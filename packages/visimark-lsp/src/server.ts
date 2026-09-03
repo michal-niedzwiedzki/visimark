@@ -12,6 +12,7 @@ import { analyzeDocument, forgetDocument } from "./analysis.js";
 import { DEFAULTS, mergeSettings, type Settings } from "./settings.js";
 import { statusOf, toDiagnostics } from "./diagnostics.js";
 import { formatEdits } from "./formatting.js";
+import { codeActionsFor } from "./codeActions.js";
 
 const connection = createConnection(ProposedFeatures.all);
 const documents = new TextDocuments(TextDocument);
@@ -124,6 +125,19 @@ connection.onDocumentRangeFormatting((params) => {
     analysis,
     { fixDates: settings.format.fixDates },
     params.range,
+  );
+});
+
+connection.onCodeAction((params) => {
+  const doc = documents.get(params.textDocument.uri);
+  if (!doc || !settings.enable) return [];
+  const analysis = analyzeDocument(doc.uri, doc.version, doc.getText());
+  return codeActionsFor(
+    doc,
+    analysis,
+    params.range,
+    params.context.only,
+    settings,
   );
 });
 
