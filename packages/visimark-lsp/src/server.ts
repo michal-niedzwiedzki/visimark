@@ -13,6 +13,7 @@ import { DEFAULTS, mergeSettings, type Settings } from "./settings.js";
 import { statusOf, toDiagnostics } from "./diagnostics.js";
 import { formatEdits } from "./formatting.js";
 import { codeActionsFor } from "./codeActions.js";
+import { inlayHintsFor } from "./inlayHints.js";
 
 const connection = createConnection(ProposedFeatures.all);
 const documents = new TextDocuments(TextDocument);
@@ -139,6 +140,13 @@ connection.onCodeAction((params) => {
     params.context.only,
     settings,
   );
+});
+
+connection.languages.inlayHint.on((params) => {
+  const doc = documents.get(params.textDocument.uri);
+  if (!doc || !settings.enable || !settings.inlayHints.enable) return [];
+  const analysis = analyzeDocument(doc.uri, doc.version, doc.getText());
+  return inlayHintsFor(doc, analysis, params.range);
 });
 
 documents.listen(connection);
