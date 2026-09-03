@@ -1,0 +1,12 @@
+{
+    "stamp.color": "#211d72",
+    "workbench.colorCustomizations": {
+        "statusBar.background": "#1c1a4d",
+        "statusBar.foreground": "#ffffff",
+        "statusBar.debuggingBackground": "#1c1a4d",
+        "statusBar.debuggingForeground": "#ffffff",
+        "statusBar.noFolderBackground": "#1c1a4d",
+        "statusBarItem.remoteBackground": "#1c1a4d",
+        "statusBarItem.remoteForeground": "#ffffff"
+    }
+}
