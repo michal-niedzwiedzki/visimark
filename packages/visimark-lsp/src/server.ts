@@ -11,6 +11,7 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import { analyzeDocument, forgetDocument } from "./analysis.js";
 import { DEFAULTS, mergeSettings, type Settings } from "./settings.js";
 import { statusOf, toDiagnostics } from "./diagnostics.js";
+import { formatEdits } from "./formatting.js";
 
 const connection = createConnection(ProposedFeatures.all);
 const documents = new TextDocuments(TextDocument);
@@ -103,6 +104,27 @@ documents.onDidClose((e) => {
   timers.delete(e.document.uri);
   forgetDocument(e.document.uri);
   void connection.sendDiagnostics({ uri: e.document.uri, diagnostics: [] });
+});
+
+// ---- formatting: the only write path, and only when asked ----
+
+connection.onDocumentFormatting((params) => {
+  const doc = documents.get(params.textDocument.uri);
+  if (!doc || !settings.enable) return [];
+  const analysis = analyzeDocument(doc.uri, doc.version, doc.getText());
+  return formatEdits(doc, analysis, { fixDates: settings.format.fixDates });
+});
+
+connection.onDocumentRangeFormatting((params) => {
+  const doc = documents.get(params.textDocument.uri);
+  if (!doc || !settings.enable) return [];
+  const analysis = analyzeDocument(doc.uri, doc.version, doc.getText());
+  return formatEdits(
+    doc,
+    analysis,
+    { fixDates: settings.format.fixDates },
+    params.range,
+  );
 });
 
 documents.listen(connection);
