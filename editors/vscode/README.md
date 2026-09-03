@@ -9,6 +9,9 @@ carries the formula that produced it, and VisiMark proves the two still agree.
   without the file changing.
 - **Repair on demand.** "Format Document" — or your own `editor.formatOnSave`
   — rewrites computed cells and anchored values, and nothing else.
+- **Repair on save, if you ask.** Turn on `visimark.format.fixOnSave` and every
+  stale value is brought up to date as the file is written. Off by default, and
+  never triggered by autosave.
 - **Quick fixes.** Update one cell, rewrite one unambiguous date, or fix the
   whole document.
 

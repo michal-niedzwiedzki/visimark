@@ -3,10 +3,12 @@
   "displayName": "VisiMark",
   "description": "Spreadsheet mechanics for Markdown: every computed number carries the formula that produced it.",
   "version": "0.1.0",
-  "publisher": "visimark",
+  "publisher": "michal-niedzwiedzki",
+  "author": {
+    "name": "Michał Niedźwiedzki"
+  },
   "license": "MIT",
   "private": true,
-  "type": "module",
   "icon": "icon.png",
   "categories": [
     "Linters",
@@ -20,7 +22,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/OWNER/visimark"
+    "url": "https://github.com/michal-niedzwiedzki/visimark"
   },
   "engines": {
     "vscode": "^1.85.0"
@@ -66,6 +68,11 @@
           "minimum": 0,
           "description": "Milliseconds to wait after a keystroke before re-checking."
         },
+        "visimark.format.fixOnSave": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Rewrite every stale value when a Markdown file is saved. Off by default: the file changes only when you ask it to, with **VisiMark: Fix All Stale Values**. Autosave (`files.autoSave`) never triggers it."
+        },
         "visimark.format.fixDates": {
           "type": "boolean",
           "default": false,
@@ -109,7 +116,7 @@
     "build": "node esbuild.mjs",
     "package": "bun run build && vsce package --no-dependencies --out visimark.vsix",
     "install-local": "command -v code >/dev/null 2>&1 || { echo \"VS Code CLI not found on PATH. In VS Code run: Shell Command: Install code command in PATH\" >&2; exit 1; } && bun run package && code --install-extension visimark.vsix --force",
-    "uninstall-local": "command -v code >/dev/null 2>&1 || { echo \"VS Code CLI not found on PATH. In VS Code run: Shell Command: Install code command in PATH\" >&2; exit 1; } && code --uninstall-extension visimark.visimark-vscode"
+    "uninstall-local": "command -v code >/dev/null 2>&1 || { echo \"VS Code CLI not found on PATH. In VS Code run: Shell Command: Install code command in PATH\" >&2; exit 1; } && code --uninstall-extension michal-niedzwiedzki.visimark-vscode"
   },
   "dependencies": {
     "visimark": "workspace:*",
