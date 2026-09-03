@@ -34,9 +34,13 @@ export interface RawCell extends Span {
   text: string;
 }
 
+export interface RawRow {
+  cells: RawCell[];
+}
+
 export interface RawTable {
   headers: RawCell[];
-  rows: RawCell[][];
+  rows: RawRow[];
   span: Span;
 }
 
@@ -162,7 +166,7 @@ function readTable(node: MdNode, source: string): RawTable {
   const [headers = [], ...body] = rows;
   return {
     headers,
-    rows: body,
+    rows: body.map((cells) => ({ cells })),
     span: { start: off(node, "start"), end: off(node, "end") },
   };
 }
