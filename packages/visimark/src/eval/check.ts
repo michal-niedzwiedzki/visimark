@@ -4,7 +4,8 @@ import type { RawTable, Span } from "../parse/document.js";
 import type { Binding, DocModel, Finding, Sheet } from "../model/types.js";
 import { closest } from "../report/levenshtein.js";
 import { parseIsoDate } from "./dates.js";
-import { AGGREGATE_FNS, evalExpr, type EvalEnv } from "./evaluate.js";
+import { evalExpr, type EvalEnv } from "./evaluate.js";
+import { describeCallProblem, FUNCTIONS, isReduce } from "./functions.js";
 import { dependencies, refText, resolve, topoOrder } from "./graph.js";
 import {
   applyUnit,
@@ -13,7 +14,6 @@ import {
   type Unit,
 } from "./units.js";
 import {
-  bool,
   date,
   EvalError,
   num,
@@ -22,6 +22,18 @@ import {
   type Value,
   valueEquals,
 } from "./value.js";
+
+/** a misspelling this far from a builtin is a different word, not a typo */
+const MAX_FN_SUGGESTION_DISTANCE = 2;
+
+/**
+ * A boolean lives only between the comparison that produces it and the `IF()`
+ * that consumes it. A binding is a storage point — a column cell or an
+ * anchored scalar — so a boolean reaching one is an error, not a value to
+ * render. See the design doc, section 4.
+ */
+const BOOLEAN_BINDING_MESSAGE =
+  "a boolean cannot be stored; wrap it in `IF()` to produce a number or a string";
 
 export interface CheckResult {
   findings: Finding[];
@@ -138,6 +150,32 @@ export function check(model: DocModel): CheckResult {
       sheetSeen.push(binding.sheetId);
     }
     const dep = dependencies(model, binding);
+
+    if (dep.callErrors.length > 0) {
+      for (const { call, problem } of dep.callErrors) {
+        emit(
+          {
+            code: "TYPE",
+            sheetId: binding.sheetId,
+            name: binding.name,
+            message: describeCallProblem(call.name, problem),
+            suggestion:
+              problem.kind === "unknown"
+                ? closest(
+                    call.name,
+                    FUNCTIONS.keys(),
+                    MAX_FN_SUGGESTION_DISTANCE,
+                  ) ?? undefined
+                : undefined,
+            sourceOffset: call.start,
+            span: { start: call.start, end: call.end },
+          },
+          { sheetId: binding.sheetId },
+        );
+      }
+      unevaluable.add(binding.id);
+      continue;
+    }
 
     if (dep.undefRefs.length > 0) {
       for (const ref of dep.undefRefs) {
@@ -276,6 +314,20 @@ export function check(model: DocModel): CheckResult {
     for (let r = 0; r < table.rows.length; r++) {
       try {
         const v0 = evalExpr(binding.expr, rowEnv(binding, sheet, r));
+        if (v0.t === "bool") {
+          emit(
+            {
+              code: "TYPE",
+              sheetId: sheet.id,
+              name: binding.name,
+              message: BOOLEAN_BINDING_MESSAGE,
+              span: binding.span,
+            },
+            { sheetId: sheet.id },
+          );
+          unevaluable.add(binding.id);
+          return;
+        }
         const v = roundValue(v0, prec);
         out.push(v);
         const cell = table.rows[r]!.cells[idx];
@@ -340,6 +392,20 @@ export function check(model: DocModel): CheckResult {
   function evalScalar(binding: Binding): void {
     try {
       const v0 = evalExpr(binding.expr, scalarEnv(binding));
+      if (v0.t === "bool") {
+        emit(
+          {
+            code: "TYPE",
+            sheetId: binding.sheetId,
+            name: binding.name,
+            message: BOOLEAN_BINDING_MESSAGE,
+            span: binding.span,
+          },
+          { sheetId: binding.sheetId },
+        );
+        unevaluable.add(binding.id);
+        return;
+      }
       const anchorText = anchorValueText(model, binding.id);
       const anchorUnit =
         anchorText !== undefined
@@ -474,7 +540,6 @@ export function check(model: DocModel): CheckResult {
     if (NUMBER_RE.test(t)) return num(new Decimal(t));
     const pm = PERCENT_RE.exec(t);
     if (pm) return num(new Decimal(pm[1]!).div(100));
-    if (t === "true" || t === "false") return bool(t === "true");
     const iso = parseIsoDate(t);
     if (iso.ok) return date(iso.iso);
     if (DATEISH_RE.test(t) || /^\d{4}-\d{2}-\d{2}$/.test(t)) {
@@ -627,6 +692,7 @@ export function matchesStored(v: Value, storedText: string, places: number): boo
     return roundToPlaces(stored, places).equals(roundToPlaces(v.d, places));
   }
   if (v.t === "date") return t === v.iso;
+  // Unreachable: a boolean never reaches a binding, so it is never stored.
   if (v.t === "bool") return t === String(v.b);
   return t === v.s;
 }
@@ -634,6 +700,7 @@ export function matchesStored(v: Value, storedText: string, places: number): boo
 export function showValue(v: Value, places: number): string {
   if (v.t === "num") return v.d.toFixed(places);
   if (v.t === "date") return v.iso;
+  // Unreachable, as above; the branch keeps the formatter total over `Value`.
   if (v.t === "bool") return String(v.b);
   return v.s;
 }
@@ -650,14 +717,14 @@ function docPrecision(model: DocModel): number {
 
 function formulaText(model: DocModel, binding: Binding): string | undefined {
   const isAggregateCall =
-    binding.expr.type === "call" && AGGREGATE_FNS.has(binding.expr.name);
+    binding.expr.type === "call" && isReduce(binding.expr.name);
   if (binding.kind !== "column" && !isAggregateCall) return undefined;
   return model.source.slice(binding.expr.start, binding.expr.end);
 }
 
 function isCrossSheetAggregate(model: DocModel, binding: Binding): boolean {
   const e = binding.expr;
-  if (e.type !== "call" || !AGGREGATE_FNS.has(e.name)) return false;
+  if (e.type !== "call" || !isReduce(e.name)) return false;
   const arg = e.args[0];
   if (!arg || arg.type !== "ref") return false;
   const res = resolve(model, binding.sheetId, arg);

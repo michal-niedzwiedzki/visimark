@@ -1,8 +1,7 @@
-import type { Expr, Ref } from "../lang/ast.js";
+import type { Call, Expr, Ref } from "../lang/ast.js";
 import { closest } from "../report/levenshtein.js";
 import type { Binding, DocModel } from "../model/types.js";
-
-export const AGGREGATES = new Set(["SUM", "MIN", "MAX", "COUNT", "AVG"]);
+import { type CallProblem, callProblem, isReduce } from "./functions.js";
 
 export type Resolution =
   | { kind: "column"; binding: Binding; sheetId: string }
@@ -78,6 +77,8 @@ export interface DepInfo {
   deps: Set<string>;
   vectorRefs: Ref[];
   undefRefs: Ref[];
+  /** calls that are malformed on their face — wrong name, arity or argument shape */
+  callErrors: { call: Call; problem: CallProblem }[];
 }
 
 export function dependencies(model: DocModel, binding: Binding): DepInfo {
@@ -86,6 +87,7 @@ export function dependencies(model: DocModel, binding: Binding): DepInfo {
     deps: new Set(),
     vectorRefs: [],
     undefRefs: [],
+    callErrors: [],
   };
 
   const visit = (node: Expr, inAggregate: boolean): void => {
@@ -121,7 +123,11 @@ export function dependencies(model: DocModel, binding: Binding): DepInfo {
         return;
       }
       case "call": {
-        const agg = AGGREGATES.has(node.name);
+        const problem = callProblem(node.name, node.args);
+        if (problem) info.callErrors.push({ call: node, problem });
+        // A malformed reduce still gates its arguments as one, so a column
+        // reference inside it is not also reported as a stray vector.
+        const agg = isReduce(node.name);
         for (const a of node.args) visit(a, inAggregate || agg);
         return;
       }

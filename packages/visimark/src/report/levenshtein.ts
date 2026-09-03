@@ -26,14 +26,23 @@ function commonPrefix(a: string, b: string): number {
   return i;
 }
 
-/** closest candidate by edit distance; ties broken by longer shared prefix, then alphabetically */
-export function closest(target: string, candidates: Iterable<string>): string | null {
+/**
+ * Closest candidate by edit distance; ties broken by longer shared prefix, then
+ * alphabetically. `maxDistance` bounds how wrong a suggestion may be — without
+ * it the nearest candidate is always offered, however unlike the target.
+ */
+export function closest(
+  target: string,
+  candidates: Iterable<string>,
+  maxDistance = Infinity,
+): string | null {
   let best: string | null = null;
   let bestDist = Infinity;
   let bestPrefix = -1;
   for (const c of candidates) {
     if (c === target) continue;
     const d = levenshtein(target, c);
+    if (d > maxDistance) continue;
     const p = commonPrefix(target, c);
     if (
       d < bestDist ||

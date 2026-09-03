@@ -57,6 +57,10 @@ export function messageOf(f: Finding): string {
       return f.suggestion
         ? `\`${f.name}\` is defined and never read — did you mean \`${f.suggestion}\`?`
         : `\`${f.name}\` is defined and never read`;
+    case "TYPE":
+      return f.suggestion
+        ? `${f.message ?? "type error"} — did you mean \`${f.suggestion}\`?`
+        : (f.message ?? "type error");
     default:
       return f.message ?? f.code;
   }

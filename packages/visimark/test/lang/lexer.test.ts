@@ -37,19 +37,17 @@ test("ISO date is one token; non-ISO date-ish text is not", () => {
   ]);
 });
 
-test("string and boolean literals", () => {
+test("string literals", () => {
   expect(pairs('"net 30"')).toEqual([
     ["string", "net 30"],
     ["eof", ""],
   ]);
-  expect(pairs("true")).toEqual([
-    ["bool", "true"],
-    ["eof", ""],
-  ]);
-  expect(pairs("false")).toEqual([
-    ["bool", "false"],
-    ["eof", ""],
-  ]);
+});
+
+test("boolean literals are rejected", () => {
+  // The type exists in the engine; the literals are not surface syntax.
+  expect(() => lex("true")).toThrow(LangError);
+  expect(() => lex("false")).toThrow(LangError);
 });
 
 test("thousands separators are rejected", () => {

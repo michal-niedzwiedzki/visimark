@@ -161,6 +161,7 @@ function renderGroup(f: Finding): string[] {
           id(f).padEnd(ID_FIELD) +
           (f.rowLabel ? "· " + f.rowLabel + "  " : "  ") +
           (f.message ?? ""),
+        ...(f.suggestion ? [CONT + "did you mean `" + f.suggestion + "`?"] : []),
       ];
     case "WARN":
       return [

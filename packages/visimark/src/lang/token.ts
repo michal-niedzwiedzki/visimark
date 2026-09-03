@@ -3,7 +3,6 @@ export type TokenKind =
   | "percent"
   | "date"
   | "string"
-  | "bool"
   | "ident"
   | "op"
   | "dot"
@@ -22,6 +21,8 @@ export interface Token {
 export class LangError extends Error {
   readonly start: number;
   readonly end: number;
+  /** the binding whose line failed, recovered for the report where possible */
+  bindingName?: string;
   constructor(message: string, start: number, end: number) {
     super(message);
     this.name = "LangError";

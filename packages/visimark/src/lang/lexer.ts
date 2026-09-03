@@ -3,6 +3,9 @@ import { LangError, type Token, type TokenKind } from "./token.js";
 const WORD_OPS = new Set(["and", "or", "not"]);
 const DATE_RE = /^\d{4}-\d{2}-\d{2}/;
 
+const BOOLEAN_LITERAL_MESSAGE =
+  "VisiMark has no boolean literals; use `IF()` to produce a number or a string";
+
 const isDigit = (c: string) => c >= "0" && c <= "9";
 const isIdentStart = (c: string) => /[A-Za-z_]/.test(c);
 const isIdentPart = (c: string) => /[A-Za-z0-9_]/.test(c);
@@ -106,8 +109,12 @@ export function lex(src: string): Token[] {
       while (i < src.length && isIdentPart(src[i]!)) i++;
       const text = src.slice(start, i);
       if (text === "true" || text === "false") {
-        push("bool", text, start, i);
-      } else if (WORD_OPS.has(text)) {
+        // The boolean type exists inside the engine, between a comparison and
+        // the `IF()` that consumes it, but it is not surface syntax and is
+        // never stored. See the design doc, section 4.
+        throw new LangError(BOOLEAN_LITERAL_MESSAGE, start, i);
+      }
+      if (WORD_OPS.has(text)) {
         push("op", text, start, i);
       } else {
         push("ident", text, start, i);

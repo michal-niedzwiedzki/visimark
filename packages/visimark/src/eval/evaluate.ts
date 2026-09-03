@@ -1,6 +1,7 @@
 import { Decimal } from "decimal.js";
 import type { Expr, Ref } from "../lang/ast.js";
 import { addDays, daysBetween } from "./dates.js";
+import { callProblem, describeCallProblem, isReduce } from "./functions.js";
 import {
   bool,
   date,
@@ -11,19 +12,6 @@ import {
   Value,
   valueEquals,
 } from "./value.js";
-
-export const AGGREGATE_FNS = new Set(["SUM", "MIN", "MAX", "COUNT", "AVG"]);
-const KNOWN_FNS = new Set([
-  "SUM",
-  "MIN",
-  "MAX",
-  "COUNT",
-  "AVG",
-  "ROUND",
-  "ABS",
-  "IF",
-  "MOD",
-]);
 
 export interface EvalEnv {
   scalar(ref: Ref): Value;
@@ -39,8 +27,6 @@ export function evalExpr(expr: Expr, env: EvalEnv): Value {
       return date(expr.value);
     case "str":
       return str(expr.value);
-    case "bool":
-      return bool(expr.value);
     case "ref":
       return env.scalar(expr);
     case "unary":
@@ -125,17 +111,20 @@ function compare(op: string, l: Value, r: Value): boolean {
 
 function evalCall(expr: Extract<Expr, { type: "call" }>, env: EvalEnv): Value {
   const { name, args } = expr;
-  if (!KNOWN_FNS.has(name)) {
-    throw new EvalError(`unknown function \`${name}\``);
-  }
+  // `check` rejects these statically, so reaching one here means the evaluator
+  // was called directly. Fail with the same message rather than reading past
+  // the end of the argument list.
+  const problem = callProblem(name, args);
+  if (problem) throw new EvalError(describeCallProblem(name, problem));
 
-  if (AGGREGATE_FNS.has(name)) {
+  if (isReduce(name)) {
     const arg = args[0];
-    if (!arg || arg.type !== "ref" || args.length !== 1) {
-      throw new EvalError(`${name}() takes one column reference`);
+    // `callProblem` has already established this, but the narrowing is what
+    // lets the vector lookup be typed rather than cast.
+    if (!arg || arg.type !== "ref") {
+      throw new EvalError(describeCallProblem(name, { kind: "shape" }));
     }
-    const vec = env.vector(arg);
-    return aggregate(name, vec);
+    return aggregate(name, env.vector(arg));
   }
 
   const vals = args.map((a) => evalExpr(a, env));

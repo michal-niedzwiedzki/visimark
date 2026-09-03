@@ -52,5 +52,9 @@ test("SUM over a column vector", () => {
 });
 
 test("comparisons and booleans", () => {
-  expect(evalStr("2 < 3 and not false", envOf({}))).toEqual({ t: "bool", b: true });
+  // Booleans have no literals, so a boolean can only come from a comparison.
+  expect(evalStr("2 < 3 and not (4 < 3)", envOf({}))).toEqual({
+    t: "bool",
+    b: true,
+  });
 });

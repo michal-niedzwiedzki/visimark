@@ -16,10 +16,6 @@ export interface StrLit extends Pos {
   type: "str";
   value: string;
 }
-export interface BoolLit extends Pos {
-  type: "bool";
-  value: boolean;
-}
 export interface Ref extends Pos {
   type: "ref";
   name: string;
@@ -46,7 +42,6 @@ export type Expr =
   | NumberLit
   | DateLit
   | StrLit
-  | BoolLit
   | Ref
   | Unary
   | Binary

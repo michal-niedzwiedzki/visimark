@@ -107,13 +107,6 @@ class Parser {
         return { type: "date", value: t.value, start: t.start, end: t.end };
       case "string":
         return { type: "str", value: t.value, start: t.start, end: t.end };
-      case "bool":
-        return {
-          type: "bool",
-          value: t.value === "true",
-          start: t.start,
-          end: t.end,
-        };
       case "ident":
         return this.identTail(t);
       case "lparen": {
@@ -203,7 +196,23 @@ export interface Binding {
   nameEnd: number;
 }
 
+const LEADING_NAME_RE = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=/;
+
 export function parseBinding(line: string): Binding {
+  try {
+    return parseBindingInner(line);
+  } catch (e) {
+    // A failure anywhere in the line — including in the lexer, before the name
+    // is ever tokenised — should still say which binding it came from.
+    if (e instanceof LangError && e.bindingName === undefined) {
+      const m = LEADING_NAME_RE.exec(line);
+      if (m) e.bindingName = m[1];
+    }
+    throw e;
+  }
+}
+
+function parseBindingInner(line: string): Binding {
   const toks = lex(line);
   const eqIndex = toks.findIndex((t) => t.kind === "op" && t.value === "=");
   if (eqIndex === -1) {

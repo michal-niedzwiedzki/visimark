@@ -143,6 +143,7 @@ function parseOne(
       findings.push({
         code: "TYPE",
         sheetId: sheetId || undefined,
+        name: e.bindingName,
         message: e.message,
         raw: rb.raw,
         sourceOffset: rb.start + e.start,
