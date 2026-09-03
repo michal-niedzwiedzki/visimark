@@ -15,6 +15,7 @@ import { formatEdits } from "./formatting.js";
 import { codeActionsFor } from "./codeActions.js";
 import { inlayHintsFor } from "./inlayHints.js";
 import { codeLensesFor } from "./codeLens.js";
+import { hoverAt } from "./hover.js";
 
 const connection = createConnection(ProposedFeatures.all);
 const documents = new TextDocuments(TextDocument);
@@ -155,6 +156,13 @@ connection.onCodeLens((params) => {
   if (!doc || !settings.enable || !settings.codeLens.enable) return [];
   const analysis = analyzeDocument(doc.uri, doc.version, doc.getText());
   return codeLensesFor(doc, analysis);
+});
+
+connection.onHover((params) => {
+  const doc = documents.get(params.textDocument.uri);
+  if (!doc || !settings.enable) return null;
+  const analysis = analyzeDocument(doc.uri, doc.version, doc.getText());
+  return hoverAt(doc, analysis, params.position);
 });
 
 documents.listen(connection);
