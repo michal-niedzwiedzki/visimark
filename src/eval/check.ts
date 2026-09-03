@@ -482,18 +482,18 @@ export function inferColumnPrecision(
   return max === -1 ? fallback : max;
 }
 
-function decimalPlaces(text: string, fallback: number): number {
+export function decimalPlaces(text: string, fallback: number): number {
   const m = /\.(\d+)\s*$/.exec(text.trim());
   if (m) return m[1]!.length;
   if (/^-?\d+$/.test(text.trim())) return 0;
   return fallback;
 }
 
-function roundValue(v: Value, places: number): Value {
+export function roundValue(v: Value, places: number): Value {
   return v.t === "num" ? num(roundToPlaces(v.d, places)) : v;
 }
 
-function matchesStored(v: Value, storedText: string, places: number): boolean {
+export function matchesStored(v: Value, storedText: string, places: number): boolean {
   const t = storedText.trim();
   if (v.t === "num") {
     if (!NUMBER_RE.test(t) && !PERCENT_RE.test(t)) return false;
@@ -507,7 +507,7 @@ function matchesStored(v: Value, storedText: string, places: number): boolean {
   return t === v.s;
 }
 
-function showValue(v: Value, places: number): string {
+export function showValue(v: Value, places: number): string {
   if (v.t === "num") return v.d.toFixed(places);
   if (v.t === "date") return v.iso;
   if (v.t === "bool") return String(v.b);
