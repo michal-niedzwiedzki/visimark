@@ -14,7 +14,8 @@
   "scripts": {
     "test": "bun test",
     "typecheck": "tsc --noEmit",
-    "build": "bun build src/cli/main.ts --target node --outdir dist --minify"
+    "build": "bun build src/cli/main.ts --target node --outdir dist --minify",
+    "prepublishOnly": "bun run typecheck && bun test && bun run build"
   },
   "engines": {
     "node": ">=18"

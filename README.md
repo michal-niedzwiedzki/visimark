@@ -91,9 +91,20 @@ configuration, and no rule for what a bare `/` means.
 
 ## Status
 
-Design agreed, nothing implemented. The design is written up in
-[`doc/2026-09-03-visimark-design.md`](doc/2026-09-03-visimark-design.md),
-including the deferred work and the known tensions.
+The CLI is implemented: `visimark check`, `fmt`, `eval` and `explain`, in
+TypeScript, run with `npx visimark`. Both worked examples pass as the acceptance
+suite — `check` on the drift invoice reproduces the transcript above
+byte-for-byte, and `fmt` leaves the clean invoice untouched. The design is
+written up in [`doc/2026-09-03-visimark-design.md`](doc/2026-09-03-visimark-design.md),
+including the deferred work and the known tensions; the implementation plan is
+[`docs/superpowers/plans/2026-09-03-visimark-cli.md`](docs/superpowers/plans/2026-09-03-visimark-cli.md).
+
+```
+git clone … && cd visimark && bun install
+bun test                    # 88 tests, the two examples included
+bun run build               # bundle to dist/ for npx
+bun src/cli/main.ts check doc/example-invoice-drift.md
+```
 
 The project began as a CSV-based idea and moved to Markdown so that several
 small sheets can live inside one master document, and so that the file renders
