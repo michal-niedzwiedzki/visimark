@@ -45,6 +45,14 @@ function prefix(code: string): string {
   return "  " + code.padEnd(8);
 }
 
+/** row label padded so the value lands in the same column every time.
+ *  padEnd never truncates, so a label that fills the field keeps one space
+ *  rather than letting the value abut its last letter. */
+function labelField(label: string): string {
+  const width = DATE_VALUE_COL - 28;
+  return label.length >= width ? label + " " : label.padEnd(width);
+}
+
 function id(f: Finding): string {
   return `${f.sheetId ?? ""}.${f.name ?? ""}`;
 }
@@ -74,7 +82,7 @@ function renderGroup(f: Finding): string[] {
         prefix("DATE") +
         id(f).padEnd(ID_FIELD) +
         "· " +
-        (f.rowLabel ?? "").padEnd(DATE_VALUE_COL - 28) +
+        labelField(f.rowLabel ?? "") +
         `"${f.raw}"`;
       const body = [
         CONT + "Dates must be ISO 8601 calendar dates: YYYY-MM-DD.",
@@ -101,7 +109,7 @@ function renderGroup(f: Finding): string[] {
         prefix("UNIT") +
         id(f).padEnd(ID_FIELD) +
         "· " +
-        (f.rowLabel ?? "").padEnd(DATE_VALUE_COL - 28) +
+        labelField(f.rowLabel ?? "") +
         `"${f.raw ?? ""}"`;
       return [head, CONT + (f.message ?? "")];
     }
