@@ -9,6 +9,7 @@ import {
   showValue,
 } from "../eval/check.js";
 import type { DocModel, Finding } from "../model/types.js";
+import { applyUnit } from "../eval/units.js";
 import { applyEdits, type Edit } from "./splice.js";
 
 export interface FmtOptions {
@@ -37,16 +38,22 @@ export function planFmt(
     if (!sheet.table) continue;
     for (const [name, binding] of sheet.columns) {
       const colId = `${sheet.id}.${name}`;
+      if (result.unitConflicts.has(colId)) continue;
       const col = result.cells.get(colId);
       if (!col) continue;
       const prec = result.columnPrecision.get(colId) ?? 2;
+      const unit = result.columnUnits.get(colId) ?? null;
       const idx = sheet.columnIndex.get(name)!;
       sheet.table.rows.forEach((row, r) => {
         const v = col[r];
         const cell = row.cells[idx];
         if (!v || !cell) return;
         if (cell.text !== "" && !matchesStored(v, cell.text, prec)) {
-          edits.push({ start: cell.start, end: cell.end, text: showValue(v, prec) });
+          edits.push({
+            start: cell.start,
+            end: cell.end,
+            text: applyUnit(showValue(v, prec), unit),
+          });
         }
       });
       void binding;
@@ -61,12 +68,13 @@ export function planFmt(
     if (!v) continue;
     const current = source.slice(a.value.start, a.value.end);
     const prec = decimalPlaces(current, 2);
+    const unit = result.scalarUnits.get(id) ?? null;
     const rounded = roundValue(v, prec);
     if (!matchesStored(rounded, current, prec)) {
       edits.push({
         start: a.value.start,
         end: a.value.end,
-        text: showValue(rounded, prec),
+        text: applyUnit(showValue(rounded, prec), unit),
       });
     }
   }

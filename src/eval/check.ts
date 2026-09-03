@@ -1,11 +1,17 @@
 import { Decimal } from "decimal.js";
 import type { Expr, Ref } from "../lang/ast.js";
-import type { RawTable } from "../parse/document.js";
+import type { RawTable, Span } from "../parse/document.js";
 import type { Binding, DocModel, Finding, Sheet } from "../model/types.js";
 import { closest } from "../report/levenshtein.js";
 import { parseIsoDate } from "./dates.js";
 import { AGGREGATE_FNS, evalExpr, type EvalEnv } from "./evaluate.js";
 import { dependencies, refText, resolve, topoOrder } from "./graph.js";
+import {
+  applyUnit,
+  inferColumnUnit,
+  parseDecorated,
+  type Unit,
+} from "./units.js";
 import {
   bool,
   date,
@@ -23,6 +29,12 @@ export interface CheckResult {
   cells: Map<string, (Value | null)[]>;
   columnPrecision: Map<string, number>;
   scalarPrecision: Map<string, number>;
+  /** inferred display decoration per column, keyed `sheet.Column` */
+  columnUnits: Map<string, Unit | null>;
+  /** inferred display decoration per anchored scalar, keyed by binding id */
+  scalarUnits: Map<string, Unit | null>;
+  /** column ids whose cells disagree about their decoration */
+  unitConflicts: Set<string>;
   exitCode: 0 | 1;
 }
 
@@ -40,6 +52,9 @@ export function check(model: DocModel): CheckResult {
   const unevaluable = new Set<string>();
   const columnPrecision = new Map<string, number>();
   const scalarPrecision = new Map<string, number>();
+  const columnUnits = new Map<string, Unit | null>();
+  const scalarUnits = new Map<string, Unit | null>();
+  const unitConflicts = new Set<string>();
   const staleScalars = new Set<string>();
   const dateErrorRows = new Set<string>(); // `${sheet}.${col}#${row}` already reported
 
@@ -60,6 +75,61 @@ export function check(model: DocModel): CheckResult {
   for (const f of model.findings) emit(f);
 
   const fallbackPrecision = docPrecision(model);
+
+  // A column's decoration is inferred from its own cells, exactly as write
+  // precision is. Input columns count too: a computed neighbour never inherits
+  // their decoration, but a reader still sees it.
+  for (const sheet of model.sheets.values()) {
+    const table = sheet.table;
+    if (!table) continue;
+    for (const [name, idx] of sheet.columnIndex) {
+      const colId = `${sheet.id}.${name}`;
+      const texts = table.rows.map((r) => r.cells[idx]?.text);
+
+      const bothSidesRow = texts.findIndex(
+        (t) => parseDecorated(t ?? "").kind === "both-sides",
+      );
+      if (bothSidesRow !== -1) {
+        const cell = table.rows[bothSidesRow]!.cells[idx];
+        unitConflicts.add(colId);
+        columnUnits.set(colId, null);
+        emit(
+          {
+            code: "UNIT",
+            sheetId: sheet.id,
+            name,
+            rowLabel: rowLabel(table, bothSidesRow),
+            raw: texts[bothSidesRow],
+            message: `\`${texts[bothSidesRow]}\` is decorated on both sides; a unit sits before the number or after it, not both`,
+            span: cell ? { start: cell.start, end: cell.end } : undefined,
+          },
+          { sheetId: sheet.id },
+        );
+        continue;
+      }
+
+      const inferred = inferColumnUnit(texts);
+      columnUnits.set(colId, inferred.unit);
+      if (inferred.conflict) {
+        unitConflicts.add(colId);
+        const row = inferred.firstDeviantRow!;
+        const cell = table.rows[row]!.cells[idx];
+        emit(
+          {
+            code: "UNIT",
+            sheetId: sheet.id,
+            name,
+            rowLabel: rowLabel(table, row),
+            raw: texts[row],
+            message: `column mixes units: ${inferred.forms.join(" and ")}`,
+            span: cell ? { start: cell.start, end: cell.end } : undefined,
+          },
+          { sheetId: sheet.id },
+        );
+      }
+    }
+  }
+
   const sheetSeen: string[] = [];
 
   for (const binding of order) {
@@ -80,6 +150,7 @@ export function check(model: DocModel): CheckResult {
             raw: refText(ref),
             suggestion: r.kind === "unknown" ? r.suggestion ?? undefined : undefined,
             sourceOffset: ref.start,
+            span: { start: ref.start, end: ref.end },
           },
           { sheetId: binding.sheetId },
         );
@@ -96,6 +167,7 @@ export function check(model: DocModel): CheckResult {
             name: binding.name,
             raw: refText(ref),
             sourceOffset: ref.start,
+            span: { start: ref.start, end: ref.end },
           },
           { sheetId: binding.sheetId },
         );
@@ -106,6 +178,18 @@ export function check(model: DocModel): CheckResult {
     if ([...dep.deps].some((d) => unevaluable.has(d))) {
       unevaluable.add(binding.id);
       continue;
+    }
+
+    // a rule whose operands are in conflict is unverifiable too
+    if (
+      [...dep.deps].some((d) => unitConflicts.has(d)) ||
+      dep.refs.some(
+        (r) =>
+          r.res.kind === "input-column" &&
+          unitConflicts.has(`${r.res.sheetId}.${r.res.column}`),
+      )
+    ) {
+      unitConflicts.add(binding.id);
     }
 
     if (binding.kind === "column" && sheet?.table) {
@@ -121,6 +205,7 @@ export function check(model: DocModel): CheckResult {
       code: "CYCLE",
       sheetId: cyc[0]?.sheetId,
       cyclePath: cyc.map((b) => b.id),
+      span: cyc[0]?.span,
     });
     for (const b of cyc) unevaluable.add(b.id);
   }
@@ -136,6 +221,7 @@ export function check(model: DocModel): CheckResult {
         sheetId: a.sheetId,
         name: a.name,
         sourceOffset: a.commentSpan.start,
+        span: a.commentSpan,
       });
     }
   }
@@ -158,6 +244,7 @@ export function check(model: DocModel): CheckResult {
         sheetId: b.sheetId,
         name: b.name,
         suggestion: closest(b.name, [...referenced].map(idName)) ?? undefined,
+        span: b.span,
       });
     }
   }
@@ -169,6 +256,9 @@ export function check(model: DocModel): CheckResult {
     cells,
     columnPrecision,
     scalarPrecision,
+    columnUnits,
+    scalarUnits,
+    unitConflicts,
     exitCode: findings.length > 0 ? 1 : 0,
   };
 
@@ -179,6 +269,8 @@ export function check(model: DocModel): CheckResult {
     const idx = sheet.columnIndex.get(binding.name)!;
     const prec = inferColumnPrecision(table, idx, fallbackPrecision);
     columnPrecision.set(colId, prec);
+    const unit = columnUnits.get(colId) ?? null;
+    const suppressed = unitConflicts.has(colId);
     const out: (Value | null)[] = [];
 
     for (let r = 0; r < table.rows.length; r++) {
@@ -186,8 +278,13 @@ export function check(model: DocModel): CheckResult {
         const v0 = evalExpr(binding.expr, rowEnv(binding, sheet, r));
         const v = roundValue(v0, prec);
         out.push(v);
-        const storedText = table.rows[r]!.cells[idx]?.text ?? "";
-        if (storedText !== "" && !matchesStored(v, storedText, prec)) {
+        const cell = table.rows[r]!.cells[idx];
+        const storedText = cell?.text ?? "";
+        if (
+          !suppressed &&
+          storedText !== "" &&
+          !matchesStored(v, storedText, prec)
+        ) {
           emit(
             {
               code: "STALE",
@@ -195,8 +292,9 @@ export function check(model: DocModel): CheckResult {
               name: binding.name,
               rowLabel: rowLabel(table, r),
               stored: storedText,
-              computed: showValue(v, prec),
+              computed: applyUnit(showValue(v, prec), unit),
               formula: formulaText(model, binding),
+              span: cell ? { start: cell.start, end: cell.end } : undefined,
             },
             { sheetId: sheet.id, rowIndex: r, isColumnCell: true },
           );
@@ -206,6 +304,7 @@ export function check(model: DocModel): CheckResult {
           out.push(null);
         } else if (e instanceof EvalError) {
           out.push(null);
+          const cell = table.rows[r]?.cells[idx];
           emit(
             {
               code: "TYPE",
@@ -213,6 +312,7 @@ export function check(model: DocModel): CheckResult {
               name: binding.name,
               rowLabel: rowLabel(table, r),
               message: e.message,
+              span: cell ? { start: cell.start, end: cell.end } : undefined,
             },
             { sheetId: sheet.id },
           );
@@ -241,6 +341,14 @@ export function check(model: DocModel): CheckResult {
     try {
       const v0 = evalExpr(binding.expr, scalarEnv(binding));
       const anchorText = anchorValueText(model, binding.id);
+      const anchorUnit =
+        anchorText !== undefined
+          ? (() => {
+              const d = parseDecorated(anchorText);
+              return d.kind === "number" ? d.unit : null;
+            })()
+          : null;
+      scalarUnits.set(binding.id, anchorUnit);
       // A scalar rounds only where it has a materialised value to match; an
       // anchor-less constant (e.g. `fx_eur = 4.2650`) keeps full precision.
       const prec =
@@ -264,8 +372,9 @@ export function check(model: DocModel): CheckResult {
               sheetId: binding.sheetId,
               name: binding.name,
               stored: anchorText,
-              computed: showValue(v, prec),
+              computed: applyUnit(showValue(v, prec), anchorUnit),
               formula: formulaText(model, binding),
+              span: anchorValueSpanOf(model, binding.id) ?? binding.span,
             },
             { sheetId: binding.sheetId },
           );
@@ -282,6 +391,7 @@ export function check(model: DocModel): CheckResult {
             sheetId: binding.sheetId,
             name: binding.name,
             message: e.message,
+            span: binding.span,
           },
           { sheetId: binding.sheetId },
         );
@@ -327,8 +437,8 @@ export function check(model: DocModel): CheckResult {
     // input-column
     if (!ctx) throw new Unevaluable();
     const colIdx = ctx.sheet.columnIndex.get(res.column)!;
-    const text = ctx.sheet.table?.rows[ctx.row]?.cells[colIdx]?.text ?? "";
-    return coerceInput(text, ctx.sheet.id, res.column, ctx.row);
+    const cell = ctx.sheet.table?.rows[ctx.row]?.cells[colIdx];
+    return coerceInput(cell?.text ?? "", ctx.sheet.id, res.column, ctx.row, cell);
   }
 
   function lookupVector(
@@ -345,9 +455,10 @@ export function check(model: DocModel): CheckResult {
     if (res.kind === "input-column") {
       const sheet = model.sheets.get(res.sheetId)!;
       const colIdx = sheet.columnIndex.get(res.column)!;
-      return (sheet.table?.rows ?? []).map((row, r) =>
-        coerceInput(row.cells[colIdx]?.text ?? "", sheet.id, res.column, r),
-      );
+      return (sheet.table?.rows ?? []).map((row, r) => {
+        const cell = row.cells[colIdx];
+        return coerceInput(cell?.text ?? "", sheet.id, res.column, r, cell);
+      });
     }
     throw new Unevaluable();
   }
@@ -357,6 +468,7 @@ export function check(model: DocModel): CheckResult {
     sheetId: string,
     column: string,
     row: number,
+    cell: { start: number; end: number } | undefined,
   ): Value {
     const t = text.trim();
     if (NUMBER_RE.test(t)) return num(new Decimal(t));
@@ -381,12 +493,15 @@ export function check(model: DocModel): CheckResult {
             altA: iso.ok ? undefined : iso.ambiguous?.a,
             altB: iso.ok ? undefined : iso.ambiguous?.b,
             daysApart: iso.ok ? undefined : iso.ambiguous?.daysApart,
+            span: cell ? { start: cell.start, end: cell.end } : undefined,
           },
           { sheetId },
         );
       }
       throw new Unevaluable();
     }
+    const dec = parseDecorated(t);
+    if (dec.kind === "number") return num(new Decimal(dec.num));
     return str(t);
   }
 }
@@ -449,8 +564,10 @@ function orderFindings(
     SHEET: 0,
     TYPE: 0,
     DATE: 1,
+    UNIT: 1,
     NOTE: 1,
     UNDEF: 1,
+    DUP: 1,
     VECTOR: 1,
     CYCLE: 2,
     ANCHOR: 3,
@@ -476,16 +593,19 @@ export function inferColumnPrecision(
   let max = -1;
   for (const row of table.rows) {
     const text = row.cells[colIndex]?.text ?? "";
-    if (text === "" || !NUMBER_RE.test(text)) continue;
-    max = Math.max(max, decimalPlaces(text, fallback));
+    const dec = parseDecorated(text);
+    if (dec.kind !== "number") continue;
+    max = Math.max(max, decimalPlaces(dec.num, fallback));
   }
   return max === -1 ? fallback : max;
 }
 
 export function decimalPlaces(text: string, fallback: number): number {
-  const m = /\.(\d+)\s*$/.exec(text.trim());
+  const dec = parseDecorated(text);
+  const t = (dec.kind === "number" ? dec.num : text).trim();
+  const m = /\.(\d+)\s*$/.exec(t);
   if (m) return m[1]!.length;
-  if (/^-?\d+$/.test(text.trim())) return 0;
+  if (/^-?\d+$/.test(t)) return 0;
   return fallback;
 }
 
@@ -496,10 +616,14 @@ export function roundValue(v: Value, places: number): Value {
 export function matchesStored(v: Value, storedText: string, places: number): boolean {
   const t = storedText.trim();
   if (v.t === "num") {
-    if (!NUMBER_RE.test(t) && !PERCENT_RE.test(t)) return false;
-    const stored = PERCENT_RE.test(t)
-      ? new Decimal(PERCENT_RE.exec(t)![1]!).div(100)
-      : new Decimal(t);
+    const dec = parseDecorated(t);
+    if (dec.kind === "number") {
+      return roundToPlaces(new Decimal(dec.num), places).equals(
+        roundToPlaces(v.d, places),
+      );
+    }
+    if (!PERCENT_RE.test(t)) return false;
+    const stored = new Decimal(PERCENT_RE.exec(t)![1]!).div(100);
     return roundToPlaces(stored, places).equals(roundToPlaces(v.d, places));
   }
   if (v.t === "date") return t === v.iso;
@@ -541,6 +665,15 @@ function isCrossSheetAggregate(model: DocModel, binding: Binding): boolean {
     (res.kind === "column" || res.kind === "input-column") &&
     res.sheetId !== binding.sheetId
   );
+}
+
+function anchorValueSpanOf(model: DocModel, id: string): Span | undefined {
+  for (const a of model.anchors) {
+    if (`${a.sheetId}.${a.name}` === id && a.value) {
+      return { start: a.value.start, end: a.value.end };
+    }
+  }
+  return undefined;
 }
 
 function anchorValueText(model: DocModel, id: string): string | undefined {

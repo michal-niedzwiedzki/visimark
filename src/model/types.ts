@@ -5,12 +5,15 @@ import type {
   RawAnchor,
   RawBlock,
   RawTable,
+  Span,
 } from "../parse/document.js";
 
 export type FindingCode =
   | "STALE"
   | "DATE"
+  | "UNIT"
   | "UNDEF"
+  | "DUP"
   | "VECTOR"
   | "CYCLE"
   | "TYPE"
@@ -35,6 +38,11 @@ export interface Finding {
   anchorGroup?: boolean;
   cyclePath?: string[];
   sourceOffset?: number;
+  /** absolute source span of the text this finding is about. Absent only on
+   *  NOTE and on the collapsed anchor-group STALE, which have no single site. */
+  span?: Span;
+  /** a second, related site — the first binding of a DUP pair. */
+  relatedSpan?: Span;
   /** the offending literal (e.g. a non-ISO date) */
   raw?: string;
   isoFix?: string;

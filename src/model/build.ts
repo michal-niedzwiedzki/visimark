@@ -21,7 +21,17 @@ export function build(doc: LocatedDoc): DocModel {
       for (const rb of block.bindings) {
         const parsed = parseOne(rb, doc.source, findings, DOC_SCOPE);
         if (!parsed) continue;
-        if (!docScope.has(parsed.name)) docScope.set(parsed.name, parsed);
+        const first = docScope.get(parsed.name);
+        if (first) {
+          findings.push({
+            code: "DUP",
+            name: parsed.name,
+            span: parsed.span,
+            relatedSpan: first.span,
+          });
+          continue;
+        }
+        docScope.set(parsed.name, parsed);
       }
       continue;
     }
@@ -38,6 +48,7 @@ export function build(doc: LocatedDoc): DocModel {
         message:
           "this block declares column rules but no table immediately precedes it",
         sourceOffset: block.span.start,
+        span: block.span,
       });
     }
 
@@ -47,6 +58,18 @@ export function build(doc: LocatedDoc): DocModel {
     for (const rb of block.bindings) {
       const parsed = parseOne(rb, doc.source, findings, sheetId);
       if (!parsed) continue;
+      const first =
+        sheet.columns.get(parsed.name) ?? sheet.scalars.get(parsed.name);
+      if (first) {
+        findings.push({
+          code: "DUP",
+          sheetId,
+          name: parsed.name,
+          span: parsed.span,
+          relatedSpan: first.span,
+        });
+        continue;
+      }
       const isColumn = table !== null && headerIndex.has(parsed.name);
       parsed.kind = isColumn ? "column" : "scalar";
       if (isColumn) {
@@ -123,6 +146,7 @@ function parseOne(
         message: e.message,
         raw: rb.raw,
         sourceOffset: rb.start + e.start,
+        span: { start: rb.start + e.start, end: rb.start + e.end },
       });
       return null;
     }
