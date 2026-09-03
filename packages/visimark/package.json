@@ -6,6 +6,15 @@
   "bin": {
     "visimark": "bin/visimark.js"
   },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "bun": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
   "files": [
     "dist",
     "bin",
@@ -14,7 +23,7 @@
   "scripts": {
     "test": "bun test",
     "typecheck": "tsc --noEmit",
-    "build": "bun build src/cli/main.ts --target node --outdir dist --minify",
+    "build": "bun build src/cli/main.ts src/index.ts --target node --outdir dist",
     "prepublishOnly": "bun run typecheck && bun test && bun run build"
   },
   "engines": {

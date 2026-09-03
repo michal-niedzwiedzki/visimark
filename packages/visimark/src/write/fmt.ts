@@ -25,13 +25,25 @@ export interface FmtResult {
   unfixable: Finding[];
 }
 
+/** an edit together with the finding it resolves, so a diagnostic can be
+ *  turned into a quick fix without re-deriving anything */
+export interface PlannedEdit extends Edit {
+  finding: Finding;
+}
+
 export function planFmt(
   model: DocModel,
   result: CheckResult,
   opts: FmtOptions,
-): Edit[] {
-  const edits: Edit[] = [];
+): PlannedEdit[] {
+  const edits: PlannedEdit[] = [];
   const source = model.source;
+  const bySpan = new Map<string, Finding>();
+  for (const f of result.findings) {
+    if (f.span) bySpan.set(`${f.span.start}:${f.span.end}`, f);
+  }
+  const findingFor = (start: number, end: number): Finding =>
+    bySpan.get(`${start}:${end}`) ?? { code: "STALE" };
 
   // 1. computed column cells
   for (const sheet of model.sheets.values()) {
@@ -53,6 +65,7 @@ export function planFmt(
             start: cell.start,
             end: cell.end,
             text: applyUnit(showValue(v, prec), unit),
+            finding: findingFor(cell.start, cell.end),
           });
         }
       });
@@ -75,6 +88,7 @@ export function planFmt(
         start: a.value.start,
         end: a.value.end,
         text: applyUnit(showValue(rounded, prec), unit),
+        finding: findingFor(a.value.start, a.value.end),
       });
     }
   }
@@ -91,7 +105,12 @@ export function planFmt(
       const row = table.rows.find((rr) => rr.cells[0]?.text === f.rowLabel);
       const cell = row?.cells[idx];
       if (cell && cell.text === f.raw) {
-        edits.push({ start: cell.start, end: cell.end, text: f.isoFix });
+        edits.push({
+          start: cell.start,
+          end: cell.end,
+          text: f.isoFix,
+          finding: f,
+        });
       }
     }
   }
@@ -99,9 +118,9 @@ export function planFmt(
   return dedupe(edits);
 }
 
-function dedupe(edits: Edit[]): Edit[] {
+function dedupe(edits: PlannedEdit[]): PlannedEdit[] {
   const seen = new Set<string>();
-  const out: Edit[] = [];
+  const out: PlannedEdit[] = [];
   for (const e of edits) {
     const key = `${e.start}:${e.end}`;
     if (seen.has(key)) continue;
