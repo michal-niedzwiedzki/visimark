@@ -137,9 +137,10 @@ Because there is no global search, two tables that both have a `Net` column
 never collide: they are two sheets, and the names are `a.Net` and `b.Net`. A
 bare `Net` is always the one in the current sheet.
 
-**A name bound twice in one scope is a `DUP` error**, naming both lines. A
-scope is a single sheet — across all blocks that share its id, since those
-merge — or the merged document scope. Resolution keeps the first binding so
+**A name bound twice in one scope is a `DUP` error**, reported on the second
+binding and pointing back at the first. A scope is a single sheet — across all
+blocks that share its id, since those merge — or the merged document scope.
+Resolution keeps the first binding so
 that references to the name still resolve; the error fires regardless. `DUP` is
 not auto-fixable. Splitting one sheet's rules across several `vmark #id` blocks
 stays legal; it is only `DUP` when the blocks actually collide on a name.

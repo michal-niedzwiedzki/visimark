@@ -116,7 +116,7 @@ Populate it at each `emit()` in `eval/check.ts` from data already in hand:
 | `DATE` | the offending input cell |
 | `UNIT` | the offending cell, or the column's first deviating cell |
 | `UNDEF`, `VECTOR` | `{ start: ref.start, end: ref.end }` |
-| `DUP` | each colliding binding's `span` — this finding produces two diagnostics, one per line |
+| `DUP` | `span` is the duplicate binding; `relatedSpan` is the first one, rendered as LSP `relatedInformation` |
 | `TYPE` | the cell for a column, else `binding.span` |
 | `CYCLE` | first binding in the cycle, `binding.span` |
 | `SHEET` | the `vmark` block span (already available where these are emitted in `model/build.ts`) |
@@ -285,7 +285,7 @@ LSP libraries — no `vscode`.
 | `DATE` ambiguous | Error | `"11/12/2026" is ambiguous: 2026-11-12 or 2026-12-11, 29 days apart — fix by hand` | none |
 | `UNIT` | Error | ``column `Price` mixes units: `$` and `€``` (or `decorated on both sides`) | none |
 | `UNDEF` | Error | ``unknown name `Nett` `` (+ "did you mean `Net`?") | change to suggestion |
-| `DUP` | Error | ``` `Net` is already defined in this sheet ``` — on both lines | none |
+| `DUP` | Error | ``` `Net` is already defined in this sheet ``` , related information on the first binding | none |
 | `VECTOR` | Error | ``` `Net` is a column, not a value ``` | wrap in `SUM(...)` |
 | `CYCLE` | Error | `circular dependency: a → b → a` | none |
 | `TYPE` | Error | the evaluator message | none |
