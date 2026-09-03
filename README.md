@@ -99,6 +99,15 @@ written up in [`doc/visimark-design.md`](doc/visimark-design.md), including the
 deferred work and the known tensions; the implementation plan is
 [`docs/superpowers/plans/2026-09-03-visimark-cli.md`](docs/superpowers/plans/2026-09-03-visimark-cli.md).
 
+## For agents
+
+[`skills/visimark/SKILL.md`](skills/visimark/SKILL.md) is an agent skill for
+authoring and verifying these documents. Copy it to `~/.claude/skills/visimark/`
+to install it. Its central warning is one worth stating here too: `check`
+reports `0 problems` on a document containing no formulas at all, so a green
+check is evidence of agreement, not of derivation. Change an input and confirm
+the checker starts complaining before believing a document is wired up.
+
 Editor support is designed but not built:
 [`doc/visimark-editor-plugins-design.md`](doc/visimark-editor-plugins-design.md)
 specifies one language server — continuous `check` as diagnostics, `fmt` behind

@@ -46,3 +46,16 @@ export async function runCli(argv: string[], io: CliIO = {}): Promise<number> {
       return 2;
   }
 }
+
+// Run when invoked directly (`bun src/cli/main.ts check FILE`). When bundled
+// into dist/ and imported by bin/visimark.js this is false, and that shim
+// calls runCli itself.
+if (import.meta.main) {
+  runCli(process.argv.slice(2)).then(
+    (code) => process.exit(code),
+    (err: unknown) => {
+      console.error(err instanceof Error ? err.stack : String(err));
+      process.exit(2);
+    },
+  );
+}
