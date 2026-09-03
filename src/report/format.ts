@@ -96,6 +96,15 @@ function renderGroup(f: Finding): string[] {
       }
       return [head, ...body];
     }
+    case "UNIT": {
+      const head =
+        prefix("UNIT") +
+        id(f).padEnd(ID_FIELD) +
+        "· " +
+        (f.rowLabel ?? "").padEnd(DATE_VALUE_COL - 28) +
+        `"${f.raw ?? ""}"`;
+      return [head, CONT + (f.message ?? "")];
+    }
     case "NOTE":
       return [
         prefix("NOTE") + id(f).padEnd(ID_FIELD) + "· " + (f.message ?? ""),
