@@ -38,6 +38,7 @@ export function build(doc: LocatedDoc): DocModel {
         message:
           "this block declares column rules but no table immediately precedes it",
         sourceOffset: block.span.start,
+        span: block.span,
       });
     }
 
@@ -123,6 +124,7 @@ function parseOne(
         message: e.message,
         raw: rb.raw,
         sourceOffset: rb.start + e.start,
+        span: { start: rb.start + e.start, end: rb.start + e.end },
       });
       return null;
     }

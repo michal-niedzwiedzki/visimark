@@ -1,6 +1,6 @@
 import { Decimal } from "decimal.js";
 import type { Expr, Ref } from "../lang/ast.js";
-import type { RawTable } from "../parse/document.js";
+import type { RawTable, Span } from "../parse/document.js";
 import type { Binding, DocModel, Finding, Sheet } from "../model/types.js";
 import { closest } from "../report/levenshtein.js";
 import { parseIsoDate } from "./dates.js";
@@ -80,6 +80,7 @@ export function check(model: DocModel): CheckResult {
             raw: refText(ref),
             suggestion: r.kind === "unknown" ? r.suggestion ?? undefined : undefined,
             sourceOffset: ref.start,
+            span: { start: ref.start, end: ref.end },
           },
           { sheetId: binding.sheetId },
         );
@@ -96,6 +97,7 @@ export function check(model: DocModel): CheckResult {
             name: binding.name,
             raw: refText(ref),
             sourceOffset: ref.start,
+            span: { start: ref.start, end: ref.end },
           },
           { sheetId: binding.sheetId },
         );
@@ -121,6 +123,7 @@ export function check(model: DocModel): CheckResult {
       code: "CYCLE",
       sheetId: cyc[0]?.sheetId,
       cyclePath: cyc.map((b) => b.id),
+      span: cyc[0]?.span,
     });
     for (const b of cyc) unevaluable.add(b.id);
   }
@@ -136,6 +139,7 @@ export function check(model: DocModel): CheckResult {
         sheetId: a.sheetId,
         name: a.name,
         sourceOffset: a.commentSpan.start,
+        span: a.commentSpan,
       });
     }
   }
@@ -158,6 +162,7 @@ export function check(model: DocModel): CheckResult {
         sheetId: b.sheetId,
         name: b.name,
         suggestion: closest(b.name, [...referenced].map(idName)) ?? undefined,
+        span: b.span,
       });
     }
   }
@@ -186,7 +191,8 @@ export function check(model: DocModel): CheckResult {
         const v0 = evalExpr(binding.expr, rowEnv(binding, sheet, r));
         const v = roundValue(v0, prec);
         out.push(v);
-        const storedText = table.rows[r]!.cells[idx]?.text ?? "";
+        const cell = table.rows[r]!.cells[idx];
+        const storedText = cell?.text ?? "";
         if (storedText !== "" && !matchesStored(v, storedText, prec)) {
           emit(
             {
@@ -197,6 +203,7 @@ export function check(model: DocModel): CheckResult {
               stored: storedText,
               computed: showValue(v, prec),
               formula: formulaText(model, binding),
+              span: cell ? { start: cell.start, end: cell.end } : undefined,
             },
             { sheetId: sheet.id, rowIndex: r, isColumnCell: true },
           );
@@ -206,6 +213,7 @@ export function check(model: DocModel): CheckResult {
           out.push(null);
         } else if (e instanceof EvalError) {
           out.push(null);
+          const cell = table.rows[r]?.cells[idx];
           emit(
             {
               code: "TYPE",
@@ -213,6 +221,7 @@ export function check(model: DocModel): CheckResult {
               name: binding.name,
               rowLabel: rowLabel(table, r),
               message: e.message,
+              span: cell ? { start: cell.start, end: cell.end } : undefined,
             },
             { sheetId: sheet.id },
           );
@@ -266,6 +275,7 @@ export function check(model: DocModel): CheckResult {
               stored: anchorText,
               computed: showValue(v, prec),
               formula: formulaText(model, binding),
+              span: anchorValueSpanOf(model, binding.id) ?? binding.span,
             },
             { sheetId: binding.sheetId },
           );
@@ -282,6 +292,7 @@ export function check(model: DocModel): CheckResult {
             sheetId: binding.sheetId,
             name: binding.name,
             message: e.message,
+            span: binding.span,
           },
           { sheetId: binding.sheetId },
         );
@@ -327,8 +338,8 @@ export function check(model: DocModel): CheckResult {
     // input-column
     if (!ctx) throw new Unevaluable();
     const colIdx = ctx.sheet.columnIndex.get(res.column)!;
-    const text = ctx.sheet.table?.rows[ctx.row]?.cells[colIdx]?.text ?? "";
-    return coerceInput(text, ctx.sheet.id, res.column, ctx.row);
+    const cell = ctx.sheet.table?.rows[ctx.row]?.cells[colIdx];
+    return coerceInput(cell?.text ?? "", ctx.sheet.id, res.column, ctx.row, cell);
   }
 
   function lookupVector(
@@ -345,9 +356,10 @@ export function check(model: DocModel): CheckResult {
     if (res.kind === "input-column") {
       const sheet = model.sheets.get(res.sheetId)!;
       const colIdx = sheet.columnIndex.get(res.column)!;
-      return (sheet.table?.rows ?? []).map((row, r) =>
-        coerceInput(row.cells[colIdx]?.text ?? "", sheet.id, res.column, r),
-      );
+      return (sheet.table?.rows ?? []).map((row, r) => {
+        const cell = row.cells[colIdx];
+        return coerceInput(cell?.text ?? "", sheet.id, res.column, r, cell);
+      });
     }
     throw new Unevaluable();
   }
@@ -357,6 +369,7 @@ export function check(model: DocModel): CheckResult {
     sheetId: string,
     column: string,
     row: number,
+    cell: { start: number; end: number } | undefined,
   ): Value {
     const t = text.trim();
     if (NUMBER_RE.test(t)) return num(new Decimal(t));
@@ -381,6 +394,7 @@ export function check(model: DocModel): CheckResult {
             altA: iso.ok ? undefined : iso.ambiguous?.a,
             altB: iso.ok ? undefined : iso.ambiguous?.b,
             daysApart: iso.ok ? undefined : iso.ambiguous?.daysApart,
+            span: cell ? { start: cell.start, end: cell.end } : undefined,
           },
           { sheetId },
         );
@@ -541,6 +555,15 @@ function isCrossSheetAggregate(model: DocModel, binding: Binding): boolean {
     (res.kind === "column" || res.kind === "input-column") &&
     res.sheetId !== binding.sheetId
   );
+}
+
+function anchorValueSpanOf(model: DocModel, id: string): Span | undefined {
+  for (const a of model.anchors) {
+    if (`${a.sheetId}.${a.name}` === id && a.value) {
+      return { start: a.value.start, end: a.value.end };
+    }
+  }
+  return undefined;
 }
 
 function anchorValueText(model: DocModel, id: string): string | undefined {
