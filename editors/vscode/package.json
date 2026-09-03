@@ -1,0 +1,122 @@
+{
+  "name": "visimark-vscode",
+  "displayName": "VisiMark",
+  "description": "Spreadsheet mechanics for Markdown: every computed number carries the formula that produced it.",
+  "version": "0.1.0",
+  "publisher": "visimark",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "icon": "icon.png",
+  "categories": [
+    "Linters",
+    "Formatters"
+  ],
+  "keywords": [
+    "markdown",
+    "spreadsheet",
+    "formula",
+    "invoice"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/OWNER/visimark"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "activationEvents": [
+    "onLanguage:markdown"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "visimark.fixAllStale",
+        "title": "VisiMark: Fix All Stale Values"
+      },
+      {
+        "command": "visimark.fixSheet",
+        "title": "VisiMark: Fix Sheet"
+      },
+      {
+        "command": "visimark.explainSheet",
+        "title": "VisiMark: Explain Sheet"
+      },
+      {
+        "command": "visimark.showReport",
+        "title": "VisiMark: Show Report"
+      },
+      {
+        "command": "visimark.restartServer",
+        "title": "VisiMark: Restart Server"
+      }
+    ],
+    "configuration": {
+      "title": "VisiMark",
+      "properties": {
+        "visimark.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable VisiMark for Markdown files."
+        },
+        "visimark.check.debounce": {
+          "type": "number",
+          "default": 300,
+          "minimum": 0,
+          "description": "Milliseconds to wait after a keystroke before re-checking."
+        },
+        "visimark.format.fixDates": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "When formatting, also rewrite *decidable* non-ISO dates (`15.10.2026` becomes `2026-10-15`). Ambiguous dates are never touched."
+        },
+        "visimark.inlayHints.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the computed value beside a stale value, without changing the file."
+        },
+        "visimark.codeLens.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show a lens above each vmark block."
+        },
+        "visimark.statusBar.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show VisiMark's status for the active document in the status bar."
+        },
+        "visimark.server.path": {
+          "type": "string",
+          "default": "",
+          "description": "Development only: path to a server entry point to run instead of the bundled one."
+        },
+        "visimark.trace.server": {
+          "type": "string",
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
+          "default": "off",
+          "description": "Trace the communication between VS Code and the VisiMark language server."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "node esbuild.mjs",
+    "package": "bun run build && vsce package --no-dependencies"
+  },
+  "dependencies": {
+    "visimark": "workspace:*",
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.2.0",
+    "esbuild": "^0.24.0",
+    "ovsx": "^0.10.0"
+  }
+}

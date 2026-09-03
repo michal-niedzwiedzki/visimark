@@ -2,3 +2,4 @@ node_modules
 dist
 *.vsix
 *.log
+packages/visimark/README.md
