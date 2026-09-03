@@ -86,6 +86,14 @@ rejected outright, because it is 11 December or 12 November depending on where
 its author lives, and no amount of care catches that by reading. Thousands
 separators are rejected for the same reason.
 
+A column may carry a currency symbol or a physical unit — `$5.50`, `12 N` —
+and VisiMark strips it to compute and puts it back when it writes. What it will
+not do is let one column mean two things: a column holding both `$5.00` and
+`€5.00` is an error, not a sum. The decoration is inert, never converted and
+never propagated through a formula.
+
+A name bound twice in one scope is an error rather than a silent overwrite.
+
 This makes the format smaller, not merely stricter: there is no locale, no
 configuration, and no rule for what a bare `/` means.
 
