@@ -1,0 +1,61 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      - run: bun test
+      - run: bun run build
+
+      - name: Publish the engine to npm
+        working-directory: packages/visimark
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          if npm view "visimark@$VERSION" version >/dev/null 2>&1; then
+            echo "visimark@$VERSION is already published; skipping."
+          else
+            npm publish --access public
+          fi
+
+      - name: Package the extension
+        working-directory: editors/vscode
+        run: bunx @vscode/vsce package --no-dependencies --out visimark.vsix
+
+      - name: Publish to the VS Code Marketplace
+        working-directory: editors/vscode
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: bunx @vscode/vsce publish --no-dependencies --packagePath visimark.vsix || echo "already published; skipping"
+
+      - name: Publish to Open VSX
+        working-directory: editors/vscode
+        env:
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
+        run: bunx ovsx publish visimark.vsix -p "$OVSX_PAT" || echo "already published; skipping"
+
+      - name: GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: editors/vscode/visimark.vsix
+          body_path: CHANGELOG.md
+          generate_release_notes: true

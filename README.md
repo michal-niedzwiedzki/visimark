@@ -107,6 +107,15 @@ written up in [`doc/visimark-design.md`](doc/visimark-design.md), including the
 deferred work and the known tensions; the implementation plan is
 [`docs/superpowers/plans/2026-09-03-visimark-cli.md`](docs/superpowers/plans/2026-09-03-visimark-cli.md).
 
+The editor support is implemented too: one language server
+(`packages/visimark-lsp`) wrapping the same engine, and a VS Code client
+(`editors/vscode`) — live diagnostics, `fmt` behind the editor's own
+format-on-save, quick fixes, inlay hints, CodeLens and hover.
+
+Releases are tag-driven: pushing a `vX.Y.Z` tag publishes the engine to npm and
+the extension to both the VS Code Marketplace and Open VSX. The workflow needs
+three repository secrets — `NPM_TOKEN`, `VSCE_PAT` and `OVSX_PAT`.
+
 ## For agents
 
 [`skills/visimark/SKILL.md`](skills/visimark/SKILL.md) is an agent skill for
@@ -116,9 +125,9 @@ reports `0 problems` on a document containing no formulas at all, so a green
 check is evidence of agreement, not of derivation. Change an input and confirm
 the checker starts complaining before believing a document is wired up.
 
-Editor support is designed but not built:
-[`doc/visimark-editor-plugins-design.md`](doc/visimark-editor-plugins-design.md)
-specifies one language server — continuous `check` as diagnostics, `fmt` behind
+Editor support is specified in
+[`doc/visimark-editor-plugins-design.md`](doc/visimark-editor-plugins-design.md):
+one language server — continuous `check` as diagnostics, `fmt` behind
 the editor's own format-on-save, quick fixes, and inlay hints that show the
 computed value without touching the bytes — with VS Code as the first client.
 
