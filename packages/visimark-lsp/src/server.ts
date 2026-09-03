@@ -10,6 +10,7 @@ import {
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { analyzeDocument, forgetDocument } from "./analysis.js";
 import { DEFAULTS, mergeSettings, type Settings } from "./settings.js";
+import { statusOf, toDiagnostics } from "./diagnostics.js";
 
 const connection = createConnection(ProposedFeatures.all);
 const documents = new TextDocuments(TextDocument);
@@ -78,12 +79,19 @@ function scheduleCheck(doc: TextDocument, immediate = false): void {
 }
 
 async function runCheck(doc: TextDocument): Promise<void> {
-  const analysis = analyzeDocument(doc.uri, doc.version, doc.getText());
-  if (!analysis.applicable) {
+  if (!settings.enable) {
     await connection.sendDiagnostics({ uri: doc.uri, diagnostics: [] });
     return;
   }
-  await connection.sendDiagnostics({ uri: doc.uri, diagnostics: [] });
+  const analysis = analyzeDocument(doc.uri, doc.version, doc.getText());
+  await connection.sendDiagnostics({
+    uri: doc.uri,
+    diagnostics: toDiagnostics(doc, analysis),
+  });
+  await connection.sendNotification(
+    "visimark/status",
+    statusOf(doc.uri, analysis),
+  );
 }
 
 documents.onDidOpen((e) => scheduleCheck(e.document, true));
