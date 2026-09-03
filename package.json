@@ -2,11 +2,16 @@
   "name": "visimark-monorepo",
   "private": true,
   "type": "module",
-  "workspaces": ["packages/*", "editors/*"],
+  "workspaces": [
+    "packages/*",
+    "editors/*"
+  ],
   "scripts": {
     "test": "bun test",
     "typecheck": "bun run --filter '*' typecheck",
-    "build": "bun run --filter '*' build"
+    "build": "bun run --filter '*' build",
+    "vscode-install": "cd editors/vscode && bun run install-local",
+    "vscode-uninstall": "cd editors/vscode && bun run uninstall-local"
   },
   "devDependencies": {
     "@types/bun": "^1.4.0",

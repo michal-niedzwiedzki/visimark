@@ -112,6 +112,19 @@ The editor support is implemented too: one language server
 (`editors/vscode`) — live diagnostics, `fmt` behind the editor's own
 format-on-save, quick fixes, inlay hints, CodeLens and hover.
 
+To try the extension in your own VS Code:
+
+```bash
+bun run vscode-install     # build, package and install (also reinstalls)
+bun run vscode-uninstall   # remove it again
+```
+
+Reload the window afterwards, then open `doc/example-invoice-drift.md`. Both
+targets need the `code` CLI on your PATH. For development, press <kbd>F5</kbd>
+instead — that runs the extension straight from `editors/vscode` in a separate
+Extension Development Host, so uninstall the packaged copy first or you will see
+every diagnostic twice.
+
 Releases are tag-driven: pushing a `vX.Y.Z` tag publishes the engine to npm and
 the extension to both the VS Code Marketplace and Open VSX. The workflow needs
 three repository secrets — `NPM_TOKEN`, `VSCE_PAT` and `OVSX_PAT`.

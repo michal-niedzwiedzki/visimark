@@ -107,7 +107,9 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "build": "node esbuild.mjs",
-    "package": "bun run build && vsce package --no-dependencies"
+    "package": "bun run build && vsce package --no-dependencies --out visimark.vsix",
+    "install-local": "command -v code >/dev/null 2>&1 || { echo \"VS Code CLI not found on PATH. In VS Code run: Shell Command: Install code command in PATH\" >&2; exit 1; } && bun run package && code --install-extension visimark.vsix --force",
+    "uninstall-local": "command -v code >/dev/null 2>&1 || { echo \"VS Code CLI not found on PATH. In VS Code run: Shell Command: Install code command in PATH\" >&2; exit 1; } && code --uninstall-extension visimark.visimark-vscode"
   },
   "dependencies": {
     "visimark": "workspace:*",
