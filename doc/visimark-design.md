@@ -1,6 +1,6 @@
 # VisiMark — design
 
-Status: design agreed, not implemented. Date: 2026-09-03.
+This document tracks the intended behaviour of the engine and is kept current.
 
 Worked examples: [`example-invoice.md`](example-invoice.md) (clean) and
 [`example-invoice-drift.md`](example-invoice-drift.md) (deliberately broken).
@@ -127,9 +127,22 @@ is the omission a reporting table will miss first.
 ## 6. Name resolution and scoping
 
 Resolution of a bare identifier, in order: the sheet's own columns, then the
-sheet's own scalars, then document scope. A qualified name `sheet.name` reaches
-another sheet's columns or scalars directly. An unresolvable name is an `UNDEF`
-error carrying a did-you-mean suggestion by edit distance.
+sheet's own scalars, then document scope. There is no global name search — a
+bare name resolves in its own sheet, then document scope, and nowhere else. A
+qualified name `sheet.name` reaches another sheet's columns or scalars
+directly. An unresolvable name is an `UNDEF` error carrying a did-you-mean
+suggestion by edit distance.
+
+Because there is no global search, two tables that both have a `Net` column
+never collide: they are two sheets, and the names are `a.Net` and `b.Net`. A
+bare `Net` is always the one in the current sheet.
+
+**A name bound twice in one scope is a `DUP` error**, naming both lines. A
+scope is a single sheet — across all blocks that share its id, since those
+merge — or the merged document scope. Resolution keeps the first binding so
+that references to the name still resolve; the error fires regardless. `DUP` is
+not auto-fixable. Splitting one sheet's rules across several `vmark #id` blocks
+stays legal; it is only `DUP` when the blocks actually collide on a name.
 
 Sheets read each other freely, which makes every column name a public API.
 The mitigation is that all references resolve **by name**, so a rename or typo
@@ -169,6 +182,37 @@ Thousands separators are rejected. They reintroduce exactly what ISO-only dates
 eliminated: a separator whose meaning depends on locale, colliding with the
 format's own punctuation. Presentation is the renderer's job.
 
+**A materialised value may carry a unit.** `$5.50`, `5.50 PLN`, `12 N` and
+`3.5 kg` are numbers with a decoration: a run of characters that are not
+digits, whitespace, `.` or `-`, sitting entirely before the number or entirely
+after it. A leading `-` binds to the number, so `$-5.00` and `-$5.00` both read
+as −5.00. Decoration on both sides is a `UNIT` error. Parenthesised negatives
+(`($5.00)`) are not supported.
+
+The decoration is inferred, never declared — the same principle as write
+precision and column alignment. **Within a column, every non-empty cell must
+carry the identical decoration**, or none at all. Any deviation — `$` against
+`€`, prefix against suffix, a decorated cell among bare ones — is a `UNIT`
+error that names the forms it saw. The tool never decides which decoration is
+the right one; a human does.
+
+A unit is stripped for every arithmetic operation, every comparison, and
+precision inference, and is **re-applied on write-back**: a column whose input
+cells are uniformly `$5.50`, `$4.00` has its computed cells written `$16.50`;
+a bare column stays bare. A computed column does not inherit a unit from its
+operands — there is no dimensional analysis — so a column computing
+`Force / Length` writes bare numbers until its own cells are decorated.
+Operand propagation and an explicit per-column unit declaration are deferred
+(section 14).
+
+Scalars work the same way: a scalar's unit is the decoration on its anchored
+value, and two anchors on one scalar that disagree are a `UNIT` error. The
+invoice's `**23300.00**<!--vmark=lines.net_total--> PLN` is unaffected: the
+anchored value is bare and `PLN` sits in the prose after the comment.
+
+`%` is not a unit. `23%` remains exactly `0.23` by the rule in section 4; a
+unit never scales the number it decorates.
+
 ## 8. Evaluation
 
 Parse every block into an AST. Build a dependency graph over bindings, spanning
@@ -192,6 +236,12 @@ Everything else — input columns, prose, headings, table alignment, the blocks
 themselves — is human territory and is never touched. The sole exception is
 `fmt --fix-dates`, which is opt-in precisely because it writes to input.
 
+A rewritten cell or anchor keeps its column's or scalar's inferred unit: the
+number changes, the `$` or ` kg` around it does not. A column carrying a `UNIT`
+error is not rewritten at all — the tool cannot know which decoration to
+apply — and its staleness is reported once, as the `UNIT` error, not as a row
+of `STALE` findings.
+
 Writing must not reformat the document. The implementation locates targets via
 mdast **positions** and then splices the original source buffer by byte offset.
 It never round-trips through `remark-stringify`, which would normalise emphasis
@@ -205,7 +255,9 @@ justifies the project.
 |------|---------|--------------|
 | `STALE` | stored value disagrees with its formula | yes, by `fmt` |
 | `DATE` | not an ISO 8601 calendar date | only if decidable, with `--fix-dates` |
+| `UNIT` | a column mixes unit decorations, or a value is decorated on both sides | no |
 | `UNDEF` | unresolvable name | no |
+| `DUP` | a name is bound twice in one scope | no |
 | `VECTOR` | foreign column outside an aggregate | no |
 | `CYCLE` | circular dependency | no |
 | `TYPE` | illegal operand types | no |
@@ -237,8 +289,11 @@ blocks: a single readable view of a sheet's logic and evaluation order.
 
 ## 12. Architecture
 
-TypeScript, single package, distributed via `npx`. A Rust binary would serve
-the agent story better but costs the extension path; it is premature.
+TypeScript, distributed via `npx`. A Rust binary would serve the agent story
+better but costs the extension path; it is premature. The engine is one package
+(`packages/visimark`) in a workspace that also holds the language server and
+the editor clients; the split and the editor-facing API it exposes are covered
+in the editor-plugins design.
 
 | Module | Responsibility | Depends on |
 |--------|----------------|------------|
@@ -272,12 +327,30 @@ Beyond those: unit tests per module; golden-file tests for the splicer proving
 that a one-cell change touches one line; and a property test that `fmt` is
 idempotent.
 
+`DUP` and `UNIT` must not fire on either example — both keep their numbers bare
+and their currency in prose — so adding those two codes leaves the acceptance
+transcript unchanged. Each gets its own unit coverage: a sheet that binds a
+name twice; a column mixing `$` and `€`; a column with one bare cell among
+decorated ones; a value decorated on both sides; a `$`-decorated input column
+whose computed neighbour is rewritten `$`-decorated and stays byte-stable
+under a second `fmt`.
+
 ## 14. Deferred
 
 Month and partial-date types. Joining sheets by key. Per-column precision and
-output formats. Per-row exceptions. A function library beyond the nine. The VS
-Code extension, including the decision of whether it renders anything at all or
-merely runs `check` on save. Incremental reparse.
+output formats. Per-row exceptions. A function library beyond the nine.
+Incremental reparse.
+
+**Units, beyond the inferred decoration in section 7.** Propagating a unit
+through a formula so that a computed column inherits `$` from `Price * Qty`
+without a seed cell; an explicit `Col :: "unit"` declaration for computed
+columns whose cells cannot be inferred from; anything resembling dimensional
+analysis, where `N` divided by `m` yields `N/m`. The v1 rule is deliberately
+flat: a unit is a display decoration on one column, inferred from that column's
+own cells, and it does not compute.
+
+The editor plugins are specified separately in
+[`visimark-editor-plugins-design.md`](visimark-editor-plugins-design.md).
 
 ## 15. Known tensions
 
@@ -286,6 +359,15 @@ started with.** Every column name is now a public API, and renaming one can
 break a sheet three pages away. Accepted deliberately, mitigated by name-based
 resolution so the break is loud, by `check` in CI, and by `WARN` on unused
 scalars.
+
+**Unit decorations let locale back in through a side door.** `$` and `kg` are
+exactly the presentational, culture-bound noise the ISO-only date rule and the
+thousands-separator ban were meant to keep out. The compromise: a unit is
+inert. It is never parsed for meaning, never converted, never propagated
+through a formula; it is a fixed string the tool carries from an input cell to
+the computed cells beside it, and a column that is not internally consistent
+about it is an error. The number is still the value; the decoration is still
+the renderer's concern, just pinned in place.
 
 **Anchors depend on renderers permitting raw HTML.** Verified on 2026-09-03;
 see section 16. Seven of eight tested configurations pass. The one failure is

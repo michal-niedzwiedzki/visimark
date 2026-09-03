@@ -95,9 +95,15 @@ The CLI is implemented: `visimark check`, `fmt`, `eval` and `explain`, in
 TypeScript, run with `npx visimark`. Both worked examples pass as the acceptance
 suite — `check` on the drift invoice reproduces the transcript above
 byte-for-byte, and `fmt` leaves the clean invoice untouched. The design is
-written up in [`doc/2026-09-03-visimark-design.md`](doc/2026-09-03-visimark-design.md),
-including the deferred work and the known tensions; the implementation plan is
+written up in [`doc/visimark-design.md`](doc/visimark-design.md), including the
+deferred work and the known tensions; the implementation plan is
 [`docs/superpowers/plans/2026-09-03-visimark-cli.md`](docs/superpowers/plans/2026-09-03-visimark-cli.md).
+
+Editor support is designed but not built:
+[`doc/visimark-editor-plugins-design.md`](doc/visimark-editor-plugins-design.md)
+specifies one language server — continuous `check` as diagnostics, `fmt` behind
+the editor's own format-on-save, quick fixes, and inlay hints that show the
+computed value without touching the bytes — with VS Code as the first client.
 
 ```
 git clone … && cd visimark && bun install
