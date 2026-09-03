@@ -1,7 +1,7 @@
 # Invoice 2026/09/014
 
-**Seller:** Epsi sp. z o.o., ul. Piękna 12, 00-549 Warszawa, NIP 5252445566
-**Buyer:** Northwind Logistics GmbH, Hafenstraße 8, 20457 Hamburg, USt-IdNr. DE811907980
+**Seller:** EPSI sp. z o.o., ul. Bura 21, 00-000 Burowce, NIP PL9998877666
+**Buyer:** Northwind Logistics GmbH, Hafenstraße 8, 22222 Hamburg, USt-IdNr. DE881188118
 
 **Issued:** 2026-09-03 &nbsp;&nbsp; **Delivered:** 2026-08-31 &nbsp;&nbsp; **Payment due:** 2026-09-17
 

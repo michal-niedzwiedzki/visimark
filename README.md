@@ -7,8 +7,9 @@ by VisiCorp and later ported to the IBM PC.
 A VisiMark document is an ordinary Markdown file. It renders correctly on
 GitHub, in VS Code preview, and through pandoc to both HTML and Word, today,
 with no plugin — verified, not assumed. What VisiMark adds is that every
-computed number in it carries the formula that produced it, and that a machine
-can prove the two still agree.
+computed number in it carries the formula that produced it, that a machine can
+prove the two still agree, and that a change to either shows up as a small,
+readable diff.
 
 ## Why
 
@@ -76,6 +77,35 @@ question a human has to answer.
 The CLI is the product. An agent must be able to verify a document without an
 editor; a VS Code extension is a later, thin wrapper.
 
+## Diffable by construction
+
+An `.xlsx` is a zip of XML: change one cell and code review can tell you the
+file changed, and essentially nothing more. VisiMark documents review like
+source, and that is a design constraint rather than a side effect of being
+text.
+
+`fmt` never re-renders the Markdown. It locates each value it owns by position
+and splices the original byte buffer, so a rewrite touches the characters of
+that number and nothing else — no reflowed paragraphs, no renormalised emphasis
+markers, no realigned table columns, none of the four-hundred-line diff a
+round-trip through a Markdown printer would produce for a one-cell change. It
+also writes only what it owns: computed cells and anchored values. Input
+columns, prose and headings are human territory and are never touched.
+
+Raising one input in the worked invoice — on-call hours from 12 to 20, the
+very edit the drift example above leaves unpropagated — makes `fmt` update 6
+cells and 9 anchors, and the result is a **13-line diff in a 127-line
+document**. Every changed line is a figure that genuinely depends on that
+input, so the diff *is* the propagation: a reviewer sees the VAT, the three
+milestone instalments, the early-payment terms and the EUR conversion all move
+together, and can check that they moved for the right reason.
+
+The other half is that the diff contains everything. The formula lives in the
+document, so a changed rule shows up as a changed rule. Nothing outside the file
+can alter a number — no plugins, no config, no clock. And because an aggregate
+takes a column rather than an expression, every intermediate is materialised on
+the page: a total is always the sum of numbers the reviewer can see.
+
 ## What it refuses to do
 
 Where a value could mean two things, VisiMark errors rather than guesses.
@@ -94,14 +124,30 @@ never propagated through a formula.
 
 A name bound twice in one scope is an error rather than a silent overwrite.
 
+There are no boolean literals. Comparisons produce booleans and `IF()` consumes
+them, but a boolean is never written into a cell — a materialised value is a
+number, a date, or a string, so the word `true` in a column stays the string it
+looks like.
+
+**There is no plugin architecture, and there will not be one.** A document's
+numbers depend on its own text and the version of VisiMark reading it, and on
+nothing else — no extension modules, no config file, no environment, no
+network, no clock. A registry of host-supplied functions would produce
+documents whose arithmetic cannot be checked from the document, which is the
+one thing the format exists to prevent. When the built-in vocabulary is too
+small the answer is a new primitive in the engine, readable by everyone and
+runnable by everyone; when a value genuinely comes from outside, it belongs in
+an input column where a human wrote it down.
+
 This makes the format smaller, not merely stricter: there is no locale, no
 configuration, and no rule for what a bare `/` means.
 
 ## Status
 
 The CLI is implemented: `visimark check`, `fmt`, `eval` and `explain`, in
-TypeScript, run with `npx visimark`. Both worked examples pass as the acceptance
-suite — `check` on the drift invoice reproduces the transcript above
+TypeScript. `npm install -g visimark` puts a `visimark` command on your PATH;
+`npx visimark` runs it without installing. Both worked examples pass as the
+acceptance suite — `check` on the drift invoice reproduces the transcript above
 byte-for-byte, and `fmt` leaves the clean invoice untouched. The design is
 written up in [`doc/visimark-design.md`](doc/visimark-design.md), including the
 deferred work and the known tensions; the implementation plan is
@@ -146,10 +192,14 @@ computed value without touching the bytes — with VS Code as the first client.
 
 ```
 git clone … && cd visimark && bun install
-bun test                    # 88 tests, the two examples included
-bun run build               # bundle to dist/ for npx
-bun src/cli/main.ts check doc/example-invoice-drift.md
+bun test                    # the full suite, the two examples included
+bunx visimark check doc/example-invoice-drift.md
 ```
+
+`bun install` builds the engine and links the `visimark` command into
+`node_modules/.bin`, so `bunx visimark` works in a fresh clone. To run the CLI
+straight from source without a build, use `bun packages/visimark/src/cli/main.ts
+check FILE`.
 
 The project began as a CSV-based idea and moved to Markdown so that several
 small sheets can live inside one master document, and so that the file renders

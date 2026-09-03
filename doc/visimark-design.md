@@ -30,6 +30,28 @@ Excel file compatibility, no attempt at Excel's function library.
 3. **Ambiguity is an error, never a guess.** Where a value could mean two
    things, VisiMark refuses rather than picks. This rule produced the ISO-only
    date decision and the rejection of thousands separators.
+4. **The meaning of a document depends only on its own text and the version of
+   `visimark` that reads it.** Nothing ambient may change what a number
+   evaluates to: no extension modules, no config file, no environment
+   variables, no network, no clock. Two people checking out the same commit get
+   the same answer, and a reviewer reading the diff sees every input to it.
+
+**The consequence is that VisiMark will not have a plugin architecture**, and
+this is a deliberate refusal rather than an unbuilt feature. A registry of
+host-supplied functions would mean a document whose numbers cannot be verified
+from the document — the Excel macro problem, where the arithmetic that produced
+a figure lives somewhere the reviewer cannot see. It would also make a Markdown
+file in a pull request able to select code that CI then executes. Both costs
+fall on exactly the property the project exists to provide, so the extension
+point is closed.
+
+Where the built-in vocabulary is too small, the fix is to grow it in this
+document and ship it in the engine — a primitive everyone can read and everyone
+can run — never to let a document reach outside itself. Values that genuinely
+come from elsewhere (an FX rate, a quoted price) belong in an input column,
+where a human or an agent writes them down, dated and diffable. The single
+exception to constraint 2, `fmt --fix-dates`, is the shape any future exception
+must take: explicit, document-local, and opt-in at the command line.
 
 ## 3. Document model
 
@@ -90,15 +112,101 @@ scalar, and it reaches the reader through an anchor.
 | `23%` | number, exactly equal to `0.23` |
 | `2026-09-03` | ISO 8601 calendar date |
 | `"net 30"` | string |
-| `true` / `false` | boolean |
+
+**There are no boolean literals.** `true` and `false` are not part of the
+surface syntax, and a boolean can never be materialised into a table cell or an
+anchor. The boolean *type* exists inside the engine — it is what a comparison
+produces and what `IF()` and `and`/`or`/`not` consume — but it lives only in
+flight, between the comparison that creates it and the function that consumes
+it.
+
+The rule is enforced at two points. `true` and `false` do not lex — the words
+are refused where they are written, so they can be neither a value nor a bound
+name — and a binding whose expression evaluates to a boolean is a `TYPE` error
+reported once against the binding, never once per row:
+
+```
+TYPE    s.Out     a boolean cannot be stored; wrap it in `IF()` to produce a
+                  number or a string
+```
+
+So `Flag = Days > 30` is refused and `Status = IF(Days > 30, "late", "current")`
+is the way to write it. Comparisons, `and`, `or` and `not` are unaffected: they
+compose freely inside a condition, which is the only place a boolean was ever
+going.
+
+Two reasons. A literal boolean in a formula is dead code — `IF(true, a, b)` is
+just `a` — and its only real use is a document-level flag that switches which
+arithmetic applies, which makes a figure depend on a toggle far from the table
+it appears in. And a materialised boolean reintroduces ambiguity of exactly
+the kind constraint 3 forbids: a cell holding the word `true` would have to be
+read as a boolean rather than as the string it plainly is, so one English word
+in an input column would silently change type. A materialised value is a
+number, a date, or a string — nothing else.
 
 **Operators.** `+ - * / ^`, comparison `== != < <= > >=`, and `and or not`.
 Equality is `==`; `=` is binding only. Two characters are deliberately absent:
 `|` would collide with table syntax, and `%` is postfix-only so that `23%` is
 never ambiguous. Use `MOD()` for modulo.
 
-**Functions, v1.** `SUM MIN MAX COUNT AVG ROUND ABS IF MOD`. Nine, chosen to
-cover the examples and nothing more. Growth is expected; it is not a v1 concern.
+### Shape: map and reduce
+
+Every expression has one of two **shapes**, and this distinction does more work
+in the language than the value types do.
+
+A **scalar** is a single value. A **vector** is a column, and exactly one thing
+produces one: a reference to a column name. From there the rules are closed:
+
+- A **map** function is scalar → scalar. It runs once per row inside a column
+  rule, and its result is a scalar wherever it appears.
+- A **reduce** function is vector → scalar. It collapses a column to one value.
+- There is **no vector → vector**. Nothing in the language transforms a column
+  into another column except a column rule, which is a map applied per row.
+
+A column rule is therefore a map over its sheet's rows, and a scalar binding is
+whatever its expression evaluates to. Three rules that otherwise look like
+unrelated restrictions all follow from this one:
+
+- `SUM(schedule.Amount)` is legal and a bare `schedule.Amount` is a `VECTOR`
+  error, because a vector has no meaning outside a reduce (section 6).
+- `Share = Net / SUM(Net)` is legal, because a reduce yields a scalar and a
+  scalar composes anywhere a map accepts one — including back inside the column
+  rule the reduce read from.
+- `SUM(Price * Qty)` is refused. **A reduce takes a column reference, never an
+  expression.** This is the audit trail rather than a limit of the parser: it
+  forces every intermediate to be materialised as a column the reader can see,
+  so a total is always the sum of numbers printed on the page. Writing a `Net`
+  column first is the point, not a detour.
+
+### Builtin functions
+
+Nine, chosen to cover the examples and nothing more. Each is declared with its
+shape and its exact argument count, in one table in `eval/functions.ts` — the
+single home for a classification the dependency walk, the evaluator and the
+reporter each need. The parser stays function-agnostic: it builds a call node
+for any name, and the name is judged afterwards.
+
+| Function | Kind | Arity | Meaning |
+|----------|------|------:|---------|
+| `SUM(col)` | reduce | 1 | total of a column; `0` over an empty column |
+| `MIN(col)` | reduce | 1 | least value; numbers or dates, not mixed |
+| `MAX(col)` | reduce | 1 | greatest value; numbers or dates, not mixed |
+| `AVG(col)` | reduce | 1 | arithmetic mean; an empty column is a `TYPE` error |
+| `COUNT(col)` | reduce | 1 | number of rows |
+| `ROUND(x, places)` | map | 2 | half-up to `places` decimals |
+| `ABS(x)` | map | 1 | absolute value |
+| `MOD(x, y)` | map | 2 | remainder; the language has no `%` operator |
+| `IF(cond, a, b)` | map | 3 | `cond` must be a boolean; returns `a` or `b` |
+
+**Arity is exact and checked statically**, once per binding, before anything is
+evaluated. `ROUND(Qty)` is a `TYPE` error blaming the span of the call, not a
+crash and not one complaint per row — a malformed call is one root cause and
+yields one finding, as section 8 requires. An unrecognised name is a `TYPE`
+error carrying a did-you-mean suggestion, bounded by edit distance so that a
+name unlike anything builtin is reported without a misleading guess.
+
+Every reduce takes exactly one argument by construction, which is the shape
+rule restated as a number: there is nothing for a second column to mean.
 
 ## 5. Dates
 
@@ -261,7 +369,7 @@ justifies the project.
 | `DUP` | a name is bound twice in one scope | no |
 | `VECTOR` | foreign column outside an aggregate | no |
 | `CYCLE` | circular dependency | no |
-| `TYPE` | illegal operand types | no |
+| `TYPE` | illegal operand types, or a malformed call (name, arity, shape) | no |
 | `SHEET` | column rules with no table | no |
 | `ANCHOR` | anchor with no rewritable target | no |
 | `WARN` | scalar defined and never read | no |
@@ -341,6 +449,31 @@ under a second `fmt`.
 Month and partial-date types. Joining sheets by key. Per-column precision and
 output formats. Per-row exceptions. A function library beyond the nine.
 Incremental reparse.
+
+**Named inline function definitions — `NAME(params) = expression` in a block —
+are deferred, to be reconsidered on 2028-01-01 if a v2 of this spec is
+warranted.** The case for them is real but unevidenced: nothing in either
+worked example repeats. `example-invoice.md` computes line items, VAT, a
+payment schedule, an FX conversion and a reconciliation in sixteen bindings, no
+two of which share a shape a function could factor out — and the closest thing
+to repetition, three `SUM()` calls over three columns, is already as short as it
+can be. A column rule is itself the abstraction over repetition, and it covers
+the cases the format was built for.
+
+The cost, by contrast, is known and is paid up front: a fourth namespace
+alongside columns, scalars and document scope, colliding with the builtin table
+above; the language's first lexical scope, for parameters, which today's
+resolution order (section 6) has no notion of; a shadowing rule; recursion
+detection, which the binding-level `CYCLE` machinery cannot see; and a surface
+in the language server for names that are neither builtin nor bindings.
+
+The trigger to revisit is a real document in which one scalar → scalar
+expression appears in three or more places, or the same expression is needed in
+two sheets. That document is the specification's motivation, and until it
+exists the feature is speculative. Should it be built, the shape rule above
+settles its form without further argument: a user-defined function is a **map**
+— scalar parameters, scalar result. Users cannot define a reduce, because doing
+so would require vector parameters, and the language does not have them.
 
 **Units, beyond the inferred decoration in section 7.** Propagating a unit
 through a formula so that a computed column inherits `$` from `Price * Qty`
