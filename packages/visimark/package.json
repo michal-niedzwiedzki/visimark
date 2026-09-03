@@ -23,7 +23,7 @@
   "scripts": {
     "test": "bun test",
     "typecheck": "tsc --noEmit",
-    "build": "bun build src/cli/main.ts src/index.ts --target node --outdir dist",
+    "build": "bun build src/cli/main.ts src/index.ts --target node --outdir dist && tsc -p tsconfig.build.json",
     "prepublishOnly": "bun run typecheck && bun test && bun run build"
   },
   "engines": {
