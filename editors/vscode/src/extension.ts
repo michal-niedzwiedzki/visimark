@@ -206,12 +206,18 @@ async function staleEdits(doc: vscode.TextDocument): Promise<vscode.TextEdit[]> 
 }
 
 /**
- * Whether this save is one the user asked to be fixed.
+ * Whether this save should bring the document's stale values up to date.
  *
- * `format.fixOnSave` is off by default, and an autosave never counts however
- * it is set: `files.autoSave` fires every few hundred milliseconds, and
- * rewriting values then would move text out from under the cursor mid-edit.
- * `editor.formatOnSave` draws the same line.
+ * `format.fixOnSave` is on by default: a document whose numbers disagree with
+ * their formulas is the state the project exists to eliminate, and a save is
+ * the moment the author has finished the edit that caused it. Only values
+ * VisiMark owns move — prose, headings and input columns are never touched —
+ * so the edit is always one the author could have made by hand.
+ *
+ * An autosave never counts, however the setting is left: `files.autoSave`
+ * fires every few hundred milliseconds, and rewriting values then would move
+ * text out from under the cursor mid-edit. `editor.formatOnSave` draws the
+ * same line.
  */
 function fixesOnSave(event: vscode.TextDocumentWillSaveEvent): boolean {
   if (event.document.languageId !== "markdown") return false;
@@ -219,7 +225,7 @@ function fixesOnSave(event: vscode.TextDocumentWillSaveEvent): boolean {
   const config = vscode.workspace.getConfiguration("visimark");
   return (
     config.get<boolean>("enable", true) &&
-    config.get<boolean>("format.fixOnSave", false)
+    config.get<boolean>("format.fixOnSave", true)
   );
 }
 

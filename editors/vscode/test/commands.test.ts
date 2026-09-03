@@ -83,25 +83,40 @@ const FIX_ON_SAVE = "visimark.format.fixOnSave";
 const MANUAL = 1;
 const AFTER_DELAY = 2;
 
-test("fixOnSave is contributed and starts off", () => {
+test("fixOnSave is contributed and starts on", () => {
   const setting = pkg.contributes.configuration.properties[FIX_ON_SAVE];
   expect(setting).toBeDefined();
   expect(setting.type).toBe("boolean");
-  expect(setting.default).toBe(false);
+  expect(setting.default).toBe(true);
 });
 
-// The whole point of the default: a save must not rewrite the file behind the
-// user's back until they ask for it.
-test("saving leaves the document alone while fixOnSave is off", async () => {
+// The manifest default and the code's fallback are two separate declarations
+// of the same decision, and only the manifest one is visible in Settings.
+// They drift silently: the extension reads its fallback when the setting is
+// unset, which is exactly the case a user never configures.
+test("the code's fallback agrees with the manifest default", async () => {
   host.config.delete(FIX_ON_SAVE);
   const doc = host.openFile(sample);
-  expect(await host.save(doc, MANUAL)).toHaveLength(0);
+  const edits = await host.save(doc, MANUAL);
+  const manifestDefault =
+    pkg.contributes.configuration.properties[FIX_ON_SAVE].default;
+  expect(edits.length > 0).toBe(manifestDefault);
 });
 
-test("saving with fixOnSave on offers VisiMark's edits to the save", async () => {
-  host.config.set(FIX_ON_SAVE, true);
+// On by default: a stale document is the state the project exists to
+// eliminate, and a save is when the author has finished the edit that caused
+// it.
+test("an unconfigured save is one VisiMark acts on", async () => {
+  host.config.delete(FIX_ON_SAVE);
   const doc = host.openFile(sample);
   expect(await host.save(doc, MANUAL)).toHaveLength(1);
+});
+
+// Turning it off must genuinely stop the rewrite, not merely skip the prompt.
+test("saving is left alone once fixOnSave is off", async () => {
+  host.config.set(FIX_ON_SAVE, false);
+  const doc = host.openFile(sample);
+  expect(await host.save(doc, MANUAL)).toHaveLength(0);
 });
 
 // `files.autoSave` fires a save every few hundred milliseconds. Rewriting

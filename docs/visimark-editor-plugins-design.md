@@ -47,14 +47,21 @@ know how to do.
 | Engine op | Nature | Editor analogue | Trigger |
 |-----------|--------|-----------------|---------|
 | `check` | read-only, produces findings | linter / diagnostics | continuous: on open, on change (debounced), on save |
-| `fmt` | rewrites computed cells and anchors only | formatter / Prettier | on demand only: "Format Document", opt-in format-on-save, explicit command, fix-all |
+| `fmt` | rewrites computed cells and anchors only | formatter / Prettier | on an explicit save by default (`format.fixOnSave`), "Format Document", explicit command, fix-all |
 
-`check` runs constantly and never writes. `fmt` writes and runs only when a
-person asks — through the platform's own `editor.formatOnSave`, never a
-VisiMark default. Silent recomputation on idle or on keystroke is rejected:
-`fmt` mutates the document, and the staleness it would erase is the signal the
-whole project exists to surface. The default way a person sees the computed
-truth is the inlay hint (section 6.5), which changes nothing.
+`check` runs constantly and never writes. `fmt` writes, and it writes at one
+moment the person chose: an explicit save. `visimark.format.fixOnSave` is on by
+default (section 13), so saving brings the document's computed cells and
+anchored values up to date.
+
+Silent recomputation on idle or on keystroke stays rejected, and the line is
+drawn at deliberateness rather than at writing as such. A keystroke is not a
+decision — it happens mid-thought, and rewriting then moves text out from under
+the cursor and erases staleness the author has not yet looked at. An explicit
+save is a decision, and it is the moment the edit that caused the drift is
+finished. An autosave, which is a timer wearing a save's clothes, is treated as
+a keystroke and never triggers `fmt`. Between edits the computed truth is
+visible without any write at all, through the inlay hint (section 6.5).
 
 ## 3. Repository restructuring
 
@@ -220,8 +227,13 @@ LSP libraries — no `vscode`.
 - `visimark.format.fixDates` (default `false`): when true, `fmt` additionally
   rewrites *decidable* non-ISO dates (`15.10.2026` → `2026-10-15`), matching
   the CLI's `--fix-dates`. Ambiguous dates are never touched.
-- This is the only write path. It fires from "Format Document", from
-  `editor.formatOnSave` **if the user has set it for Markdown**, and from the
+- `visimark.format.fixOnSave` (default `true`): an explicit save applies the
+  stale-value edits before the file is written. It hooks `onWillSave`, so the
+  edits are folded into the content being written and the document lands on
+  disk clean rather than dirty again. A save with reason `AfterDelay` — an
+  autosave — is declined however the setting is left.
+- This is the only write path. It fires from that save, from "Format Document",
+  from `editor.formatOnSave` if the user has set it for Markdown, and from the
   fix-all command and code action below — never from typing or idle.
 
 ### 6.3 Quick fixes and fix-all
@@ -310,9 +322,13 @@ Contributed under `visimark.*`:
 | `visimark.trace.server` | off/messages/verbose | `off` | standard LSP trace |
 | `visimark.server.path` | string | `""` | dev: path to a server entry to run instead of the bundled one |
 
-Formatting cadence is deliberately **not** a VisiMark setting. Whether `fmt`
-runs on save is `editor.formatOnSave` (and `editor.codeActionsOnSave` for
-fix-all), scoped to Markdown by the user, exactly as for Prettier.
+`visimark.format.fixOnSave` (default `true`) decides whether an explicit save
+brings stale values up to date. It is a VisiMark setting rather than a
+deferral to `editor.formatOnSave` because the two answer different questions:
+`editor.formatOnSave` picks the document's formatter, which for most people
+writing Markdown is Prettier, and turning it on to get VisiMark's repairs would
+also reflow their prose. `editor.formatOnSave` and `editor.codeActionsOnSave`
+continue to work for anyone who prefers to drive it that way.
 
 ## 9. The VS Code client
 
@@ -402,12 +418,29 @@ One version across `packages/visimark`, `packages/visimark-lsp`,
 
 ## 13. Known tensions
 
-**Format-on-save mutates the document, and staleness is the signal.** Resolved
-by never making it a VisiMark default: the write path is the platform's
-opt-in `editor.formatOnSave`, and the default way a person sees the computed
-truth is the inlay hint, which changes nothing. A person who wants
-Prettier-style "always correct on save" can have it; the out-of-the-box
-experience keeps the drift visible until they act.
+**Fix-on-save mutates the document, and staleness is the signal.** This was
+first resolved the other way — no VisiMark default, drift left visible until
+the person acted — and the default was reversed deliberately. Both readings of
+"staleness is the signal" are defensible, and the deciding argument is *who is
+being signalled to*.
+
+Drift matters at review time, when a reader has to know whether a number was
+recomputed or merely left behind. It does not need to persist on the author's
+own disk to do that job: the author already saw it, live, as a squiggle and an
+inlay hint, in the seconds after making the edit that caused it. Keeping it on
+disk past that point does not inform the author again — it just ships a
+document whose numbers are wrong to everyone downstream, and makes committing
+drift the path of least resistance. Repairing at save keeps the invariant
+where it pays: what leaves your machine agrees with its formulas.
+
+The cost is real and is accepted: a save now changes bytes the author did not
+type. Three things bound it. `fmt` writes only what VisiMark owns — computed
+cells and anchored values — so prose, headings and input columns are never
+touched. The edits are exactly the ones the inlay hints had already displayed,
+so nothing appears that the author had not been shown. And it is one setting
+away from off, which is a stronger guarantee than it sounds: the CLI is the
+normative checker, and `visimark check` in CI catches drift regardless of what
+any editor was configured to do.
 
 **The engine gains a public API surface.** Every symbol in section 4.3 is now a
 contract. Mitigated by keeping it a thin re-export with no logic, and by

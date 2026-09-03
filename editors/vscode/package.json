@@ -70,8 +70,8 @@
         },
         "visimark.format.fixOnSave": {
           "type": "boolean",
-          "default": false,
-          "markdownDescription": "Rewrite every stale value when a Markdown file is saved. Off by default: the file changes only when you ask it to, with **VisiMark: Fix All Stale Values**. Autosave (`files.autoSave`) never triggers it."
+          "default": true,
+          "markdownDescription": "Rewrite every stale value when a Markdown file is saved. On by default: saving a document brings its computed cells and anchored values up to date, the same edits **VisiMark: Fix All Stale Values** makes. Only values VisiMark owns are touched — never prose, headings or input columns. Autosave (`files.autoSave`) never triggers it."
         },
         "visimark.format.fixDates": {
           "type": "boolean",
