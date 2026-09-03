@@ -9,7 +9,9 @@ const CONT = " ".repeat(CONTENT_COL);
 
 const ERROR_CODES = new Set([
   "DATE",
+  "UNIT",
   "UNDEF",
+  "DUP",
   "VECTOR",
   "CYCLE",
   "TYPE",
@@ -102,6 +104,16 @@ function renderGroup(f: Finding): string[] {
       return [
         prefix("UNDEF") + id(f).padEnd(ID_FIELD) + "  " + "unknown name `" + f.raw + "`",
         ...(f.suggestion ? [CONT + "did you mean `" + f.suggestion + "`?"] : []),
+      ];
+    case "DUP":
+      return [
+        prefix("DUP") +
+          id(f).padEnd(ID_FIELD) +
+          "  " +
+          "`" +
+          (f.name ?? "") +
+          "` is already defined in this scope",
+        CONT + "the first binding wins; delete or rename one of them",
       ];
     case "VECTOR":
       return [
