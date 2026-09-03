@@ -51,12 +51,12 @@ Four ideas, and that is the whole format:
 
 ## Worked examples
 
-[`doc/example-invoice.md`](doc/example-invoice.md) is a complete B2B invoice
+[`docs/example-invoice.md`](docs/example-invoice.md) is a complete B2B invoice
 that computes itself: line items, VAT, a payment schedule derived from the gross
 total, early-payment terms, a currency conversion, and a reconciliation that
 proves the instalments sum to the invoice. Its appendix explains each mechanism.
 
-[`doc/example-invoice-drift.md`](doc/example-invoice-drift.md) is the same
+[`docs/example-invoice-drift.md`](docs/example-invoice-drift.md) is the same
 invoice after someone raised the on-call hours from 12 to 20 and updated nothing
 derived from it. It renders as a clean, plausible invoice — which is the entire
 argument. `visimark check` finds 26 problems in it, including a payment date
@@ -149,7 +149,7 @@ TypeScript. `npm install -g visimark` puts a `visimark` command on your PATH;
 `npx visimark` runs it without installing. Both worked examples pass as the
 acceptance suite — `check` on the drift invoice reproduces the transcript above
 byte-for-byte, and `fmt` leaves the clean invoice untouched. The design is
-written up in [`doc/visimark-design.md`](doc/visimark-design.md), including the
+written up in [`docs/visimark-design.md`](docs/visimark-design.md), including the
 deferred work and the known tensions; the implementation plan is
 [`docs/superpowers/plans/2026-09-03-visimark-cli.md`](docs/superpowers/plans/2026-09-03-visimark-cli.md).
 
@@ -165,7 +165,7 @@ bun run vscode-install     # build, package and install (also reinstalls)
 bun run vscode-uninstall   # remove it again
 ```
 
-Reload the window afterwards, then open `doc/example-invoice-drift.md`. Both
+Reload the window afterwards, then open `docs/example-invoice-drift.md`. Both
 targets need the `code` CLI on your PATH. For development, press <kbd>F5</kbd>
 instead — that runs the extension straight from `editors/vscode` in a separate
 Extension Development Host, so uninstall the packaged copy first or you will see
@@ -185,7 +185,7 @@ check is evidence of agreement, not of derivation. Change an input and confirm
 the checker starts complaining before believing a document is wired up.
 
 Editor support is specified in
-[`doc/visimark-editor-plugins-design.md`](doc/visimark-editor-plugins-design.md):
+[`docs/visimark-editor-plugins-design.md`](docs/visimark-editor-plugins-design.md):
 one language server — continuous `check` as diagnostics, `fmt` behind
 the editor's own format-on-save, quick fixes, and inlay hints that show the
 computed value without touching the bytes — with VS Code as the first client.
@@ -193,7 +193,7 @@ computed value without touching the bytes — with VS Code as the first client.
 ```
 git clone … && cd visimark && bun install
 bun test                    # the full suite, the two examples included
-bunx visimark check doc/example-invoice-drift.md
+bunx visimark check docs/example-invoice-drift.md
 ```
 
 `bun install` builds the engine and links the `visimark` command into

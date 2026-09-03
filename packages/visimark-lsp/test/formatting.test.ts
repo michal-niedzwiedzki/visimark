@@ -5,7 +5,7 @@ import { dirname, join } from "node:path";
 import { startServer, type Harness } from "./harness.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const docDir = join(here, "..", "..", "..", "doc");
+const docDir = join(here, "..", "..", "..", "docs");
 const clean = readFileSync(join(docDir, "example-invoice.md"), "utf8");
 const drift = readFileSync(join(docDir, "example-invoice-drift.md"), "utf8");
 

@@ -6,11 +6,11 @@ import { startServer, URI, type Harness } from "./harness.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const drift = readFileSync(
-  join(here, "..", "..", "..", "doc", "example-invoice-drift.md"),
+  join(here, "..", "..", "..", "docs", "example-invoice-drift.md"),
   "utf8",
 );
 const clean = readFileSync(
-  join(here, "..", "..", "..", "doc", "example-invoice.md"),
+  join(here, "..", "..", "..", "docs", "example-invoice.md"),
   "utf8",
 );
 

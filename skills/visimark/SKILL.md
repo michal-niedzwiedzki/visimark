@@ -135,9 +135,9 @@ only a person can answer — do not paper over a `DATE`, `UNIT`, `CYCLE`,
 
 ## Reference
 
-`doc/visimark-design.md` in the repository is the normative spec.
-`doc/example-invoice.md` is a complete worked example — a self-computing B2B
+`docs/visimark-design.md` in the repository is the normative spec.
+`docs/example-invoice.md` is a complete worked example — a self-computing B2B
 invoice with VAT, a payment schedule, early-payment terms, a currency
-conversion and a reconciliation. `doc/example-invoice-drift.md` is the same
+conversion and a reconciliation. `docs/example-invoice-drift.md` is the same
 invoice after someone changed one input and updated nothing derived from it;
 `check` finds 26 problems in it. Read the clean one before authoring.

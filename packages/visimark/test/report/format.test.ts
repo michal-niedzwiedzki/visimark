@@ -24,7 +24,7 @@ test("levenshtein basics", () => {
 
 test("formatCheck reproduces the drift transcript byte-for-byte", () => {
   const r = check(build(locate(drift)));
-  const out = formatCheck("doc/example-invoice-drift.md", r.findings);
+  const out = formatCheck("docs/example-invoice-drift.md", r.findings);
   expect(out).toBe(expectedTranscript());
 });
 

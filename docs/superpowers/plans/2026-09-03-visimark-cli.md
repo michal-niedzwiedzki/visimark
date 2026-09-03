@@ -8,7 +8,7 @@
 
 **Tech Stack:** TypeScript (ESM), Bun as dev runtime + test runner (`bun test`), `decimal.js` for decimal arithmetic, `unified` + `remark-parse` + `remark-gfm` for Markdown parsing. Package ships with a `bin` so `npx visimark` works for consumers; `tsc --noEmit` for typecheck.
 
-**Spec:** [`doc/visimark-design.md`](../../../doc/visimark-design.md). Worked examples [`doc/example-invoice.md`](../../../doc/example-invoice.md) (clean, normative) and [`doc/example-invoice-drift.md`](../../../doc/example-invoice-drift.md) (broken, its fenced `console` block is normative).
+**Spec:** [`docs/visimark-design.md`](../../visimark-design.md). Worked examples [`docs/example-invoice.md`](../../example-invoice.md) (clean, normative) and [`docs/example-invoice-drift.md`](../../example-invoice-drift.md) (broken, its fenced `console` block is normative).
 
 ## Global Constraints
 

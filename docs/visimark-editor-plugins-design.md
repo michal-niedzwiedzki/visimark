@@ -69,8 +69,7 @@ editors/
   vscode/            the VS Code client; bundles the server at build time
 package.json          workspace root: { "workspaces": ["packages/*", "editors/*"] }
 tsconfig.base.json    shared compiler options; each package extends it
-doc/                  unchanged, repo-level
-docs/superpowers/     unchanged, repo-level
+docs/                 unchanged, repo-level: specs, worked examples, plans
 ```
 
 - `git mv src packages/visimark/src`, likewise `test`, `bin`. `dist/` stays

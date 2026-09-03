@@ -8,7 +8,7 @@
 
 **Tech Stack:** TypeScript (ESM), Bun workspaces + `bun test`, `vscode-languageserver` / `vscode-languageserver-textdocument` for the server, `vscode-languageclient` for the client, esbuild for bundling, `@vscode/vsce` and `ovsx` for publishing, GitHub Actions for CI.
 
-**Spec:** [`doc/visimark-editor-plugins-design.md`](../../../doc/visimark-editor-plugins-design.md). The engine it wraps is specified in [`doc/visimark-design.md`](../../../doc/visimark-design.md).
+**Spec:** [`docs/visimark-editor-plugins-design.md`](../../visimark-editor-plugins-design.md). The engine it wraps is specified in [`docs/visimark-design.md`](../../visimark-design.md).
 
 **Prerequisite:** [`2026-09-03-visimark-dup-units-spans.md`](2026-09-03-visimark-dup-units-spans.md) must be complete. This plan assumes every finding carries a `span`, and that `DUP` and `UNIT` exist.
 

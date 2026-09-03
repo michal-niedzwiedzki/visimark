@@ -7,7 +7,7 @@
       "request": "launch",
       "args": [
         "--extensionDevelopmentPath=${workspaceFolder}/editors/vscode",
-        "${workspaceFolder}/doc/example-invoice-drift.md"
+        "${workspaceFolder}/docs/example-invoice-drift.md"
       ],
       "outFiles": ["${workspaceFolder}/editors/vscode/dist/**/*.js"],
       "preLaunchTask": "npm: build - editors/vscode"

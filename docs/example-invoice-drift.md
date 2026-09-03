@@ -98,8 +98,8 @@ it stayed behind. A human reviewer would have to redo the whole invoice by hand
 to notice. A reviewer skimming a pull request would not notice at all.
 
 ```console
-$ visimark check doc/example-invoice-drift.md
-doc/example-invoice-drift.md
+$ visimark check docs/example-invoice-drift.md
+docs/example-invoice-drift.md
 
   STALE   lines.Net       · On-call support         3120.00 ≠ 5200.00    Qty * Rate
   STALE   lines.VAT       · On-call support          717.60 ≠ 1196.00    Net * vat

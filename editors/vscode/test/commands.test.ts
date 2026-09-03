@@ -9,7 +9,7 @@ const root = join(here, "..");
 const repo = join(root, "..", "..");
 const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
 
-const sample = join(repo, "doc", "example-invoice.md");
+const sample = join(repo, "docs", "example-invoice.md");
 
 let host: Host;
 

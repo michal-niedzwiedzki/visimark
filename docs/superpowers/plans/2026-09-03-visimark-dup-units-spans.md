@@ -8,7 +8,7 @@
 
 **Tech Stack:** TypeScript (ESM), Bun as dev runtime and test runner (`bun test`), `decimal.js`. No new dependencies.
 
-**Spec:** [`doc/visimark-design.md`](../../../doc/visimark-design.md) — sections 6 (`DUP`, name resolution), 7 (unit decorations), 9 (write-back), 10 (error taxonomy), 13 (testing). Worked examples [`doc/example-invoice.md`](../../../doc/example-invoice.md) and [`doc/example-invoice-drift.md`](../../../doc/example-invoice-drift.md) are normative and **must not change**.
+**Spec:** [`docs/visimark-design.md`](../../visimark-design.md) — sections 6 (`DUP`, name resolution), 7 (unit decorations), 9 (write-back), 10 (error taxonomy), 13 (testing). Worked examples [`docs/example-invoice.md`](../../example-invoice.md) and [`docs/example-invoice-drift.md`](../../example-invoice-drift.md) are normative and **must not change**.
 
 ## Global Constraints
 
