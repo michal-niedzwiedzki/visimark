@@ -6,6 +6,9 @@ The engine is built and green: `visimark check`, `fmt`, `eval`, `explain`, 91
 tests, both worked examples passing as the acceptance suite. Nothing about the
 editor work has been implemented — only specified.
 
+**The route is Plan A, then Plan B.** The goal is the VS Code plugin, but the
+first commit belongs to the engine amendments — see the next section.
+
 Everything below is on `master`, merged and unpushed.
 
 | Artifact | Path |
@@ -16,22 +19,23 @@ Everything below is on `master`, merged and unpushed.
 | Plan B — the plugins | `docs/superpowers/plans/2026-09-03-visimark-editor-plugins.md` |
 | Agent skill | `skills/visimark/SKILL.md` |
 
-## Read this first: Plan A comes before Plan B
+## Read this first: run Plan A to completion, then Plan B
 
-**Plan B assumes Plan A is complete.** Two reasons, one hard and one soft:
+**Do not start Plan B until Plan A is finished and green.** Plan B is written
+against the engine Plan A leaves behind, and depends on it in two ways:
 
-- **Hard:** Plan B needs every `Finding` to carry a `span`. Today only `UNDEF`,
-  `VECTOR` and `ANCHOR` carry an offset, and a diagnostic without a range
-  cannot be published. That is Plan A **Task 1** — one task, purely additive,
-  no behaviour change.
-- **Soft:** Plan B's code samples assume `DUP` and `UNIT` exist (Plan A tasks
-  2–6). Skipping them leaves a severity map with entries that never fire and
-  one `applyUnit(...)` call in `planFmt` that has to become plain
-  `showValue(...)`.
+- Plan B publishes diagnostics, and a diagnostic needs a range. Today only
+  `UNDEF`, `VECTOR` and `ANCHOR` carry an offset. Plan A **Task 1** puts a
+  `span` on every finding.
+- Plan B's code assumes `DUP` and `UNIT` exist — a severity map that lists
+  them, and an `applyUnit(...)` call inside `planFmt`. Those come from Plan A
+  tasks 2–6.
 
-If you want the plugin moving today, do Plan A Task 1 and nothing else, then
-start Plan B and adjust those two spots. Otherwise run Plan A end to end first
-— it is six mechanical tasks and leaves the engine in the shape Plan B expects.
+Plan A is six mechanical tasks over code that already exists, and it is guarded
+throughout by the acceptance suite below. Finish it first. Splitting it — doing
+Task 1 alone to unblock the server sooner — means editing Plan B's samples
+mid-flight and doing engine surgery twice, once before the workspace move and
+once after.
 
 ## Starting
 
@@ -39,13 +43,16 @@ start Plan B and adjust those two spots. Otherwise run Plan A end to end first
 cd /home/michal/Projects/visimark
 git status                      # expect clean, on master
 bun test                        # expect 91 pass
+git switch -c feat/dup-units-spans
 ```
 
 Then invoke `superpowers:subagent-driven-development` (or
-`superpowers:executing-plans`) on the chosen plan. Both plans are task-by-task
-with checkboxes, real code in every step, and a commit at the end of each task.
+`superpowers:executing-plans`) on **Plan A**. Both plans are task-by-task with
+checkboxes, real code in every step, and a commit at the end of each task.
 
-Work on a branch. `master` is the default branch and the plans commit
+When Plan A is done — full suite green, `typecheck` clean, the transcript
+unchanged — merge it, branch again, and run Plan B the same way. Work on a
+branch each time; `master` is the default branch and the plans commit
 frequently.
 
 ## The invariant that governs both plans
