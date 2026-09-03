@@ -1,0 +1,30 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run VisiMark Extension",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}/editors/vscode",
+        "${workspaceFolder}/doc/example-invoice-drift.md"
+      ],
+      "outFiles": ["${workspaceFolder}/editors/vscode/dist/**/*.js"],
+      "preLaunchTask": "npm: build - editors/vscode"
+    },
+    {
+      "name": "Attach to VisiMark Server",
+      "type": "node",
+      "request": "attach",
+      "port": 6019,
+      "restart": true,
+      "outFiles": ["${workspaceFolder}/editors/vscode/dist/**/*.js"]
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Extension + Server",
+      "configurations": ["Run VisiMark Extension", "Attach to VisiMark Server"]
+    }
+  ]
+}
