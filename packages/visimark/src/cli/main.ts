@@ -1,3 +1,4 @@
+import { pathToFileURL } from "node:url";
 import {
   cmdCheck,
   cmdEval,
@@ -47,10 +48,16 @@ export async function runCli(argv: string[], io: CliIO = {}): Promise<number> {
   }
 }
 
-// Run when invoked directly (`bun src/cli/main.ts check FILE`). When bundled
-// into dist/ and imported by bin/visimark.js this is false, and that shim
-// calls runCli itself.
-if (import.meta.main) {
+// Run when invoked directly (`bun src/cli/main.ts check FILE`). `import.meta.main`
+// would be the obvious test, but bun's bundler rewrites it to a CommonJS check
+// that is always true in the ESM bundle, so dist/cli/main.js would run itself on
+// import as well. Comparing against argv[1] survives bundling: when bin/visimark.js
+// is the entry point this is false and that shim calls runCli itself.
+const invokedDirectly =
+  process.argv[1] !== undefined &&
+  import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (invokedDirectly) {
   runCli(process.argv.slice(2)).then(
     (code) => process.exit(code),
     (err: unknown) => {
