@@ -1,12 +1,10 @@
 import { expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { clean, drift } from "../examples.js";
 import { locate } from "../../src/parse/document.js";
 import { build } from "../../src/model/build.js";
 import { check } from "../../src/eval/check.js";
 import type { Finding } from "../../src/model/types.js";
 
-const clean = readFileSync("doc/example-invoice.md", "utf8");
-const drift = readFileSync("doc/example-invoice-drift.md", "utf8");
 
 const run = (src: string) => check(build(locate(src)));
 const idOf = (f: Finding) =>

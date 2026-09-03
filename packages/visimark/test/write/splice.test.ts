@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { drift } from "../examples.js";
 import { applyEdits } from "../../src/write/splice.js";
 import { inferColumnPrecision } from "../../src/eval/check.js";
 import { locate } from "../../src/parse/document.js";
@@ -25,7 +25,6 @@ test("overlapping edits throw", () => {
 });
 
 test("inferColumnPrecision reads the existing cells", () => {
-  const drift = readFileSync("doc/example-invoice-drift.md", "utf8");
   const m = build(locate(drift));
   const sch = m.sheets.get("schedule")!;
   const daysIdx = sch.columnIndex.get("Days")!;

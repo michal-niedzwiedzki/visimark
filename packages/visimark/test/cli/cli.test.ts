@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { readFileSync, writeFileSync, mkdtempSync } from "node:fs";
+import { cleanPath, drift, driftPath } from "../examples.js";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runCli } from "../../src/cli/main.js";
@@ -14,30 +15,33 @@ function capture() {
   };
 }
 
-const drift = readFileSync("doc/example-invoice-drift.md", "utf8");
 
 test("check on the clean invoice exits 0", async () => {
   const c = capture();
-  const code = await runCli(["check", "doc/example-invoice.md"], c.io);
+  const code = await runCli(["check", cleanPath], c.io);
   expect(code).toBe(0);
   expect(c.out()).toContain("0 problems");
 });
 
 test("check on the drift invoice exits 1 with the transcript", async () => {
   const c = capture();
-  const code = await runCli(["check", "doc/example-invoice-drift.md"], c.io);
+  const code = await runCli(["check", driftPath], c.io);
   expect(code).toBe(1);
   const all = drift.split("\n");
   const start = all.findIndex((l) => l.trim() === "```console");
   const end = all.findIndex((l, i) => i > start && l.trim() === "```");
-  const expected = all.slice(start + 2, end).join("\n"); // skip the `$ visimark` line
-  expect(c.out()).toBe(expected);
+  const expected = all.slice(start + 2, end); // skip the `$ visimark` line
+  // The transcript's first line is the display path — whatever path the CLI
+  // was handed. The rest is the report, and must match byte for byte.
+  const [pathLine, ...body] = c.out().split("\n");
+  expect(pathLine).toBe(driftPath);
+  expect(body.join("\n")).toBe(expected.slice(1).join("\n"));
 });
 
 test("eval --get prints one raw decimal value", async () => {
   const c = capture();
   const code = await runCli(
-    ["eval", "doc/example-invoice.md", "--get", "lines.gross_total"],
+    ["eval", cleanPath, "--get", "lines.gross_total"],
     c.io,
   );
   expect(code).toBe(0);
@@ -47,7 +51,7 @@ test("eval --get prints one raw decimal value", async () => {
 test("eval --get accepts a bare name and --json", async () => {
   const c = capture();
   await runCli(
-    ["eval", "doc/example-invoice.md", "--get", "gross_total", "--json"],
+    ["eval", cleanPath, "--get", "gross_total", "--json"],
     c.io,
   );
   expect(JSON.parse(c.out())).toEqual({ gross_total: "28659" });
@@ -72,7 +76,7 @@ test("fmt rewrites the file in place and is stable on a second run", async () =>
 test("explain prints a sheet's rules and evaluation order", async () => {
   const c = capture();
   const code = await runCli(
-    ["explain", "doc/example-invoice.md", "#schedule"],
+    ["explain", cleanPath, "#schedule"],
     c.io,
   );
   expect(code).toBe(0);

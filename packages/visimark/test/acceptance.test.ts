@@ -1,13 +1,11 @@
 import { expect, test, describe } from "bun:test";
-import { readFileSync } from "node:fs";
+import { clean, drift } from "./examples.js";
 import { locate } from "../src/parse/document.js";
 import { build } from "../src/model/build.js";
 import { check } from "../src/eval/check.js";
 import { fmt } from "../src/write/fmt.js";
 import { formatCheck } from "../src/report/format.js";
 
-const clean = readFileSync("doc/example-invoice.md", "utf8");
-const drift = readFileSync("doc/example-invoice-drift.md", "utf8");
 const run = (s: string) => check(build(locate(s)));
 
 describe("the two worked examples are the acceptance suite", () => {

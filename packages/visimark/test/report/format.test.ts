@@ -1,12 +1,11 @@
 import { expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { drift } from "../examples.js";
 import { locate } from "../../src/parse/document.js";
 import { build } from "../../src/model/build.js";
 import { check } from "../../src/eval/check.js";
 import { formatCheck } from "../../src/report/format.js";
 import { levenshtein } from "../../src/report/levenshtein.js";
 
-const drift = readFileSync("doc/example-invoice-drift.md", "utf8");
 
 /** the normative transcript, read straight out of the example doc */
 function expectedTranscript(): string {

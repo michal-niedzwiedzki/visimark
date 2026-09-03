@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { cleanPath, driftPath, mainTs, repoRoot } from "../examples.js";
 
 /**
  * `bun src/cli/main.ts check FILE` must actually run. Before the
@@ -7,7 +8,8 @@ import { expect, test } from "bun:test";
  * document with 26 problems in it.
  */
 async function run(args: string[]): Promise<{ code: number; out: string }> {
-  const proc = Bun.spawn(["bun", "src/cli/main.ts", ...args], {
+  const proc = Bun.spawn(["bun", mainTs, ...args], {
+    cwd: repoRoot,
     stdout: "pipe",
     stderr: "pipe",
   });
@@ -17,13 +19,13 @@ async function run(args: string[]): Promise<{ code: number; out: string }> {
 }
 
 test("running main.ts directly reports the drift invoice and exits 1", async () => {
-  const { code, out } = await run(["check", "doc/example-invoice-drift.md"]);
+  const { code, out } = await run(["check", driftPath]);
   expect(out).toContain("26 problems (21 stale, 5 errors)");
   expect(code).toBe(1);
 });
 
 test("running main.ts directly on the clean invoice exits 0", async () => {
-  const { code, out } = await run(["check", "doc/example-invoice.md"]);
+  const { code, out } = await run(["check", cleanPath]);
   expect(out).toContain("0 problems (0 stale, 0 errors)");
   expect(code).toBe(0);
 });

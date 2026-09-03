@@ -1,0 +1,35 @@
+{
+  "name": "visimark",
+  "version": "0.1.0",
+  "description": "Spreadsheet mechanics for Markdown: every computed number carries the formula that produced it, and a machine can prove the two still agree.",
+  "type": "module",
+  "bin": {
+    "visimark": "bin/visimark.js"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "build": "bun build src/cli/main.ts --target node --outdir dist --minify",
+    "prepublishOnly": "bun run typecheck && bun test && bun run build"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "decimal.js": "^10.4.3",
+    "remark-gfm": "^4.0.0",
+    "remark-parse": "^11.0.0",
+    "unified": "^11.0.4"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.0",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.5.0"
+  },
+  "license": "MIT"
+}

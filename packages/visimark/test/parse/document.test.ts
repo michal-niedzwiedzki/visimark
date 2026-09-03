@@ -1,9 +1,7 @@
 import { expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { clean, drift } from "../examples.js";
 import { locate } from "../../src/parse/document.js";
 
-const clean = readFileSync("doc/example-invoice.md", "utf8");
-const drift = readFileSync("doc/example-invoice-drift.md", "utf8");
 
 test("locates blocks and links the immediately preceding table", () => {
   const d = locate(clean);

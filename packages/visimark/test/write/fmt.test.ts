@@ -1,12 +1,10 @@
 import { expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { clean, drift } from "../examples.js";
 import { fmt } from "../../src/write/fmt.js";
 import { locate } from "../../src/parse/document.js";
 import { build } from "../../src/model/build.js";
 import { check } from "../../src/eval/check.js";
 
-const clean = readFileSync("doc/example-invoice.md", "utf8");
-const drift = readFileSync("doc/example-invoice-drift.md", "utf8");
 
 test("fmt leaves the clean invoice byte-for-byte identical", () => {
   const r = fmt(clean, {});

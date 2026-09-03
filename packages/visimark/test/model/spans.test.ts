@@ -1,10 +1,9 @@
 import { expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { drift } from "../examples.js";
 import { locate } from "../../src/parse/document.js";
 import { build } from "../../src/model/build.js";
 import { check } from "../../src/eval/check.js";
 
-const drift = readFileSync("doc/example-invoice-drift.md", "utf8");
 const run = (s: string) => check(build(locate(s)));
 
 test("every finding except NOTE and the anchor group carries a span", () => {
