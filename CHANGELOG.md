@@ -3,6 +3,12 @@
 ## Unreleased
 
 ### Added
+- `visimark infer FILE... [--write]` — read a document that has arithmetic and
+  no formulas, work out which rules reproduce the numbers already in it, and
+  propose them. Verification runs the real evaluator, so anything it proposes
+  `check` re-proves. The result is an acyclic set rather than a list of
+  findings, and `--write` only ever inserts. A rule that fits every row but one
+  is reported as a near-miss — evidence the document is already wrong.
 - `DUP` — a name bound twice in one scope is an error rather than a silent
   overwrite.
 - `UNIT` — a column may carry a currency symbol or a physical unit, inferred

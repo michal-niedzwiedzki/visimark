@@ -51,9 +51,18 @@ document is wired up. Fix it before you report anything.
 ```bash
 visimark check FILE...                # read-only; exit 1 if anything disagrees
 visimark fmt   FILE... [--fix-dates]  # rewrite computed cells and anchors
+visimark infer FILE... [--write]      # propose rules for a document with none
 visimark eval  FILE [--get NAME] [--json]
 visimark explain FILE [#sheet]        # rules and evaluation order
 ```
+
+`infer` is the way into an existing document. It reads a Markdown file that has
+arithmetic and no formulas, works out which rules reproduce the numbers already
+in it, and prints them; `--write` inserts the blocks and anchors. It is
+advisory — it exits `0` whatever it finds — and it only ever inserts, so prose,
+headings, input columns and existing blocks are untouched. A rule that fits
+every row but one is reported as a near-miss: that is the document telling you
+it already has a wrong number in it.
 
 From a clone: `bun src/cli/main.ts check FILE`, or `node bin/visimark.js check FILE`
 once `bun run build` has been run. `npx visimark` for a published install.

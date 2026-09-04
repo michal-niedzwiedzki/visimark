@@ -5,8 +5,12 @@ import type { Value } from "../eval/value.js";
 import { build } from "../model/build.js";
 import type { DocModel } from "../model/types.js";
 import { locate } from "../parse/document.js";
+import { infer } from "../infer/propose.js";
+import { planInfer } from "../infer/write.js";
 import { formatCheck } from "../report/format.js";
+import { formatInfer } from "../report/infer.js";
 import { fmt } from "../write/fmt.js";
+import { applyEdits } from "../write/splice.js";
 
 interface Parsed {
   files: string[];
@@ -104,6 +108,48 @@ export function cmdFmt(args: string[], out: Writer, err: Writer): number {
       out(formatCheck(path, r.unfixable));
       if (exit === 0) exit = 1;
     }
+  }
+  return exit;
+}
+
+/**
+ * `infer` is advisory. It exits `0` whatever it finds and `2` only on usage or
+ * a read failure — never `1`. A document with no inferable rules is not a
+ * failure, it is a document, and all CI pressure stays in `check`.
+ */
+export function cmdInfer(args: string[], out: Writer, err: Writer): number {
+  const { files, flags } = parseArgs(args);
+  if (files.length === 0) {
+    err("usage: visimark infer FILE... [--write]");
+    return 2;
+  }
+  let exit = 0;
+  for (const path of files) {
+    let source: string;
+    try {
+      source = read(path);
+    } catch {
+      err(`visimark: cannot read ${path}`);
+      exit = 2;
+      continue;
+    }
+    const proposals = infer(source);
+    out(formatInfer(path, source, proposals));
+    if (!flags.has("write")) continue;
+
+    const edits = planInfer(source, proposals);
+    if (edits.length === 0) {
+      out(`${path}: nothing to write`);
+      continue;
+    }
+    writeFileSync(path, applyEdits(source, edits));
+    const blocks = edits.filter((e) => e.kind === "block").length;
+    const anchors = edits.filter((e) => e.kind === "anchor").length;
+    const bits = [
+      blocks ? `${blocks} block${blocks === 1 ? "" : "s"}` : "",
+      anchors ? `${anchors} anchor${anchors === 1 ? "" : "s"}` : "",
+    ].filter(Boolean);
+    out(`${path}: wrote ${bits.join(", ")}`);
   }
   return exit;
 }

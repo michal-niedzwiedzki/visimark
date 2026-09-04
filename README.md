@@ -144,8 +144,8 @@ configuration, and no rule for what a bare `/` means.
 
 ## Status
 
-The CLI is implemented: `visimark check`, `fmt`, `eval` and `explain`, in
-TypeScript. `npm install -g visimark` puts a `visimark` command on your PATH;
+The CLI is implemented: `visimark check`, `fmt`, `infer`, `eval` and `explain`,
+in TypeScript. `npm install -g visimark` puts a `visimark` command on your PATH;
 `npx visimark` runs it without installing. Both worked examples pass as the
 acceptance suite — `check` on the drift invoice reproduces the transcript above
 byte-for-byte, and `fmt` leaves the clean invoice untouched. The design is

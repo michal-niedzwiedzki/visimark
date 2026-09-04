@@ -16,7 +16,11 @@ export {
   type FnKind,
   type FnSpec,
 } from "./eval/functions.js";
+export { infer, type Proposal, type ProposalKind } from "./infer/propose.js";
+export { planInfer, type PlannedInsert } from "./infer/write.js";
 export { formatCheck } from "./report/format.js";
+export { formatInfer } from "./report/infer.js";
+export { lineOf } from "./report/lines.js";
 export { applyUnit, parseDecorated, type Unit } from "./eval/units.js";
 export type {
   Binding,
@@ -29,6 +33,7 @@ export type {
   LocatedDoc,
   RawAnchor,
   RawBlock,
+  ProseFigure,
   RawTable,
   Span,
 } from "./parse/document.js";

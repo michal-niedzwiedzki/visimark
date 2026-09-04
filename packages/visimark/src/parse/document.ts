@@ -59,11 +59,30 @@ export interface RawAnchor {
   value: (Span & { kind: AnchorTargetKind }) | null;
 }
 
+/**
+ * A numeric literal in prose — outside every table and every `vmark` block.
+ * `infer` treats these as the sites a scalar could be anchored at; nothing
+ * else reads them, so a document with no inference run behaves as before.
+ */
+export interface ProseFigure {
+  /** the literal as written: `23300.00`, `23%`, `$5.50` */
+  text: string;
+  /** the span an anchor would rewrite, and the inline kind holding it */
+  value: Span & { kind: AnchorTargetKind };
+  /** offset just after the inline node an anchor comment would follow, or
+   *  `null` when the literal sits where no anchor can bind it */
+  anchorAt: number | null;
+  /** true when an anchor comment already binds this literal */
+  anchored: boolean;
+}
+
 export interface LocatedDoc {
   source: string;
   blocks: RawBlock[];
   tables: RawTable[];
   anchors: RawAnchor[];
+  /** numeric literals in prose, in document order */
+  figures: ProseFigure[];
   /** for each block, the GFM table it owns (immediately precedes it), or null */
   tableBeforeBlock: Map<RawBlock, RawTable | null>;
   /** true when a block owns no table but a table appears between it and the previous block/heading */
@@ -143,11 +162,23 @@ export function locate(source: string): LocatedDoc {
 
   collectAnchors(tree, source, anchors);
 
+  const figures: ProseFigure[] = [];
+  collectFigures(tree, source, figures);
+  const anchoredSpans = new Set(
+    anchors
+      .filter((a) => a.value)
+      .map((a) => `${a.value!.start}:${a.value!.end}`),
+  );
+  for (const f of figures) {
+    f.anchored = anchoredSpans.has(`${f.value.start}:${f.value.end}`);
+  }
+
   return {
     source,
     blocks,
     tables,
     anchors,
+    figures,
     tableBeforeBlock,
     detachedTableBlocks,
   };
@@ -266,4 +297,93 @@ function anchorValueSpan(
 function walk(node: MdNode, visit: (n: MdNode) => void): void {
   visit(node);
   for (const c of node.children ?? []) walk(c, visit);
+}
+
+/** a whole inline node that is nothing but a number */
+const WHOLE_NUMBER_RE = /^-?\s*[^\d\s.\-%]*\s*\d+(?:\.\d+)?\s*(?:%|[^\d\s.\-%]*)$/;
+/** every numeric run inside a text node, for the ones that cannot be anchored */
+const ANY_NUMBER_RE = /\d+(?:\.\d+)?%?/g;
+/** a character that makes an adjacent digit run part of something else —
+ *  a date, an identifier, a document number — rather than a figure */
+const GLUE_RE = /[\w./\-:%]/;
+
+function collectFigures(node: MdNode, source: string, out: ProseFigure[]): void {
+  if (node.type === "table" || node.type === "code" || node.type === "html") {
+    return;
+  }
+  const kids = node.children;
+  if (!kids) return;
+  for (const child of kids) {
+    switch (child.type) {
+      case "strong":
+      case "emphasis": {
+        const t = child.children?.[0];
+        if (
+          child.children?.length === 1 &&
+          t?.type === "text" &&
+          WHOLE_NUMBER_RE.test((t.value ?? "").trim())
+        ) {
+          const span = innerValueSpan(t);
+          if (span) {
+            out.push({
+              text: source.slice(span.start, span.end),
+              value: { ...span, kind: child.type },
+              anchorAt: off(child, "end"),
+              anchored: false,
+            });
+            continue;
+          }
+        }
+        collectFigures(child, source, out);
+        continue;
+      }
+      case "inlineCode": {
+        const v = (child.value ?? "").trim();
+        if (WHOLE_NUMBER_RE.test(v)) {
+          const span = innerValueSpan(child)!;
+          out.push({
+            text: source.slice(span.start, span.end),
+            value: span,
+            anchorAt: off(child, "end"),
+            anchored: false,
+          });
+        }
+        continue;
+      }
+      case "text": {
+        textFigures(child, source, out);
+        continue;
+      }
+      default:
+        collectFigures(child, source, out);
+    }
+  }
+}
+
+/**
+ * Numbers inside a text node. Only the trailing one can carry an anchor, and
+ * it is found with the very regex the anchor reader uses, so a figure this
+ * function calls anchorable is one `anchorValueSpan` will read back.
+ */
+function textFigures(node: MdNode, source: string, out: ProseFigure[]): void {
+  const value = node.value ?? "";
+  const base = off(node, "start");
+  const trailing = TRAILING_NUMBER_RE.exec(value);
+  const trailingStart = trailing ? trailing.index : -1;
+
+  ANY_NUMBER_RE.lastIndex = 0;
+  for (let m = ANY_NUMBER_RE.exec(value); m; m = ANY_NUMBER_RE.exec(value)) {
+    const start = m.index;
+    const end = start + m[0].length;
+    const before = value[start - 1] ?? " ";
+    const after = value[end] ?? " ";
+    if (GLUE_RE.test(before) || GLUE_RE.test(after)) continue;
+    const isTrailing = start === trailingStart && !m[0].endsWith("%");
+    out.push({
+      text: m[0],
+      value: { start: base + start, end: base + end, kind: "text" },
+      anchorAt: isTrailing ? off(node, "end") : null,
+      anchored: false,
+    });
+  }
 }

@@ -1,3 +1,5 @@
+import { Decimal } from "decimal.js";
+
 /**
  * A unit is a display decoration on a number: `$` in `$5.50`, `N` in `12 N`.
  * It is inert — never converted, never propagated through a formula. The
@@ -105,4 +107,22 @@ export function inferColumnUnit(cellTexts: (string | undefined)[]): ColumnUnit {
     if (!forms.includes(label)) forms.push(label);
   }
   return { unit: null, conflict: true, forms, firstDeviantRow: deviant.row };
+}
+
+/**
+ * The numeric value of a cell or a prose figure, or `null` when the text is
+ * not a number at all. This is the one place that decides what "numeric"
+ * means — `check` coerces inputs through it and inference classifies columns
+ * through it, so the two can never disagree about which columns are numbers.
+ *
+ * A date is deliberately not a number: `2026-09-10` fails the decorated shape
+ * because `-` is excluded from the decoration class.
+ */
+export function numericValue(text: string): Decimal | null {
+  const t = text.trim();
+  if (/^-?\d+(?:\.\d+)?$/.test(t)) return new Decimal(t);
+  const pm = /^(\d+(?:\.\d+)?)%$/.exec(t);
+  if (pm) return new Decimal(pm[1]!).div(100);
+  const dec = parseDecorated(t);
+  return dec.kind === "number" ? new Decimal(dec.num) : null;
 }

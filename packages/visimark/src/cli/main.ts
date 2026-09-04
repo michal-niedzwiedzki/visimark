@@ -4,6 +4,7 @@ import {
   cmdEval,
   cmdExplain,
   cmdFmt,
+  cmdInfer,
   type Writer,
 } from "./commands.js";
 
@@ -12,6 +13,7 @@ const USAGE = `visimark — spreadsheet mechanics for Markdown
 usage:
   visimark check FILE...               read-only; exit 1 if any finding
   visimark fmt   FILE... [--fix-dates] rewrite computed cells and anchors
+  visimark infer FILE... [--write]     propose rules for a document with none
   visimark eval  FILE [--get NAME] [--json]
   visimark explain FILE [#sheet]       print rules and dependency order
 
@@ -32,6 +34,8 @@ export async function runCli(argv: string[], io: CliIO = {}): Promise<number> {
       return cmdCheck(rest, out, err);
     case "fmt":
       return cmdFmt(rest, out, err);
+    case "infer":
+      return cmdInfer(rest, out, err);
     case "eval":
       return cmdEval(rest, out, err);
     case "explain":

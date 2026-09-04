@@ -10,6 +10,7 @@ import { dependencies, refText, resolve, topoOrder } from "./graph.js";
 import {
   applyUnit,
   inferColumnUnit,
+  numericValue,
   parseDecorated,
   type Unit,
 } from "./units.js";
@@ -52,7 +53,6 @@ export interface CheckResult {
 
 class Unevaluable extends Error {}
 
-const NUMBER_RE = /^-?\d+(?:\.\d+)?$/;
 const PERCENT_RE = /^(\d+(?:\.\d+)?)%$/;
 const DATEISH_RE = /^\d{1,4}[./-]\d{1,4}[./-]\d{1,4}$/;
 
@@ -537,9 +537,8 @@ export function check(model: DocModel): CheckResult {
     cell: { start: number; end: number } | undefined,
   ): Value {
     const t = text.trim();
-    if (NUMBER_RE.test(t)) return num(new Decimal(t));
-    const pm = PERCENT_RE.exec(t);
-    if (pm) return num(new Decimal(pm[1]!).div(100));
+    const n = numericValue(t);
+    if (n !== null) return num(n);
     const iso = parseIsoDate(t);
     if (iso.ok) return date(iso.iso);
     if (DATEISH_RE.test(t) || /^\d{4}-\d{2}-\d{2}$/.test(t)) {
@@ -565,8 +564,6 @@ export function check(model: DocModel): CheckResult {
       }
       throw new Unevaluable();
     }
-    const dec = parseDecorated(t);
-    if (dec.kind === "number") return num(new Decimal(dec.num));
     return str(t);
   }
 }
