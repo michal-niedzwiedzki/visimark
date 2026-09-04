@@ -3,3 +3,4 @@ dist
 *.vsix
 *.log
 packages/visimark/README.md
+TODO.md
