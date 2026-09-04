@@ -1,6 +1,7 @@
 # Design — `visimark infer`
 
-**Status:** approved, not implemented.
+**Status:** implemented. Sections 4, 6 and 13 carry amendments made during
+implementation, each marked and argued where it sits.
 **Companion:** [`2026-09-04-visimark-infer-editor-design.md`](2026-09-04-visimark-infer-editor-design.md)
 — the editor surfaces that consume this.
 
@@ -81,6 +82,34 @@ net_total   = SUM(Net)      matching the figure at line 33
 gross_total = SUM(Gross)    matching the figure at line 35
 ```
 
+**Amendment — which figures qualify.** A figure states a value only when it is
+already written the way `fmt` would write that value back: the value, rounded to
+the figure's own decimals, carrying the decoration inferred for the column being
+reduced. Comparing the two as numbers is not enough. `00` in a postal code and
+`MIN(Share)` of `0.25` agree at zero decimals; `#unnamed1` parses as a decorated
+`1` and agrees with `SUM(Share)`. Both disagree about the *text*, which is the
+thing an anchor is a promise about.
+
+The test is exact and it introduces nothing: it is `planFmt`'s write-back asked
+as a question rather than performed. Rounding at the anchor stays legal, because
+a value rounded to the figure's decimals is precisely what `fmt` writes — the
+invoice's `eur_total` still matches its `6719.58`. Only forms the tool would
+never produce are refused, which is why a figure written `25%` never anchors a
+scalar: `fmt` would write `0.25` there. That is the same asymmetry the format
+already has, where an input written `30%` stays `30%` forever because nothing
+computes it.
+
+**Amendment — which figure a scalar is anchored at.** A scalar may be anchored
+only at a figure that follows its own table, and only once. Both halves are
+needed and neither is a heuristic about meaning. A document states a total after
+the rows it totals, so a figure above the table is not evidence for it; and a
+name that is already bound in prose is not a candidate for a second sentence,
+which is what makes the *later* claimant of a repeated value ambiguous rather
+than the earlier one. Without the first half, `SUM(Gross)` and `SUM(Amount)`
+would compete at every figure equal to `28659.00` and none of the three totals
+in the worked invoice could be proposed; without the second, the reconciliation
+sentence would silently repeat an anchor that already exists.
+
 **Stage 4 — cross-sheet.** `C = A * s` where `s` is a scalar named in stage 3,
 in this sheet or another. Stage 4 depends on stage 3's names, which is why the
 order is fixed.
@@ -90,9 +119,16 @@ Amount = Share * lines.gross_total
 ```
 
 **A column qualifies as numeric** only if every non-empty cell parses as a
-decimal after unit stripping, via the existing `parseDecorated`. `Item` and
-`Unit` are excluded by that test alone, which is why "no rule found, treating
-as an input" needs no separate rule: it is what is left over.
+decimal after unit stripping. `Item` and `Unit` are excluded by that test alone,
+which is why "no rule found, treating as an input" needs no separate rule: it is
+what is left over.
+
+*(Amendment.)* The test is `numericValue`, not `parseDecorated` directly: a
+percent cell is a number too, and `check` has always coerced one. `Share`, whose
+cells read `30%`, has to be numeric or the worked invoice's own stage 4 rule
+cannot be found. `numericValue` is the single home for that decision, and
+`check`'s input coercion now runs through it, so inference and the evaluator
+cannot disagree about which columns are numbers.
 
 Cost is not a concern. A seven-column, four-row table is roughly 120 candidate
 evaluations in stage 1, and the stages below it are smaller.
@@ -128,11 +164,20 @@ Applied in order:
    separate defence: it is the same principle that makes a reduce take a column
    reference rather than an expression, so that every intermediate is a number
    the reviewer can see.
-3. **Build outward from inputs.** Prefer rules whose operands are input columns
+3. **Prefer the constructive form of an arithmetic fact to its rearrangement.**
+   `*` and `+` outrank `/` and `-`. *(Amendment.)* Cycle rejection says the set
+   may contain only one of `Net = Qty * Rate`, `Qty = Net / Rate` and
+   `Rate = Net / Qty`, but it does not say which, and without a rule the answer
+   is whichever the search reached first. The product is the one a person
+   writes: the inverses are the same fact read backwards, and taking one of them
+   inverts the direction the whole set then builds in. This is what leaves `Qty`
+   and `Rate` as inputs, and it is what leaves `VAT = Net * 0.23` as the only
+   survivor for `VAT` once `Gross = Net + VAT` has ruled out `VAT = Gross - Net`.
+4. **Build outward from inputs.** Prefer rules whose operands are input columns
    or already-accepted computed columns.
-4. **When two survivors still rank equally, report both and propose neither.**
+5. **When two survivors still rank equally, report both and propose neither.**
 
-Rule 4 is the general form of constraint 3 in the engine design: ambiguity is
+Rule 5 is the general form of constraint 3 in the engine design: ambiguity is
 an error, never a guess. It is reported as an `ambiguous` proposal listing the
 competing rules, and `--write` skips it.
 
@@ -330,6 +375,16 @@ export function infer(source: string): Proposal[];
 export function planInfer(source: string, only?: Proposal[]): PlannedInsert[];
 ```
 
+*(Amendment.)* Four additive fields earned their place during implementation, and
+one member on `ProposalKind`. `weak` marks a two-row proposal, which section 7
+reports but never writes. `reason` carries why a fitting rule was not proposed.
+`disagreement.rowIndex` is what lets the report print `row 4` without recounting.
+`kind: "alternative"` is the "also fits, not proposed" line, which section 10
+prints and the enum had no member for. On `PlannedInsert`, `kind` distinguishes a
+block from an anchor and `proposals` carries the whole set a block insert holds —
+a block is one edit covering a sheet's bindings, so a single `proposal` field
+cannot describe it.
+
 `planInfer` mirrors `planFmt`, and the optional `only` is what lets an editor
 apply one proposal without applying the rest. That split is the whole reason
 the editor surfaces are a thin wrapper rather than a second implementation.
@@ -344,7 +399,10 @@ What inference must recover from it, exactly:
 - `#unnamed1`, the services table: `Net = Qty * Rate`, `VAT = Net * 0.23`,
   `Gross = Net + VAT`, and the three totals anchored at lines 33, 34 and 35.
 - `#unnamed2`, the schedule table: `Amount = Share * unnamed1.gross_total` via
-  stage 4, and `covered = SUM(Amount)` anchored at line 51.
+  stage 4, and `amount_total = SUM(Amount)` anchored at line 51. *(Amendment: an
+  earlier draft named this one `covered`, which is what the original document
+  calls it. Section 8 is what governs — the name is mechanical, and reading the
+  original's choice back out of it would be the guess section 8 refuses.)*
 
 What it must **not** recover is the more valuable half of the test:
 
@@ -357,7 +415,7 @@ What it must **not** recover is the more valuable half of the test:
   lies outside every candidate space in section 4.
 - **An anchor on the figures at lines 76 and 77.** `28659.00` there equals
   `SUM(schedule.Amount)`, `SUM(lines.Gross)` and `schedule.covered` alike, so it
-  is ambiguous under selection rule 4 and no anchor is proposed.
+  is ambiguous under selection rule 5 and no anchor is proposed.
 
 `check` on the written result must then report `0 problems`.
 
@@ -376,6 +434,18 @@ Unit coverage, each its own case: cycle rejection on `Gross = Net + VAT` against
 floors; anchor insertion into each of the four inline kinds; a minted id
 colliding with an existing `#unnamed1`; and a candidate whose `k` fits row 1 and
 no other row.
+
+*(Amendment.)* The write-back rule in section 4 earns four more, because each is
+a false positive that reached a worked example before it was caught: a bare
+integer in a postal code against a fractional `MIN`; a token ending in digits,
+`#unnamed1`, against a `SUM` of `1`; a figure written `25%` against the `0.25` it
+equals; and a currency-prefixed `**$750.00**` over a `$` column, which must
+still anchor, because the rule is about the form the tool writes and not about
+refusing decoration.
+
+The line numbers above are the *clean* invoice's, used to name which figure is
+meant. The stripped fixture's own numbering differs, and the acceptance test
+asserts content rather than lines.
 
 ## 14. Rejected alternatives
 

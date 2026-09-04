@@ -1,11 +1,11 @@
 import {
   check,
-  decimalPlaces,
-  docPrecision,
   matchesStored,
+  roundValue,
   showValue,
 } from "../eval/check.js";
-import { applyUnit } from "../eval/units.js";
+import { applyUnit, parseDecorated, type Unit } from "../eval/units.js";
+import type { Value } from "../eval/value.js";
 import type { Binding } from "../model/types.js";
 import type { Span } from "../parse/document.js";
 import {
@@ -43,8 +43,11 @@ export interface ScalarVerdict {
   usable: boolean;
   /** the value rendered at `places` decimals, for comparison against prose */
   text(places: number): string;
-  /** true when the value matches a figure written like `stored` */
-  matches(stored: string): boolean;
+  /**
+   * True when `fmt` would write this figure exactly as it already stands — the
+   * value, at the figure's own decimals, carrying the column's decoration.
+   */
+  writes(figure: string): boolean;
 }
 
 /**
@@ -111,11 +114,13 @@ export function verifyScalar(
   sheet: InferSheet,
   rule: string,
   accepted: Accepted[],
+  /** the column the rule reduces, whose decoration the value would carry */
+  unitFrom?: string,
 ): ScalarVerdict {
   const miss: ScalarVerdict = {
     usable: false,
     text: () => "",
-    matches: () => false,
+    writes: () => false,
   };
   const binding = safeBinding(sheet, rule);
   if (!binding || binding.kind !== "scalar") return miss;
@@ -128,19 +133,37 @@ export function verifyScalar(
   }
   const v = result.values.get(binding.id);
   if (!v) return miss;
+  const unit = unitFrom
+    ? result.columnUnits.get(`${sheet.id}.${unitFrom}`) ?? null
+    : null;
 
-  // A figure in prose is compared at no less than the document's own
-  // precision. Without that floor a bare integer — a postal code, a year —
-  // matches any value that rounds to it, so `00` in an address would claim
-  // `MIN(Share)`. Two decimals is where the document states money, and a whole
-  // number is not a claim about a value that differs in the second place.
-  const floor = docPrecision(model);
   return {
     usable: true,
     text: (places) => showValue(v, places),
-    matches: (stored) =>
-      matchesStored(v, stored, Math.max(decimalPlaces(stored, floor), floor)),
+    writes: (figure) => writesExactly(v, unit, figure),
   };
+}
+
+/**
+ * A figure in prose states this value only if it is already written the way
+ * `fmt` would write it back. Comparing the two as numbers is not enough: `00`
+ * in a postal code and `MIN(Share)` of `0.25` agree at zero decimals, and
+ * `#unnamed1` parses as a decorated `1` and agrees with `SUM(Share)`. Both
+ * disagree about the *text*, which is the thing an anchor is a promise about.
+ *
+ * This is exact, and it is not a new rule: it is `planFmt`'s own write-back,
+ * asked as a question instead of performed. Rounding at the anchor stays
+ * legal, because a value rounded to the figure's decimals is what `fmt`
+ * writes; only forms the tool would never produce are refused.
+ */
+function writesExactly(v: Value, unit: Unit | null, figure: string): boolean {
+  const text = figure.trim();
+  const dec = parseDecorated(text);
+  if (dec.kind !== "number") return false;
+  const m = /^-?\d+(?:\.(\d+))?$/.exec(dec.num);
+  if (!m) return false;
+  const places = m[1]?.length ?? 0;
+  return applyUnit(showValue(roundValue(v, places), places), unit) === text;
 }
 
 function bindings(accepted: Accepted[]): Binding[] {

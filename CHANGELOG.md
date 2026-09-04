@@ -12,6 +12,15 @@
 - A third worked example, `docs/example-quote-plain.md`: a quote with no
   VisiMark in it at all, whose appendix carries the real `infer` transcript and
   is pinned by the acceptance suite.
+
+### Fixed
+- `infer` proposed an anchor wherever a prose figure and a value agreed as
+  numbers, so `00` in a postal code claimed a fractional `MIN` and `#unnamed1`
+  claimed a `SUM` of `1`. A figure now states a value only when it is already
+  written the way `fmt` would write that value back — the value at the figure's
+  own decimals, carrying the column's decoration. Rounding at an anchor stays
+  legal; a currency-prefixed `**$750.00**` over a `$` column anchors as it
+  should; a figure written `25%` does not, because `fmt` would write `0.25`.
 - `DUP` — a name bound twice in one scope is an error rather than a silent
   overwrite.
 - `UNIT` — a column may carry a currency symbol or a physical unit, inferred

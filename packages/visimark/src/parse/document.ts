@@ -300,12 +300,13 @@ function walk(node: MdNode, visit: (n: MdNode) => void): void {
 }
 
 /**
- * A whole inline node that is nothing but a bare number. Deliberately narrower
- * than `parseDecorated`, which reads any leading run of non-digits as a unit
- * and so would take `#unnamed1` or `Q3` for a decorated `1` and `3`. A figure
- * is a number a sentence states, not a token that happens to end in digits.
+ * A whole inline node that is nothing but a number, decorated or not, so a
+ * prose `**$28659.00**` is as much a figure as a bare one. This is permissive
+ * on purpose: `parseDecorated` reads any leading run of non-digits as a unit,
+ * so `#unnamed1` lands here too. Deciding which figures actually state a value
+ * is the matcher's job, not the scanner's — see `infer/verify.ts`.
  */
-const WHOLE_NUMBER_RE = /^-?\d+(?:\.\d+)?%?$/;
+const WHOLE_NUMBER_RE = /^-?\s*[^\d\s.\-%]*\s*\d+(?:\.\d+)?\s*(?:%|[^\d\s.\-%]*)$/;
 /** every numeric run inside a text node, for the ones that cannot be anchored */
 const ANY_NUMBER_RE = /\d+(?:\.\d+)?%?/g;
 /** a character that makes an adjacent digit run part of something else —

@@ -55,6 +55,12 @@ export interface Proposal {
   reason?: string;
 }
 
+/**
+ * The other form a constant can be written in. `23%` and `0.23` are the same
+ * value; `Q23` and `#unnamed23` are tokens that happen to contain one.
+ */
+const PLAIN_FIGURE_RE = /^-?\d+(?:\.\d+)?%?$/;
+
 /** the reduces stage 3 searches, in the order they are reported */
 const REDUCES = ["SUM", "AVG", "MIN", "MAX", "COUNT"] as const;
 const SUFFIX: Record<string, string> = {
@@ -71,7 +77,8 @@ interface ScalarCandidate {
   reduce: string;
   name: string;
   rule: string;
-  matches(stored: string): boolean;
+  /** true when this value is already written in prose the way `fmt` writes it */
+  writes(figure: string): boolean;
 }
 
 interface ScalarPick {
@@ -130,17 +137,10 @@ function inferScalars(ctx: InferContext): {
         const name = column.toLowerCase() + SUFFIX[reduce]!;
         if (taken.has(name)) continue;
         const rule = `${name} = ${reduce}(${column})`;
-        const v = verifyScalar(ctx, sheet, rule, []);
+        const v = verifyScalar(ctx, sheet, rule, [], column);
         if (!v.usable) continue;
-        all.push({ sheet, column, reduce, name, rule, matches: v.matches });
+        all.push({ sheet, column, reduce, name, rule, writes: v.writes });
       }
-    }
-  }
-
-  const cellTexts = new Set<string>();
-  for (const sheet of ctx.sheets) {
-    for (const row of sheet.table.rows) {
-      for (const cell of row.cells) cellTexts.add(cell.text.trim());
     }
   }
 
@@ -149,11 +149,9 @@ function inferScalars(ctx: InferContext): {
   const claimed = new Set<ScalarCandidate>();
 
   for (const figure of ctx.doc.figures) {
-    // A figure written exactly as one of the table's own cells is quoting the
-    // table, not naming a value derived from it.
-    if (figure.anchored || cellTexts.has(figure.text.trim())) continue;
+    if (figure.anchored) continue;
 
-    const matching = all.filter((c) => c.matches(figure.text));
+    const matching = all.filter((c) => c.writes(figure.text));
     if (matching.length === 0) continue;
     const available = matching.filter(
       (c) => !claimed.has(c) && c.sheet.table.span.end < figure.value.start,
@@ -350,7 +348,7 @@ function echo(
   const k = numericValue(constant);
   if (!k) return undefined;
   for (const f of ctx.doc.figures) {
-    if (f.text === constant) continue;
+    if (f.text === constant || !PLAIN_FIGURE_RE.test(f.text)) continue;
     const v = numericValue(f.text);
     if (v && v.equals(k)) return { text: f.text, span: f.value };
   }
