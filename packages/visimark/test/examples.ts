@@ -12,9 +12,26 @@ const docDir = join(repoRoot, "docs");
 
 export const cleanPath = join(docDir, "example-invoice.md");
 export const driftPath = join(docDir, "example-invoice-drift.md");
+/** the third worked example: a plain document, with nothing wired up */
+export const quotePath = join(docDir, "example-quote-plain.md");
 
 export const clean = readFileSync(cleanPath, "utf8");
 export const drift = readFileSync(driftPath, "utf8");
+export const quote = readFileSync(quotePath, "utf8");
+
+/** the body of the nth ```console block in a worked example, `$` lines dropped */
+export function transcript(source: string, nth = 0): string {
+  const lines = source.split("\n");
+  let from = -1;
+  for (let seen = 0; seen <= nth; seen++) {
+    from = lines.findIndex((l, i) => i > from && l.trim() === "```console");
+  }
+  const to = lines.findIndex((l, i) => i > from && l.trim() === "```");
+  return lines
+    .slice(from + 1, to)
+    .filter((l) => !l.startsWith("$ "))
+    .join("\n");
+}
 
 /** the CLI entry, for tests that spawn it as a subprocess */
 export const mainTs = join(here, "..", "src", "cli", "main.ts");

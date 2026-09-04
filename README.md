@@ -146,9 +146,12 @@ configuration, and no rule for what a bare `/` means.
 
 The CLI is implemented: `visimark check`, `fmt`, `infer`, `eval` and `explain`,
 in TypeScript. `npm install -g visimark` puts a `visimark` command on your PATH;
-`npx visimark` runs it without installing. Both worked examples pass as the
+`npx visimark` runs it without installing. All three worked examples pass as the
 acceptance suite — `check` on the drift invoice reproduces the transcript above
-byte-for-byte, and `fmt` leaves the clean invoice untouched. The design is
+byte-for-byte, `fmt` leaves the clean invoice untouched, and `infer` on
+[`docs/example-quote-plain.md`](docs/example-quote-plain.md) — a quote with no
+formulas in it at all — reproduces the transcript in that document's own
+appendix. The design is
 written up in [`docs/visimark-design.md`](docs/visimark-design.md), including the
 deferred work and the known tensions; the implementation plan is
 [`docs/superpowers/plans/2026-09-03-visimark-cli.md`](docs/superpowers/plans/2026-09-03-visimark-cli.md).

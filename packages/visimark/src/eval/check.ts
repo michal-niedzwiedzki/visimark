@@ -706,7 +706,7 @@ function rowLabel(table: RawTable, row: number): string {
   return table.rows[row]?.cells[0]?.text ?? `row ${row + 1}`;
 }
 
-function docPrecision(model: DocModel): number {
+export function docPrecision(model: DocModel): number {
   const p = model.docScope.get("precision");
   if (p && p.expr.type === "num") return Number(p.expr.value);
   return 2;

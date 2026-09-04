@@ -1,4 +1,10 @@
-import { check, decimalPlaces, matchesStored, showValue } from "../eval/check.js";
+import {
+  check,
+  decimalPlaces,
+  docPrecision,
+  matchesStored,
+  showValue,
+} from "../eval/check.js";
 import { applyUnit } from "../eval/units.js";
 import type { Binding } from "../model/types.js";
 import type { Span } from "../parse/document.js";
@@ -123,10 +129,17 @@ export function verifyScalar(
   const v = result.values.get(binding.id);
   if (!v) return miss;
 
+  // A figure in prose is compared at no less than the document's own
+  // precision. Without that floor a bare integer — a postal code, a year —
+  // matches any value that rounds to it, so `00` in an address would claim
+  // `MIN(Share)`. Two decimals is where the document states money, and a whole
+  // number is not a claim about a value that differs in the second place.
+  const floor = docPrecision(model);
   return {
     usable: true,
     text: (places) => showValue(v, places),
-    matches: (stored) => matchesStored(v, stored, decimalPlaces(stored, 2)),
+    matches: (stored) =>
+      matchesStored(v, stored, Math.max(decimalPlaces(stored, floor), floor)),
   };
 }
 

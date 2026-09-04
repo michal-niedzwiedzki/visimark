@@ -3,8 +3,8 @@ import type { Proposal } from "../infer/propose.js";
 import { locate, type RawTable } from "../parse/document.js";
 import { lineOf } from "./lines.js";
 
-/** where `4/4 rows` sits, measured from the start of the line */
-const FITS_COL = 46;
+/** the narrowest column `4/4 rows` sits at; a longer rule pushes it right */
+const MIN_FITS_COL = 46;
 /** where a scalar's name sits, after the rule that produces it */
 const SCALAR_RULE_FIELD = 28;
 /** where the reason for a rejected rule sits */
@@ -79,11 +79,13 @@ function section(out: string[], title: string, body: string[]): void {
 function rules(group: Proposal[]): string[] {
   const ps = group.filter((p) => p.kind === "column");
   const w = field(ps.map((p) => p.name));
-  return ps.map((p) => {
-    const expr = p.rule.slice(p.rule.indexOf("=") + 2);
-    const head = `    ${p.name.padEnd(w)}= ${expr}`;
+  const heads = ps.map(
+    (p) => `    ${p.name.padEnd(w)}= ${p.rule.slice(p.rule.indexOf("=") + 2)}`,
+  );
+  const col = column(heads, MIN_FITS_COL);
+  return ps.map((p, i) => {
     const note = p.weak ? "2 rows — weak, not written" : `${p.fits}/${p.rows} rows`;
-    return pad(head, FITS_COL) + note;
+    return heads[i]!.padEnd(col) + note;
   });
 }
 
@@ -138,25 +140,30 @@ function ambiguous(group: Proposal[]): string[] {
 }
 
 function nearMisses(group: Proposal[]): string[] {
+  const ps = group.filter((x) => x.kind === "near-miss");
+  const heads = ps.flatMap((p) => [
+    `    ${p.rule}`,
+    `      cell ${p.disagreement!.stored}, rule gives ${p.disagreement!.computed}`,
+  ]);
+  const col = column(heads, MIN_FITS_COL);
   const out: string[] = [];
-  for (const p of group.filter((x) => x.kind === "near-miss")) {
-    out.push(pad(`    ${p.rule}`, FITS_COL) + `${p.fits}/${p.rows} rows`);
+  ps.forEach((p, i) => {
     const d = p.disagreement!;
+    out.push(heads[i * 2]!.padEnd(col) + `${p.fits}/${p.rows} rows`);
     out.push(`      row ${d.rowIndex + 1}  ${d.rowLabel}`);
     out.push(
-      pad(
-        `      cell ${d.stored}, rule gives ${d.computed}`,
-        FITS_COL,
-      ) + `differs by ${difference(d.stored, d.computed)}`,
+      heads[i * 2 + 1]!.padEnd(col) +
+        `differs by ${difference(d.stored, d.computed)}`,
     );
-  }
+  });
   return out;
 }
 
 function alsoFits(group: Proposal[]): string[] {
-  return group
-    .filter((p) => p.kind === "alternative")
-    .map((p) => pad(`    ${p.rule}`, 4 + REASON_FIELD) + (p.reason ?? ""));
+  const ps = group.filter((p) => p.kind === "alternative");
+  const heads = ps.map((p) => `    ${p.rule}`);
+  const col = column(heads, 4 + REASON_FIELD);
+  return ps.map((p, i) => heads[i]!.padEnd(col) + (p.reason ?? ""));
 }
 
 function looseFigures(loose: Proposal[], source: string): string[] {
@@ -189,8 +196,9 @@ function field(values: string[]): number {
   return Math.max(MIN_NAME_FIELD, ...values.map((v) => v.length + 2));
 }
 
-function pad(text: string, to: number): string {
-  return text.length >= to ? `${text} ` : text.padEnd(to);
+/** the column a trailing field starts at: never before `min`, never abutting */
+function column(heads: string[], min: number): number {
+  return Math.max(min, ...heads.map((h) => h.length + 2));
 }
 
 function plural(n: number, what: string): string {

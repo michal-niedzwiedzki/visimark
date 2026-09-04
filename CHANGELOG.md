@@ -9,6 +9,9 @@
   `check` re-proves. The result is an acyclic set rather than a list of
   findings, and `--write` only ever inserts. A rule that fits every row but one
   is reported as a near-miss — evidence the document is already wrong.
+- A third worked example, `docs/example-quote-plain.md`: a quote with no
+  VisiMark in it at all, whose appendix carries the real `infer` transcript and
+  is pinned by the acceptance suite.
 - `DUP` — a name bound twice in one scope is an error rather than a silent
   overwrite.
 - `UNIT` — a column may carry a currency symbol or a physical unit, inferred
