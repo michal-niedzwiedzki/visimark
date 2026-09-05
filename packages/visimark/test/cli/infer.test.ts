@@ -86,6 +86,39 @@ describe("--write", () => {
   });
 });
 
+describe("check points at infer when there is nothing to check", () => {
+  test("a rules-free document with rules to recover gets the hint, and still exits 0", async () => {
+    const path = scratch("f.md", strippedClean);
+    const c = capture();
+    expect(await runCli(["check", path], c.io)).toBe(0);
+    expect(c.out()).toContain("0 problems (0 stale, 0 errors)");
+    expect(c.out()).toContain(`no rules found — try \`visimark infer ${path}\``);
+  });
+
+  test("a document that already has rules does not get it", async () => {
+    const c = capture();
+    await runCli(["check", cleanPath], c.io);
+    expect(c.out()).not.toContain("no rules found");
+  });
+
+  test("a table infer can make nothing of does not get it either", async () => {
+    // The hint promises infer has something to say. One row is not evidence of
+    // a rule, so there is nothing to point at and the report stays quiet.
+    const path = scratch("g.md", "| Item | Price |\n|------|------:|\n| pen  |  5.00 |\n");
+    const c = capture();
+    expect(await runCli(["check", path], c.io)).toBe(0);
+    expect(c.out()).not.toContain("no rules found");
+  });
+
+  test("with --require-formulas it accompanies the failure", async () => {
+    const path = scratch("h.md", strippedClean);
+    const c = capture();
+    expect(await runCli(["check", path, "--require-formulas"], c.io)).toBe(1);
+    expect(c.out()).toContain("COVERAGE");
+    expect(c.out()).toContain(`no rules found — try \`visimark infer ${path}\``);
+  });
+});
+
 test("the usage text lists infer", async () => {
   const c = capture();
   await runCli(["--help"], c.io);

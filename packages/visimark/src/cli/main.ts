@@ -13,8 +13,10 @@ const USAGE = `visimark — spreadsheet mechanics for Markdown
 usage:
   visimark check FILE... [--require-formulas]
                                         read-only; exit 1 if any finding.
-                                        --require-formulas also fails a
-                                        document with zero \`vmark\` rules.
+                                        A document with no \`vmark\` rules gets
+                                        an advisory \`try visimark infer\` line
+                                        and still exits 0; --require-formulas
+                                        makes that case a finding.
   visimark fmt   FILE... [--fix-dates] rewrite computed cells and anchors
   visimark infer FILE... [--write]     propose rules for a document with none
   visimark eval  FILE [--get NAME] [--json]

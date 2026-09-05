@@ -20,7 +20,19 @@ const ERROR_CODES = new Set([
   "COVERAGE",
 ]);
 
-export function formatCheck(path: string, findings: Finding[]): string {
+export interface FormatOptions {
+  /**
+   * The document has no rules at all, and `infer` can see some in it. "0
+   * problems" is true and useless in that case; this points at the way in.
+   */
+  inferHint?: boolean;
+}
+
+export function formatCheck(
+  path: string,
+  findings: Finding[],
+  opts: FormatOptions = {},
+): string {
   const lines: string[] = [path, ""];
 
   const stale = findings.filter((f) => f.code === "STALE");
@@ -28,22 +40,28 @@ export function formatCheck(path: string, findings: Finding[]): string {
 
   for (const f of stale) lines.push(staleLine(f));
 
-  if (rest.length > 0) {
-    lines.push("");
-    rest.forEach((f) => {
-      lines.push(...renderGroup(f));
-      lines.push("");
-    });
-  } else if (stale.length > 0) {
+  // one blank closes the stale block, whether or not anything follows it —
+  // pushing it with the groups instead doubles it on an error-only document
+  if (stale.length > 0) lines.push("");
+
+  for (const f of rest) {
+    lines.push(...renderGroup(f));
     lines.push("");
   }
 
   lines.push(footer(findings));
+  if (opts.inferHint) {
+    lines.push("", `  no rules found — try \`visimark infer ${path}\``);
+  }
   return lines.join("\n");
 }
 
+/** the code field, padded so the payload lands at CONTENT_COL. As with
+ *  `labelField`, a code that fills the field keeps one space rather than
+ *  letting its message abut its last letter. */
 function prefix(code: string): string {
-  return "  " + code.padEnd(8);
+  const padded = code.padEnd(8);
+  return "  " + (padded.length === code.length ? code + " " : padded);
 }
 
 /** row label padded so the value lands in the same column every time.

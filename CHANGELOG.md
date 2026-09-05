@@ -22,8 +22,20 @@
 - A third worked example, `docs/example-quote-plain.md`: a quote with no
   VisiMark in it at all, whose appendix carries the real `infer` transcript and
   is pinned by the acceptance suite.
+- `check` points at `infer` instead of leaving "0 problems" to stand alone: a
+  document with no rules that `infer` can recover rules from now prints
+  `no rules found — try visimark infer FILE` under the count. Gated on what
+  `infer` would actually report, so the hint never promises more than the tool
+  can deliver, and advisory — the exit code is unchanged, and
+  `--require-formulas` remains what turns the case into a failure.
 
 ### Fixed
+- The `COVERAGE` code fills the eight-column code field exactly, so its message
+  ran straight into it: `COVERAGEdocument has no ...`. A code that fills the
+  field now keeps one space, the rule `labelField` already stated for labels.
+- A document with findings but no stale values had a doubled blank line under
+  its path — the separator that closes the stale block was emitted even when
+  there was no stale block to close.
 - `infer` proposed an anchor wherever a prose figure and a value agreed as
   numbers, so `00` in a postal code claimed a fractional `MIN` and `#unnamed1`
   claimed a `SUM` of `1`. A figure now states a value only when it is already

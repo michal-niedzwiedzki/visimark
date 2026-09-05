@@ -16,6 +16,25 @@ the arithmetic.
 follows from other numbers, it belongs in a `vmark` block as a rule, and the
 tool writes the value.
 
+## Handed an existing document? Run `infer` first
+
+A table that already has its numbers — a quote or budget someone drafted the
+ordinary way, no `vmark` block anywhere — **does not need its rules typed out
+by hand.** Do not skip to "Authoring: the shape" below. Run:
+
+```bash
+visimark infer FILE...          # see what it proposes
+visimark infer FILE... --write  # insert it
+```
+
+`infer` proposes only rules that reproduce every row exactly, verified against
+the same evaluator `check` uses — never a best fit. Hand-author what it leaves:
+`no rule found` is a genuine input, `also fits, not proposed` is a judgment
+call it refuses to make for you.
+
+`check` says the same thing on a document with no rules — `no rules found —
+try visimark infer FILE`.
+
 ## The trap: a green check proves nothing on its own
 
 `visimark check` verifies that the formulas in a document agree with the
@@ -26,13 +45,17 @@ $ visimark check quote-with-no-formulas.md
 quote-with-no-formulas.md
 
   0 problems (0 stale, 0 errors)
+
+  no rules found — try `visimark infer quote-with-no-formulas.md`
 $ echo $?
 0
 ```
 
-That is the exact output a fully-derived document gives. If you hand-compute
-the totals, write them as plain text, run `check`, and report "the checker
-passes," you have reported a green build on a document with no build.
+The count is the one a fully-derived document gives, and the exit code is `0`
+either way — the hint under it is the only difference, and it appears only when
+`infer` can see rules to recover. If you hand-compute the totals, write them as
+plain text, run `check`, and report "the checker passes," you have reported a
+green build on a document with no build.
 
 **Before reporting a VisiMark document as done, prove the numbers are derived.**
 Change one input and confirm the checker starts complaining:
@@ -64,13 +87,9 @@ visimark eval  FILE [--get NAME] [--json]
 visimark explain FILE [#sheet]        # rules and evaluation order
 ```
 
-`infer` is the way into an existing document. It reads a Markdown file that has
-arithmetic and no formulas, works out which rules reproduce the numbers already
-in it, and prints them; `--write` inserts the blocks and anchors. It is
-advisory — it exits `0` whatever it finds — and it only ever inserts, so prose,
-headings, input columns and existing blocks are untouched. A rule that fits
-every row but one is reported as a near-miss: that is the document telling you
-it already has a wrong number in it.
+`infer` is advisory — it exits `0` whatever it finds — and it only ever
+inserts, so prose, headings, input columns and existing blocks are untouched.
+See "Handed an existing document?" above for when to reach for it.
 
 From a clone: `bun src/cli/main.ts check FILE`, or `node bin/visimark.js check FILE`
 once `bun run build` has been run. `npx visimark` for a published install.
@@ -139,11 +158,13 @@ only a person can answer — do not paper over a `DATE`, `UNIT`, `CYCLE`,
 | "I'll add the formulas after the prose reads well" | You will forget, and the checker will not tell you. Table, block, anchors, then prose. |
 | "A totals row is more readable" | It breaks the rectangle. Totals are scalars reached through anchors. |
 | "I'll just fix that one cell by hand" | That cell is an output. Change the input or the rule and run `fmt`. |
+| "The document already has numbers, I'll just write the same rules by hand" | Run `infer` first. It derives and verifies the rule from the numbers already there; hand-authoring re-does that work and can introduce the exact mistake the tool exists to catch. |
 | "The date format is obvious from context" | `11/12/2026` is two different dates. VisiMark refuses on purpose. |
 
 ## Red flags — stop
 
 - You typed a number that another number implies.
+- You hand-authored `vmark` rules for a document that already had the arithmetic worked out, instead of running `infer` first.
 - You reported "0 problems" without changing an input to see it break.
 - You edited a value inside a `<!--vmark=…-->` anchor or a computed column.
 - You added a `Total` row to a table.

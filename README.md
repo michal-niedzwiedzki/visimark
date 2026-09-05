@@ -332,6 +332,11 @@ reports `0 problems` on a document containing no formulas at all, so a green
 check is evidence of agreement, not of derivation. Change an input and confirm
 the checker starts complaining before believing a document is wired up.
 
+`check` makes that case harder to miss: on a document with no rules that
+`infer` can see rules in, it prints `no rules found — try visimark infer FILE`
+under the count. The nudge is advisory and the exit code stays `0`;
+`--require-formulas` is what turns the same case into a failure.
+
 Editor support is specified in
 [`docs/visimark-editor-plugins-design.md`](docs/visimark-editor-plugins-design.md):
 one language server — continuous `check` as diagnostics, `fmt` behind

@@ -726,7 +726,7 @@ function rowLabel(table: RawTable, row: number): string {
   return table.rows[row]?.cells[0]?.text ?? `row ${row + 1}`;
 }
 
-function countBindings(model: DocModel): number {
+export function countBindings(model: DocModel): number {
   let n = model.docScope.size;
   for (const sheet of model.sheets.values()) {
     n += sheet.columns.size + sheet.scalars.size;

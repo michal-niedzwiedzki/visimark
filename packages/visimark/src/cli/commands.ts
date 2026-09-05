@@ -1,5 +1,5 @@
 import { readFileSync, writeFileSync } from "node:fs";
-import { check } from "../eval/check.js";
+import { check, countBindings } from "../eval/check.js";
 import { topoOrder } from "../eval/graph.js";
 import type { Value } from "../eval/value.js";
 import { build } from "../model/build.js";
@@ -50,6 +50,20 @@ function showValue(v: Value): string {
   return v.s;
 }
 
+/**
+ * Whether pointing the reader at `infer` would pay off. The hint promises
+ * `infer` has something to say, so it is gated on what `infer` would actually
+ * report: a rule it would write, or a near-miss — a rule that fits every row
+ * but one, which is the document admitting it already has a wrong number in
+ * it. A constant echoed in prose, or a tie between rules it refuses to pick
+ * between, is not on its own worth sending someone to another command for.
+ */
+function recoverable(source: string): boolean {
+  return infer(source).some(
+    (p) => p.kind === "column" || p.kind === "scalar" || p.kind === "near-miss",
+  );
+}
+
 export function cmdCheck(args: string[], out: Writer, err: Writer): number {
   const { files, flags } = parseArgs(args);
   if (files.length === 0) {
@@ -67,8 +81,13 @@ export function cmdCheck(args: string[], out: Writer, err: Writer): number {
       exit = 2;
       continue;
     }
-    const result = check(build(locate(source)), { requireFormulas });
-    out(formatCheck(path, result.findings));
+    const model = build(locate(source));
+    const result = check(model, { requireFormulas });
+    out(
+      formatCheck(path, result.findings, {
+        inferHint: countBindings(model) === 0 && recoverable(source),
+      }),
+    );
     if (result.findings.length > 0 && exit === 0) exit = 1;
   }
   return exit;

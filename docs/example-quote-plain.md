@@ -156,9 +156,11 @@ modules.
 ```
 
 `visimark check` reports `0 problems` on the document as committed, and that
-means nothing at all: there is nothing in it to disagree with. Run it against the
-document `--write` leaves behind and the same `0 problems` is a claim. Change one
-`Seats` figure there and it stops being true — in both tables at once, because
+means nothing at all: there is nothing in it to disagree with. It says so —
+`no rules found — try visimark infer …` sits under the count, because a green
+check on a document with no rules is a question, not an answer. Run it against
+the document `--write` leaves behind and the same `0 problems` is a claim.
+Change one `Seats` figure there and it stops being true — in both tables at once, because
 the schedule reads the delivered total.
 
 ### The half that matters more
