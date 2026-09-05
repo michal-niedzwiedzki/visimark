@@ -1,4 +1,4 @@
-export { locate } from "./parse/document.js";
+export { locate } from './parse/document.js';
 export { build } from "./model/build.js";
 export { check, type CheckResult } from "./eval/check.js";
 export { fmt, planFmt, type FmtOptions, type FmtResult, type PlannedEdit } from "./write/fmt.js";
