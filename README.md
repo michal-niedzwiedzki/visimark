@@ -189,13 +189,62 @@ VisiMark parses the document, builds a dependency graph across every sheet,
 sorts it topologically, and evaluates in decimal arithmetic. Circular
 dependencies are reported with the full path through the cycle.
 
-`visimark check` is read-only and exits non-zero on any disagreement, so a
-wrong number fails CI instead of reaching the customer. `visimark fmt` repairs
-stale values, and only stale values — every other class of problem is a
-question a human has to answer.
-
 The CLI is the product. An agent must be able to verify a document without an
 editor; a VS Code extension is a later, thin wrapper.
+
+## The commands
+
+Five of them. `check` is the one that matters; the rest exist to get a
+document into a state `check` can be strict about, or to explain what it did.
+
+| Command | What it does | Options | What it writes | Exit codes |
+|---------|--------------|---------|----------------|------------|
+| `visimark check FILE...` | Recomputes every formula and reports the numbers that no longer agree with it | — | nothing, ever | `0` clean · `1` findings · `2` bad usage or unreadable file |
+| `visimark fmt FILE...` | Repairs stale values in place, by splicing the bytes of each number it owns | `--fix-dates` rewrites unambiguous non-ISO dates | computed cells and anchored values only — never inputs, prose or headings | `0` clean · `1` problems it cannot fix remain · `2` bad usage or unreadable file |
+| `visimark infer FILE...` | Works out which rules reproduce the numbers a document already has, and proposes them | `--write` inserts what it proposed | nothing, unless `--write` — and then it only ever inserts | `0` whatever it finds, because it is advisory · `2` bad usage or unreadable file |
+| `visimark eval FILE` | Prints the computed values — all of them, or one by name | `--get NAME`, `--json` | nothing | `0` · `2` bad usage, unreadable file, or no such name |
+| `visimark explain FILE` | Prints each sheet's inputs, rules and evaluation order | `#sheet` limits it to one sheet | nothing | `0` · `2` bad usage, unreadable file, or no such sheet |
+
+`check` is read-only, so it is safe to point at anything. `fmt` repairs stale
+values and *only* stale values: every other kind of problem is a question a
+person has to answer, so it reports those and leaves them alone.
+
+### A green check has to mean something
+
+A document with no formulas in it has nothing to disagree with, so a checker
+that only compares numbers to rules would call it clean — the most misleading
+answer it could give. `check` reports a table with no rules attached to it as a
+problem in its own right:
+
+```console
+$ visimark check quote.md
+quote.md
+
+  COVERAGE a table with no `vmark` rules — nothing in this document is checked
+           run `visimark infer` to derive them, or mark it `<!--vmark:no-formulas-->`
+
+  1 problem (0 stale, 1 error)
+```
+
+Two things keep that from being annoying. It needs a table to be present, so
+prose — a README, a changelog — is never asked for arithmetic it does not have.
+And it is counted across the whole document, so a reference table that really
+is all input passes as long as some other table carries a rule.
+
+When a document genuinely has nothing to derive, say so in the document:
+
+```markdown
+<!--vmark:no-formulas-->
+```
+
+That marker is the only way out, and deliberately so. It lives in the file
+rather than in a workflow flag, so it travels with the content, shows up in
+review, and turns up in a `grep`. `visimark infer --write` writes it for you
+when it finds nothing whatsoever to derive — and refuses to when it found a
+near-miss or two rules it cannot choose between, because those mean the
+document *does* have arithmetic and wants a person to look. The marker is
+checked like anything else: add rules to a marked document later and `check`
+tells you the marker is now wrong.
 
 ## In CI
 
@@ -212,25 +261,16 @@ this repo ships ([`action.yml`](action.yml)) instead of hand-rolling the
 `npx` line:
 
 ```yaml
-- uses: michal-niedzwiedzki/visimark@v1
+- uses: michal-niedzwiedzki/visimark@v0.1.0
   with:
     files: "docs/**/*.md"
 ```
 
-A document whose tables carry no `vmark` rules fails that gate by default,
-rather than passing for having nothing to disagree with. Run `visimark infer`
-on it to derive the rules, or — if the tables really are just reference data
-with no arithmetic in them — put
-
-```markdown
-<!--vmark:no-formulas-->
-```
-
-anywhere in the document. That marker is the whole escape hatch: it lives in
-the file rather than in a workflow flag, so it travels with the content, shows
-up in review, and can be found with `grep`. It is checked too — a marked
-document that later grows rules is reported, so the claim cannot quietly
-outlive the state it was written for.
+There is nothing to configure and no strictness dial to find: pointing it at a
+glob is the whole setup. Any document under that glob with a table and no rules
+is a failure, which is why the `<!--vmark:no-formulas-->` marker above belongs
+in the file rather than in this workflow — the decision is about a document,
+not about a CI run.
 
 ## Diffable by construction
 
@@ -299,9 +339,9 @@ configuration, and no rule for what a bare `/` means.
 
 ## Status
 
-The CLI is implemented: `visimark check`, `fmt`, `infer`, `eval` and `explain`,
-in TypeScript. `npm install -g visimark` puts a `visimark` command on your PATH;
-`npx visimark` runs it without installing. All three worked examples pass as the
+All five commands are implemented, in TypeScript. `npm install -g visimark`
+puts a `visimark` command on your PATH; `npx visimark` runs it without
+installing. All three worked examples pass as the
 acceptance suite — `check` on the drift invoice reproduces the transcript above
 byte-for-byte, `fmt` leaves the clean invoice untouched, and `infer` on
 [`docs/example-quote-plain.md`](docs/example-quote-plain.md) — a quote with no
@@ -339,13 +379,10 @@ three repository secrets — `NPM_TOKEN`, `VSCE_PAT` and `OVSX_PAT`.
 authoring and verifying these documents. Copy it to `~/.claude/skills/visimark/`
 to install it. Its central warning is one worth stating here too: a green check
 is evidence of agreement, not of derivation. Change an input and confirm the
-checker starts complaining before believing a document is wired up.
-
-`check` no longer leaves that case to vigilance. A table with no `vmark` rules
-anywhere in its document is a `COVERAGE` finding and a non-zero exit — the way
-out is `visimark infer`, or the `<!--vmark:no-formulas-->` marker for a
-document that genuinely has nothing to derive. Prose with no table is never
-asked for arithmetic it does not have.
+checker starts complaining before believing a document is wired up. The
+`COVERAGE` finding described above exists so that an agent cannot report a
+green build on a document with no build in it, but the habit is still the
+better safeguard.
 
 Editor support is specified in
 [`docs/visimark-editor-plugins-design.md`](docs/visimark-editor-plugins-design.md):
@@ -373,3 +410,5 @@ as a document rather than as data.
 No grid, no presentation layer, no cell styling, no locale, no Excel file
 compatibility, and no attempt at Excel's function library. Use other tools for
 neat presentation.
+
+<!--vmark:no-formulas-->

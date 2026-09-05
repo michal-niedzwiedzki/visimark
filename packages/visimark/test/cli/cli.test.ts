@@ -103,7 +103,7 @@ test("check passes a document that has a formula", async () => {
   expect(await runCli(["check", cleanPath], c.io)).toBe(0);
 });
 
-test("the retired --require-formulas flag is accepted and ignored", async () => {
+test("an unrecognised flag is ignored rather than failing the run", async () => {
   const c = capture();
   expect(await runCli(["check", cleanPath, "--require-formulas"], c.io)).toBe(0);
 });

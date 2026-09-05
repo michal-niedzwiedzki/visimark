@@ -19,15 +19,13 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-      # `bun install` links this branch's CLI into node_modules/.bin, and the
-      # build produces the dist/ that link points at. Neither is enough on its
-      # own: node_modules/.bin is on PATH inside `bun run`, but *not* inside a
-      # composite action's plain `run:` step, so the action's `command -v
-      # visimark` preference silently fell through to `npx visimark@latest` —
-      # dogfooding the last published package instead of the code under test.
-      # GITHUB_PATH is what makes that preference actually resolve here.
+      # `bun install` builds this branch's CLI (root postinstall) and links it
+      # into node_modules/.bin. That directory is on PATH inside `bun run`, but
+      # *not* inside a composite action's plain `run:` step, so the action's
+      # `command -v visimark` preference silently fell through to
+      # `npx visimark@latest` — dogfooding the last published package instead
+      # of the code under test. GITHUB_PATH is what makes it resolve here.
       - run: bun install --frozen-lockfile
-      - run: bun run build
       - run: echo "${{ github.workspace }}/node_modules/.bin" >> "$GITHUB_PATH"
 
       - name: the action must run this branch's CLI, not the published package
