@@ -1,16 +1,27 @@
-import { locate } from "../parse/document.js";
+import { countBindings } from "../eval/check.js";
+import { build } from "../model/build.js";
+import { locate, type LocatedDoc, NO_FORMULAS_MARKER } from "../parse/document.js";
 import type { Edit } from "../write/splice.js";
 import { buildContext, type InferSheet } from "./context.js";
 import { infer, type Proposal } from "./propose.js";
 
-export interface PlannedInsert extends Edit {
-  /** a `vmark` block, or the comment anchor that binds a scalar into prose */
-  kind: "block" | "anchor";
-  /** the proposal this insert carries; the first of `proposals` for a block */
-  proposal: Proposal;
-  /** every proposal this insert carries — a block holds a sheet's whole set */
-  proposals: Proposal[];
-}
+export type PlannedInsert = Edit &
+  (
+    | {
+        /** a `vmark` block, or the comment anchor that binds a scalar into prose */
+        kind: "block" | "anchor";
+        /** the proposal this insert carries; the first of `proposals` for a block */
+        proposal: Proposal;
+        /** every proposal this insert carries — a block holds a sheet's whole set */
+        proposals: Proposal[];
+      }
+    | {
+        /** the `no-formulas` marker, which carries no proposal by definition */
+        kind: "marker";
+        proposal?: undefined;
+        proposals?: undefined;
+      }
+  );
 
 /**
  * `--write` only ever inserts. It never rewrites an existing byte, so input
@@ -21,7 +32,11 @@ export function planInfer(source: string, only?: Proposal[]): PlannedInsert[] {
   const proposals = only ?? infer(source);
   const ctx = buildContext(source);
   const sheetById = new Map(ctx.sheets.map((s) => [s.id, s]));
-  const figures = locate(source).figures;
+  const doc = locate(source);
+  const figures = doc.figures;
+
+  const marker = planMarker(source, doc, proposals);
+  if (marker) return [marker];
 
   const writable = proposals.filter(
     (p) => !p.weak && (p.kind === "column" || (p.kind === "scalar" && p.anchorSite !== undefined)),
@@ -62,6 +77,30 @@ export function planInfer(source: string, only?: Proposal[]): PlannedInsert[] {
   }
 
   return out;
+}
+
+/**
+ * The negative result, written down. A document whose tables have no rules
+ * fails `check`, and the only honest answer for one that has no arithmetic to
+ * recover is to say so in the document itself.
+ *
+ * `infer` must have found *nothing whatsoever* first. A near-miss or an
+ * ambiguity means the document does have arithmetic — one wrong row, or two
+ * rules it refuses to choose between — and marking it would silence exactly
+ * the document that most needs a reader.
+ */
+function planMarker(source: string, doc: LocatedDoc, proposals: Proposal[]): PlannedInsert | null {
+  if (proposals.length > 0) return null;
+  if (doc.tables.length === 0 || doc.noFormulas !== null) return null;
+  if (countBindings(build(doc)) > 0) return null;
+
+  const lead = source.endsWith("\n\n") ? "" : source.endsWith("\n") ? "\n" : "\n\n";
+  return {
+    start: source.length,
+    end: source.length,
+    text: `${lead}${NO_FORMULAS_MARKER}\n`,
+    kind: "marker",
+  };
 }
 
 /**

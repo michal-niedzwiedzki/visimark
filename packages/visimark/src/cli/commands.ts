@@ -1,10 +1,10 @@
 import { readFileSync, writeFileSync } from "node:fs";
-import { check, countBindings } from "../eval/check.js";
+import { check } from "../eval/check.js";
 import { topoOrder } from "../eval/graph.js";
 import type { Value } from "../eval/value.js";
 import { build } from "../model/build.js";
 import type { DocModel } from "../model/types.js";
-import { locate } from "../parse/document.js";
+import { locate, NO_FORMULAS_MARKER } from "../parse/document.js";
 import { infer } from "../infer/propose.js";
 import { planInfer } from "../infer/write.js";
 import { formatCheck } from "../report/format.js";
@@ -50,27 +50,12 @@ function showValue(v: Value): string {
   return v.s;
 }
 
-/**
- * Whether pointing the reader at `infer` would pay off. The hint promises
- * `infer` has something to say, so it is gated on what `infer` would actually
- * report: a rule it would write, or a near-miss — a rule that fits every row
- * but one, which is the document admitting it already has a wrong number in
- * it. A constant echoed in prose, or a tie between rules it refuses to pick
- * between, is not on its own worth sending someone to another command for.
- */
-function recoverable(source: string): boolean {
-  return infer(source).some(
-    (p) => p.kind === "column" || p.kind === "scalar" || p.kind === "near-miss",
-  );
-}
-
 export function cmdCheck(args: string[], out: Writer, err: Writer): number {
-  const { files, flags } = parseArgs(args);
+  const { files } = parseArgs(args);
   if (files.length === 0) {
-    err("usage: visimark check FILE... [--require-formulas]");
+    err("usage: visimark check FILE...");
     return 2;
   }
-  const requireFormulas = flags.has("require-formulas");
   let exit = 0;
   for (const path of files) {
     let source: string;
@@ -81,13 +66,8 @@ export function cmdCheck(args: string[], out: Writer, err: Writer): number {
       exit = 2;
       continue;
     }
-    const model = build(locate(source));
-    const result = check(model, { requireFormulas });
-    out(
-      formatCheck(path, result.findings, {
-        inferHint: countBindings(model) === 0 && recoverable(source),
-      }),
-    );
+    const result = check(build(locate(source)));
+    out(formatCheck(path, result.findings));
     if (result.findings.length > 0 && exit === 0) exit = 1;
   }
   return exit;
@@ -161,6 +141,10 @@ export function cmdInfer(args: string[], out: Writer, err: Writer): number {
       continue;
     }
     writeFileSync(path, applyEdits(source, edits));
+    if (edits.some((e) => e.kind === "marker")) {
+      out(`${path}: nothing to derive — marked \`${NO_FORMULAS_MARKER}\``);
+      continue;
+    }
     const blocks = edits.filter((e) => e.kind === "block").length;
     const anchors = edits.filter((e) => e.kind === "anchor").length;
     const bits = [

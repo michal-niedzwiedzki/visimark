@@ -1,5 +1,48 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- **A table with no `vmark` rules is now a finding, with no flag to pass.**
+  `check` used to report `0 problems` on a document with nothing to disagree
+  with, and `--require-formulas` was the opt-in that turned that into a
+  failure — a flag you had to already know about to close a hole you would not
+  think to look for. The requirement is now the default, and two things make
+  that safe to turn on: it is keyed on a table being present, so prose is never
+  asked for arithmetic it does not have, and it stays counted document-wide, so
+  a reference table that is legitimately all-input passes as long as some other
+  table in the document carries a rule.
+
+- **`--require-formulas` is gone.** Passing it is harmless — unknown flags are
+  ignored — so an existing workflow keeps working and gets the behaviour it was
+  asking for. A per-run flag was always the wrong shape for a per-document
+  question: it could not say "these three reference tables are fine, that
+  fourth document is a quote someone forgot to formalise."
+
+### Added
+
+- **`<!--vmark:no-formulas-->`**: the per-document way out, in the document
+  rather than in a CI flag. It travels with the content, shows up in review,
+  and can be found with `grep`. Only a top-level comment counts, so a marker
+  shown inside a fenced example is documentation rather than an assertion.
+
+- **`visimark infer --write` writes that marker** when it finds nothing
+  whatsoever to derive — the negative result recorded rather than printed and
+  forgotten. It deliberately does not write it when it found a near-miss or an
+  ambiguity: those mean the document does have arithmetic, and marking it would
+  silence exactly the document that most needs a reader.
+
+- **The marker is checked like any other claim.** A marked document that has
+  since grown rules is reported, so the assertion cannot quietly outlive the
+  state it was written for.
+
+### Removed
+
+- The advisory `no rules found — try visimark infer FILE` line under the count.
+  The case it pointed at is now a finding that names the same way out, so the
+  hint would only repeat it.
+
 ## 0.1.0 - 2026-09-05
 
 First release. VisiMark is a spreadsheet-mechanics tool for Markdown: a

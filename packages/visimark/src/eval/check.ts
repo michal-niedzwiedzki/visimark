@@ -1,6 +1,6 @@
 import { Decimal } from "decimal.js";
 import type { Expr, Ref } from "../lang/ast.js";
-import type { RawTable, Span } from "../parse/document.js";
+import { NO_FORMULAS_MARKER, type RawTable, type Span } from "../parse/document.js";
 import type { Binding, DocModel, Finding, Sheet } from "../model/types.js";
 import { closest } from "../report/levenshtein.js";
 import { parseIsoDate } from "./dates.js";
@@ -22,17 +22,6 @@ const MAX_FN_SUGGESTION_DISTANCE = 2;
 const BOOLEAN_BINDING_MESSAGE =
   "a boolean cannot be stored; wrap it in `IF()` to produce a number or a string";
 
-export interface CheckOptions {
-  /**
-   * Fail a document that has zero `vmark` rules anywhere in it — the exact
-   * gap the SKILL.md warning describes: `check` reports 0 problems on a
-   * document with nothing to disagree with. Checked document-wide, not
-   * per-sheet, so a reference sheet that is legitimately all-input never
-   * trips it as long as some other sheet in the document carries a rule.
-   */
-  requireFormulas?: boolean;
-}
-
 export interface CheckResult {
   findings: Finding[];
   values: Map<string, Value>;
@@ -53,7 +42,7 @@ class Unevaluable extends Error {}
 const PERCENT_RE = /^(\d+(?:\.\d+)?)%$/;
 const DATEISH_RE = /^\d{1,4}[./-]\d{1,4}[./-]\d{1,4}$/;
 
-export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
+export function check(model: DocModel): CheckResult {
   const { order, cycles } = topoOrder(model);
 
   const values = new Map<string, Value>();
@@ -83,12 +72,7 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
   // structural findings carried from the model (SHEET, binding parse errors)
   for (const f of model.findings) emit(f);
 
-  if (opts.requireFormulas && countBindings(model) === 0) {
-    emit({
-      code: "COVERAGE",
-      message: "document has no `vmark` rules; --require-formulas needs at least one",
-    });
-  }
+  emitCoverage(model, emit);
 
   const fallbackPrecision = docPrecision(model);
 
@@ -683,6 +667,44 @@ export function countBindings(model: DocModel): number {
     n += sheet.columns.size + sheet.scalars.size;
   }
   return n;
+}
+
+/**
+ * A table with no rule attached to it anywhere is the one thing `check` cannot
+ * otherwise see: `0 problems` on a document with nothing to disagree with.
+ *
+ * Two deliberate limits. It is keyed on a table being present, so prose — a
+ * README, a changelog, a design note — is never asked for arithmetic it does
+ * not have. And it is counted document-wide rather than per-sheet, so a
+ * reference table that is legitimately all-input passes as long as some other
+ * table in the document carries a rule.
+ *
+ * The way out is `<!--vmark:no-formulas-->`: the author saying in the document
+ * that there is nothing here to derive. That claim is checked like any other —
+ * a marked document that has since grown rules is reported, so the marker
+ * cannot quietly outlive the state it was written for.
+ */
+function emitCoverage(model: DocModel, emit: (f: Finding) => void): void {
+  const bindings = countBindings(model);
+  const marked = model.located.noFormulas !== null;
+
+  if (marked && bindings > 0) {
+    emit({
+      code: "COVERAGE",
+      message: `marked \`${NO_FORMULAS_MARKER}\`, but the document has ${bindings} rule${bindings === 1 ? "" : "s"}`,
+      suggestion: "delete the marker — those rules are checked either way",
+      span: model.located.noFormulas ?? undefined,
+    });
+    return;
+  }
+
+  if (!marked && bindings === 0 && model.located.tables.length > 0) {
+    emit({
+      code: "COVERAGE",
+      message: "a table with no `vmark` rules — nothing in this document is checked",
+      suggestion: `run \`visimark infer\` to derive them, or mark it \`${NO_FORMULAS_MARKER}\``,
+    });
+  }
 }
 
 function docPrecision(model: DocModel): number {

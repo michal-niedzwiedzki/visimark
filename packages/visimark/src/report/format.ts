@@ -20,15 +20,7 @@ const ERROR_CODES = new Set([
   "COVERAGE",
 ]);
 
-export interface FormatOptions {
-  /**
-   * The document has no rules at all, and `infer` can see some in it. "0
-   * problems" is true and useless in that case; this points at the way in.
-   */
-  inferHint?: boolean;
-}
-
-export function formatCheck(path: string, findings: Finding[], opts: FormatOptions = {}): string {
+export function formatCheck(path: string, findings: Finding[]): string {
   const lines: string[] = [path, ""];
 
   const stale = findings.filter((f) => f.code === "STALE");
@@ -46,9 +38,6 @@ export function formatCheck(path: string, findings: Finding[], opts: FormatOptio
   }
 
   lines.push(footer(findings));
-  if (opts.inferHint) {
-    lines.push("", `  no rules found — try \`visimark infer ${path}\``);
-  }
   return lines.join("\n");
 }
 
@@ -148,8 +137,16 @@ function renderGroup(f: Finding): string[] {
       return [prefix("CYCLE") + (f.cyclePath ?? []).join(" → ")];
     case "SHEET":
       return [prefix("SHEET") + id(f).padEnd(ID_FIELD) + "  " + (f.message ?? "")];
-    case "COVERAGE":
-      return [prefix("COVERAGE") + (f.message ?? "")];
+    case "COVERAGE": {
+      // `COVERAGE` fills the eight-column code field exactly, so its payload
+      // starts one column right of `CONT`. Indent the continuation to the
+      // head it actually follows rather than to the shared constant.
+      const head = prefix("COVERAGE");
+      return [
+        head + (f.message ?? ""),
+        ...(f.suggestion ? [" ".repeat(head.length) + f.suggestion] : []),
+      ];
+    }
     case "ANCHOR":
       return [
         prefix("ANCHOR") +

@@ -12,11 +12,11 @@ const DISPLAY_PATH = "docs/example-quote-plain.md";
 const report = (src: string) => formatInfer(DISPLAY_PATH, src, infer(src));
 
 describe("example-quote-plain.md — the plain document worked example", () => {
-  test("it really is plain: no blocks, no anchors, nothing checked", () => {
+  test("it really is plain — and check reports that rather than passing it", () => {
     const doc = locate(quote);
     expect(doc.blocks).toEqual([]);
     expect(doc.anchors).toEqual([]);
-    expect(check(build(doc)).findings).toEqual([]);
+    expect(check(build(doc)).findings.map((f) => f.code)).toEqual(["COVERAGE"]);
   });
 
   test("infer reproduces the appendix's own transcript", () => {

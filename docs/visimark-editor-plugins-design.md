@@ -456,3 +456,5 @@ does not "fix" it toward byte offsets.
 which is all VisiMark targets. If a pathological document ever makes this
 sting, the debounce is user-configurable and incremental reparse is the
 deferred escape hatch.
+
+<!--vmark:no-formulas-->

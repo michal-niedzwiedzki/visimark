@@ -179,9 +179,9 @@ reported as a near-miss instead — the tool telling you the document already
 has a wrong number in it, before anyone runs `check` on it. The document's own
 appendix walks through every mechanism, including that near-miss case.
 
-`infer` is the way in for the document `check` cannot yet help with: one with
-no formulas at all. Pairing the two closes the loop — `infer` gets a plain
-table wired up, `check` (`--require-formulas` included) keeps it that way.
+`infer` is the way in for the document `check` would otherwise have nothing to
+say about: one with no formulas at all. Pairing the two closes the loop —
+`infer` gets a plain table wired up, and `check` keeps it that way.
 
 ## How it works
 
@@ -217,10 +217,20 @@ this repo ships ([`action.yml`](action.yml)) instead of hand-rolling the
     files: "docs/**/*.md"
 ```
 
-Add `--require-formulas` — `args: "--require-formulas"` for the action —
-for a stricter gate: without it, a document with zero `vmark` rules still
-passes `check`, for having nothing to disagree with rather than for being
-verified.
+A document whose tables carry no `vmark` rules fails that gate by default,
+rather than passing for having nothing to disagree with. Run `visimark infer`
+on it to derive the rules, or — if the tables really are just reference data
+with no arithmetic in them — put
+
+```markdown
+<!--vmark:no-formulas-->
+```
+
+anywhere in the document. That marker is the whole escape hatch: it lives in
+the file rather than in a workflow flag, so it travels with the content, shows
+up in review, and can be found with `grep`. It is checked too — a marked
+document that later grows rules is reported, so the claim cannot quietly
+outlive the state it was written for.
 
 ## Diffable by construction
 
@@ -327,15 +337,15 @@ three repository secrets — `NPM_TOKEN`, `VSCE_PAT` and `OVSX_PAT`.
 
 [`skills/visimark/SKILL.md`](skills/visimark/SKILL.md) is an agent skill for
 authoring and verifying these documents. Copy it to `~/.claude/skills/visimark/`
-to install it. Its central warning is one worth stating here too: `check`
-reports `0 problems` on a document containing no formulas at all, so a green
-check is evidence of agreement, not of derivation. Change an input and confirm
-the checker starts complaining before believing a document is wired up.
+to install it. Its central warning is one worth stating here too: a green check
+is evidence of agreement, not of derivation. Change an input and confirm the
+checker starts complaining before believing a document is wired up.
 
-`check` makes that case harder to miss: on a document with no rules that
-`infer` can see rules in, it prints `no rules found — try visimark infer FILE`
-under the count. The nudge is advisory and the exit code stays `0`;
-`--require-formulas` is what turns the same case into a failure.
+`check` no longer leaves that case to vigilance. A table with no `vmark` rules
+anywhere in its document is a `COVERAGE` finding and a non-zero exit — the way
+out is `visimark infer`, or the `<!--vmark:no-formulas-->` marker for a
+document that genuinely has nothing to derive. Prose with no table is never
+asked for arithmetic it does not have.
 
 Editor support is specified in
 [`docs/visimark-editor-plugins-design.md`](docs/visimark-editor-plugins-design.md):

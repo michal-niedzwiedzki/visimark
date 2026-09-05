@@ -32,30 +32,29 @@ the same evaluator `check` uses — never a best fit. Hand-author what it leaves
 `no rule found` is a genuine input, `also fits, not proposed` is a judgment
 call it refuses to make for you.
 
-`check` says the same thing on a document with no rules — `no rules found —
-try visimark infer FILE`.
+`check` says the same thing, as a failure, on a document with no rules.
 
-## The trap: a green check proves nothing on its own
+## The trap it closes: a green check proves nothing on its own
 
 `visimark check` verifies that the formulas in a document agree with the
-numbers. A document with **no formulas** has nothing to disagree with:
+numbers. A document with **no formulas** has nothing to disagree with, so
+`check` refuses to call it clean:
 
 ```
 $ visimark check quote-with-no-formulas.md
 quote-with-no-formulas.md
 
-  0 problems (0 stale, 0 errors)
+  COVERAGE a table with no `vmark` rules — nothing in this document is checked
+           run `visimark infer` to derive them, or mark it `<!--vmark:no-formulas-->`
 
-  no rules found — try `visimark infer quote-with-no-formulas.md`
+  1 problem (0 stale, 1 error)
 $ echo $?
-0
+1
 ```
 
-The count is the one a fully-derived document gives, and the exit code is `0`
-either way — the hint under it is the only difference, and it appears only when
-`infer` can see rules to recover. If you hand-compute the totals, write them as
-plain text, run `check`, and report "the checker passes," you have reported a
-green build on a document with no build.
+If you hand-compute the totals, write them as plain text, run `check`, and
+report "the checker passes," you have reported a green build on a document with
+no build. This finding is what stops that.
 
 **Before reporting a VisiMark document as done, prove the numbers are derived.**
 Change one input and confirm the checker starts complaining:
@@ -69,18 +68,30 @@ git checkout quote.md                    # or undo the edit
 If `check` still says `0 problems` after you changed an input, nothing in that
 document is wired up. Fix it before you report anything.
 
-CI can enforce this instead of trusting the change-one-input ritual:
-`visimark check FILE... --require-formulas` fails (exit 1) a document with zero
-`vmark` rules anywhere in it, the same "0 problems" case above. It is opt-in —
-a document that is legitimately all-input still passes `check` without the
-flag.
+The finding is keyed on a table being present, so a prose document — a README,
+a changelog — is never asked for arithmetic it does not have. It is counted
+document-wide, so a reference table that is legitimately all-input passes as
+long as some other table in the document carries a rule.
+
+For a document whose tables really are reference data with no arithmetic in
+them, say so in the document itself:
+
+```markdown
+<!--vmark:no-formulas-->
+```
+
+`visimark infer FILE --write` writes that marker for you when it finds nothing
+whatsoever to derive — and deliberately does **not** when it finds a near-miss
+or an ambiguity, because those mean the document does have arithmetic and needs
+a human. Never add the marker by hand to silence a failure you have not read:
+that is the one move this finding exists to prevent. A marked document that
+later grows rules is reported too, so the marker cannot outlive its truth.
 
 ## Running it
 
 ```bash
-visimark check FILE... [--require-formulas]
-                                       # read-only; exit 1 if anything disagrees
-                                       # (or if --require-formulas and no rules)
+visimark check FILE...                # read-only; exit 1 if anything disagrees,
+                                       # or if a table has no rules at all
 visimark fmt   FILE... [--fix-dates]  # rewrite computed cells and anchors
 visimark infer FILE... [--write]      # propose rules for a document with none
 visimark eval  FILE [--get NAME] [--json]
@@ -179,3 +190,5 @@ invoice with VAT, a payment schedule, early-payment terms, a currency
 conversion and a reconciliation. `docs/example-invoice-drift.md` is the same
 invoice after someone changed one input and updated nothing derived from it;
 `check` finds 26 problems in it. Read the clean one before authoring.
+
+<!--vmark:no-formulas-->

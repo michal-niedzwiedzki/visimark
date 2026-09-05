@@ -86,36 +86,35 @@ describe("--write", () => {
   });
 });
 
-describe("check points at infer when there is nothing to check", () => {
-  test("a rules-free document with rules to recover gets the hint, and still exits 0", async () => {
+describe("check points at infer when a table has no rules", () => {
+  test("a rules-free document fails, and the failure names the way out", async () => {
     const path = scratch("f.md", strippedClean);
     const c = capture();
-    expect(await runCli(["check", path], c.io)).toBe(0);
-    expect(c.out()).toContain("0 problems (0 stale, 0 errors)");
-    expect(c.out()).toContain(`no rules found — try \`visimark infer ${path}\``);
+    expect(await runCli(["check", path], c.io)).toBe(1);
+    expect(c.out()).toContain("COVERAGE");
+    expect(c.out()).toContain("visimark infer");
   });
 
-  test("a document that already has rules does not get it", async () => {
+  test("a document that already has rules is left alone", async () => {
     const c = capture();
-    await runCli(["check", cleanPath], c.io);
-    expect(c.out()).not.toContain("no rules found");
+    expect(await runCli(["check", cleanPath], c.io)).toBe(0);
+    expect(c.out()).not.toContain("COVERAGE");
   });
 
-  test("a table infer can make nothing of does not get it either", async () => {
-    // The hint promises infer has something to say. One row is not evidence of
-    // a rule, so there is nothing to point at and the report stays quiet.
+  test("a table infer can make nothing of fails too — the marker is the way out", async () => {
+    // One row is not evidence of a rule, so `infer` has nothing to propose.
+    // The document still has to say out loud that it has nothing to derive.
     const path = scratch("g.md", "| Item | Price |\n|------|------:|\n| pen  |  5.00 |\n");
     const c = capture();
-    expect(await runCli(["check", path], c.io)).toBe(0);
-    expect(c.out()).not.toContain("no rules found");
+    expect(await runCli(["check", path], c.io)).toBe(1);
+    expect(c.out()).toContain("no-formulas");
   });
 
-  test("with --require-formulas it accompanies the failure", async () => {
-    const path = scratch("h.md", strippedClean);
+  test("marking it is what makes it pass", async () => {
+    const path = scratch("h.md", "| Item | Price |\n|------|------:|\n| pen  |  5.00 |\n");
+    await runCli(["infer", path, "--write"], capture().io);
     const c = capture();
-    expect(await runCli(["check", path, "--require-formulas"], c.io)).toBe(1);
-    expect(c.out()).toContain("COVERAGE");
-    expect(c.out()).toContain(`no rules found — try \`visimark infer ${path}\``);
+    expect(await runCli(["check", path], c.io)).toBe(0);
   });
 });
 

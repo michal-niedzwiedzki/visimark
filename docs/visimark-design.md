@@ -547,3 +547,5 @@ Two findings that bear on the implementation:
 Obsidian was not tested; it is not scriptable in this environment. It is
 believed to hide HTML comments in reading view, but that is unverified and no
 document should claim it.
+
+<!--vmark:no-formulas-->

@@ -119,3 +119,46 @@ B = A * 2
     expect(proposals.filter((p) => p.name === "B")).toEqual([]);
   });
 });
+
+describe("--write marks a document infer can make nothing of", () => {
+  const PLAIN = "| Item | Price |\n|------|------:|\n| pen  |  5.00 |\n";
+  // `Fee = Hours * Rate` everywhere but row c. Nothing here is writable, so a
+  // marker written on "nothing to write" alone would silence the one document
+  // that most needs a reader.
+  const NEAR_MISS = [
+    "| Item | Hours | Rate  |    Fee |",
+    "|------|------:|------:|-------:|",
+    "| a    |     3 | 12.50 |  37.50 |",
+    "| b    |     7 | 20.00 | 140.00 |",
+    "| c    |     5 | 11.00 |  90.00 |",
+    "| d    |     9 |  8.00 |  72.00 |",
+    "",
+  ].join("\n");
+
+  test("a table infer finds no rule in gets the marker", () => {
+    expect(infer(PLAIN)).toEqual([]);
+    expect(planInfer(PLAIN).map((e) => e.kind)).toEqual(["marker"]);
+    expect(written(PLAIN)).toContain("<!--vmark:no-formulas-->");
+  });
+
+  test("the marked document then passes check", () => {
+    expect(check(build(locate(written(PLAIN)))).findings).toEqual([]);
+  });
+
+  test("a near-miss is never marked away — that document has a wrong number", () => {
+    expect(infer(NEAR_MISS).some((p) => p.kind === "near-miss")).toBe(true);
+    expect(planInfer(NEAR_MISS).some((e) => e.kind === "marker")).toBe(false);
+  });
+
+  test("a document with rules to write gets blocks, not a marker", () => {
+    expect(planInfer(strippedClean).some((e) => e.kind === "marker")).toBe(false);
+  });
+
+  test("a document with no table is left alone", () => {
+    expect(planInfer("# Notes\n\nJust words.\n")).toEqual([]);
+  });
+
+  test("a second --write does not stack markers", () => {
+    expect(planInfer(written(PLAIN))).toEqual([]);
+  });
+});

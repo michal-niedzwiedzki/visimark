@@ -75,24 +75,37 @@ test("explain prints a sheet's rules and evaluation order", async () => {
   expect(c.out()).toMatch(/order:\s+Amount → covered/);
 });
 
-test("check --require-formulas fails a document with no vmark rules", async () => {
+const plainDoc = (name: string): string => {
   const dir = mkdtempSync(join(tmpdir(), "visimark-"));
-  const p = join(dir, "plain.md");
+  const p = join(dir, name);
   writeFileSync(p, "| Item | Price |\n|------|------:|\n| pen  |  5.00 |\n");
+  return p;
+};
 
-  const c1 = capture();
-  expect(await runCli(["check", p], c1.io)).toBe(0);
-
-  const c2 = capture();
-  const code2 = await runCli(["check", p, "--require-formulas"], c2.io);
-  expect(code2).toBe(1);
-  expect(c2.out()).toContain("COVERAGE");
+test("check fails a document whose table has no rules, with no flag passed", async () => {
+  const c = capture();
+  expect(await runCli(["check", plainDoc("plain.md")], c.io)).toBe(1);
+  expect(c.out()).toContain("COVERAGE");
 });
 
-test("check --require-formulas passes a document that has a formula", async () => {
+test("infer --write clears the coverage failure it is pointed at", async () => {
+  const p = plainDoc("mark-me.md");
+  await runCli(["infer", p, "--write"], capture().io);
+  expect(readFileSync(p, "utf8")).toContain("<!--vmark:no-formulas-->");
+
   const c = capture();
-  const code = await runCli(["check", cleanPath, "--require-formulas"], c.io);
-  expect(code).toBe(0);
+  expect(await runCli(["check", p], c.io)).toBe(0);
+  expect(c.out()).toContain("0 problems");
+});
+
+test("check passes a document that has a formula", async () => {
+  const c = capture();
+  expect(await runCli(["check", cleanPath], c.io)).toBe(0);
+});
+
+test("the retired --require-formulas flag is accepted and ignored", async () => {
+  const c = capture();
+  expect(await runCli(["check", cleanPath, "--require-formulas"], c.io)).toBe(0);
 });
 
 test("no command is a usage error", async () => {

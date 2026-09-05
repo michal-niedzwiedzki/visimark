@@ -19,7 +19,7 @@ inputs:
     required: false
     default: "check"
   args:
-    description: "Extra flags, e.g. --require-formulas or --fix-dates"
+    description: "Extra flags, e.g. --fix-dates for fmt"
     required: false
     default: ""
   version:

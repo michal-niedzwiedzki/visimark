@@ -78,3 +78,20 @@ Net = Price * Qty
   await h.change("file:///fix.md", bad.replace("9.99", "10.00"));
   expect(await h.nextDiagnostics("file:///fix.md")).toEqual([]);
 });
+
+test("a plain document is not nagged in the editor for having no rules", async () => {
+  // The coverage finding is a CI rule about which documents must be verified.
+  // Merely opening a table in an editor is not a claim that it should be, and
+  // `applicable` already keeps the server quiet on a document with no blocks.
+  await h.open("file:///plain.md", "| Item | Price |\n|------|------:|\n| pen  |  5.00 |\n");
+  expect(await h.nextDiagnostics("file:///plain.md")).toEqual([]);
+});
+
+test("a no-formulas marker on a document that has rules is flagged at the marker", async () => {
+  const src = `${clean}\n<!--vmark:no-formulas-->\n`;
+  await h.open("file:///marked.md", src);
+  const diags = await h.nextDiagnostics("file:///marked.md");
+  expect(diags.map((d) => d.code)).toEqual(["COVERAGE"]);
+  const line = src.split("\n")[diags[0]!.range.start.line]!;
+  expect(line).toBe("<!--vmark:no-formulas-->");
+});

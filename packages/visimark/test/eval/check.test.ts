@@ -139,16 +139,34 @@ const NO_FORMULAS = `
 | pen   |  5.00 |  10 |
 `;
 
-test("requireFormulas: a document with zero vmark rules fails, off by default", () => {
-  const model = build(locate(NO_FORMULAS));
-  expect(check(model).findings).toEqual([]);
-  const r = check(model, { requireFormulas: true });
+const PROSE_ONLY = `# Notes
+
+Nothing here but words, and a stray 42 in a sentence.
+`;
+
+test("a table with no rules is a finding, with no flag to remember", () => {
+  const r = run(NO_FORMULAS);
   expect(r.findings).toHaveLength(1);
   expect(r.findings[0]).toMatchObject({ code: "COVERAGE" });
   expect(r.exitCode).toBe(1);
 });
 
-test("requireFormulas: a document with at least one rule is unaffected", () => {
-  const r = check(build(locate(clean)), { requireFormulas: true });
-  expect(r.findings.some((f) => f.code === "COVERAGE")).toBe(false);
+test("a document with no table has nothing to require rules of", () => {
+  expect(run(PROSE_ONLY).findings).toEqual([]);
+});
+
+test("the no-formulas marker answers the coverage finding", () => {
+  expect(run(`${NO_FORMULAS}\n<!--vmark:no-formulas-->\n`).findings).toEqual([]);
+});
+
+test("a marked document that grew rules is reported, so the marker cannot rot", () => {
+  const coverage = run(`${clean}\n<!--vmark:no-formulas-->\n`).findings.filter(
+    (f) => f.code === "COVERAGE",
+  );
+  expect(coverage).toHaveLength(1);
+  expect(coverage[0]!.message).toContain("no-formulas");
+});
+
+test("a document with at least one rule is unaffected", () => {
+  expect(run(clean).findings.some((f) => f.code === "COVERAGE")).toBe(false);
 });

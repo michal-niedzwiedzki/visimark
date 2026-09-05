@@ -79,6 +79,14 @@ export interface LocatedDoc {
   anchors: RawAnchor[];
   /** numeric literals in prose, in document order */
   figures: ProseFigure[];
+  /**
+   * Span of the `<!--vmark:no-formulas-->` marker, or `null`. The author
+   * saying, in the document itself, that its tables have no arithmetic to
+   * derive — the one thing that answers a `COVERAGE` finding. Only a
+   * top-level comment counts, so a marker shown inside a fenced example is
+   * documentation rather than an assertion.
+   */
+  noFormulas: Span | null;
   /** for each block, the GFM table it owns (immediately precedes it), or null */
   tableBeforeBlock: Map<RawBlock, RawTable | null>;
   /** true when a block owns no table but a table appears between it and the previous block/heading */
@@ -86,6 +94,8 @@ export interface LocatedDoc {
 }
 
 const ANCHOR_RE = /^<!--\s*vmark\s*=\s*([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)\s*-->$/;
+export const NO_FORMULAS_MARKER = "<!--vmark:no-formulas-->";
+const NO_FORMULAS_RE = /^<!--\s*vmark\s*:\s*no-formulas\s*-->$/;
 const TRAILING_NUMBER_RE = /(-?\d+(?:\.\d+)?)\s*$/;
 
 const off = (n: MdNode, which: "start" | "end"): number => {
@@ -109,12 +119,21 @@ export function locate(source: string): LocatedDoc {
   // index tables by their span start so a block can find the sibling before it
   const tableBySpanStart = new Map<number, RawTable>();
 
+  let noFormulas: Span | null = null;
+
   for (let i = 0; i < top.length; i++) {
     const node = top[i]!;
     if (node.type === "table") {
       const t = readTable(node, source);
       tables.push(t);
       tableBySpanStart.set(t.span.start, t);
+    }
+    if (
+      node.type === "html" &&
+      noFormulas === null &&
+      NO_FORMULAS_RE.test((node.value ?? "").trim())
+    ) {
+      noFormulas = { start: off(node, "start"), end: off(node, "end") };
     }
   }
 
@@ -166,6 +185,7 @@ export function locate(source: string): LocatedDoc {
     tables,
     anchors,
     figures,
+    noFormulas,
     tableBeforeBlock,
     detachedTableBlocks,
   };

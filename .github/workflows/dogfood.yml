@@ -23,10 +23,13 @@ jobs:
       # runs the code under test instead of the last thing published to npm.
       - run: bun install --frozen-lockfile
 
-      - name: the clean invoice and the plain quote must pass
+      # Every markdown file this repo asks anyone else to trust, checked by the
+      # rule the repo now ships: a table with no rules fails, and a document
+      # with no arithmetic says so with `<!--vmark:no-formulas-->`.
+      - name: the clean invoice and this repo's own prose must pass
         uses: ./
         with:
-          files: "docs/example-invoice.md docs/example-quote-plain.md"
+          files: "docs/example-invoice.md docs/visimark-design.md docs/visimark-editor-plugins-design.md README.md CHANGELOG.md skills/visimark/SKILL.md"
 
       - name: the drift invoice is supposed to fail
         id: drift
@@ -39,4 +42,20 @@ jobs:
         if: steps.drift.outcome != 'failure'
         run: |
           echo "::error::docs/example-invoice-drift.md is supposed to fail visimark check — it passed instead. Either the example was fixed by accident, or check regressed."
+          exit 1
+
+      # The plain quote has arithmetic and no rules, which is now a finding.
+      # It must keep failing until someone runs `infer` on it — that is the
+      # whole lesson of the example.
+      - name: the plain quote is supposed to fail for having no rules
+        id: plain
+        continue-on-error: true
+        uses: ./
+        with:
+          files: "docs/example-quote-plain.md"
+
+      - name: fail the job if the plain quote stopped failing
+        if: steps.plain.outcome != 'failure'
+        run: |
+          echo "::error::docs/example-quote-plain.md is supposed to fail visimark check with COVERAGE — it passed instead. Either rules were written into it, or the coverage rule regressed."
           exit 1

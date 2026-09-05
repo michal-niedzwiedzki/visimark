@@ -115,3 +115,15 @@ test("drift example: comment lines and cycle block are parsed", () => {
     "total = base + fee",
   ]);
 });
+
+test("the no-formulas marker is located when it stands on its own", () => {
+  const src = "| a |\n|---|\n| 1 |\n\n<!--vmark:no-formulas-->\n";
+  const d = locate(src);
+  expect(d.noFormulas).not.toBeNull();
+  expect(src.slice(d.noFormulas!.start, d.noFormulas!.end)).toBe("<!--vmark:no-formulas-->");
+});
+
+test("a marker shown inside a fenced example is documentation, not a marker", () => {
+  const d = locate("````markdown\n<!--vmark:no-formulas-->\n````\n");
+  expect(d.noFormulas).toBeNull();
+});
