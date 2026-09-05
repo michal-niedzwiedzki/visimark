@@ -4,3 +4,4 @@ dist
 *.log
 packages/visimark/README.md
 TODO.md
+docs/superpowers/
