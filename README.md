@@ -4,6 +4,10 @@ VisiMark is a spreadsheet-mechanics tool for Markdown. The name is a nod to
 VisiCalc — the first spreadsheet software, originally developed for the Apple II
 by VisiCorp and later ported to the IBM PC.
 
+Agents are unreliable at arithmetic and reliable at writing formulas. VisiMark
+is what that fact implies for Markdown: write `Net = Price * Qty` instead of
+`50.00`, and a machine can prove the two still agree.
+
 A VisiMark document is an ordinary Markdown file. It renders correctly on
 GitHub, in VS Code preview, and through pandoc to both HTML and Word, today,
 with no plugin — verified, not assumed. What VisiMark adds is that every
@@ -16,8 +20,7 @@ readable diff.
 The working stack for collaborating with an AI agent is a text editor over
 lightly formatted artifacts. Markdown covers prose. Nothing covers calculation.
 
-Agents are unreliable at arithmetic and reliable at writing formulas. If an
-agent emits `Net = Price * Qty` instead of `50.00`, the number stops being a
+When an agent emits a formula instead of a number, the number stops being a
 claim and becomes a derivation: reviewable in a diff, re-runnable, and
 enforceable in CI. That is the point of the project. The arithmetic is not the
 value; the audit trail is.
