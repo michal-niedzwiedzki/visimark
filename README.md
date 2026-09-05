@@ -15,6 +15,62 @@ computed number in it carries the formula that produced it, that a machine can
 prove the two still agree, and that a change to either shows up as a small,
 readable diff.
 
+## A wrong invoice that renders clean
+
+[`docs/example-invoice-drift.md`](docs/example-invoice-drift.md) is a real B2B
+invoice after someone raised the on-call hours from 12 to 20 and updated
+nothing that depends on it. It renders as a clean, plausible invoice on
+GitHub, in a Markdown preview, anywhere — which is the entire argument for
+this project. Every number in it carries the formula that produced it; the
+syntax follows further down. Here is `visimark check` reading the same file a
+reviewer just skimmed and approved:
+
+```console
+$ visimark check docs/example-invoice-drift.md
+docs/example-invoice-drift.md
+
+  STALE   lines.Net       · On-call support         3120.00 ≠ 5200.00    Qty * Rate
+  STALE   lines.VAT       · On-call support          717.60 ≠ 1196.00    Net * vat
+  STALE   lines.Gross     · On-call support         3837.60 ≠ 6396.00    Net + VAT
+  STALE   lines.Gross     · Discovery workshop      4428.50 ≠ 4428.00    Net + VAT
+  STALE   lines.net_total                          23300.00 ≠ 25380.00   SUM(Net)
+  STALE   lines.vat_total                           5359.00 ≠ 5837.40    SUM(VAT)
+  STALE   lines.gross_total                        28659.00 ≠ 31217.40   SUM(Gross)
+  STALE   schedule.Amount · Signature               8597.70 ≠ 9365.22    Share * lines.gross_total
+  STALE   schedule.Amount · Delivery of backend    11463.60 ≠ 12486.96   Share * lines.gross_total
+  STALE   schedule.Amount · Acceptance              8597.70 ≠ 9365.22    Share * lines.gross_total
+  STALE   schedule.covered                         28659.00 ≠ 31217.40   SUM(Amount)
+  STALE   terms.early_pay_total                    28085.82 ≠ 30593.05
+  STALE   terms.early_pay_saved                      573.18 ≠ 624.35
+  STALE   8 prose anchors bound to the values above
+
+  DATE    schedule.Due    · Delivery of backend   "15.10.2026"
+          Dates must be ISO 8601 calendar dates: YYYY-MM-DD.
+          Unambiguous — `visimark fmt --fix-dates` rewrites it to 2026-10-15.
+
+  DATE    schedule.Due    · Acceptance            "11/12/2026"
+          Dates must be ISO 8601 calendar dates: YYYY-MM-DD.
+          Ambiguous: 2026-12-11 or 2026-11-12, 29 days apart. Fix by hand.
+
+  NOTE    schedule.Days   · 2 rows not verified (upstream DATE errors)
+
+  UNDEF   terms.eur_total   unknown name `fx_rate`
+          did you mean `fx_eur`?
+
+  VECTOR  recon.variance    `schedule.Amount` is a column, not a value.
+          Wrap it in an aggregate: SUM(schedule.Amount)
+
+  CYCLE   late_fees.base → late_fees.fee → late_fees.total → late_fees.base
+
+  26 problems (21 stale, 5 errors)
+$ echo $?
+1
+```
+
+Twenty-six problems: a payment date ambiguous by twenty-nine days, a cell
+someone nudged by hand to make a column look right, a circular reference — all
+invisible on the rendered page, all caught before a human had to notice.
+
 ## Why
 
 The working stack for collaborating with an AI agent is a text editor over
@@ -59,12 +115,10 @@ that computes itself: line items, VAT, a payment schedule derived from the gross
 total, early-payment terms, a currency conversion, and a reconciliation that
 proves the instalments sum to the invoice. Its appendix explains each mechanism.
 
-[`docs/example-invoice-drift.md`](docs/example-invoice-drift.md) is the same
-invoice after someone raised the on-call hours from 12 to 20 and updated nothing
-derived from it. It renders as a clean, plausible invoice — which is the entire
-argument. `visimark check` finds 26 problems in it, including a payment date
-that is ambiguous by twenty-nine days and a cell somebody nudged by hand to make
-the column look right.
+[`docs/example-invoice-drift.md`](docs/example-invoice-drift.md) is that same
+invoice with the drift shown at the top of this README — the `26 problems`
+transcript above is `check` reading this exact file, and its appendix walks
+through every one of the 26 findings.
 
 ## How it works
 
