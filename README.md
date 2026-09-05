@@ -120,6 +120,69 @@ invoice with the drift shown at the top of this README — the `26 problems`
 transcript above is `check` reading this exact file, and its appendix walks
 through every one of the 26 findings.
 
+[`docs/example-quote-plain.md`](docs/example-quote-plain.md) is the other
+direction: a quote with no VisiMark in it at all — no `vmark` block, no
+anchor, just a table and a total written in prose, the way an agent hands one
+over before anyone has wired it up. `visimark infer` reads it and proposes the
+rules that reproduce every number already there:
+
+```console
+$ visimark infer docs/example-quote-plain.md
+docs/example-quote-plain.md  table at line 10 — 4 rows, 7 columns
+
+  column rules
+    Revenue    = Seats * Fee                  4/4 rows
+    Materials  = Revenue * 0.08               4/4 rows
+    Delivered  = Revenue + Materials          4/4 rows
+
+  constants worth naming
+    0.08   also appears as "8%" in prose, line 18
+
+  scalars matching figures in prose
+    72        line 17  = SUM(Seats)                seats_total
+    27600.00  line 18  = SUM(Revenue)              revenue_total
+    2208.00   line 19  = SUM(Materials)            materials_total
+    29808.00  line 19  = SUM(Delivered)            delivered_total
+    530.00    line 20  = AVG(Fee)                  fee_avg
+
+  no rule found — treating as inputs
+    Module, Format, Seats, Fee
+
+  also fits, not proposed
+    Delivered = Revenue * 1.08    prefers a rule over materialised columns
+    Delivered = Materials * 13.5  prefers a rule over materialised columns
+
+docs/example-quote-plain.md  table at line 24 — 3 rows, 4 columns
+
+  column rules
+    Amount  = Share * unnamed1.delivered_total  3/3 rows
+
+  scalars matching figures in prose
+    29808.00  line 30  = SUM(Amount)               amount_total
+
+  no rule found — treating as inputs
+    Stage, Share, Due
+
+  also fits, not proposed
+    Amount = Share * 29808    prefers a rule over materialised columns
+
+4 rules, 6 scalars, 6 anchors.
+```
+
+A rule is proposed only if it reproduces every row exactly, at that column's
+own precision — never a best fit, never a threshold, and `also fits, not
+proposed` is listed rather than silently dropped, because a rule over
+materialised columns beating one with a bare constant is a judgment call worth
+seeing. `--write` inserts exactly the blocks and anchors above and rewrites
+nothing else. A rule that fits every row but one is never written; it is
+reported as a near-miss instead — the tool telling you the document already
+has a wrong number in it, before anyone runs `check` on it. The document's own
+appendix walks through every mechanism, including that near-miss case.
+
+`infer` is the way in for the document `check` cannot yet help with: one with
+no formulas at all. Pairing the two closes the loop — `infer` gets a plain
+table wired up, `check` (`--require-formulas` included) keeps it that way.
+
 ## How it works
 
 VisiMark parses the document, builds a dependency graph across every sheet,
@@ -277,7 +340,7 @@ computed value without touching the bytes — with VS Code as the first client.
 
 ```
 git clone … && cd visimark && bun install
-bun test                    # the full suite, the two examples included
+bun test                    # the full suite, the three examples included
 bunx visimark check docs/example-invoice-drift.md
 ```
 
