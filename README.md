@@ -77,6 +77,31 @@ question a human has to answer.
 The CLI is the product. An agent must be able to verify a document without an
 editor; a VS Code extension is a later, thin wrapper.
 
+## In CI
+
+The whole point of `check` is that it runs somewhere other than a human's
+judgment, so the CI story is one line:
+
+```bash
+npx visimark check **/*.md
+```
+
+That exits non-zero on the first disagreement, which is all most CI systems
+need. A GitHub Actions workflow can do the same with the composite action
+this repo ships ([`action.yml`](action.yml)) instead of hand-rolling the
+`npx` line:
+
+```yaml
+- uses: michal-niedzwiedzki/visimark@v1
+  with:
+    files: "docs/**/*.md"
+```
+
+Add `--require-formulas` — `args: "--require-formulas"` for the action —
+for a stricter gate: without it, a document with zero `vmark` rules still
+passes `check`, for having nothing to disagree with rather than for being
+verified.
+
 ## Diffable by construction
 
 An `.xlsx` is a zip of XML: change one cell and code review can tell you the

@@ -1,0 +1,42 @@
+name: dogfood
+
+# Runs the composite action in ./action.yml against this repo's own worked
+# examples, the same way an external consumer's workflow would call it. It
+# is not a substitute for the unit/acceptance suite — it exists to catch a
+# broken Action interface (bad inputs, bad shell quoting) that `bun test`
+# never exercises because it never runs the YAML.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  self-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      # links this branch's CLI into node_modules/.bin, so the action below
+      # runs the code under test instead of the last thing published to npm.
+      - run: bun install --frozen-lockfile
+
+      - name: the clean invoice and the plain quote must pass
+        uses: ./
+        with:
+          files: "docs/example-invoice.md docs/example-quote-plain.md"
+
+      - name: the drift invoice is supposed to fail
+        id: drift
+        continue-on-error: true
+        uses: ./
+        with:
+          files: "docs/example-invoice-drift.md"
+
+      - name: fail the job if the drift example stopped failing
+        if: steps.drift.outcome != 'failure'
+        run: |
+          echo "::error::docs/example-invoice-drift.md is supposed to fail visimark check — it passed instead. Either the example was fixed by accident, or check regressed."
+          exit 1

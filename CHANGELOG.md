@@ -3,6 +3,10 @@
 ## Unreleased
 
 ### Added
+- A composite GitHub Action (`action.yml`) wrapping `visimark check`/`fmt`,
+  and a `dogfood` CI workflow that runs it against this repo's own worked
+  examples on every push. The README's CI section documents the plain
+  `npx visimark check **/*.md` one-liner alongside it.
 - `visimark check FILE... --require-formulas` — opt-in flag that fails
   (exit 1) a document with zero `vmark` rules anywhere in it, closing the gap
   the SKILL.md warning already called out: `check` reports `0 problems` on a

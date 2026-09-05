@@ -1,0 +1,59 @@
+name: "VisiMark check"
+description: >-
+  Verify that a VisiMark Markdown document's formulas still agree with its
+  numbers, and fail the build if they don't.
+author: "VisiMark"
+branding:
+  icon: "check-square"
+  color: "green"
+
+inputs:
+  files:
+    description: >-
+      Space-separated glob(s) of Markdown files to check (bash globstar, so
+      ** matches across directories).
+    required: false
+    default: "**/*.md"
+  command:
+    description: "visimark subcommand to run: check or fmt"
+    required: false
+    default: "check"
+  args:
+    description: "Extra flags, e.g. --require-formulas or --fix-dates"
+    required: false
+    default: ""
+  version:
+    description: "visimark npm version or dist-tag to install"
+    required: false
+    default: "latest"
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 20
+
+    - name: Run visimark
+      shell: bash
+      env:
+        VISIMARK_FILES: ${{ inputs.files }}
+        VISIMARK_COMMAND: ${{ inputs.command }}
+        VISIMARK_ARGS: ${{ inputs.args }}
+        VISIMARK_VERSION: ${{ inputs.version }}
+      run: |
+        shopt -s globstar nullglob
+        files=($VISIMARK_FILES)
+        if [ ${#files[@]} -eq 0 ]; then
+          echo "visimark-action: no files matched \"$VISIMARK_FILES\"" >&2
+          exit 2
+        fi
+        # A caller that already has `visimark` on PATH (e.g. this repo's own
+        # CI, via the workspace link `bun install` creates) runs that build
+        # rather than fetching one from npm — that's how this action can be
+        # dogfooded against the current branch instead of the last release.
+        if command -v visimark >/dev/null 2>&1; then
+          visimark "$VISIMARK_COMMAND" $VISIMARK_ARGS "${files[@]}"
+        else
+          npx --yes "visimark@$VISIMARK_VERSION" "$VISIMARK_COMMAND" $VISIMARK_ARGS "${files[@]}"
+        fi
