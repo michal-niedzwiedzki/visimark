@@ -56,9 +56,7 @@ export function fakeUri(value: string): FakeUri {
   const colon = value.indexOf(":");
   const scheme = value.slice(0, colon);
   const rest = value.slice(colon + 1);
-  const path = decodeURIComponent(
-    rest.startsWith("//") ? rest.replace(/^\/\/[^/]*/, "") : rest,
-  );
+  const path = decodeURIComponent(rest.startsWith("//") ? rest.replace(/^\/\/[^/]*/, "") : rest);
   return { scheme, path, fsPath: path, toString: () => value };
 }
 
@@ -69,10 +67,7 @@ export function createHost(): Host {
   const shown: FakeDocument[] = [];
   const config = new Map<string, unknown>();
   const willSave: ((e: unknown) => void)[] = [];
-  const providers = new Map<
-    string,
-    { provideTextDocumentContent(uri: FakeUri): string }
-  >();
+  const providers = new Map<string, { provideTextDocumentContent(uri: FakeUri): string }>();
   const disposable = { dispose(): void {} };
 
   const record = (m: string): Promise<undefined> => {
@@ -95,7 +90,7 @@ export function createHost(): Host {
       ) {}
     },
     Range: class {
-      constructor(...readonly args: unknown[]) {}
+      constructor(..._args: unknown[]) {}
     },
     WorkspaceEdit: class {
       readonly replacements: unknown[] = [];
@@ -273,9 +268,7 @@ export function createHost(): Host {
  * real server from here, so activation is expected to fail *after* the
  * commands are registered; the failure is returned rather than thrown.
  */
-export async function activateExtension(
-  host: Host,
-): Promise<{ activationError: unknown }> {
+export async function activateExtension(): Promise<{ activationError: unknown }> {
   const require_ = createRequire(import.meta.url);
   const bundle = join(root, "dist", "extension.js");
   const ext = require_(bundle) as {

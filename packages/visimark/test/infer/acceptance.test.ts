@@ -11,8 +11,7 @@ import { clean, strippedClean, strippedDrift } from "../examples.js";
 const proposals = infer(strippedClean);
 const rule = (name: string): string | undefined =>
   proposals.find((p) => p.kind === "column" && p.name === name)?.rule;
-const scalar = (name: string) =>
-  proposals.find((p) => p.kind === "scalar" && p.name === name);
+const scalar = (name: string) => proposals.find((p) => p.kind === "scalar" && p.name === name);
 
 const recovered = applyEdits(strippedClean, planInfer(strippedClean));
 
@@ -39,9 +38,7 @@ describe("what inference recovers from the stripped worked invoice", () => {
       const s = scalar(name!)!;
       expect(s.sheetId).toBe("unnamed1");
       expect(s.anchorSite).toBeDefined();
-      expect(
-        strippedClean.slice(s.anchorSite!.start, s.anchorSite!.end),
-      ).toBe(value!);
+      expect(strippedClean.slice(s.anchorSite!.start, s.anchorSite!.end)).toBe(value!);
     }
   });
 
@@ -53,11 +50,7 @@ describe("what inference recovers from the stripped worked invoice", () => {
   });
 
   test("both sheet ids were minted, in document order", () => {
-    expect([...new Set(proposals.map((p) => p.sheetId))]).toEqual([
-      "unnamed1",
-      "unnamed2",
-      "",
-    ]);
+    expect([...new Set(proposals.map((p) => p.sheetId))]).toEqual(["unnamed1", "unnamed2", ""]);
     expect(proposals.every((p) => p.sheetId === "" || p.mintedSheetId)).toBe(true);
   });
 });

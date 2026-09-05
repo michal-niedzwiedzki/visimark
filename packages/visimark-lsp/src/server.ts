@@ -57,9 +57,7 @@ connection.onInitialized(() => {
 });
 
 connection.onDidChangeConfiguration((change) => {
-  settings = mergeSettings(
-    (change.settings as { visimark?: unknown } | undefined)?.visimark,
-  );
+  settings = mergeSettings((change.settings as { visimark?: unknown } | undefined)?.visimark);
   for (const doc of documents.all()) scheduleCheck(doc);
 });
 
@@ -93,10 +91,7 @@ async function runCheck(doc: TextDocument): Promise<void> {
     uri: doc.uri,
     diagnostics: toDiagnostics(doc, analysis),
   });
-  await connection.sendNotification(
-    "visimark/status",
-    statusOf(doc.uri, analysis),
-  );
+  await connection.sendNotification("visimark/status", statusOf(doc.uri, analysis));
 }
 
 documents.onDidOpen((e) => scheduleCheck(e.document, true));
@@ -123,25 +118,14 @@ connection.onDocumentRangeFormatting((params) => {
   const doc = documents.get(params.textDocument.uri);
   if (!doc || !settings.enable) return [];
   const analysis = analyzeDocument(doc.uri, doc.version, doc.getText());
-  return formatEdits(
-    doc,
-    analysis,
-    { fixDates: settings.format.fixDates },
-    params.range,
-  );
+  return formatEdits(doc, analysis, { fixDates: settings.format.fixDates }, params.range);
 });
 
 connection.onCodeAction((params) => {
   const doc = documents.get(params.textDocument.uri);
   if (!doc || !settings.enable) return [];
   const analysis = analyzeDocument(doc.uri, doc.version, doc.getText());
-  return codeActionsFor(
-    doc,
-    analysis,
-    params.range,
-    params.context.only,
-    settings,
-  );
+  return codeActionsFor(doc, analysis, params.range, params.context.only, settings);
 });
 
 connection.languages.inlayHint.on((params) => {

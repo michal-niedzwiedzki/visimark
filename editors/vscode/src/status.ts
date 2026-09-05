@@ -11,10 +11,7 @@ export class StatusBar {
   private readonly seen = new Map<string, Status>();
 
   constructor() {
-    this.item = vscode.window.createStatusBarItem(
-      vscode.StatusBarAlignment.Right,
-      100,
-    );
+    this.item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
     this.item.command = "visimark.showReport";
   }
 
@@ -33,9 +30,7 @@ export class StatusBar {
       .getConfiguration("visimark")
       .get<boolean>("statusBar.enable", true);
     const editor = vscode.window.activeTextEditor;
-    const status = editor
-      ? this.seen.get(editor.document.uri.toString())
-      : undefined;
+    const status = editor ? this.seen.get(editor.document.uri.toString()) : undefined;
 
     if (!enabled || !status) {
       this.item.hide();

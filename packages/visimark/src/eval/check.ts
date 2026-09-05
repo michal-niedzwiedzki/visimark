@@ -7,22 +7,8 @@ import { parseIsoDate } from "./dates.js";
 import { evalExpr, type EvalEnv } from "./evaluate.js";
 import { describeCallProblem, FUNCTIONS, isReduce } from "./functions.js";
 import { dependencies, refText, resolve, topoOrder } from "./graph.js";
-import {
-  applyUnit,
-  inferColumnUnit,
-  numericValue,
-  parseDecorated,
-  type Unit,
-} from "./units.js";
-import {
-  date,
-  EvalError,
-  num,
-  roundToPlaces,
-  str,
-  type Value,
-  valueEquals,
-} from "./value.js";
+import { applyUnit, inferColumnUnit, numericValue, parseDecorated, type Unit } from "./units.js";
+import { date, EvalError, num, roundToPlaces, str, type Value } from "./value.js";
 
 /** a misspelling this far from a builtin is a different word, not a typo */
 const MAX_FN_SUGGESTION_DISTANCE = 2;
@@ -100,8 +86,7 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
   if (opts.requireFormulas && countBindings(model) === 0) {
     emit({
       code: "COVERAGE",
-      message:
-        "document has no `vmark` rules; --require-formulas needs at least one",
+      message: "document has no `vmark` rules; --require-formulas needs at least one",
     });
   }
 
@@ -117,9 +102,7 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
       const colId = `${sheet.id}.${name}`;
       const texts = table.rows.map((r) => r.cells[idx]?.text);
 
-      const bothSidesRow = texts.findIndex(
-        (t) => parseDecorated(t ?? "").kind === "both-sides",
-      );
+      const bothSidesRow = texts.findIndex((t) => parseDecorated(t ?? "").kind === "both-sides");
       if (bothSidesRow !== -1) {
         const cell = table.rows[bothSidesRow]!.cells[idx];
         unitConflicts.add(colId);
@@ -180,11 +163,7 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
             message: describeCallProblem(call.name, problem),
             suggestion:
               problem.kind === "unknown"
-                ? closest(
-                    call.name,
-                    FUNCTIONS.keys(),
-                    MAX_FN_SUGGESTION_DISTANCE,
-                  ) ?? undefined
+                ? (closest(call.name, FUNCTIONS.keys(), MAX_FN_SUGGESTION_DISTANCE) ?? undefined)
                 : undefined,
             sourceOffset: call.start,
             span: { start: call.start, end: call.end },
@@ -205,7 +184,7 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
             sheetId: binding.sheetId,
             name: binding.name,
             raw: refText(ref),
-            suggestion: r.kind === "unknown" ? r.suggestion ?? undefined : undefined,
+            suggestion: r.kind === "unknown" ? (r.suggestion ?? undefined) : undefined,
             sourceOffset: ref.start,
             span: { start: ref.start, end: ref.end },
           },
@@ -242,8 +221,7 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
       [...dep.deps].some((d) => unitConflicts.has(d)) ||
       dep.refs.some(
         (r) =>
-          r.res.kind === "input-column" &&
-          unitConflicts.has(`${r.res.sheetId}.${r.res.column}`),
+          r.res.kind === "input-column" && unitConflicts.has(`${r.res.sheetId}.${r.res.column}`),
       )
     ) {
       unitConflicts.add(binding.id);
@@ -351,11 +329,7 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
         out.push(v);
         const cell = table.rows[r]!.cells[idx];
         const storedText = cell?.text ?? "";
-        if (
-          !suppressed &&
-          storedText !== "" &&
-          !matchesStored(v, storedText, prec)
-        ) {
+        if (!suppressed && storedText !== "" && !matchesStored(v, storedText, prec)) {
           emit(
             {
               code: "STALE",
@@ -437,18 +411,12 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
       // A scalar rounds only where it has a materialised value to match; an
       // anchor-less constant (e.g. `fx_eur = 4.2650`) keeps full precision.
       const prec =
-        anchorText !== undefined
-          ? decimalPlaces(anchorText, fallbackPrecision)
-          : undefined;
+        anchorText !== undefined ? decimalPlaces(anchorText, fallbackPrecision) : undefined;
       if (prec !== undefined) scalarPrecision.set(binding.id, prec);
       const v = prec !== undefined ? roundValue(v0, prec) : v0;
       values.set(binding.id, v);
 
-      if (
-        anchorText !== undefined &&
-        prec !== undefined &&
-        !matchesStored(v, anchorText, prec)
-      ) {
+      if (anchorText !== undefined && prec !== undefined && !matchesStored(v, anchorText, prec)) {
         staleScalars.add(binding.id);
         if (!isCrossSheetAggregate(model, binding)) {
           emit(
@@ -526,11 +494,7 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
     return coerceInput(cell?.text ?? "", ctx.sheet.id, res.column, ctx.row, cell);
   }
 
-  function lookupVector(
-    binding: Binding,
-    ref: Ref,
-    _ctx: unknown,
-  ): Value[] {
+  function lookupVector(binding: Binding, ref: Ref, _ctx: unknown): Value[] {
     const res = resolve(model, binding.sheetId, ref);
     if (res.kind === "column") {
       const col = cells.get(res.binding.id);
@@ -599,9 +563,7 @@ function orderFindings(
   }[],
   sheetOrder: string[],
 ): Finding[] {
-  const staleCells = entries.filter(
-    (e) => e.f.code === "STALE" && e.isColumnCell,
-  );
+  const staleCells = entries.filter((e) => e.f.code === "STALE" && e.isColumnCell);
   const staleScalars = entries.filter(
     (e) => e.f.code === "STALE" && !e.isColumnCell && !e.f.anchorGroup,
   );
@@ -614,9 +576,9 @@ function orderFindings(
   };
 
   const sectionA: Finding[] = [];
-  const sheets = [
-    ...new Set([...staleCells, ...staleScalars].map((e) => e.sheetId ?? "")),
-  ].sort((a, b) => sheetRank(a) - sheetRank(b));
+  const sheets = [...new Set([...staleCells, ...staleScalars].map((e) => e.sheetId ?? ""))].sort(
+    (a, b) => sheetRank(a) - sheetRank(b),
+  );
 
   for (const sh of sheets) {
     const cellsHere = staleCells.filter((e) => (e.sheetId ?? "") === sh);
@@ -627,8 +589,7 @@ function orderFindings(
       byRow.set(e.rowIndex!, arr);
     }
     const rowGroups = [...byRow.entries()].sort(
-      (a, b) =>
-        Math.min(...a[1].map((e) => e.det)) - Math.min(...b[1].map((e) => e.det)),
+      (a, b) => Math.min(...a[1].map((e) => e.det)) - Math.min(...b[1].map((e) => e.det)),
     );
     for (const [, group] of rowGroups) {
       group.sort((a, b) => a.det - b.det);
@@ -657,21 +618,13 @@ function orderFindings(
   };
   const sectionB = rest
     .slice()
-    .sort(
-      (a, b) =>
-        (CODE_RANK[a.f.code] ?? 9) - (CODE_RANK[b.f.code] ?? 9) ||
-        a.det - b.det,
-    )
+    .sort((a, b) => (CODE_RANK[a.f.code] ?? 9) - (CODE_RANK[b.f.code] ?? 9) || a.det - b.det)
     .map((e) => e.f);
 
   return [...sectionA, ...sectionB];
 }
 
-export function inferColumnPrecision(
-  table: RawTable,
-  colIndex: number,
-  fallback: number,
-): number {
+export function inferColumnPrecision(table: RawTable, colIndex: number, fallback: number): number {
   let max = -1;
   for (const row of table.rows) {
     const text = row.cells[colIndex]?.text ?? "";
@@ -700,9 +653,7 @@ export function matchesStored(v: Value, storedText: string, places: number): boo
   if (v.t === "num") {
     const dec = parseDecorated(t);
     if (dec.kind === "number") {
-      return roundToPlaces(new Decimal(dec.num), places).equals(
-        roundToPlaces(v.d, places),
-      );
+      return roundToPlaces(new Decimal(dec.num), places).equals(roundToPlaces(v.d, places));
     }
     if (!PERCENT_RE.test(t)) return false;
     const stored = new Decimal(PERCENT_RE.exec(t)![1]!).div(100);
@@ -741,8 +692,7 @@ function docPrecision(model: DocModel): number {
 }
 
 function formulaText(model: DocModel, binding: Binding): string | undefined {
-  const isAggregateCall =
-    binding.expr.type === "call" && isReduce(binding.expr.name);
+  const isAggregateCall = binding.expr.type === "call" && isReduce(binding.expr.name);
   if (binding.kind !== "column" && !isAggregateCall) return undefined;
   return model.source.slice(binding.expr.start, binding.expr.end);
 }
@@ -753,10 +703,7 @@ function isCrossSheetAggregate(model: DocModel, binding: Binding): boolean {
   const arg = e.args[0];
   if (!arg || arg.type !== "ref") return false;
   const res = resolve(model, binding.sheetId, arg);
-  return (
-    (res.kind === "column" || res.kind === "input-column") &&
-    res.sheetId !== binding.sheetId
-  );
+  return (res.kind === "column" || res.kind === "input-column") && res.sheetId !== binding.sheetId;
 }
 
 function anchorValueSpanOf(model: DocModel, id: string): Span | undefined {

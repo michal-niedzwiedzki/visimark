@@ -39,8 +39,7 @@ export const FUNCTIONS: ReadonlyMap<string, FnSpec> = new Map<string, FnSpec>([
   ["IF", { kind: "map", arity: 3 }],
 ]);
 
-export const isReduce = (name: string): boolean =>
-  FUNCTIONS.get(name)?.kind === "reduce";
+export const isReduce = (name: string): boolean => FUNCTIONS.get(name)?.kind === "reduce";
 
 export type CallProblem =
   | { kind: "unknown" }
@@ -48,10 +47,7 @@ export type CallProblem =
   | { kind: "shape" };
 
 /** Static problems with a call, decidable without evaluating anything. */
-export function callProblem(
-  name: string,
-  args: { type: string }[],
-): CallProblem | null {
+export function callProblem(name: string, args: { type: string }[]): CallProblem | null {
   const spec = FUNCTIONS.get(name);
   if (!spec) return { kind: "unknown" };
   if (args.length !== spec.arity) {
@@ -66,9 +62,7 @@ export function describeCallProblem(name: string, p: CallProblem): string {
     case "unknown":
       return `unknown function \`${name}\``;
     case "arity":
-      return `${name}() takes ${p.expected} argument${
-        p.expected === 1 ? "" : "s"
-      }, got ${p.got}`;
+      return `${name}() takes ${p.expected} argument${p.expected === 1 ? "" : "s"}, got ${p.got}`;
     case "shape":
       return `${name}() takes a column reference, not an expression`;
   }

@@ -5,7 +5,6 @@ import { build } from "../../src/model/build.js";
 import { check } from "../../src/eval/check.js";
 import type { Finding } from "../../src/model/types.js";
 
-
 const run = (src: string) => check(build(locate(src)));
 const idOf = (f: Finding) =>
   f.anchorGroup
@@ -42,14 +41,24 @@ test("drift: STALE findings in the transcript's order", () => {
 test("drift: stored ≠ computed values match the transcript", () => {
   const r = run(drift);
   const find = (name: string, rowLabel?: string) =>
-    r.findings.find(
-      (f) => f.code === "STALE" && f.name === name && f.rowLabel === rowLabel,
-    )!;
-  expect([find("Net", "On-call support").stored, find("Net", "On-call support").computed]).toEqual(["3120.00", "5200.00"]);
-  expect([find("Gross", "Discovery workshop").stored, find("Gross", "Discovery workshop").computed]).toEqual(["4428.50", "4428.00"]);
+    r.findings.find((f) => f.code === "STALE" && f.name === name && f.rowLabel === rowLabel)!;
+  expect([find("Net", "On-call support").stored, find("Net", "On-call support").computed]).toEqual([
+    "3120.00",
+    "5200.00",
+  ]);
+  expect([
+    find("Gross", "Discovery workshop").stored,
+    find("Gross", "Discovery workshop").computed,
+  ]).toEqual(["4428.50", "4428.00"]);
   expect([find("net_total").stored, find("net_total").computed]).toEqual(["23300.00", "25380.00"]);
-  expect([find("early_pay_total").stored, find("early_pay_total").computed]).toEqual(["28085.82", "30593.05"]);
-  expect([find("early_pay_saved").stored, find("early_pay_saved").computed]).toEqual(["573.18", "624.35"]);
+  expect([find("early_pay_total").stored, find("early_pay_total").computed]).toEqual([
+    "28085.82",
+    "30593.05",
+  ]);
+  expect([find("early_pay_saved").stored, find("early_pay_saved").computed]).toEqual([
+    "573.18",
+    "624.35",
+  ]);
 });
 
 test("drift: formula column shown only for column rules and aggregate scalars", () => {
@@ -68,8 +77,20 @@ test("drift: two DATE findings, then the schedule.Days NOTE", () => {
   expect(codes).toEqual(["DATE", "DATE", "NOTE", "UNDEF", "VECTOR", "CYCLE"]);
 
   const [d1, d2, note] = nonStale;
-  expect(d1).toMatchObject({ name: "Due", rowLabel: "Delivery of backend", raw: "15.10.2026", isoFix: "2026-10-15" });
-  expect(d2).toMatchObject({ name: "Due", rowLabel: "Acceptance", raw: "11/12/2026", altA: "2026-12-11", altB: "2026-11-12", daysApart: 29 });
+  expect(d1).toMatchObject({
+    name: "Due",
+    rowLabel: "Delivery of backend",
+    raw: "15.10.2026",
+    isoFix: "2026-10-15",
+  });
+  expect(d2).toMatchObject({
+    name: "Due",
+    rowLabel: "Acceptance",
+    raw: "11/12/2026",
+    altA: "2026-12-11",
+    altB: "2026-11-12",
+    daysApart: 29,
+  });
   expect(d2!.isoFix).toBeUndefined();
   expect(note).toMatchObject({ name: "Days", suppressedCount: 2 });
 });
@@ -77,7 +98,12 @@ test("drift: two DATE findings, then the schedule.Days NOTE", () => {
 test("drift: UNDEF, VECTOR and CYCLE contents", () => {
   const r = run(drift);
   const undef = r.findings.find((f) => f.code === "UNDEF")!;
-  expect(undef).toMatchObject({ sheetId: "terms", name: "eur_total", raw: "fx_rate", suggestion: "fx_eur" });
+  expect(undef).toMatchObject({
+    sheetId: "terms",
+    name: "eur_total",
+    raw: "fx_rate",
+    suggestion: "fx_eur",
+  });
   const vec = r.findings.find((f) => f.code === "VECTOR")!;
   expect(vec).toMatchObject({ sheetId: "recon", name: "variance", raw: "schedule.Amount" });
   const cyc = r.findings.find((f) => f.code === "CYCLE")!;

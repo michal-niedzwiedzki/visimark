@@ -59,9 +59,7 @@ export function select(
   const winner = new Map<string, ColumnCandidate>();
 
   for (;;) {
-    const pool = usable.filter(
-      (c) => !resolved.has(id(c)) && !closesCycle(graph, id(c), c.deps),
-    );
+    const pool = usable.filter((c) => !resolved.has(id(c)) && !closesCycle(graph, id(c), c.deps));
     if (pool.length === 0) break;
 
     const best = Math.min(...pool.map(rank));
@@ -131,8 +129,7 @@ export function isWeak(c: ColumnCandidate): boolean {
 const id = (c: ColumnCandidate): string => `${c.sheet.id}.${c.target}`;
 
 /** two materialised columns, then a column and a named scalar, then a literal */
-const stageRank = (c: ColumnCandidate): number =>
-  c.stage === 1 ? 0 : c.stage === 4 ? 1 : 2;
+const stageRank = (c: ColumnCandidate): number => (c.stage === 1 ? 0 : c.stage === 4 ? 1 : 2);
 
 /**
  * Ranking, in the order section 6 applies it: an exact rule before a
@@ -150,11 +147,7 @@ function rank(c: ColumnCandidate): number {
   return ((tier * 2 + weak) * 3 + stage) * 2 + op;
 }
 
-function closesCycle(
-  graph: Map<string, string[]>,
-  target: string,
-  deps: string[],
-): boolean {
+function closesCycle(graph: Map<string, string[]>, target: string, deps: string[]): boolean {
   const seen = new Set<string>();
   const stack = [...deps];
   while (stack.length > 0) {

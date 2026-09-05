@@ -5,7 +5,6 @@ import { locate } from "../../src/parse/document.js";
 import { build } from "../../src/model/build.js";
 import { check } from "../../src/eval/check.js";
 
-
 test("fmt leaves the clean invoice byte-for-byte identical", () => {
   const r = fmt(clean, {});
   expect(r.changed).toBe(false);
@@ -48,12 +47,9 @@ test("fmt is idempotent", () => {
 });
 
 test("a one-cell corruption produces a one-line diff", () => {
-  const corrupted = clean.replace("| 50.00 |", "| 51.00 |")
-    // fall back: the clean invoice has no `50.00`; corrupt the first Net cell
-    ;
-  const src = clean.includes("| 50.00 |")
-    ? corrupted
-    : clean.replace("3600.00", "3600.01");
+  const corrupted = clean.replace("| 50.00 |", "| 51.00 |");
+  // fall back: the clean invoice has no `50.00`; corrupt the first Net cell
+  const src = clean.includes("| 50.00 |") ? corrupted : clean.replace("3600.00", "3600.01");
   const out = fmt(src, {}).output;
   const changedLines = diffLines(src, out);
   expect(changedLines).toBe(1);

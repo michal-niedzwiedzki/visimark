@@ -24,9 +24,7 @@ export function planInfer(source: string, only?: Proposal[]): PlannedInsert[] {
   const figures = locate(source).figures;
 
   const writable = proposals.filter(
-    (p) =>
-      !p.weak &&
-      (p.kind === "column" || (p.kind === "scalar" && p.anchorSite !== undefined)),
+    (p) => !p.weak && (p.kind === "column" || (p.kind === "scalar" && p.anchorSite !== undefined)),
   );
 
   const out: PlannedInsert[] = [];
@@ -36,9 +34,7 @@ export function planInfer(source: string, only?: Proposal[]): PlannedInsert[] {
     if (here.length === 0) continue;
     const columns = here.filter((p) => p.kind === "column");
     const scalars = here.filter((p) => p.kind === "scalar");
-    const body = [align(columns), align(scalars)]
-      .filter((g) => g.length > 0)
-      .join("\n\n");
+    const body = [align(columns), align(scalars)].filter((g) => g.length > 0).join("\n\n");
     out.push({
       ...blockEdit(source, sheet, body),
       kind: "block",
@@ -52,9 +48,7 @@ export function planInfer(source: string, only?: Proposal[]): PlannedInsert[] {
     const sheet = sheetById.get(p.sheetId);
     if (!sheet) continue;
     const figure = figures.find(
-      (f) =>
-        f.value.start === p.anchorSite!.start &&
-        f.value.end === p.anchorSite!.end,
+      (f) => f.value.start === p.anchorSite!.start && f.value.end === p.anchorSite!.end,
     );
     if (!figure || figure.anchorAt === null) continue;
     out.push({

@@ -62,8 +62,7 @@ test("identifiers that merely start with the words are unaffected", () => {
 
 // ---- a boolean can never be stored -------------------------------------
 
-const STORE_MSG =
-  "a boolean cannot be stored; wrap it in `IF()` to produce a number or a string";
+const STORE_MSG = "a boolean cannot be stored; wrap it in `IF()` to produce a number or a string";
 
 test("a column rule yielding a boolean is one TYPE finding, not one per row", () => {
   const r = run(sheet("Qty > 5"));

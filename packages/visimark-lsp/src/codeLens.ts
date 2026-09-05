@@ -2,13 +2,9 @@ import type { CodeLens } from "vscode-languageserver/node.js";
 import type { TextDocument } from "vscode-languageserver-textdocument";
 import type { Analysis } from "./analysis.js";
 
-const plural = (n: number, one: string): string =>
-  `${n} ${one}${n === 1 ? "" : "s"}`;
+const plural = (n: number, one: string): string => `${n} ${one}${n === 1 ? "" : "s"}`;
 
-export function codeLensesFor(
-  doc: TextDocument,
-  analysis: Analysis,
-): CodeLens[] {
+export function codeLensesFor(doc: TextDocument, analysis: Analysis): CodeLens[] {
   if (!analysis.applicable) return [];
   const { model, result } = analysis;
   const out: CodeLens[] = [];

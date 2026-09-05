@@ -1,19 +1,9 @@
-import {
-  check,
-  matchesStored,
-  roundValue,
-  showValue,
-} from "../eval/check.js";
+import { check, matchesStored, roundValue, showValue } from "../eval/check.js";
 import { applyUnit, parseDecorated, type Unit } from "../eval/units.js";
 import type { Value } from "../eval/value.js";
 import type { Binding } from "../model/types.js";
 import type { Span } from "../parse/document.js";
-import {
-  type InferContext,
-  type InferSheet,
-  makeBinding,
-  provisional,
-} from "./context.js";
+import { type InferContext, type InferSheet, makeBinding, provisional } from "./context.js";
 
 /** a rule already chosen, carried into the model a candidate is verified in */
 export interface Accepted {
@@ -133,9 +123,7 @@ export function verifyScalar(
   }
   const v = result.values.get(binding.id);
   if (!v) return miss;
-  const unit = unitFrom
-    ? result.columnUnits.get(`${sheet.id}.${unitFrom}`) ?? null
-    : null;
+  const unit = unitFrom ? (result.columnUnits.get(`${sheet.id}.${unitFrom}`) ?? null) : null;
 
   return {
     usable: true,

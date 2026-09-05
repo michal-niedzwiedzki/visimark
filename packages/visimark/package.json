@@ -2,10 +2,36 @@
   "name": "visimark",
   "version": "0.1.0",
   "description": "Spreadsheet mechanics for Markdown: every computed number carries the formula that produced it, and a machine can prove the two still agree.",
-  "type": "module",
+  "keywords": [
+    "ai",
+    "arithmetic",
+    "cli",
+    "formulas",
+    "invoice",
+    "llm",
+    "markdown",
+    "spreadsheet",
+    "verification"
+  ],
+  "homepage": "https://github.com/michal-niedzwiedzki/visimark#readme",
+  "bugs": "https://github.com/michal-niedzwiedzki/visimark/issues",
+  "license": "MIT",
+  "author": "Michał Niedźwiedzki <michal@epsi.pl>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/michal-niedzwiedzki/visimark.git",
+    "directory": "packages/visimark"
+  },
   "bin": {
     "visimark": "bin/visimark.js"
   },
+  "files": [
+    "dist",
+    "bin",
+    "README.md",
+    "LICENSE"
+  ],
+  "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -15,20 +41,11 @@
       "default": "./dist/index.js"
     }
   },
-  "files": [
-    "dist",
-    "bin",
-    "README.md",
-    "LICENSE"
-  ],
   "scripts": {
     "test": "bun test",
     "typecheck": "tsc --noEmit",
     "build": "bun build src/cli/main.ts src/index.ts --target node --outdir dist && tsc -p tsconfig.build.json",
     "prepublishOnly": "cp ../../README.md README.md && bun run typecheck && bun test && bun run build"
-  },
-  "engines": {
-    "node": ">=18"
   },
   "dependencies": {
     "decimal.js": "^10.4.3",
@@ -41,5 +58,7 @@
     "@types/node": "^22.0.0",
     "typescript": "^5.5.0"
   },
-  "license": "MIT"
+  "engines": {
+    "node": ">=18"
+  }
 }

@@ -68,9 +68,7 @@ test("the lens carries the uri and sheet id as arguments", async () => {
 
 test("every block also gets an explain lens", async () => {
   const ls = await lenses("file:///cl-explain.md", twoSheets);
-  expect(
-    ls.filter((l) => l.command?.command === "visimark.explainSheet").length,
-  ).toBe(2);
+  expect(ls.filter((l) => l.command?.command === "visimark.explainSheet").length).toBe(2);
 });
 
 test("a document with no vmark block has no lenses", async () => {

@@ -60,9 +60,7 @@ test("the quick fix at one cell does not repair the other", async () => {
 });
 
 test("source.fixAll repairs every stale value at once", async () => {
-  const a = await actions("file:///ca-all.md", stale, 2, [
-    "source.fixAll.visimark",
-  ]);
+  const a = await actions("file:///ca-all.md", stale, 2, ["source.fixAll.visimark"]);
   const all = a.find((x) => x.kind === "source.fixAll.visimark")!;
   expect(all.title).toBe("VisiMark: fix all stale values");
   expect(Object.values(all.edit!.changes!)[0]!.length).toBe(2);

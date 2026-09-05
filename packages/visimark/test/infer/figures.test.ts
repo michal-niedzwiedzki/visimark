@@ -26,9 +26,7 @@ describe("a figure states a value only when it is already written as one", () =>
 
   test("a token that happens to end in digits is not a decorated number", () => {
     // `#unnamed1` parses as a decorated 1, and SUM(Share) is 1
-    expect(anchored(`${table}\nThe sheet is called \`#unnamed1\` here.\n`)).toEqual(
-      [],
-    );
+    expect(anchored(`${table}\nThe sheet is called \`#unnamed1\` here.\n`)).toEqual([]);
   });
 
   test("a percent figure is not the form the tool would write back", () => {

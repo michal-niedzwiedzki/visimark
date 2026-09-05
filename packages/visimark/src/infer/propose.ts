@@ -1,14 +1,6 @@
 import { numericValue } from "../eval/units.js";
-import type {
-  AnchorTargetKind,
-  ProseFigure,
-  Span,
-} from "../parse/document.js";
-import {
-  type ColumnCandidate,
-  columnCandidates,
-  crossSheetCandidates,
-} from "./candidates.js";
+import type { AnchorTargetKind, ProseFigure, Span } from "../parse/document.js";
+import { type ColumnCandidate, columnCandidates, crossSheetCandidates } from "./candidates.js";
 import { buildContext, type InferContext, type InferSheet } from "./context.js";
 import { type Ambiguity, select, type Selection } from "./select.js";
 import { type Accepted, verifyScalar } from "./verify.js";
@@ -102,9 +94,7 @@ export function infer(source: string): Proposal[] {
   const candidates: ColumnCandidate[] = [];
   for (const sheet of ctx.sheets) {
     candidates.push(...columnCandidates(ctx, sheet, scalarAccepted));
-    candidates.push(
-      ...crossSheetCandidates(ctx, sheet, scalarNames, scalarAccepted),
-    );
+    candidates.push(...crossSheetCandidates(ctx, sheet, scalarNames, scalarAccepted));
   }
 
   // Stage 3's names are fixed before the columns are chosen, so their edges
@@ -238,9 +228,7 @@ function assemble(
         rows: sheet.table.rows.length,
         anchorSite: p.figure.anchorAt === null ? undefined : p.figure.value,
         reason:
-          p.figure.anchorAt === null
-            ? "no anchorable inline node holds this figure"
-            : undefined,
+          p.figure.anchorAt === null ? "no anchorable inline node holds this figure" : undefined,
       });
     }
 
@@ -264,9 +252,7 @@ function assemble(
       });
     }
 
-    for (const a of selection.ambiguous.filter(
-      (x: Ambiguity) => x.sheet === sheet,
-    )) {
+    for (const a of selection.ambiguous.filter((x: Ambiguity) => x.sheet === sheet)) {
       out.push({
         ...base,
         kind: "ambiguous",
@@ -279,9 +265,7 @@ function assemble(
       });
     }
 
-    for (const { candidate, reason } of selection.alsoFits.filter((x) =>
-      here(x.candidate),
-    )) {
+    for (const { candidate, reason } of selection.alsoFits.filter((x) => here(x.candidate))) {
       out.push({
         ...base,
         kind: "alternative",
@@ -341,10 +325,7 @@ function orderByDependency(
  * because concluding that the constant is therefore *called* `vat` is a guess
  * about meaning.
  */
-function echo(
-  ctx: InferContext,
-  constant: string,
-): { text: string; span: Span } | undefined {
+function echo(ctx: InferContext, constant: string): { text: string; span: Span } | undefined {
   const k = numericValue(constant);
   if (!k) return undefined;
   for (const f of ctx.doc.figures) {
@@ -354,4 +335,3 @@ function echo(
   }
   return undefined;
 }
-

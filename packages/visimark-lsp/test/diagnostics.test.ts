@@ -9,10 +9,7 @@ const drift = readFileSync(
   join(here, "..", "..", "..", "docs", "example-invoice-drift.md"),
   "utf8",
 );
-const clean = readFileSync(
-  join(here, "..", "..", "..", "docs", "example-invoice.md"),
-  "utf8",
-);
+const clean = readFileSync(join(here, "..", "..", "..", "docs", "example-invoice.md"), "utf8");
 
 let h: Harness;
 beforeAll(async () => {

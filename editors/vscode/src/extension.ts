@@ -17,12 +17,8 @@ let statusBar: StatusBar | undefined;
 const EXPLAIN_SCHEME = "visimark-explain";
 const REPORT_SCHEME = "visimark-report";
 
-export async function activate(
-  context: vscode.ExtensionContext,
-): Promise<void> {
-  const configured = vscode.workspace
-    .getConfiguration("visimark")
-    .get<string>("server.path", "");
+export async function activate(context: vscode.ExtensionContext): Promise<void> {
+  const configured = vscode.workspace.getConfiguration("visimark").get<string>("server.path", "");
   const module =
     configured && configured.length > 0
       ? configured
@@ -47,12 +43,7 @@ export async function activate(
     },
   };
 
-  client = new LanguageClient(
-    "visimark",
-    "VisiMark",
-    serverOptions,
-    clientOptions,
-  );
+  client = new LanguageClient("visimark", "VisiMark", serverOptions, clientOptions);
 
   statusBar = new StatusBar();
   const explain = new TextProvider();
@@ -60,15 +51,10 @@ export async function activate(
 
   context.subscriptions.push(
     statusBar,
-    vscode.workspace.registerTextDocumentContentProvider(
-      EXPLAIN_SCHEME,
-      explain,
-    ),
+    vscode.workspace.registerTextDocumentContentProvider(EXPLAIN_SCHEME, explain),
     vscode.workspace.registerTextDocumentContentProvider(REPORT_SCHEME, report),
     vscode.window.onDidChangeActiveTextEditor(() => statusBar?.refresh()),
-    vscode.workspace.onDidCloseTextDocument((d) =>
-      statusBar?.forget(d.uri.toString()),
-    ),
+    vscode.workspace.onDidCloseTextDocument((d) => statusBar?.forget(d.uri.toString())),
 
     // `onWillSave` rather than `onDidSave`: the edits are folded into the
     // content being written, so the file lands on disk correct and the
@@ -102,11 +88,7 @@ export async function activate(
         const args = sheetId ? ["explain", `#${sheetId}`] : ["explain"];
         const text = await runCliOn(doc, args);
         const name = sheetId ?? path.basename(doc.uri.fsPath);
-        await show(
-          explain,
-          vscode.Uri.parse(`${EXPLAIN_SCHEME}:${name}.txt`),
-          text,
-        );
+        await show(explain, vscode.Uri.parse(`${EXPLAIN_SCHEME}:${name}.txt`), text);
       },
     ),
 
@@ -147,9 +129,7 @@ async function target(uri?: string): Promise<vscode.TextDocument | undefined> {
   if (uri) return vscode.workspace.openTextDocument(vscode.Uri.parse(uri));
   const doc = vscode.window.activeTextEditor?.document;
   if (!doc || doc.languageId !== "markdown") {
-    void vscode.window.showWarningMessage(
-      "VisiMark: open a Markdown file first.",
-    );
+    void vscode.window.showWarningMessage("VisiMark: open a Markdown file first.");
     return undefined;
   }
   return doc;
@@ -165,9 +145,7 @@ async function target(uri?: string): Promise<vscode.TextDocument | undefined> {
  */
 async function fix(doc: vscode.TextDocument): Promise<void> {
   if (!client || client.state !== State.Running) {
-    void vscode.window.showWarningMessage(
-      "VisiMark: the language server is not running.",
-    );
+    void vscode.window.showWarningMessage("VisiMark: the language server is not running.");
     return;
   }
 
@@ -223,10 +201,7 @@ function fixesOnSave(event: vscode.TextDocumentWillSaveEvent): boolean {
   if (event.document.languageId !== "markdown") return false;
   if (event.reason === vscode.TextDocumentSaveReason.AfterDelay) return false;
   const config = vscode.workspace.getConfiguration("visimark");
-  return (
-    config.get<boolean>("enable", true) &&
-    config.get<boolean>("format.fixOnSave", true)
-  );
+  return config.get<boolean>("enable", true) && config.get<boolean>("format.fixOnSave", true);
 }
 
 /**
@@ -234,10 +209,7 @@ function fixesOnSave(event: vscode.TextDocumentWillSaveEvent): boolean {
  * unsaved edits. The engine is bundled into the extension, so this is an
  * in-process call, not a subprocess.
  */
-async function runCliOn(
-  doc: vscode.TextDocument,
-  args: string[],
-): Promise<string> {
+async function runCliOn(doc: vscode.TextDocument, args: string[]): Promise<string> {
   const { analyze, formatCheck } = await import("visimark");
   if (args[0] === "check") {
     const { result } = analyze(doc.getText());

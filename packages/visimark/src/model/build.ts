@@ -2,13 +2,7 @@ import type { Expr } from "../lang/ast.js";
 import { parseBinding } from "../lang/parser.js";
 import { LangError } from "../lang/token.js";
 import type { LocatedDoc, RawBlock } from "../parse/document.js";
-import {
-  type Binding,
-  type DocModel,
-  DOC_SCOPE,
-  type Finding,
-  type Sheet,
-} from "./types.js";
+import { type Binding, type DocModel, DOC_SCOPE, type Finding, type Sheet } from "./types.js";
 
 export function build(doc: LocatedDoc): DocModel {
   const sheets = new Map<string, Sheet>();
@@ -45,8 +39,7 @@ export function build(doc: LocatedDoc): DocModel {
       findings.push({
         code: "SHEET",
         sheetId,
-        message:
-          "this block declares column rules but no table immediately precedes it",
+        message: "this block declares column rules but no table immediately precedes it",
         sourceOffset: block.span.start,
         span: block.span,
       });
@@ -58,8 +51,7 @@ export function build(doc: LocatedDoc): DocModel {
     for (const rb of block.bindings) {
       const parsed = parseOne(rb, doc.source, findings, sheetId);
       if (!parsed) continue;
-      const first =
-        sheet.columns.get(parsed.name) ?? sheet.scalars.get(parsed.name);
+      const first = sheet.columns.get(parsed.name) ?? sheet.scalars.get(parsed.name);
       if (first) {
         findings.push({
           code: "DUP",
@@ -99,11 +91,7 @@ export function build(doc: LocatedDoc): DocModel {
   };
 }
 
-function ensureSheet(
-  sheets: Map<string, Sheet>,
-  id: string,
-  table: Sheet["table"],
-): Sheet {
+function ensureSheet(sheets: Map<string, Sheet>, id: string, table: Sheet["table"]): Sheet {
   let s = sheets.get(id);
   if (!s) {
     s = {

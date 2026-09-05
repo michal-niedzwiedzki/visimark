@@ -27,14 +27,7 @@ test("ISO date is one token; non-ISO date-ish text is not", () => {
     ["date", "2026-09-03"],
     ["eof", ""],
   ]);
-  expect(kinds("2026-9-3")).toEqual([
-    "number",
-    "op",
-    "number",
-    "op",
-    "number",
-    "eof",
-  ]);
+  expect(kinds("2026-9-3")).toEqual(["number", "op", "number", "op", "number", "eof"]);
 });
 
 test("string literals", () => {

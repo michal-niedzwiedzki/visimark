@@ -115,9 +115,7 @@ export function cmdFmt(args: string[], out: Writer, err: Writer): number {
       writeFileSync(path, r.output);
       const bits = [
         r.cellsUpdated ? `${r.cellsUpdated} cell${r.cellsUpdated === 1 ? "" : "s"}` : "",
-        r.anchorsUpdated
-          ? `${r.anchorsUpdated} anchor${r.anchorsUpdated === 1 ? "" : "s"}`
-          : "",
+        r.anchorsUpdated ? `${r.anchorsUpdated} anchor${r.anchorsUpdated === 1 ? "" : "s"}` : "",
         r.datesFixed ? `${r.datesFixed} date${r.datesFixed === 1 ? "" : "s"}` : "",
       ].filter(Boolean);
       out(`${path}: updated ${bits.join(", ")}`);
@@ -270,9 +268,7 @@ export function cmdExplain(args: string[], out: Writer, err: Writer): number {
       out("  scalars:");
       for (const b of sheet.scalars.values()) out(`    ${b.name} = ${slice(model, b)}`);
     }
-    const localOrder = order
-      .filter((b) => b.sheetId === sid)
-      .map((b) => b.name);
+    const localOrder = order.filter((b) => b.sheetId === sid).map((b) => b.name);
     if (localOrder.length > 0) out(`  order:   ${localOrder.join(" → ")}`);
     out("");
   }

@@ -250,11 +250,7 @@ function extractCycles(
   return cycles;
 }
 
-function tarjan(
-  ids: string[],
-  deps: Map<string, Set<string>>,
-  within: Set<string>,
-): string[][] {
+function tarjan(ids: string[], deps: Map<string, Set<string>>, within: Set<string>): string[][] {
   let index = 0;
   const idx = new Map<string, number>();
   const low = new Map<string, number>();

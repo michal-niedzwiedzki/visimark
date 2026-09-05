@@ -55,9 +55,7 @@ export function showUnit(u: Unit | null): string {
 export function applyUnit(numText: string, unit: Unit | null): string {
   if (!unit) return numText;
   if (unit.side === "suffix") return `${numText} ${unit.text}`;
-  return numText.startsWith("-")
-    ? `-${unit.text}${numText.slice(1)}`
-    : `${unit.text}${numText}`;
+  return numText.startsWith("-") ? `-${unit.text}${numText.slice(1)}` : `${unit.text}${numText}`;
 }
 
 export interface ColumnUnit {

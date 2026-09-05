@@ -3,18 +3,13 @@ import { clean, drift } from "../examples.js";
 import { locate } from "../../src/parse/document.js";
 import { build } from "../../src/model/build.js";
 
-
 const model = () => build(locate(clean));
 
 test("#lines sheet: column rules, scalars, input columns", () => {
   const m = model();
   const lines = m.sheets.get("lines")!;
   expect([...lines.columns.keys()]).toEqual(["Net", "VAT", "Gross"]);
-  expect([...lines.scalars.keys()]).toEqual([
-    "net_total",
-    "vat_total",
-    "gross_total",
-  ]);
+  expect([...lines.scalars.keys()]).toEqual(["net_total", "vat_total", "gross_total"]);
   for (const c of ["Item", "Unit", "Qty", "Rate"]) {
     expect(lines.inputColumns.has(c)).toBe(true);
   }
@@ -35,11 +30,7 @@ test("table-less sheet: all bindings are scalars, no SHEET finding", () => {
   const terms = m.sheets.get("terms")!;
   expect(terms.table).toBeNull();
   expect(terms.columns.size).toBe(0);
-  expect([...terms.scalars.keys()]).toEqual([
-    "early_pay_total",
-    "early_pay_saved",
-    "eur_total",
-  ]);
+  expect([...terms.scalars.keys()]).toEqual(["early_pay_total", "early_pay_saved", "eur_total"]);
   expect(m.findings.filter((f) => f.code === "SHEET")).toEqual([]);
 });
 

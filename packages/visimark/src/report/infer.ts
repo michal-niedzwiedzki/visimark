@@ -12,11 +12,7 @@ const REASON_FIELD = 26;
 /** the narrowest first field; wider names push it out, shorter ones do not */
 const MIN_NAME_FIELD = 7;
 
-export function formatInfer(
-  path: string,
-  source: string,
-  proposals: Proposal[],
-): string {
+export function formatInfer(path: string, source: string, proposals: Proposal[]): string {
   const tables = new Map<number, RawTable>();
   for (const t of locate(source).tables) tables.set(t.span.start, t);
 
@@ -58,9 +54,7 @@ export function formatInfer(
 
   const ruleCount = proposals.filter((p) => p.kind === "column" && !p.weak).length;
   const scalarCount = proposals.filter((p) => p.kind === "scalar").length;
-  const anchorCount = proposals.filter(
-    (p) => p.kind === "scalar" && p.anchorSite,
-  ).length;
+  const anchorCount = proposals.filter((p) => p.kind === "scalar" && p.anchorSite).length;
   if (lines.length > 0) lines.push("");
   lines.push(
     `${plural(ruleCount, "rule")}, ${plural(scalarCount, "scalar")}, ` +
@@ -79,9 +73,7 @@ function section(out: string[], title: string, body: string[]): void {
 function rules(group: Proposal[]): string[] {
   const ps = group.filter((p) => p.kind === "column");
   const w = field(ps.map((p) => p.name));
-  const heads = ps.map(
-    (p) => `    ${p.name.padEnd(w)}= ${p.rule.slice(p.rule.indexOf("=") + 2)}`,
-  );
+  const heads = ps.map((p) => `    ${p.name.padEnd(w)}= ${p.rule.slice(p.rule.indexOf("=") + 2)}`);
   const col = column(heads, MIN_FITS_COL);
   return ps.map((p, i) => {
     const note = p.weak ? "2 rows — weak, not written" : `${p.fits}/${p.rows} rows`;
@@ -102,9 +94,7 @@ function scalars(group: Proposal[], source: string): string[] {
   const ps = group.filter((p) => p.kind === "scalar");
   const shown = ps.map((p) => ({
     p,
-    value: p.anchorSite
-      ? source.slice(p.anchorSite.start, p.anchorSite.end)
-      : "",
+    value: p.anchorSite ? source.slice(p.anchorSite.start, p.anchorSite.end) : "",
     line: p.anchorSite ? `line ${lineOf(source, p.anchorSite.start)}` : "",
   }));
   const vw = field(shown.map((s) => s.value));
@@ -121,9 +111,7 @@ function inputs(group: Proposal[], table: RawTable | undefined): string[] {
   // A column with a near-miss is not an input either: the tool has an opinion
   // about it, and listing it here would bury the finding.
   const ruled = new Set(
-    group
-      .filter((p) => p.kind === "column" || p.kind === "near-miss")
-      .map((p) => p.name),
+    group.filter((p) => p.kind === "column" || p.kind === "near-miss").map((p) => p.name),
   );
   const left = table.headers.map((h) => h.text).filter((h) => !ruled.has(h));
   return left.length === 0 ? [] : [`    ${left.join(", ")}`];
@@ -133,9 +121,7 @@ function ambiguous(group: Proposal[]): string[] {
   const ps = group.filter((p) => p.kind === "ambiguous");
   const w = field(ps.map((p) => p.name));
   return ps.flatMap((p) =>
-    (p.alternatives ?? []).map((alt, i) =>
-      `    ${(i === 0 ? p.name : "").padEnd(w)}${alt}`,
-    ),
+    (p.alternatives ?? []).map((alt, i) => `    ${(i === 0 ? p.name : "").padEnd(w)}${alt}`),
   );
 }
 
@@ -151,10 +137,7 @@ function nearMisses(group: Proposal[]): string[] {
     const d = p.disagreement!;
     out.push(heads[i * 2]!.padEnd(col) + `${p.fits}/${p.rows} rows`);
     out.push(`      row ${d.rowIndex + 1}  ${d.rowLabel}`);
-    out.push(
-      heads[i * 2 + 1]!.padEnd(col) +
-        `differs by ${difference(d.stored, d.computed)}`,
-    );
+    out.push(heads[i * 2 + 1]!.padEnd(col) + `differs by ${difference(d.stored, d.computed)}`);
   });
   return out;
 }
@@ -184,8 +167,8 @@ function looseFigures(loose: Proposal[], source: string): string[] {
 }
 
 function difference(stored: string, computed: string): string {
-  const a = new Decimal(stored.replace(/[^\d.\-]/g, ""));
-  const b = new Decimal(computed.replace(/[^\d.\-]/g, ""));
+  const a = new Decimal(stored.replace(/[^\d.-]/g, ""));
+  const b = new Decimal(computed.replace(/[^\d.-]/g, ""));
   const places = Math.max(decimals(stored), decimals(computed));
   return b.minus(a).abs().toFixed(places);
 }

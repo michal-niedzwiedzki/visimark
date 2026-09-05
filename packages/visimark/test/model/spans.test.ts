@@ -25,9 +25,7 @@ test("spans are well formed and inside the source", () => {
 });
 
 test("a STALE cell span selects exactly the stored text", () => {
-  const f = run(drift).findings.find(
-    (x) => x.code === "STALE" && x.rowLabel && x.stored,
-  )!;
+  const f = run(drift).findings.find((x) => x.code === "STALE" && x.rowLabel && x.stored)!;
   expect(drift.slice(f.span!.start, f.span!.end)).toBe(f.stored!);
 });
 

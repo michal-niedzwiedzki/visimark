@@ -2,7 +2,6 @@ import { expect, test } from "bun:test";
 import { clean, drift } from "../examples.js";
 import { locate } from "../../src/parse/document.js";
 
-
 test("locates blocks and links the immediately preceding table", () => {
   const d = locate(clean);
   const lines = d.blocks.find((b) => b.sheetId === "lines")!;
@@ -76,9 +75,7 @@ test("binding offsets slice back to the binding text", () => {
 
 test("strong-wrapped prose anchor locates its value span", () => {
   const d = locate(clean);
-  const a = d.anchors.find(
-    (x) => x.sheetId === "lines" && x.name === "gross_total",
-  )!;
+  const a = d.anchors.find((x) => x.sheetId === "lines" && x.name === "gross_total")!;
   expect(a.value).not.toBeNull();
   expect(a.value!.kind).toBe("strong");
   expect(clean.slice(a.value!.start, a.value!.end)).toBe("28659.00");

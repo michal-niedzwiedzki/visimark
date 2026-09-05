@@ -1,36 +1,46 @@
 {
   "name": "visimark-vscode",
   "displayName": "VisiMark",
-  "description": "Spreadsheet mechanics for Markdown: every computed number carries the formula that produced it.",
   "version": "0.1.0",
-  "publisher": "michal-niedzwiedzki",
+  "private": true,
+  "description": "Spreadsheet mechanics for Markdown: every computed number carries the formula that produced it.",
+  "categories": [
+    "Formatters",
+    "Linters"
+  ],
+  "keywords": [
+    "formula",
+    "invoice",
+    "markdown",
+    "spreadsheet"
+  ],
+  "license": "MIT",
   "author": {
     "name": "Michał Niedźwiedzki"
   },
-  "license": "MIT",
-  "private": true,
-  "icon": "icon.png",
-  "categories": [
-    "Linters",
-    "Formatters"
-  ],
-  "keywords": [
-    "markdown",
-    "spreadsheet",
-    "formula",
-    "invoice"
-  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/michal-niedzwiedzki/visimark"
   },
-  "engines": {
-    "vscode": "^1.85.0"
-  },
-  "activationEvents": [
-    "onLanguage:markdown"
-  ],
+  "publisher": "michal-niedzwiedzki",
   "main": "./dist/extension.js",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "node esbuild.mjs",
+    "package": "bun run build && vsce package --no-dependencies --out visimark.vsix",
+    "install-local": "command -v code >/dev/null 2>&1 || { echo \"VS Code CLI not found on PATH. In VS Code run: Shell Command: Install code command in PATH\" >&2; exit 1; } && bun run package && code --install-extension visimark.vsix --force",
+    "uninstall-local": "command -v code >/dev/null 2>&1 || { echo \"VS Code CLI not found on PATH. In VS Code run: Shell Command: Install code command in PATH\" >&2; exit 1; } && code --uninstall-extension michal-niedzwiedzki.visimark-vscode"
+  },
+  "dependencies": {
+    "visimark": "workspace:*",
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.2.0",
+    "esbuild": "^0.24.0",
+    "ovsx": "^0.10.0"
+  },
   "contributes": {
     "commands": [
       {
@@ -111,21 +121,11 @@
       }
     }
   },
-  "scripts": {
-    "typecheck": "tsc --noEmit",
-    "build": "node esbuild.mjs",
-    "package": "bun run build && vsce package --no-dependencies --out visimark.vsix",
-    "install-local": "command -v code >/dev/null 2>&1 || { echo \"VS Code CLI not found on PATH. In VS Code run: Shell Command: Install code command in PATH\" >&2; exit 1; } && bun run package && code --install-extension visimark.vsix --force",
-    "uninstall-local": "command -v code >/dev/null 2>&1 || { echo \"VS Code CLI not found on PATH. In VS Code run: Shell Command: Install code command in PATH\" >&2; exit 1; } && code --uninstall-extension michal-niedzwiedzki.visimark-vscode"
-  },
-  "dependencies": {
-    "visimark": "workspace:*",
-    "vscode-languageclient": "^9.0.1"
-  },
-  "devDependencies": {
-    "@types/vscode": "^1.85.0",
-    "@vscode/vsce": "^3.2.0",
-    "esbuild": "^0.24.0",
-    "ovsx": "^0.10.0"
+  "activationEvents": [
+    "onLanguage:markdown"
+  ],
+  "icon": "icon.png",
+  "engines": {
+    "vscode": "^1.85.0"
   }
 }

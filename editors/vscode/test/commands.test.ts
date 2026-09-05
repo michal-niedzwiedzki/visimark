@@ -15,7 +15,7 @@ let host: Host;
 
 beforeAll(async () => {
   host = createHost();
-  await activateExtension(host);
+  await activateExtension();
 });
 
 test("every contributed command survives activation", () => {
@@ -31,8 +31,7 @@ test("every contributed command survives activation", () => {
 test("contributed commands do not throw when the palette calls them bare", async () => {
   for (const c of pkg.contributes.commands) {
     const run = host.commands.get(c.command)!;
-    expect(run()).resolves.toBeDefined; // does not reject
-    await run();
+    await run(); // does not reject
   }
 });
 
@@ -98,8 +97,7 @@ test("the code's fallback agrees with the manifest default", async () => {
   host.config.delete(FIX_ON_SAVE);
   const doc = host.openFile(sample);
   const edits = await host.save(doc, MANUAL);
-  const manifestDefault =
-    pkg.contributes.configuration.properties[FIX_ON_SAVE].default;
+  const manifestDefault = pkg.contributes.configuration.properties[FIX_ON_SAVE].default;
   expect(edits.length > 0).toBe(manifestDefault);
 });
 

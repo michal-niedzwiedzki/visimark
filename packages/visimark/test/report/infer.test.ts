@@ -53,9 +53,7 @@ describe("the report keeps check's visual idiom with its own field layout", () =
   });
 
   test("a document with nothing to say still says so", () => {
-    expect(formatInfer("i.md", "# nothing\n", [])).toBe(
-      "0 rules, 0 scalars, 0 anchors.",
-    );
+    expect(formatInfer("i.md", "# nothing\n", [])).toBe("0 rules, 0 scalars, 0 anchors.");
   });
 });
 

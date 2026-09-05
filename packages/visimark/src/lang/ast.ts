@@ -38,13 +38,6 @@ export interface Call extends Pos {
   args: Expr[];
 }
 
-export type Expr =
-  | NumberLit
-  | DateLit
-  | StrLit
-  | Ref
-  | Unary
-  | Binary
-  | Call;
+export type Expr = NumberLit | DateLit | StrLit | Ref | Unary | Binary | Call;
 
 export const COMPARISON_OPS = new Set(["==", "!=", "<", "<=", ">", ">="]);

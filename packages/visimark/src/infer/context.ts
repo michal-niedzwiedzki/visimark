@@ -1,16 +1,7 @@
 import { parseBinding } from "../lang/parser.js";
 import { build } from "../model/build.js";
-import {
-  type Binding,
-  type DocModel,
-  type Sheet,
-} from "../model/types.js";
-import {
-  locate,
-  type LocatedDoc,
-  type RawBlock,
-  type RawTable,
-} from "../parse/document.js";
+import { type Binding, type DocModel, type Sheet } from "../model/types.js";
+import { locate, type LocatedDoc, type RawBlock, type RawTable } from "../parse/document.js";
 import { numericValue } from "../eval/units.js";
 
 /**
@@ -80,9 +71,7 @@ export function buildContext(source: string): InferContext {
     const filled = new Map<string, number>();
     const constant = new Set<string>();
     for (const [name, i] of index) {
-      const texts = table.rows
-        .map((r) => r.cells[i]?.text ?? "")
-        .filter((t) => t.trim() !== "");
+      const texts = table.rows.map((r) => r.cells[i]?.text ?? "").filter((t) => t.trim() !== "");
       filled.set(name, texts.length);
       if (texts.length === 0) continue;
       const values = texts.map((t) => numericValue(t));
@@ -169,10 +158,7 @@ function cloneSheet(s: Sheet): Sheet {
  * into the rule text, which is all the evaluator needs; every span inference
  * reports comes from the real document instead.
  */
-export function makeBinding(
-  sheet: InferSheet,
-  text: string,
-): Binding {
+export function makeBinding(sheet: InferSheet, text: string): Binding {
   const parsed = parseBinding(text);
   return {
     id: `${sheet.id}.${parsed.name}`,

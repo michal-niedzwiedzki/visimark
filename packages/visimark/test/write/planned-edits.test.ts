@@ -32,9 +32,7 @@ test("an edit's span matches its finding's span", () => {
 
 test("the cell edit replaces the stale text with the computed value", () => {
   const { model, result } = analyze(doc);
-  const cell = planFmt(model, result, {}).find(
-    (e) => e.finding.rowLabel === "pen",
-  )!;
+  const cell = planFmt(model, result, {}).find((e) => e.finding.rowLabel === "pen")!;
   expect(doc.slice(cell.start, cell.end)).toBe("9.99");
   expect(cell.text).toBe("15.00");
 });

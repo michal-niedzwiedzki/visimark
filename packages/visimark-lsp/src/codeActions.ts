@@ -1,8 +1,4 @@
-import {
-  CodeActionKind,
-  type CodeAction,
-  type Range,
-} from "vscode-languageserver/node.js";
+import { CodeActionKind, type CodeAction, type Range } from "vscode-languageserver/node.js";
 import type { TextDocument } from "vscode-languageserver-textdocument";
 import { planFmt } from "visimark";
 import type { Analysis } from "./analysis.js";
@@ -48,9 +44,7 @@ export function codeActionsFor(
     if (e.end <= lo || e.start >= hi) continue;
     const f = e.finding;
     const title =
-      f.code === "DATE"
-        ? `VisiMark: rewrite to ${e.text}`
-        : `VisiMark: update to ${e.text}`;
+      f.code === "DATE" ? `VisiMark: rewrite to ${e.text}` : `VisiMark: update to ${e.text}`;
     out.push({
       title,
       kind: CodeActionKind.QuickFix,
@@ -88,9 +82,7 @@ export function codeActionsFor(
         kind: CodeActionKind.QuickFix,
         edit: {
           changes: {
-            [doc.uri]: [
-              { range: rangeOf(doc, f.span), newText: `SUM(${f.raw})` },
-            ],
+            [doc.uri]: [{ range: rangeOf(doc, f.span), newText: `SUM(${f.raw})` }],
           },
         },
       });

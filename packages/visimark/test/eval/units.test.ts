@@ -81,9 +81,7 @@ test("applyUnit keeps a negative sign in front of a prefix", () => {
 
 test("unitKey and showUnit distinguish side as well as text", () => {
   expect(unitKey(null)).toBe("(none)");
-  expect(unitKey({ text: "$", side: "prefix" })).not.toBe(
-    unitKey({ text: "$", side: "suffix" }),
-  );
+  expect(unitKey({ text: "$", side: "prefix" })).not.toBe(unitKey({ text: "$", side: "suffix" }));
   expect(showUnit(null)).toBe("(none)");
   expect(showUnit({ text: "$", side: "prefix" })).toBe("$");
 });

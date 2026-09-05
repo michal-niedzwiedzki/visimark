@@ -24,9 +24,7 @@ describe("the two worked examples are the acceptance suite", () => {
     const start = all.findIndex((l) => l.trim() === "```console");
     const end = all.findIndex((l, i) => i > start && l.trim() === "```");
     const expected = all.slice(start + 2, end).join("\n");
-    expect(formatCheck("docs/example-invoice-drift.md", run(drift).findings)).toBe(
-      expected,
-    );
+    expect(formatCheck("docs/example-invoice-drift.md", run(drift).findings)).toBe(expected);
   });
 
   test("example-invoice-drift.md: 26 problems (21 stale, 5 errors) plus one NOTE", () => {

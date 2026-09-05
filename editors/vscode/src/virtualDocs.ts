@@ -19,11 +19,7 @@ export class TextProvider implements vscode.TextDocumentContentProvider {
   }
 }
 
-export async function show(
-  provider: TextProvider,
-  uri: vscode.Uri,
-  text: string,
-): Promise<void> {
+export async function show(provider: TextProvider, uri: vscode.Uri, text: string): Promise<void> {
   provider.set(uri, text);
   const doc = await vscode.workspace.openTextDocument(uri);
   await vscode.window.showTextDocument(doc, {

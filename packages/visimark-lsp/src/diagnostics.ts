@@ -1,8 +1,4 @@
-import {
-  DiagnosticSeverity,
-  type Diagnostic,
-  type Range,
-} from "vscode-languageserver/node.js";
+import { DiagnosticSeverity, type Diagnostic, type Range } from "vscode-languageserver/node.js";
 import type { TextDocument } from "vscode-languageserver-textdocument";
 import type { Finding, Span } from "visimark";
 import type { Analysis } from "./analysis.js";
@@ -66,10 +62,7 @@ export function messageOf(f: Finding): string {
   }
 }
 
-export function toDiagnostics(
-  doc: TextDocument,
-  analysis: Analysis,
-): Diagnostic[] {
+export function toDiagnostics(doc: TextDocument, analysis: Analysis): Diagnostic[] {
   if (!analysis.applicable) return [];
   const out: Diagnostic[] = [];
   for (const f of analysis.result.findings) {

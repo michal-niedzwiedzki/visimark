@@ -28,9 +28,7 @@ test("foreign bare column outside an aggregate is a vector ref", () => {
   const m = driftModel();
   const variance = m.sheets.get("recon")!.scalars.get("variance")!;
   const info = dependencies(m, variance);
-  expect(info.vectorRefs.map((r) => `${r.qualifier}.${r.name}`)).toEqual([
-    "schedule.Amount",
-  ]);
+  expect(info.vectorRefs.map((r) => `${r.qualifier}.${r.name}`)).toEqual(["schedule.Amount"]);
 });
 
 test("foreign column inside an aggregate is a legal dependency", () => {

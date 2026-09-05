@@ -1,12 +1,6 @@
 import type { Expr } from "../lang/ast.js";
 import type { LangError } from "../lang/token.js";
-import type {
-  LocatedDoc,
-  RawAnchor,
-  RawBlock,
-  RawTable,
-  Span,
-} from "../parse/document.js";
+import type { LocatedDoc, RawAnchor, RawBlock, RawTable, Span } from "../parse/document.js";
 
 export type FindingCode =
   | "STALE"

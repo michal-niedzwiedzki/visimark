@@ -40,7 +40,10 @@ test("half-up rounding at the binding boundary", () => {
 });
 
 test("date arithmetic is closed and small", () => {
-  const env = envOf({ due: { t: "date", iso: "2026-09-10" }, issued: { t: "date", iso: "2026-09-03" } });
+  const env = envOf({
+    due: { t: "date", iso: "2026-09-10" },
+    issued: { t: "date", iso: "2026-09-03" },
+  });
   expect(evalStr("due - issued", env)).toEqual(num(7));
   expect(evalStr("issued + 7", env)).toEqual({ t: "date", iso: "2026-09-10" });
   expect(() => evalStr("issued * 2", env)).toThrow(/number/);

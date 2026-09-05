@@ -2,16 +2,7 @@ import { Decimal } from "decimal.js";
 import type { Expr, Ref } from "../lang/ast.js";
 import { addDays, daysBetween } from "./dates.js";
 import { callProblem, describeCallProblem, isReduce } from "./functions.js";
-import {
-  bool,
-  date,
-  EvalError,
-  num,
-  roundToPlaces,
-  str,
-  Value,
-  valueEquals,
-} from "./value.js";
+import { bool, date, EvalError, num, roundToPlaces, str, Value, valueEquals } from "./value.js";
 
 export interface EvalEnv {
   scalar(ref: Ref): Value;
@@ -32,11 +23,7 @@ export function evalExpr(expr: Expr, env: EvalEnv): Value {
     case "unary":
       return evalUnary(expr.op, evalExpr(expr.operand, env));
     case "binary":
-      return evalBinary(
-        expr.op,
-        evalExpr(expr.left, env),
-        evalExpr(expr.right, env),
-      );
+      return evalBinary(expr.op, evalExpr(expr.left, env), evalExpr(expr.right, env));
     case "call":
       return evalCall(expr, env);
   }
@@ -130,9 +117,7 @@ function evalCall(expr: Extract<Expr, { type: "call" }>, env: EvalEnv): Value {
   const vals = args.map((a) => evalExpr(a, env));
   switch (name) {
     case "ROUND":
-      return num(
-        roundToPlaces(asNum(vals[0]!, "ROUND"), Number(asNum(vals[1]!, "ROUND"))),
-      );
+      return num(roundToPlaces(asNum(vals[0]!, "ROUND"), Number(asNum(vals[1]!, "ROUND"))));
     case "ABS":
       return num(asNum(vals[0]!, "ABS").abs());
     case "MOD":
@@ -150,9 +135,7 @@ function evalCall(expr: Extract<Expr, { type: "call" }>, env: EvalEnv): Value {
 function aggregate(name: string, vec: Value[]): Value {
   if (name === "COUNT") return num(vec.length);
   if (name === "SUM") {
-    return num(
-      vec.reduce((acc, v) => acc.plus(asNum(v, "SUM")), new Decimal(0)),
-    );
+    return num(vec.reduce((acc, v) => acc.plus(asNum(v, "SUM")), new Decimal(0)));
   }
   if (vec.length === 0) throw new EvalError(`${name}() of an empty column`);
   if (name === "AVG") {

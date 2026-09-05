@@ -28,11 +28,7 @@ export interface FormatOptions {
   inferHint?: boolean;
 }
 
-export function formatCheck(
-  path: string,
-  findings: Finding[],
-  opts: FormatOptions = {},
-): string {
+export function formatCheck(path: string, findings: Finding[], opts: FormatOptions = {}): string {
   const lines: string[] = [path, ""];
 
   const stale = findings.filter((f) => f.code === "STALE");
@@ -78,14 +74,9 @@ function id(f: Finding): string {
 
 function staleLine(f: Finding): string {
   if (f.anchorGroup) {
-    return (
-      prefix("STALE") +
-      `${f.suppressedCount} prose anchors bound to the values above`
-    );
+    return prefix("STALE") + `${f.suppressedCount} prose anchors bound to the values above`;
   }
-  const left = f.rowLabel
-    ? id(f).padEnd(ID_FIELD) + "· " + f.rowLabel
-    : id(f);
+  const left = f.rowLabel ? id(f).padEnd(ID_FIELD) + "· " + f.rowLabel : id(f);
   const stored = f.stored ?? "";
   const pad = Math.max(1, STORED_END - left.length);
   const computed = f.formula
@@ -103,20 +94,14 @@ function renderGroup(f: Finding): string[] {
         "· " +
         labelField(f.rowLabel ?? "") +
         `"${f.raw}"`;
-      const body = [
-        CONT + "Dates must be ISO 8601 calendar dates: YYYY-MM-DD.",
-      ];
+      const body = [CONT + "Dates must be ISO 8601 calendar dates: YYYY-MM-DD."];
       if (f.isoFix) {
         body.push(
-          CONT +
-            "Unambiguous — `visimark fmt --fix-dates` rewrites it to " +
-            f.isoFix +
-            ".",
+          CONT + "Unambiguous — `visimark fmt --fix-dates` rewrites it to " + f.isoFix + ".",
         );
       } else if (f.altA && f.altB) {
         body.push(
-          CONT +
-            `Ambiguous: ${f.altA} or ${f.altB}, ${f.daysApart} days apart. Fix by hand.`,
+          CONT + `Ambiguous: ${f.altA} or ${f.altB}, ${f.daysApart} days apart. Fix by hand.`,
         );
       } else {
         body.push(CONT + "Fix by hand.");
@@ -133,9 +118,7 @@ function renderGroup(f: Finding): string[] {
       return [head, CONT + (f.message ?? "")];
     }
     case "NOTE":
-      return [
-        prefix("NOTE") + id(f).padEnd(ID_FIELD) + "· " + (f.message ?? ""),
-      ];
+      return [prefix("NOTE") + id(f).padEnd(ID_FIELD) + "· " + (f.message ?? "")];
     case "UNDEF":
       return [
         prefix("UNDEF") + id(f).padEnd(ID_FIELD) + "  " + "unknown name `" + f.raw + "`",
@@ -164,9 +147,7 @@ function renderGroup(f: Finding): string[] {
     case "CYCLE":
       return [prefix("CYCLE") + (f.cyclePath ?? []).join(" → ")];
     case "SHEET":
-      return [
-        prefix("SHEET") + id(f).padEnd(ID_FIELD) + "  " + (f.message ?? ""),
-      ];
+      return [prefix("SHEET") + id(f).padEnd(ID_FIELD) + "  " + (f.message ?? "")];
     case "COVERAGE":
       return [prefix("COVERAGE") + (f.message ?? "")];
     case "ANCHOR":
@@ -201,7 +182,7 @@ function footer(findings: Finding[]): string {
   let stale = 0;
   let errors = 0;
   for (const f of findings) {
-    if (f.code === "STALE") stale += f.anchorGroup ? f.suppressedCount ?? 0 : 1;
+    if (f.code === "STALE") stale += f.anchorGroup ? (f.suppressedCount ?? 0) : 1;
     else if (ERROR_CODES.has(f.code)) errors++;
   }
   const problems = stale + errors;

@@ -37,9 +37,7 @@ function apply(text: string, edits: TextEdit[]): string {
     .sort((a, b) => offsetOf(b.range.start) - offsetOf(a.range.start))
     .reduce(
       (acc, e) =>
-        acc.slice(0, offsetOf(e.range.start)) +
-        e.newText +
-        acc.slice(offsetOf(e.range.end)),
+        acc.slice(0, offsetOf(e.range.start)) + e.newText + acc.slice(offsetOf(e.range.end)),
       text,
     );
 }

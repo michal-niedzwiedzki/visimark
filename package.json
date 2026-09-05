@@ -1,15 +1,39 @@
 {
   "name": "visimark-monorepo",
   "private": true,
-  "type": "module",
+  "description": "Monorepo for VisiMark: spreadsheet mechanics for Markdown, plus its editor integrations.",
+  "keywords": [
+    "agent",
+    "ai",
+    "claude",
+    "cli",
+    "csv",
+    "formulas",
+    "markdown",
+    "spreadsheet",
+    "vscode"
+  ],
+  "homepage": "https://github.com/michal-niedzwiedzki/visimark#readme",
+  "bugs": "https://github.com/michal-niedzwiedzki/visimark/issues",
+  "license": "MIT",
+  "author": "Michał Niedźwiedzki <michal@epsi.pl>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/michal-niedzwiedzki/visimark.git"
+  },
   "workspaces": [
     "packages/*",
     "editors/*"
   ],
+  "type": "module",
   "scripts": {
     "test": "bun test",
     "typecheck": "bun run --filter '*' typecheck",
     "build": "bun run --filter '*' build",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
     "vscode-install": "cd editors/vscode && bun run install-local",
     "vscode-uninstall": "cd editors/vscode && bun run uninstall-local",
     "postinstall": "bun run --filter visimark build"
@@ -20,6 +44,9 @@
   "devDependencies": {
     "@types/bun": "^1.4.0",
     "@types/node": "^22.0.0",
+    "oxfmt": "^0.66.0",
+    "oxlint": "^1.81.0",
     "typescript": "^5.5.0"
-  }
+  },
+  "packageManager": "bun@1.4.2"
 }

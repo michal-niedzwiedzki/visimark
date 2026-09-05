@@ -6,7 +6,6 @@ import { check } from "../../src/eval/check.js";
 import { formatCheck } from "../../src/report/format.js";
 import { levenshtein } from "../../src/report/levenshtein.js";
 
-
 /** the normative transcript, read straight out of the example doc */
 function expectedTranscript(): string {
   const all = drift.split("\n");
@@ -43,7 +42,13 @@ test("a row label at or past the value column keeps a space before the value", (
 
 test("padding for labels shorter than the field is untouched", () => {
   const out = formatCheck("f.md", [
-    { code: "DATE", sheetId: "schedule", name: "Due", rowLabel: "Delivery of backend", raw: "15.10.2026" },
+    {
+      code: "DATE",
+      sheetId: "schedule",
+      name: "Due",
+      rowLabel: "Delivery of backend",
+      raw: "15.10.2026",
+    },
   ]);
   expect(out).toContain(`Delivery of backend   "15.10.2026"`);
 });

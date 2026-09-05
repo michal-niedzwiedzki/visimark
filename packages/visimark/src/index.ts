@@ -1,34 +1,17 @@
 export { locate } from "./parse/document.js";
 export { build } from "./model/build.js";
 export { check, type CheckResult } from "./eval/check.js";
-export {
-  fmt,
-  planFmt,
-  type FmtOptions,
-  type FmtResult,
-  type PlannedEdit,
-} from "./write/fmt.js";
+export { fmt, planFmt, type FmtOptions, type FmtResult, type PlannedEdit } from "./write/fmt.js";
 export { applyEdits, type Edit } from "./write/splice.js";
 export { topoOrder, dependencies, resolve, refText } from "./eval/graph.js";
-export {
-  FUNCTIONS,
-  isReduce,
-  type FnKind,
-  type FnSpec,
-} from "./eval/functions.js";
+export { FUNCTIONS, isReduce, type FnKind, type FnSpec } from "./eval/functions.js";
 export { infer, type Proposal, type ProposalKind } from "./infer/propose.js";
 export { planInfer, type PlannedInsert } from "./infer/write.js";
 export { formatCheck } from "./report/format.js";
 export { formatInfer } from "./report/infer.js";
 export { lineOf } from "./report/lines.js";
 export { applyUnit, parseDecorated, type Unit } from "./eval/units.js";
-export type {
-  Binding,
-  DocModel,
-  Finding,
-  FindingCode,
-  Sheet,
-} from "./model/types.js";
+export type { Binding, DocModel, Finding, FindingCode, Sheet } from "./model/types.js";
 export type {
   LocatedDoc,
   RawAnchor,

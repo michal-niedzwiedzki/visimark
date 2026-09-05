@@ -17,26 +17,15 @@ export function isLeap(y: number): boolean {
 }
 
 export function daysInMonth(y: number, m: number): number {
-  return [31, isLeap(y) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][
-    m - 1
-  ]!;
+  return [31, isLeap(y) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1]!;
 }
 
 function validYmd(y: number, m: number, d: number): boolean {
-  return (
-    y >= 1 &&
-    y <= 9999 &&
-    m >= 1 &&
-    m <= 12 &&
-    d >= 1 &&
-    d <= daysInMonth(y, m)
-  );
+  return y >= 1 && y <= 9999 && m >= 1 && m <= 12 && d >= 1 && d <= daysInMonth(y, m);
 }
 
 const iso = (y: number, m: number, d: number): string =>
-  `${String(y).padStart(4, "0")}-${String(m).padStart(2, "0")}-${String(
-    d,
-  ).padStart(2, "0")}`;
+  `${String(y).padStart(4, "0")}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 
 export function parseIsoDate(text: string): IsoResult {
   const isoMatch = ISO_RE.exec(text);

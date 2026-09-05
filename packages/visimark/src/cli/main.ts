@@ -1,12 +1,5 @@
 import { pathToFileURL } from "node:url";
-import {
-  cmdCheck,
-  cmdEval,
-  cmdExplain,
-  cmdFmt,
-  cmdInfer,
-  type Writer,
-} from "./commands.js";
+import { cmdCheck, cmdEval, cmdExplain, cmdFmt, cmdInfer, type Writer } from "./commands.js";
 
 const USAGE = `visimark — spreadsheet mechanics for Markdown
 
@@ -63,8 +56,7 @@ export async function runCli(argv: string[], io: CliIO = {}): Promise<number> {
 // import as well. Comparing against argv[1] survives bundling: when bin/visimark.js
 // is the entry point this is false and that shim calls runCli itself.
 const invokedDirectly =
-  process.argv[1] !== undefined &&
-  import.meta.url === pathToFileURL(process.argv[1]).href;
+  process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (invokedDirectly) {
   runCli(process.argv.slice(2)).then(

@@ -19,11 +19,7 @@ const cache = new Map<string, Entry>();
  * unchanged. Every provider calls this, so a single keystroke costs one
  * parse no matter how many features are active.
  */
-export function analyzeDocument(
-  uri: string,
-  version: number,
-  text: string,
-): Analysis {
+export function analyzeDocument(uri: string, version: number, text: string): Analysis {
   const hit = cache.get(uri);
   if (hit && hit.version === version) return hit.analysis;
 

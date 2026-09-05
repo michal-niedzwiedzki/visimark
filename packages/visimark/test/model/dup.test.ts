@@ -75,9 +75,7 @@ test("DUP keeps the first binding, so the column still computes", () => {
 test("DUP points at the second binding and back at the first", () => {
   const d = run(twiceInASheet).findings.find((f) => f.code === "DUP")!;
   expect(twiceInASheet.slice(d.span!.start, d.span!.end)).toBe("Net = 99");
-  expect(twiceInASheet.slice(d.relatedSpan!.start, d.relatedSpan!.end)).toBe(
-    "Net = Price * Qty",
-  );
+  expect(twiceInASheet.slice(d.relatedSpan!.start, d.relatedSpan!.end)).toBe("Net = Price * Qty");
 });
 
 test("a name bound twice in document scope is DUP", () => {
@@ -88,9 +86,7 @@ test("a name bound twice in document scope is DUP", () => {
 });
 
 test("two blocks sharing a sheet id collide on a repeated name", () => {
-  const dups = run(acrossTwoBlocksSameSheet).findings.filter(
-    (f) => f.code === "DUP",
-  );
+  const dups = run(acrossTwoBlocksSameSheet).findings.filter((f) => f.code === "DUP");
   expect(dups.length).toBe(1);
   expect(dups[0]!.name).toBe("Net");
 });

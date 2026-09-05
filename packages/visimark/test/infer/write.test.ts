@@ -50,9 +50,7 @@ describe("--write only ever inserts", () => {
   });
 
   test("one proposal can be applied without the rest", () => {
-    const one = infer(strippedClean).filter(
-      (p) => p.kind === "column" && p.name === "Net",
-    );
+    const one = infer(strippedClean).filter((p) => p.kind === "column" && p.name === "Net");
     const out = written(strippedClean, one);
     expect(out).toContain("```vmark #unnamed1\nNet = Qty * Rate\n```");
     expect(out).not.toContain("<!--vmark=unnamed1");

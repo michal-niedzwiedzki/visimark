@@ -1,4 +1,3 @@
-import { Decimal } from "decimal.js";
 import { numericValue } from "../eval/units.js";
 import type { InferContext, InferSheet } from "./context.js";
 import { type Accepted, type ColumnVerdict, verifyColumn } from "./verify.js";
@@ -146,11 +145,7 @@ function droppedRule(
   right: string,
 ): string | undefined {
   if (candidate.op !== "*") return undefined;
-  const keep = sheet.constant.has(left)
-    ? right
-    : sheet.constant.has(right)
-      ? left
-      : null;
+  const keep = sheet.constant.has(left) ? right : sheet.constant.has(right) ? left : null;
   if (keep === null) return undefined;
   const dropped = `${candidate.target} = ${keep}`;
   const v = verifyColumn(ctx, sheet, dropped, accepted);
@@ -162,11 +157,7 @@ function droppedRule(
  * the candidate to the evaluator like any other. A `k` that only satisfies the
  * row it came from is not a finding, and verification is what says so.
  */
-function solveMultiplier(
-  sheet: InferSheet,
-  target: string,
-  a: string,
-): string | null {
+function solveMultiplier(sheet: InferSheet, target: string, a: string): string | null {
   const ti = sheet.index.get(target)!;
   const ai = sheet.index.get(a)!;
   for (const row of sheet.table.rows) {
@@ -180,4 +171,3 @@ function solveMultiplier(
   }
   return null;
 }
-

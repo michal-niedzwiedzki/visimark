@@ -15,7 +15,6 @@ function capture() {
   };
 }
 
-
 test("check on the clean invoice exits 0", async () => {
   const c = capture();
   const code = await runCli(["check", cleanPath], c.io);
@@ -40,20 +39,14 @@ test("check on the drift invoice exits 1 with the transcript", async () => {
 
 test("eval --get prints one raw decimal value", async () => {
   const c = capture();
-  const code = await runCli(
-    ["eval", cleanPath, "--get", "lines.gross_total"],
-    c.io,
-  );
+  const code = await runCli(["eval", cleanPath, "--get", "lines.gross_total"], c.io);
   expect(code).toBe(0);
   expect(c.out()).toBe("28659");
 });
 
 test("eval --get accepts a bare name and --json", async () => {
   const c = capture();
-  await runCli(
-    ["eval", cleanPath, "--get", "gross_total", "--json"],
-    c.io,
-  );
+  await runCli(["eval", cleanPath, "--get", "gross_total", "--json"], c.io);
   expect(JSON.parse(c.out())).toEqual({ gross_total: "28659" });
 });
 
@@ -75,10 +68,7 @@ test("fmt rewrites the file in place and is stable on a second run", async () =>
 
 test("explain prints a sheet's rules and evaluation order", async () => {
   const c = capture();
-  const code = await runCli(
-    ["explain", cleanPath, "#schedule"],
-    c.io,
-  );
+  const code = await runCli(["explain", cleanPath, "#schedule"], c.io);
   expect(code).toBe(0);
   expect(c.out()).toContain("Amount = Share * lines.gross_total");
   expect(c.out()).toContain("covered = SUM(Amount)");

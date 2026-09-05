@@ -14,9 +14,7 @@ export function applyEdits(source: string, edits: Edit[]): string {
   let lastStart = source.length + 1;
   for (const e of sorted) {
     if (e.end > lastStart) {
-      throw new Error(
-        `overlapping edits at ${e.start}..${e.end} and ${lastStart}`,
-      );
+      throw new Error(`overlapping edits at ${e.start}..${e.end} and ${lastStart}`);
     }
     if (e.start < 0 || e.end > out.length || e.start > e.end) {
       throw new Error(`edit out of range: ${e.start}..${e.end}`);

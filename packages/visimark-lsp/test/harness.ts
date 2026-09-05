@@ -34,11 +34,9 @@ export interface Diagnostic {
 }
 
 export async function startServer(): Promise<Harness> {
-  const child: ChildProcessWithoutNullStreams = spawn(
-    "bun",
-    [serverEntry, "--stdio"],
-    { stdio: ["pipe", "pipe", "pipe"] },
-  );
+  const child: ChildProcessWithoutNullStreams = spawn("bun", [serverEntry, "--stdio"], {
+    stdio: ["pipe", "pipe", "pipe"],
+  });
   const conn = createMessageConnection(
     new StreamMessageReader(child.stdout),
     new StreamMessageWriter(child.stdin),

@@ -6,9 +6,7 @@ import { strippedClean } from "../examples.js";
 const exact = (src: string, sheetIndex = 0) => {
   const ctx = buildContext(src);
   const sheet = ctx.sheets[sheetIndex]!;
-  return columnCandidates(ctx, sheet, []).filter(
-    (c) => c.verdict.misses.length === 0,
-  );
+  return columnCandidates(ctx, sheet, []).filter((c) => c.verdict.misses.length === 0);
 };
 
 describe("stages 1 and 2 find the rules the services table was built from", () => {

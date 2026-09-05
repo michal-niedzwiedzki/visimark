@@ -44,11 +44,7 @@ export interface RawTable {
   span: Span;
 }
 
-export type AnchorTargetKind =
-  | "strong"
-  | "emphasis"
-  | "inlineCode"
-  | "text";
+export type AnchorTargetKind = "strong" | "emphasis" | "inlineCode" | "text";
 
 export interface RawAnchor {
   sheetId: string;
@@ -89,8 +85,7 @@ export interface LocatedDoc {
   detachedTableBlocks: Set<RawBlock>;
 }
 
-const ANCHOR_RE =
-  /^<!--\s*vmark\s*=\s*([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)\s*-->$/;
+const ANCHOR_RE = /^<!--\s*vmark\s*=\s*([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)\s*-->$/;
 const TRAILING_NUMBER_RE = /(-?\d+(?:\.\d+)?)\s*$/;
 
 const off = (n: MdNode, which: "start" | "end"): number => {
@@ -102,10 +97,7 @@ const off = (n: MdNode, which: "start" | "end"): number => {
 };
 
 export function locate(source: string): LocatedDoc {
-  const tree = unified()
-    .use(remarkParse)
-    .use(remarkGfm)
-    .parse(source) as unknown as MdNode;
+  const tree = unified().use(remarkParse).use(remarkGfm).parse(source) as unknown as MdNode;
 
   const top = tree.children ?? [];
   const blocks: RawBlock[] = [];
@@ -140,10 +132,7 @@ export function locate(source: string): LocatedDoc {
 
       const prev = top[i - 1];
       if (prev && prev.type === "table") {
-        tableBeforeBlock.set(
-          block,
-          tableBySpanStart.get(off(prev, "start")) ?? null,
-        );
+        tableBeforeBlock.set(block, tableBySpanStart.get(off(prev, "start")) ?? null);
       } else {
         tableBeforeBlock.set(block, null);
         // a table sits between this block and the previous block/heading boundary
@@ -165,9 +154,7 @@ export function locate(source: string): LocatedDoc {
   const figures: ProseFigure[] = [];
   collectFigures(tree, source, figures);
   const anchoredSpans = new Set(
-    anchors
-      .filter((a) => a.value)
-      .map((a) => `${a.value!.start}:${a.value!.end}`),
+    anchors.filter((a) => a.value).map((a) => `${a.value!.start}:${a.value!.end}`),
   );
   for (const f of figures) {
     f.anchored = anchoredSpans.has(`${f.value.start}:${f.value.end}`);
@@ -223,9 +210,7 @@ function readCell(cell: MdNode, source: string): RawCell {
 }
 
 /** value span for a strong/emphasis/inlineCode/text inline node */
-function innerValueSpan(
-  node: MdNode,
-): (Span & { kind: AnchorTargetKind }) | null {
+function innerValueSpan(node: MdNode): (Span & { kind: AnchorTargetKind }) | null {
   if (node.type === "strong" || node.type === "emphasis") {
     const t = node.children?.[0];
     if (t && t.type === "text") {
@@ -274,14 +259,8 @@ function collectAnchors(root: MdNode, source: string, out: RawAnchor[]): void {
   });
 }
 
-function anchorValueSpan(
-  prev: MdNode,
-): (Span & { kind: AnchorTargetKind }) | null {
-  if (
-    prev.type === "strong" ||
-    prev.type === "emphasis" ||
-    prev.type === "inlineCode"
-  ) {
+function anchorValueSpan(prev: MdNode): (Span & { kind: AnchorTargetKind }) | null {
+  if (prev.type === "strong" || prev.type === "emphasis" || prev.type === "inlineCode") {
     return innerValueSpan(prev);
   }
   if (prev.type === "text") {

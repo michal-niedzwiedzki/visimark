@@ -1,17 +1,9 @@
-import {
-  MarkupKind,
-  type Hover,
-  type Position,
-} from "vscode-languageserver/node.js";
+import { MarkupKind, type Hover, type Position } from "vscode-languageserver/node.js";
 import type { TextDocument } from "vscode-languageserver-textdocument";
 import { dependencies, refText, type Binding } from "visimark";
 import type { Analysis } from "./analysis.js";
 
-export function hoverAt(
-  doc: TextDocument,
-  analysis: Analysis,
-  position: Position,
-): Hover | null {
+export function hoverAt(doc: TextDocument, analysis: Analysis, position: Position): Hover | null {
   if (!analysis.applicable) return null;
   const { model, result } = analysis;
   const off = doc.offsetAt(position);
@@ -31,10 +23,7 @@ export function hoverAt(
 
   const allBindings: Binding[] = [
     ...model.docScope.values(),
-    ...[...model.sheets.values()].flatMap((s) => [
-      ...s.columns.values(),
-      ...s.scalars.values(),
-    ]),
+    ...[...model.sheets.values()].flatMap((s) => [...s.columns.values(), ...s.scalars.values()]),
   ];
 
   // 1. inside a vmark block, on a binding line
@@ -57,18 +46,13 @@ export function hoverAt(
         const cell = table.rows[r]!.cells[idx];
         if (!cell || off < cell.start || off > cell.end) continue;
         const stale = result.findings.find(
-          (f) =>
-            f.code === "STALE" &&
-            f.span?.start === cell.start &&
-            f.span?.end === cell.end,
+          (f) => f.code === "STALE" && f.span?.start === cell.start && f.span?.end === cell.end,
         );
         const body =
           "```vmark\n" +
           formula(binding) +
           "\n```" +
-          (stale
-            ? `\n\ncomputed \`${stale.computed}\` — the cell says \`${stale.stored}\``
-            : "");
+          (stale ? `\n\ncomputed \`${stale.computed}\` — the cell says \`${stale.stored}\`` : "");
         return md(body + deps(binding));
       }
     }

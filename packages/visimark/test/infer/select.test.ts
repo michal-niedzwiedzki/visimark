@@ -26,26 +26,16 @@ describe("selection produces an acyclic set", () => {
   });
 
   test("the three rules of the services table, and only those", () => {
-    expect(rules).toEqual([
-      "Net = Qty * Rate",
-      "Gross = Net + VAT",
-      "VAT = Net * 0.23",
-    ]);
+    expect(rules).toEqual(["Net = Qty * Rate", "Gross = Net + VAT", "VAT = Net * 0.23"]);
   });
 
   test("the constant form is reported as a rival, not proposed", () => {
-    expect(s.alsoFits.map((a) => a.candidate.rule)).toEqual([
-      "Gross = Net * 1.23",
-    ]);
-    expect(s.alsoFits[0]!.reason).toBe(
-      "prefers a rule over materialised columns",
-    );
+    expect(s.alsoFits.map((a) => a.candidate.rule)).toEqual(["Gross = Net * 1.23"]);
+    expect(s.alsoFits[0]!.reason).toBe("prefers a rule over materialised columns");
   });
 
   test("a rearrangement of an accepted rule is not offered as a rival", () => {
-    expect(s.alsoFits.map((a) => a.candidate.rule)).not.toContain(
-      "Net = Gross - VAT",
-    );
+    expect(s.alsoFits.map((a) => a.candidate.rule)).not.toContain("Net = Gross - VAT");
   });
 });
 
@@ -67,9 +57,7 @@ describe("evidence floors", () => {
   });
 
   test("three rows are proposable", () => {
-    const s = run(
-      body(["| a | 2 | 3 | 6 |", "| b | 4 | 5 | 20 |", "| c | 6 | 7 | 42 |"]),
-    );
+    const s = run(body(["| a | 2 | 3 | 6 |", "| b | 4 | 5 | 20 |", "| c | 6 | 7 | 42 |"]));
     expect(s.accepted.map((c) => c.rule)).toContain("C = A * B");
     expect(s.weak).toEqual([]);
   });

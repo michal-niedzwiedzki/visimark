@@ -1,10 +1,5 @@
 import { Decimal } from "decimal.js";
-import {
-  COMPARISON_OPS,
-  type Call,
-  type Expr,
-  type Ref,
-} from "./ast.js";
+import { COMPARISON_OPS, type Call, type Expr, type Ref } from "./ast.js";
 import { lex } from "./lexer.js";
 import { LangError, type Token } from "./token.js";
 
@@ -67,16 +62,8 @@ class Parser {
       const lbp = LEFT_BP[t.value];
       if (lbp === undefined || lbp <= minBp) break;
 
-      if (
-        COMPARISON_OPS.has(t.value) &&
-        left.type === "binary" &&
-        COMPARISON_OPS.has(left.op)
-      ) {
-        throw new LangError(
-          "comparisons do not chain; use `and` to combine them",
-          t.start,
-          t.end,
-        );
+      if (COMPARISON_OPS.has(t.value) && left.type === "binary" && COMPARISON_OPS.has(left.op)) {
+        throw new LangError("comparisons do not chain; use `and` to combine them", t.start, t.end);
       }
 
       this.next();

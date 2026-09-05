@@ -31,11 +31,7 @@ export interface PlannedEdit extends Edit {
   finding: Finding;
 }
 
-export function planFmt(
-  model: DocModel,
-  result: CheckResult,
-  opts: FmtOptions,
-): PlannedEdit[] {
+export function planFmt(model: DocModel, result: CheckResult, opts: FmtOptions): PlannedEdit[] {
   const edits: PlannedEdit[] = [];
   const source = model.source;
   const bySpan = new Map<string, Finding>();
@@ -160,11 +156,7 @@ export function fmt(source: string, opts: FmtOptions = {}): FmtResult {
   };
 }
 
-function countCellEdits(
-  model: DocModel,
-  _result: CheckResult,
-  edits: Edit[],
-): number {
+function countCellEdits(model: DocModel, _result: CheckResult, edits: Edit[]): number {
   const cellSpans = new Set<string>();
   for (const sheet of model.sheets.values()) {
     for (const row of sheet.table?.rows ?? []) {
