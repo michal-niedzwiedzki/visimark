@@ -19,9 +19,25 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-      # links this branch's CLI into node_modules/.bin, so the action below
-      # runs the code under test instead of the last thing published to npm.
+      # `bun install` links this branch's CLI into node_modules/.bin, and the
+      # build produces the dist/ that link points at. Neither is enough on its
+      # own: node_modules/.bin is on PATH inside `bun run`, but *not* inside a
+      # composite action's plain `run:` step, so the action's `command -v
+      # visimark` preference silently fell through to `npx visimark@latest` —
+      # dogfooding the last published package instead of the code under test.
+      # GITHUB_PATH is what makes that preference actually resolve here.
       - run: bun install --frozen-lockfile
+      - run: bun run build
+      - run: echo "${{ github.workspace }}/node_modules/.bin" >> "$GITHUB_PATH"
+
+      - name: the action must run this branch's CLI, not the published package
+        run: |
+          resolved="$(command -v visimark || true)"
+          echo "visimark resolves to: ${resolved:-<nothing>}"
+          if [ "$resolved" != "${{ github.workspace }}/node_modules/.bin/visimark" ]; then
+            echo "::error::visimark does not resolve to this branch's build, so every check below would be dogfooding the published package. Fix the PATH wiring rather than the assertion."
+            exit 1
+          fi
 
       # Every markdown file this repo asks anyone else to trust, checked by the
       # rule the repo now ships: a table with no rules fails, and a document
