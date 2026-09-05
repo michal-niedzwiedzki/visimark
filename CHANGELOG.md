@@ -3,6 +3,12 @@
 ## Unreleased
 
 ### Added
+- `visimark check FILE... --require-formulas` — opt-in flag that fails
+  (exit 1) a document with zero `vmark` rules anywhere in it, closing the gap
+  the SKILL.md warning already called out: `check` reports `0 problems` on a
+  document with nothing to disagree with. Checked document-wide, so a sheet
+  that is legitimately all-input never trips it as long as some other sheet
+  carries a rule.
 - `visimark infer FILE... [--write]` — read a document that has arithmetic and
   no formulas, work out which rules reproduce the numbers already in it, and
   propose them. Verification runs the real evaluator, so anything it proposes

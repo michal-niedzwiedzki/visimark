@@ -20,7 +20,8 @@ export type FindingCode =
   | "SHEET"
   | "ANCHOR"
   | "WARN"
-  | "NOTE";
+  | "NOTE"
+  | "COVERAGE";
 
 export interface Finding {
   code: FindingCode;

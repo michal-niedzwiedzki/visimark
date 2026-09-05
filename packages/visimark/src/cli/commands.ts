@@ -51,11 +51,12 @@ function showValue(v: Value): string {
 }
 
 export function cmdCheck(args: string[], out: Writer, err: Writer): number {
-  const { files } = parseArgs(args);
+  const { files, flags } = parseArgs(args);
   if (files.length === 0) {
-    err("usage: visimark check FILE...");
+    err("usage: visimark check FILE... [--require-formulas]");
     return 2;
   }
+  const requireFormulas = flags.has("require-formulas");
   let exit = 0;
   for (const path of files) {
     let source: string;
@@ -66,7 +67,7 @@ export function cmdCheck(args: string[], out: Writer, err: Writer): number {
       exit = 2;
       continue;
     }
-    const result = check(build(locate(source)));
+    const result = check(build(locate(source)), { requireFormulas });
     out(formatCheck(path, result.findings));
     if (result.findings.length > 0 && exit === 0) exit = 1;
   }

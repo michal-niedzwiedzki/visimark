@@ -17,6 +17,7 @@ const ERROR_CODES = new Set([
   "TYPE",
   "SHEET",
   "ANCHOR",
+  "COVERAGE",
 ]);
 
 export function formatCheck(path: string, findings: Finding[]): string {
@@ -148,6 +149,8 @@ function renderGroup(f: Finding): string[] {
       return [
         prefix("SHEET") + id(f).padEnd(ID_FIELD) + "  " + (f.message ?? ""),
       ];
+    case "COVERAGE":
+      return [prefix("COVERAGE") + (f.message ?? "")];
     case "ANCHOR":
       return [
         prefix("ANCHOR") +

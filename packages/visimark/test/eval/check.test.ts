@@ -106,3 +106,23 @@ test("drift: no double-report of the late_fees cycle members", () => {
   const late = r.findings.filter((f) => f.sheetId === "late_fees");
   expect(late.map((f) => f.code)).toEqual(["CYCLE"]);
 });
+
+const NO_FORMULAS = `
+| Item  | Price | Qty |
+|-------|------:|----:|
+| pen   |  5.00 |  10 |
+`;
+
+test("requireFormulas: a document with zero vmark rules fails, off by default", () => {
+  const model = build(locate(NO_FORMULAS));
+  expect(check(model).findings).toEqual([]);
+  const r = check(model, { requireFormulas: true });
+  expect(r.findings).toHaveLength(1);
+  expect(r.findings[0]).toMatchObject({ code: "COVERAGE" });
+  expect(r.exitCode).toBe(1);
+});
+
+test("requireFormulas: a document with at least one rule is unaffected", () => {
+  const r = check(build(locate(clean)), { requireFormulas: true });
+  expect(r.findings.some((f) => f.code === "COVERAGE")).toBe(false);
+});

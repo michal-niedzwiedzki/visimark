@@ -46,10 +46,18 @@ git checkout quote.md                    # or undo the edit
 If `check` still says `0 problems` after you changed an input, nothing in that
 document is wired up. Fix it before you report anything.
 
+CI can enforce this instead of trusting the change-one-input ritual:
+`visimark check FILE... --require-formulas` fails (exit 1) a document with zero
+`vmark` rules anywhere in it, the same "0 problems" case above. It is opt-in —
+a document that is legitimately all-input still passes `check` without the
+flag.
+
 ## Running it
 
 ```bash
-visimark check FILE...                # read-only; exit 1 if anything disagrees
+visimark check FILE... [--require-formulas]
+                                       # read-only; exit 1 if anything disagrees
+                                       # (or if --require-formulas and no rules)
 visimark fmt   FILE... [--fix-dates]  # rewrite computed cells and anchors
 visimark infer FILE... [--write]      # propose rules for a document with none
 visimark eval  FILE [--get NAME] [--json]

@@ -36,6 +36,17 @@ const MAX_FN_SUGGESTION_DISTANCE = 2;
 const BOOLEAN_BINDING_MESSAGE =
   "a boolean cannot be stored; wrap it in `IF()` to produce a number or a string";
 
+export interface CheckOptions {
+  /**
+   * Fail a document that has zero `vmark` rules anywhere in it — the exact
+   * gap the SKILL.md warning describes: `check` reports 0 problems on a
+   * document with nothing to disagree with. Checked document-wide, not
+   * per-sheet, so a reference sheet that is legitimately all-input never
+   * trips it as long as some other sheet in the document carries a rule.
+   */
+  requireFormulas?: boolean;
+}
+
 export interface CheckResult {
   findings: Finding[];
   values: Map<string, Value>;
@@ -56,7 +67,7 @@ class Unevaluable extends Error {}
 const PERCENT_RE = /^(\d+(?:\.\d+)?)%$/;
 const DATEISH_RE = /^\d{1,4}[./-]\d{1,4}[./-]\d{1,4}$/;
 
-export function check(model: DocModel): CheckResult {
+export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
   const { order, cycles } = topoOrder(model);
 
   const values = new Map<string, Value>();
@@ -85,6 +96,14 @@ export function check(model: DocModel): CheckResult {
 
   // structural findings carried from the model (SHEET, binding parse errors)
   for (const f of model.findings) emit(f);
+
+  if (opts.requireFormulas && countBindings(model) === 0) {
+    emit({
+      code: "COVERAGE",
+      message:
+        "document has no `vmark` rules; --require-formulas needs at least one",
+    });
+  }
 
   const fallbackPrecision = docPrecision(model);
 
@@ -623,6 +642,7 @@ function orderFindings(
   if (anchorGroup) sectionA.push(anchorGroup.f);
 
   const CODE_RANK: Record<string, number> = {
+    COVERAGE: 0,
     SHEET: 0,
     TYPE: 0,
     DATE: 1,
@@ -704,6 +724,14 @@ export function showValue(v: Value, places: number): string {
 
 function rowLabel(table: RawTable, row: number): string {
   return table.rows[row]?.cells[0]?.text ?? `row ${row + 1}`;
+}
+
+function countBindings(model: DocModel): number {
+  let n = model.docScope.size;
+  for (const sheet of model.sheets.values()) {
+    n += sheet.columns.size + sheet.scalars.size;
+  }
+  return n;
 }
 
 function docPrecision(model: DocModel): number {

@@ -11,7 +11,10 @@ import {
 const USAGE = `visimark — spreadsheet mechanics for Markdown
 
 usage:
-  visimark check FILE...               read-only; exit 1 if any finding
+  visimark check FILE... [--require-formulas]
+                                        read-only; exit 1 if any finding.
+                                        --require-formulas also fails a
+                                        document with zero \`vmark\` rules.
   visimark fmt   FILE... [--fix-dates] rewrite computed cells and anchors
   visimark infer FILE... [--write]     propose rules for a document with none
   visimark eval  FILE [--get NAME] [--json]

@@ -85,6 +85,26 @@ test("explain prints a sheet's rules and evaluation order", async () => {
   expect(c.out()).toMatch(/order:\s+Amount → covered/);
 });
 
+test("check --require-formulas fails a document with no vmark rules", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "visimark-"));
+  const p = join(dir, "plain.md");
+  writeFileSync(p, "| Item | Price |\n|------|------:|\n| pen  |  5.00 |\n");
+
+  const c1 = capture();
+  expect(await runCli(["check", p], c1.io)).toBe(0);
+
+  const c2 = capture();
+  const code2 = await runCli(["check", p, "--require-formulas"], c2.io);
+  expect(code2).toBe(1);
+  expect(c2.out()).toContain("COVERAGE");
+});
+
+test("check --require-formulas passes a document that has a formula", async () => {
+  const c = capture();
+  const code = await runCli(["check", cleanPath, "--require-formulas"], c.io);
+  expect(code).toBe(0);
+});
+
 test("no command is a usage error", async () => {
   const c = capture();
   const code = await runCli([], c.io);
