@@ -170,3 +170,22 @@ test("a marked document that grew rules is reported, so the marker cannot rot", 
 test("a document with at least one rule is unaffected", () => {
   expect(run(clean).findings.some((f) => f.code === "COVERAGE")).toBe(false);
 });
+
+const WARN_ONLY = `
+| Item | Price | Qty |   Net |
+|------|------:|----:|------:|
+| pen  |  5.00 |  10 | 50.00 |
+
+\`\`\`vmark #order
+Net    = Price * Qty
+unused = SUM(Net)
+\`\`\`
+`;
+
+test("an advisory finding is reported without failing the run", () => {
+  // The report calls this document `0 problems`, so the exit code has to
+  // agree with it. WARN and NOTE are advice, not disagreements.
+  const r = run(WARN_ONLY);
+  expect(r.findings.map((f) => f.code)).toEqual(["WARN"]);
+  expect(r.exitCode).toBe(0);
+});

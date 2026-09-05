@@ -17,6 +17,31 @@ export type FindingCode =
   | "NOTE"
   | "COVERAGE";
 
+/**
+ * The codes that count as an error in the report's total and fail a run.
+ * `STALE` counts too, tallied separately because the report shows it
+ * separately. Everything else — `WARN`, `NOTE` — is advice: reported, never
+ * counted, never the reason an exit code is non-zero. One definition, so the
+ * printed count and the exit code cannot drift apart.
+ */
+export const ERROR_CODES: ReadonlySet<FindingCode> = new Set<FindingCode>([
+  "DATE",
+  "UNIT",
+  "UNDEF",
+  "DUP",
+  "VECTOR",
+  "CYCLE",
+  "TYPE",
+  "SHEET",
+  "ANCHOR",
+  "COVERAGE",
+]);
+
+/** whether a finding is a problem — something to fix — rather than advice */
+export function isProblem(f: Finding): boolean {
+  return f.code === "STALE" || ERROR_CODES.has(f.code);
+}
+
 export interface Finding {
   code: FindingCode;
   sheetId?: string;

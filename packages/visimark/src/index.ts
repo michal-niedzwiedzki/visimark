@@ -12,6 +12,7 @@ export { formatInfer } from "./report/infer.js";
 export { lineOf } from "./report/lines.js";
 export { applyUnit, parseDecorated, type Unit } from "./eval/units.js";
 export type { Binding, DocModel, Finding, FindingCode, Sheet } from "./model/types.js";
+export { ERROR_CODES, isProblem } from "./model/types.js";
 export type {
   LocatedDoc,
   RawAnchor,

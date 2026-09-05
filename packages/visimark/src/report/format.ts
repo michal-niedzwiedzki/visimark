@@ -1,4 +1,4 @@
-import type { Finding } from "../model/types.js";
+import { ERROR_CODES, type Finding } from "../model/types.js";
 
 const CONTENT_COL = 10; // where the payload after the code field starts
 const ID_FIELD = 16; // id padded to this width, so `·` lands at column 26
@@ -6,19 +6,6 @@ const STORED_END = 49; // the id+label+stored field is this wide (cols 10..58)
 const COMPUTED_FIELD = 11; // computed value padded to this before the formula
 const DATE_VALUE_COL = 50; // where the quoted raw date sits
 const CONT = " ".repeat(CONTENT_COL);
-
-const ERROR_CODES = new Set([
-  "DATE",
-  "UNIT",
-  "UNDEF",
-  "DUP",
-  "VECTOR",
-  "CYCLE",
-  "TYPE",
-  "SHEET",
-  "ANCHOR",
-  "COVERAGE",
-]);
 
 export function formatCheck(path: string, findings: Finding[]): string {
   const lines: string[] = [path, ""];

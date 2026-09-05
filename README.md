@@ -205,6 +205,9 @@ document into a state `check` can be strict about, or to explain what it did.
 | `visimark eval FILE` | Prints the computed values — all of them, or one by name | `--get NAME`, `--json` | nothing | `0` · `2` bad usage, unreadable file, or no such name |
 | `visimark explain FILE` | Prints each sheet's inputs, rules and evaluation order | `#sheet` limits it to one sheet | nothing | `0` · `2` bad usage, unreadable file, or no such sheet |
 
+Every option, every exit code and every finding `check` can report is
+tabulated in [`docs/cli-reference.md`](docs/cli-reference.md).
+
 `check` is read-only, so it is safe to point at anything. `fmt` repairs stale
 values and *only* stale values: every other kind of problem is a question a
 person has to answer, so it reports those and leaves them alone.

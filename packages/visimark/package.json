@@ -1,6 +1,6 @@
 {
   "name": "visimark",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Spreadsheet mechanics for Markdown: every computed number carries the formula that produced it, and a machine can prove the two still agree.",
   "keywords": [
     "ai",

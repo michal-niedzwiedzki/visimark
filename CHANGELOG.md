@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0 - 2026-09-05
+## 0.1.1 - 2026-09-05
 
 First release. VisiMark is a spreadsheet-mechanics tool for Markdown: a
 `vmark` block declares formulas for the table above it, and `visimark check`
@@ -19,8 +19,9 @@ proves the numbers in the document still agree with them.
   disagreement — stale values, ambiguous or malformed dates, undefined
   names, a column referenced where a scalar is required, dependency cycles,
   and a table with no rules attached to it at all — exiting non-zero on any
-  finding, in a transcript-exact format designed to be read by both humans
-  and CI.
+  problem, in a transcript-exact format designed to be read by both humans
+  and CI. `WARN` and `NOTE` are advice: printed, never counted, and never the
+  reason a run fails, so the printed count and the exit code always agree.
 - **`DUP`**: a name bound twice in the same scope is an error, not a silent
   overwrite.
 - **`UNIT`**: a column may carry a currency symbol or a physical unit,
@@ -65,7 +66,9 @@ proves the numbers in the document still agree with them.
   a quote with no VisiMark in it at all, whose appendix carries the real
   `infer` transcript.
 - **An agent skill** ([`skills/visimark/SKILL.md`](skills/visimark/SKILL.md))
-  for authoring and verifying VisiMark documents.
+  for authoring and verifying VisiMark documents, and a
+  [CLI reference](docs/cli-reference.md) tabulating every command, option,
+  exit code and finding code.
 
 ### Fixed
 
@@ -86,4 +89,4 @@ proves the numbers in the document still agree with them.
   column's decoration.
 - The installed `visimark` binary did not run when invoked directly.
 
-[0.1.0]: https://github.com/michal-niedzwiedzki/visimark/releases/tag/v0.1.0
+[0.1.1]: https://github.com/michal-niedzwiedzki/visimark/releases/tag/v0.1.1

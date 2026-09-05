@@ -114,3 +114,16 @@ test("no command is a usage error", async () => {
   expect(code).toBe(2);
   expect(c.err()).toContain("usage:");
 });
+
+test("a document whose only finding is advice prints 0 problems and exits 0", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "visimark-"));
+  const p = join(dir, "warn.md");
+  writeFileSync(
+    p,
+    "| Item | Price | Qty |   Net |\n|------|------:|----:|------:|\n| pen  |  5.00 |  10 | 50.00 |\n\n```vmark #order\nNet    = Price * Qty\nunused = SUM(Net)\n```\n",
+  );
+  const c = capture();
+  expect(await runCli(["check", p], c.io)).toBe(0);
+  expect(c.out()).toContain("WARN");
+  expect(c.out()).toContain("0 problems");
+});

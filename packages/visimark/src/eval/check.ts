@@ -1,7 +1,13 @@
 import { Decimal } from "decimal.js";
 import type { Expr, Ref } from "../lang/ast.js";
 import { NO_FORMULAS_MARKER, type RawTable, type Span } from "../parse/document.js";
-import type { Binding, DocModel, Finding, Sheet } from "../model/types.js";
+import {
+  type Binding,
+  type DocModel,
+  type Finding,
+  isProblem,
+  type Sheet,
+} from "../model/types.js";
 import { closest } from "../report/levenshtein.js";
 import { parseIsoDate } from "./dates.js";
 import { evalExpr, type EvalEnv } from "./evaluate.js";
@@ -278,7 +284,7 @@ export function check(model: DocModel): CheckResult {
     columnUnits,
     scalarUnits,
     unitConflicts,
-    exitCode: findings.length > 0 ? 1 : 0,
+    exitCode: findings.some(isProblem) ? 1 : 0,
   };
 
   // ---- helpers bound to the closures above ----

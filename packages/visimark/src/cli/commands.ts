@@ -68,7 +68,7 @@ export function cmdCheck(args: string[], out: Writer, err: Writer): number {
     }
     const result = check(build(locate(source)));
     out(formatCheck(path, result.findings));
-    if (result.findings.length > 0 && exit === 0) exit = 1;
+    if (result.exitCode === 1 && exit === 0) exit = 1;
   }
   return exit;
 }

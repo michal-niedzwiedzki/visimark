@@ -1,6 +1,6 @@
 import { DiagnosticSeverity, type Diagnostic, type Range } from "vscode-languageserver/node.js";
 import type { TextDocument } from "vscode-languageserver-textdocument";
-import type { Finding, Span } from "visimark";
+import { ERROR_CODES, type Finding, type Span } from "visimark";
 import type { Analysis } from "./analysis.js";
 
 const SEVERITY: Record<string, DiagnosticSeverity> = {
@@ -92,18 +92,6 @@ export interface Status {
   stale: number;
   errors: number;
 }
-
-const ERROR_CODES = new Set([
-  "DATE",
-  "UNIT",
-  "UNDEF",
-  "DUP",
-  "VECTOR",
-  "CYCLE",
-  "TYPE",
-  "SHEET",
-  "ANCHOR",
-]);
 
 export function statusOf(uri: string, analysis: Analysis): Status {
   let stale = 0;

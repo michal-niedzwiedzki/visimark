@@ -102,6 +102,14 @@ visimark explain FILE [#sheet]        # rules and evaluation order
 inserts, so prose, headings, input columns and existing blocks are untouched.
 See "Handed an existing document?" above for when to reach for it.
 
+Every command, every option, every exit code and every finding code `check`
+can report is tabulated in
+[`docs/cli-reference.md`](../../docs/cli-reference.md). Read it before
+guessing at a flag or at what an exit code meant. Two things from it worth
+knowing without looking: exit `1` means the document has problems and exit `2`
+means the command could not run at all, and `WARN`/`NOTE` are advice that is
+printed without failing anything.
+
 From a clone: `bun src/cli/main.ts check FILE`, or `node bin/visimark.js check FILE`
 once `bun run build` has been run. `npx visimark` for a published install.
 

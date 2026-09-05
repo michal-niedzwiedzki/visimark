@@ -1,7 +1,7 @@
 {
   "name": "visimark-vscode",
   "displayName": "VisiMark",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Spreadsheet mechanics for Markdown: every computed number carries the formula that produced it.",
   "categories": [

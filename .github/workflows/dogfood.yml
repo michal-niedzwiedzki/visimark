@@ -43,7 +43,7 @@ jobs:
       - name: the clean invoice and this repo's own prose must pass
         uses: ./
         with:
-          files: "docs/example-invoice.md docs/visimark-design.md docs/visimark-editor-plugins-design.md README.md CHANGELOG.md skills/visimark/SKILL.md"
+          files: "docs/example-invoice.md docs/visimark-design.md docs/visimark-editor-plugins-design.md docs/cli-reference.md README.md CHANGELOG.md skills/visimark/SKILL.md"
 
       - name: the drift invoice is supposed to fail
         id: drift
