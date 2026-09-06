@@ -1,7 +1,7 @@
 ---
-description: Record the maintainer's decision on a vocabulary-request issue — a Decision comment and the catalogue PR
+description: Decide a vocabulary-request issue — on APPROVED, draft the feature spec with the maintainer, then post the decision, merge the catalogue PR, and open the implementation PR
 argument-hint: <issue-number> [verdict and/or notes]
-allowed-tools: Bash(gh:*), Bash(git:*), Bash(bunx:*), Bash(mktemp:*), Bash(cat:*), Read, WebFetch
+allowed-tools: Bash(gh:*), Bash(git:*), Bash(bunx:*), Bash(mktemp:*), Bash(cat:*), Bash(mkdir:*), Read, Write, Edit, Glob, WebFetch, AskUserQuestion
 ---
 
 You are running the **decision** stage of the vocabulary-review workflow.
@@ -9,7 +9,7 @@ You are running the **decision** stage of the vocabulary-review workflow.
 Read first, every run:
 - `docs/superpowers/specs/2026-09-06-vocabulary-review-workflow-design.md` — the design
 - `docs/vocabulary-catalogue.md` — the register and its four criteria and status values
-- `docs/visimark-design.md` — §2, §4, §7, §14
+- `docs/visimark-design.md` — §2, §4, §5, §7, §9, §10, §13, §14
 
 Arguments: `$ARGUMENTS`
 - First token: the issue number `<n>`.
@@ -22,7 +22,7 @@ Run `git status --porcelain`; if non-empty, stop: "Working tree is dirty — com
 - `gh issue view <n> --json number,title,body,labels,author,url,state`
 - `gh issue view <n> --comments`
 
-Read: the request, the pre-review comment if present (first line starts `**Automated pre-review**`), **every maintainer comment posted since**, the free-text argument, and the conversation preceding this command in the session.
+Read: the request, the pre-review comment if present (first line starts `**Automated pre-review**`), the discussion summary if present (first line starts `**Discussion summary**`), **every maintainer comment posted since**, the free-text argument, and the conversation preceding this command in the session.
 
 Guard: refuse unless the issue has a `vocabulary` label **and** a title starting `vocabulary: `.
 
@@ -35,18 +35,85 @@ Recompute `<slug>` from the `Name` field (lowercase, non-`[a-z0-9]` runs → `-`
 
 Settle on `APPROVED` / `DEFERRED` / `REJECTED` and the reason, citing the design-doc section that governs.
 
-## 3. Deciding comment
+**Order from here:** for `DEFERRED` / `REJECTED`, skip to step 4. For `APPROVED`, step 3 must complete — a handoff-ready spec — **before** step 4 posts anything or step 5 merges anything.
+
+## 3. Draft the spec — APPROVED only
+
+The approval is not landed until a feature spec exists that an
+implementation-plan writer (`superpowers:writing-plans`) can consume without
+coming back with questions. Draft it now, with the maintainer.
+
+### 3.1 First draft
+
+Guard: if `vocab/issue-<n>-<slug>-impl` already exists on the remote
+(`gh pr list --search "head:vocab/issue-<n>-<slug>-impl" --state all --json number,url,state`),
+a spec PR is already open — note it, skip to step 4, and in step 7 update that
+branch's `docs/vocab/<slug>.md` instead of creating a new PR.
+
+Build the draft in a temp file — **do not touch the working tree yet**. Source
+material: the issue form fields (`Name`, `Kind`, `Signature and shape`,
+`What it does` with its worked values, `The real document that needs it`,
+`Constraint check`, `Anything else`), the pre-review, the discussion summary,
+and this session's conversation.
+
+House design-doc style — prose sections and tables, like `docs/visimark-design.md`.
+Header:
+
+```
+# <Name> — feature spec
+
+**Status:** approved (#<n>) · **Date:** <today> · **Decision:** <deciding-comment-url once step 4 has run; leave a placeholder until then>
+```
+
+Sections, in order:
+1. **Purpose** — what the primitive is; the document that motivated it (quote the `#…` block from the issue); why existing vocabulary does not reach it. A paragraph each.
+2. **Signature and shape** — `<Name>(args) -> <type>`; map or reduce; exact arity; each argument's type. Cite §4.
+3. **Semantics** — a table, one row per behavioural case, each with a worked input → output. Cover the normal case; boundary inputs (zero, negative, empty); everything the arithmetic makes special (year / "month" / leap boundaries for a date primitive; empty column for a reduce; precision for a number primitive). Every worked value in the issue appears here, plus the ones the issue did not think of.
+4. **Type rules and errors** — wrong arity, wrong operand types, and any argument that must be further constrained (e.g. integer-only). Name the `§10` error code for each; cite §4 for static arity/shape checking.
+5. **Interaction with the rest of the language** — dates §5 (does the result feed `date ± number`, sorting, anchors?), numeric semantics and write precision §7, write-back §9, name resolution §6, units §7 where relevant. State explicitly what does **not** change.
+6. **Acceptance** — in §13 style: the new fixture or the edit to an existing example document, and the exact `visimark check` / `eval` output it must produce. This is what the plan turns into a test.
+7. **Non-goals** — adjacent things this spec does not cover, especially anything the deciding comment carved out.
+8. **Open questions** — must be **empty** before handoff. Anything left here blocks step 4.
+
+### 3.2 Gap hunt
+
+Walk this checklist against the draft and turn every gap into a concrete question:
+
+- Is every argument's type pinned — including "integer, not merely number" where it matters?
+- Every boundary — zero / negative / empty / overflow / leap / out-of-range component — is the result **specified**, not implied?
+- For each error case, is the §10 code chosen (not "an error")?
+- Does the result type compose with what the motivating document then does with it (arithmetic, sort, anchor)?
+- Write precision / decoration: what does a written cell or anchor look like?
+- Does `visimark infer` need to know about it? `explain`? the did-you-mean list once the name is known?
+- Acceptance: is the expected tool output written out literally, or still hand-wavy?
+- Anything the pre-review, the discussion, or the deciding reasoning raised that the draft does not answer.
+
+### 3.3 Resolve with the maintainer
+
+Put the gaps to the maintainer — `AskUserQuestion` for choices with discrete
+options, plain prose for the open ones. Fold each answer into the draft. Repeat
+3.2–3.3 until the checklist is clean and **Open questions** is empty.
+
+Then show the full spec in a chat message and ask via `AskUserQuestion` —
+"Spec ready to hand off?": **Ready** / **Keep editing** / **Change the verdict**.
+
+- **Keep editing** → back to 3.3.
+- **Change the verdict** → the maintainer is no longer approving; return to step 2 with their new steer.
+- **Ready** → keep the finalised spec text in the temp file; continue to step 4.
+
+## 4. Deciding comment
 
 Author it in the maintainer's voice, first person. Structure:
 - First line, verbatim: `Decision: <APPROVED|DEFERRED|REJECTED>.`
 - The reason, in the catalogue's idiom, with the design-doc citation.
 - One sentence naming any divergence from the pre-review ("The pre-review leaned DEFERRED; deciding APPROVED because …").
+- For `APPROVED`, one line: `Spec: to be committed on `vocab/issue-<n>-<slug>-impl`.`
 - If a pre-review existed, a final line: `Pre-review: <link to that comment>`.
 
 Write it to a temp file, post with `gh issue comment <n> --body-file <file>`, then capture the URL:
-`gh issue view <n> --json comments -q '.comments[-1].url'`.
+`gh issue view <n> --json comments -q '.comments[-1].url'`. For `APPROVED`, substitute this URL into the spec header's `**Decision:**` placeholder.
 
-## 4. Catalogue PR
+## 5. Catalogue PR
 
 Locate this issue's row in `docs/vocabulary-catalogue.md` (the row whose Request cell links `#<n>`).
 
@@ -70,11 +137,11 @@ git push -u origin HEAD
 - **New branch** → `gh pr create --base master --title "Catalogue #<n>: <Name> (<VERDICT>)" --body "$(printf '%s\n\n%s\n\nDeciding comment: %s\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)' '<the decision>' '<the reason>' '<comment-url>')"`
 - **Existing PR #1** → the push updates it; `gh pr edit <num> --title "Catalogue #<n>: <Name> (<VERDICT>)"` and append the decision to its body with `gh pr edit <num> --body ...`.
 
-Do **not** put `closes #<n>` anywhere in the PR body — the issue's state is set explicitly in step 5, not by a merge keyword.
+Do **not** put `closes #<n>` anywhere in the PR body — the issue's state is set explicitly in step 6, not by a merge keyword.
 
 `git switch -`.
 
-## 5. Land the decision
+## 6. Land the decision
 
 Every verdict is recorded as a catalogue row — the catalogue exists so a "no"
 has a citable reason too — so the PR is **merged in all three cases**, never
@@ -92,18 +159,48 @@ closed unmerged.
    print the PR URL and the error, say "resolve and merge by hand, then re-run
    `/vocab-decide <n>`", and do nothing else. Never `--admin`, never force.
 2. **Set the issue state:**
-   - `APPROVED` → leave it **open**. It now tracks implementation and becomes a
-     design-doc §4 row when the primitive ships.
-   - `DEFERRED` / `REJECTED` → close it:
+   - `APPROVED` → leave it **open**; continue to step 7.
+   - `DEFERRED` / `REJECTED` → close it and **stop**:
      `gh issue close <n> --reason "not planned" --comment "$(printf 'Catalogued %s — see %s\n\nReopen only with new information.' <VERDICT> '<comment-url>')"`
+     Print: the deciding-comment URL, the merged-PR URL, and "Issue closed."
 
-Print: the deciding-comment URL, the merged-PR URL, and whether the issue was
-left open or closed.
+## 7. Open the implementation PR — APPROVED only
 
-## 6. Reopen note
+Only after the catalogue PR is merged.
+
+```bash
+git fetch origin
+git switch -c vocab/issue-<n>-<slug>-impl origin/master   # or: git switch to the existing branch (3.1 guard)
+mkdir -p docs/vocab
+```
+
+Write the finalised step-3 spec to `docs/vocab/<slug>.md` (the header's
+`**Decision:**` now carries the real comment URL).
+
+```bash
+git add docs/vocab/<slug>.md
+git commit -m "$(printf 'docs: spec for #%s (%s)\n\nApproved on #%s. Feature spec for handoff to an implementation plan.\n\nCo-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>' <n> <Name> <n>)"
+git push -u origin HEAD
+```
+
+- **New branch** →
+  `gh pr create --base master --title "Spec #<n>: <Name>" --body "$(printf 'Feature spec for `%s`, approved on #%s.\n\nDeciding comment: %s\n\nThis PR carries the spec only. The implementation plan (superpowers:writing-plans) and the code follow on this branch — do not merge until the primitive ships.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)' '<Name>' <n> '<comment-url>')"`
+- **Existing `-impl` PR** (3.1 guard) → the push updates it; no new PR.
+
+No `closes #<n>` — #<n> stays open and now also tracks this PR.
+
+`git switch -`.
+
+Print: the deciding-comment URL, the merged catalogue-PR URL, the spec-PR URL,
+and: "Issue #<n> stays open. Hand the spec PR to an implementation-plan writer
+(`superpowers:writing-plans`)."
+
+## 8. Reopen note
 
 If the issue already had a `Decision:` comment (this is a re-decision with new
 information), everything above still holds: reopen the issue first if it was
-closed (`gh issue reopen <n>`), post the new `Decision:` comment, and the PR
-**edits the existing row** — never add a second row for the same issue — then
-step 5 re-merges and re-closes as needed.
+closed (`gh issue reopen <n>`), post the new `Decision:` comment, and the
+catalogue PR **edits the existing row** — never add a second row. If the
+re-decision lands on `APPROVED` and `vocab/issue-<n>-<slug>-impl` already
+exists, step 7 commits the revised `docs/vocab/<slug>.md` onto it rather than
+opening a second spec PR.
