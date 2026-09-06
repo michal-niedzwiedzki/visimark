@@ -3,7 +3,7 @@ import { locate } from "../../src/parse/document.js";
 import { build } from "../../src/model/build.js";
 import { check } from "../../src/eval/check.js";
 import { formatCheck } from "../../src/report/format.js";
-import { FUNCTIONS, isReduce } from "../../src/eval/functions.js";
+import { callProblem, FUNCTIONS, isReduce } from "../../src/eval/functions.js";
 import type { Finding } from "../../src/model/types.js";
 
 const run = (src: string) => check(build(locate(src)));
@@ -39,6 +39,7 @@ test("every builtin declares a kind and an arity", () => {
     "ABS",
     "AVG",
     "COUNT",
+    "EOMONTH",
     "IF",
     "MAX",
     "MIN",
@@ -166,4 +167,42 @@ test("the report offers a did-you-mean for a misspelled function", () => {
   const out = formatCheck("x.md", run(src).findings);
   expect(out).toContain("unknown function `ROND`");
   expect(out).toContain("did you mean `ROUND`?");
+});
+
+// ---- EOMONTH ----------------------------------------------------------
+
+test("EOMONTH is a map of arity 2", () => {
+  expect(FUNCTIONS.get("EOMONTH")).toEqual({ kind: "map", arity: 2 });
+  expect(isReduce("EOMONTH")).toBe(false);
+  expect(callProblem("EOMONTH", [{ type: "num" }])).toEqual({
+    kind: "arity",
+    expected: 2,
+    got: 1,
+  });
+  expect(callProblem("EOMONTH", [{ type: "ref" }, { type: "num" }, { type: "num" }])).toEqual({
+    kind: "arity",
+    expected: 2,
+    got: 3,
+  });
+  expect(callProblem("EOMONTH", [{ type: "ref" }, { type: "num" }])).toBeNull();
+});
+
+test("EOMONTH(issued, 2) evaluates and anchors a due date", () => {
+  const src = `
+issued falls on 2026-01-15, so payment is due **2026-03-31**<!--vmark=terms.due-->.
+
+\`\`\`vmark #terms
+issued = 2026-01-15
+due    = EOMONTH(issued, 2)
+\`\`\`
+`;
+  expect(run(src).findings).toEqual([]);
+});
+
+test("EOMONTH misspelled gets a did-you-mean", () => {
+  const r = run(withScalar("EOMONT(Price, 1)"));
+  const ts = typeFindings(r.findings);
+  expect(ts).toHaveLength(1);
+  expect(ts[0]!.message).toBe("unknown function `EOMONT`");
+  expect(ts[0]!.suggestion).toBe("EOMONTH");
 });
