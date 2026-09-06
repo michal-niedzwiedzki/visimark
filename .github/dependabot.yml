@@ -15,11 +15,18 @@ updates:
   # bun.lock untouched (there is no package-lock.json for it to work from),
   # so every dependency bump PR failed `bun install --frozen-lockfile` in CI.
   # The `bun` ecosystem (Dependabot GA 2025-02) understands the text bun.lock.
+  #
+  # bun does not reliably rewrite bun.lock in a workspace repo
+  # (dependabot-core#14223), so `.github/workflows/dependabot-lockfile.yml`
+  # regenerates it on the PR branch.
   - package-ecosystem: bun
     directory: "/"
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    # One PR a week for the whole workspace: fewer branches, one lockfile
+    # regeneration per batch. `dependency-type` grouping is silently ignored
+    # for the bun ecosystem, so match on patterns instead.
     groups:
-      dev-dependencies:
-        dependency-type: development
+      bun:
+        patterns: ["*"]

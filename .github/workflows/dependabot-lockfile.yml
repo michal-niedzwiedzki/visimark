@@ -1,0 +1,46 @@
+name: dependabot-lockfile
+
+# Dependabot's `bun` ecosystem updates package.json but does not reliably
+# rewrite bun.lock in a workspace repo (dependabot-core#14223), so every bump
+# PR would fail `ci`'s `bun install --frozen-lockfile` before any other check
+# runs. This regenerates the lockfile on the PR branch and pushes it back.
+#
+# One-time setup: create a token with `contents: write` on this repo (a
+# fine-grained PAT, or a GitHub App installation token) and add it as a
+# *Dependabot* secret named LOCKFILE_SYNC_TOKEN — Settings -> Secrets and
+# variables -> Dependabot. It has to be a Dependabot secret, not an Actions
+# one: this workflow is triggered by a Dependabot PR, so only Dependabot
+# secrets are in scope and the default GITHUB_TOKEN is read-only. Pushing with
+# a real token (rather than GITHUB_TOKEN) is also what re-triggers `ci` on the
+# corrected commit.
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    if: github.actor == 'dependabot[bot]' && startsWith(github.head_ref, 'dependabot/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.LOCKFILE_SYNC_TOKEN }}
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --lockfile-only
+      - name: push bun.lock if it changed
+        run: |
+          if git diff --quiet -- bun.lock; then
+            echo "bun.lock is already in sync with package.json."
+            exit 0
+          fi
+          git config user.name "dependabot[bot]"
+          git config user.email "49699333+dependabot[bot]@users.noreply.github.com"
+          git add bun.lock
+          git commit -m "chore(deps): sync bun.lock"
+          git push
