@@ -1,5 +1,5 @@
 ---
-description: Decide a vocabulary-request issue — on APPROVED, draft the feature spec and implementation plan with the maintainer, post the decision, merge the catalogue PR, open the implementation PR, and on confirmation execute the plan to green
+description: Decide a vocabulary-request issue — on APPROVED, draft the spec and implementation plan with the maintainer, post the decision, merge the catalogue PR, open a draft implementation PR, and on confirmation execute the plan and promote the PR once CI is green
 argument-hint: <issue-number> [verdict and/or notes]
 allowed-tools: Bash(gh:*), Bash(git:*), Bash(bun:*), Bash(bunx:*), Bash(mktemp:*), Bash(cat:*), Bash(mkdir:*), Read, Write, Edit, Glob, Grep, WebFetch, AskUserQuestion
 ---
@@ -184,8 +184,11 @@ git push -u origin HEAD
 ```
 
 - **New branch** →
-  `gh pr create --base master --title "Spec #<n>: <Name>" --body "$(printf 'Feature spec for `%s`, approved on #%s.\n\nDeciding comment: %s\n\nThis PR carries the spec only. The implementation plan (superpowers:writing-plans) and the code follow on this branch — do not merge until the primitive ships.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)' '<Name>' <n> '<comment-url>')"`
-- **Existing `-impl` PR** (3.1 guard) → the push updates it; no new PR.
+  `gh pr create --draft --base master --title "Spec #<n>: <Name>" --body "$(printf 'Feature spec for `%s`, approved on #%s.\n\nDeciding comment: %s\n\n**Draft** until the implementation is complete and CI is green — it holds the spec now, then the plan, then the code. The plan (superpowers:writing-plans) and the code follow on this branch.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)' '<Name>' <n> '<comment-url>')"`
+- **Existing `-impl` PR** (3.1 guard) → the push updates it; no new PR. If it was promoted out of draft by an earlier run, leave it as it is.
+
+The PR is opened **as a draft** and stays a draft through steps 8 and 9 — only
+step 9, on a full green build with passing CI, promotes it with `gh pr ready`.
 
 No `closes #<n>` — #<n> stays open and now also tracks this PR.
 
@@ -197,8 +200,8 @@ Ask the maintainer via `AskUserQuestion` — "Write the implementation plan now?
 **Write it** / **Not now**.
 
 - **Not now** → `git switch -`; print the deciding-comment URL, the merged
-  catalogue-PR URL and the spec-PR URL, and: "Issue #<n> stays open. The plan
-  can be written later with `superpowers:writing-plans` against the spec PR."
+  catalogue-PR URL and the spec-PR URL, and: "Issue #<n> stays open. The draft
+  PR holds the spec; write the plan later with `superpowers:writing-plans`."
   Stop.
 
 - **Write it** → draft the plan against the finalised step-3 spec, in the
@@ -215,6 +218,15 @@ Ask the maintainer via `AskUserQuestion` — "Write the implementation plan now?
   (`AskUserQuestion` for discrete choices, prose otherwise) and folded in.
   Iterate until nothing low-certainty remains.
 
+  The plan's **final task is always "documentation"**, and it must list, at
+  minimum: the `visimark-design.md` §4 builtin table (or the relevant section);
+  a `CHANGELOG.md` entry under `## Unreleased` → `### Added` (and a one-line
+  `editors/vscode/CHANGELOG.md` entry when the LSP/extension surface changes —
+  e.g. a name that used to flag as unknown no longer does); the
+  `vocabulary-catalogue.md` row moved to `SHIPPED` linking this PR; and
+  `docs/cli-reference.md` if it enumerates the changed surface. A merged
+  implementation PR with no `## Unreleased` line is a bug in the plan.
+
   Then:
   ```bash
   git add docs/vocab/<slug>-plan.md
@@ -230,33 +242,37 @@ Ask the maintainer via `AskUserQuestion` — "Start implementation now?":
 **Start** / **Not now**.
 
 - **Not now** → `git switch -`; print the deciding-comment URL, the merged
-  catalogue-PR URL and the spec-PR URL, and: "Plan ready on <spec-PR>. Execute
-  it with `superpowers:executing-plans` when ready." Stop.
+  catalogue-PR URL and the spec-PR URL, and: "Draft PR ready on <spec-PR>.
+  Execute the plan with `superpowers:executing-plans` when ready." Stop.
 
 - **Start** → on `vocab/issue-<n>-<slug>-impl`, invoke **`superpowers:executing-plans`**
   against `docs/vocab/<slug>-plan.md` and work it task by task under that skill's
-  discipline. After each task, and again at the end, run the project's checks —
-  `bun test` in `packages/visimark` (and any other package the plan touches),
-  plus `bunx visimark check` on every example document the plan says must stay
-  clean. **Loop test → fix → test until the whole suite is green.** Do not stop
-  on a red suite, a skipped task, or a `.skip`/`.only` left in a test; do not
-  loosen an assertion or delete a failing test to pass.
+  discipline, **including the final documentation task** (design doc,
+  `CHANGELOG.md` `## Unreleased`, catalogue → `SHIPPED`, cli-reference). After
+  each task, and again at the end, run the full local checks — `bun test`,
+  `bun run typecheck` and `bun run build` from the repo root, plus
+  `bun run packages/visimark/src/cli/main.ts check` on every example document
+  the plan protects (`bunx visimark` runs the *published* build, not the branch
+  — do not use it here). **Loop check → fix → check until everything is green.**
+  Do not stop on a red suite, a skipped task, or a `.skip`/`.only` left in a
+  test; do not loosen an assertion or delete a failing test to pass.
 
-  When the plan is complete and green:
+  When the plan is complete and green locally:
   ```bash
   git push
-  git switch -
   ```
-  The push updates the spec PR, which now carries spec + plan + implementation.
-
-  Print: the deciding-comment URL, the merged catalogue-PR URL, the spec-PR URL
-  (now the implementation PR), the final `bun test` summary line, and:
-  "Implementation on <spec-PR> — review and merge to ship `<Name>`."
+  Then **wait for CI on the pushed commit** — `gh pr checks <spec-PR> --watch`.
+  - **All checks pass** → promote the PR: `gh pr ready <spec-PR>`. `git switch -`.
+    Print: the deciding-comment URL, the merged catalogue-PR URL, the now-ready
+    PR URL, the final `bun test` summary, the CI conclusion, and: "PR promoted
+    from draft — review and merge to ship `<Name>`."
+  - **A check fails** → treat it as part of the loop: fix, commit, push, wait
+    again. The PR **stays a draft** until CI is green.
 
 If execution cannot reach green because of a design gap the plan did not
-foresee, **stop**: push what is committed, add a comment on the spec PR naming
-the blocker, and tell the maintainer — never force a merge or weaken a test to
-get past it.
+foresee, **stop**: push what is committed, leave the PR a **draft**, add a
+comment on it naming the blocker, and tell the maintainer — never force a merge,
+promote a red PR, or weaken a test to get past it.
 
 ## 10. Reopen note
 

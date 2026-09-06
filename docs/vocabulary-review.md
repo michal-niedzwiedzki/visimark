@@ -14,7 +14,7 @@ mechanics; every judgement call is yours.
 |---------|--------------|----------------|
 | `/vocab-review <n> [--draft]` | Parses the request, checks it against every constraint, runs `visimark check` / `infer` on the motivating document, drafts a recommendation | A pre-review comment on the issue and a PR adding the row as `NEW` — or, with `--draft`, nothing |
 | `/vocab-discuss <n>` | Condenses the review conversation you had with Claude in the session into a neutral summary, shows it to you, and posts it only if you approve | A `**Discussion summary**` comment on the issue — nothing else |
-| `/vocab-decide <n> [notes]` | Reconciles the pre-review with your steer, writes the decision, and lands it. **On `APPROVED` it first drafts the feature spec with you** — a gap hunt and a round of questions — and does nothing public until you call the spec ready; then it offers to draft the implementation plan, and then to execute it | A `Decision:` comment on the issue; the catalogue PR **merged** to `master` with the row at its verdict (the merge commit quotes the decision); the issue **closed** for `DEFERRED` / `REJECTED`, left open for `APPROVED`; and, for `APPROVED`, a second PR on `vocab/issue-<n>-<slug>-impl` carrying `docs/vocab/<slug>.md` and, if you asked for them, `docs/vocab/<slug>-plan.md` and the implementation (tests green) |
+| `/vocab-decide <n> [notes]` | Reconciles the pre-review with your steer, writes the decision, and lands it. **On `APPROVED` it first drafts the feature spec with you** — a gap hunt and a round of questions — and does nothing public until you call the spec ready; then it offers to draft the implementation plan, and then to execute it | A `Decision:` comment on the issue; the catalogue PR **merged** to `master` with the row at its verdict (the merge commit quotes the decision); the issue **closed** for `DEFERRED` / `REJECTED`, left open for `APPROVED`; and, for `APPROVED`, a **draft** PR on `vocab/issue-<n>-<slug>-impl` carrying `docs/vocab/<slug>.md` and, if you asked for them, `docs/vocab/<slug>-plan.md` and the implementation — promoted out of draft only once the build and CI are green |
 
 `/vocab-discuss` is optional and repeatable — reach for it when the session
 argument mattered and the issue thread should carry it before the decision.
@@ -40,16 +40,18 @@ argument mattered and the issue thread should carry it before the decision.
      unspecified boundaries, un-coded errors, acceptance still hand-wavy), and
      puts them to you as questions. Nothing is posted or merged until you
      answer "Spec ready to hand off?" with **Ready**. *Then* it posts the
-     deciding comment, merges the catalogue PR, and opens a second PR on
+     deciding comment, merges the catalogue PR, and opens a **draft** PR on
      `vocab/issue-<n>-<slug>-impl` with the spec committed. Then it asks
      whether to **write the implementation plan** now — if yes, it drafts
      `docs/vocab/<slug>-plan.md`, asking you about any decision the spec does
      not settle, and commits it onto the same PR. Last, it asks whether to
      **start implementation** — if yes, it runs `superpowers:executing-plans`
-     against the plan, loops test → fix until the suite is green, and pushes the
-     code onto the same PR. The issue stays open and tracks that PR.
-   If a PR cannot merge (conflict, red check), the command stops and leaves it
-   for you.
+     against the plan (final task always: design doc, `CHANGELOG.md`
+     `## Unreleased`, catalogue → `SHIPPED`), loops check → fix until the local
+     build is green, pushes, waits for CI, and only on a full green build
+     **promotes the PR out of draft**. The issue stays open and tracks that PR.
+   The implementation PR stays a **draft** until CI is green — a blocked or
+   red build leaves it draft for you to pick up.
 5. **Review and merge the implementation PR** to ship the primitive — or, if you
    deferred a step, pick it up with `superpowers:writing-plans` /
    `superpowers:executing-plans` against the spec PR. The catalogue row becomes
