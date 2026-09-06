@@ -194,11 +194,13 @@ Terms are net two months, end of month. Payment falls due
 **Files:**
 - Edit: `docs/visimark-design.md` (§4 builtin table, §5 month note, the "Nine, chosen…" sentence)
 - Edit: `docs/cli-reference.md` (if it enumerates builtins)
-- Edit: `docs/vocabulary-catalogue.md` (the EOMONTH row)
+- Edit: `docs/vocabulary-catalogue.md` (the EOMONTH row + the "nine functions" count)
+- Edit: `CHANGELOG.md` (the `## Unreleased` section)
+- Edit: `editors/vscode/CHANGELOG.md` (a one-line entry — the LSP now recognises `EOMONTH`)
 
 **Interfaces:**
 - Consumes: shipped behaviour from Tasks 1–4.
-- Produces: the design doc describes ten builtins and no longer implies `EOMONTH` is unavailable.
+- Produces: the design doc describes ten builtins and no longer implies `EOMONTH` is unavailable; a `## Unreleased` changelog line so a release cut from `master` ships an accurate note.
 
 - [ ] **Step 1: §4** — add the row to the builtin table:
   `| \`EOMONTH(d, months)\` | map | 2 | last day of the month \`months\` calendar months from \`d\`; \`months\` is a whole number, \`d\`'s day is discarded |`
@@ -212,14 +214,18 @@ Terms are net two months, end of month. Payment falls due
 
 - [ ] **Step 5: `cli-reference.md`** — grep for a builtin list; if present, add `EOMONTH`, else no change.
 
-**Verify:** `bun test` (whole suite), `bunx visimark check docs/example-invoice.md` clean and `bunx visimark fmt docs/example-invoice.md` a no-op (`git diff --exit-code`).
+- [ ] **Step 6: `CHANGELOG.md`** — under `## Unreleased` → `### Added`, a paragraph in the file's idiom: `EOMONTH(d, months)` is the tenth builtin, the first from the vocabulary catalogue, motivated by a real net-EOM payment term (#6); what it does; that a result outside years 1–9999 is a `DATE` error. It stays under `## Unreleased` until a release renames the section — the changelog line ships with the code, not with the decision.
+
+- [ ] **Step 7: `editors/vscode/CHANGELOG.md`** — one line under a new `## Unreleased`: the engine (and so the editor's diagnostics) now recognises `EOMONTH`, so `EOMONTH(...)` no longer flags as an unknown function.
+
+**Verify:** `bun test` (whole suite), `bun run typecheck`, `bun run build`; `bun run packages/visimark/src/cli/main.ts check docs/example-invoice.md` clean and `... fmt docs/example-invoice.md` a no-op (`git diff --exit-code docs/example-invoice.md`). Do **not** use `bunx visimark` — it runs the published build, not this branch.
 
 ---
 
 ## Done when
 
-- `bun test` green, including the new dates / functions / check / cli cases.
-- `EOMONTH(2026-01-15, 2)` evaluates to `2026-03-31` through the CLI.
+- `bun test`, `bun run typecheck`, `bun run build` all green, including the new dates / functions / check / cli cases.
+- `EOMONTH(2026-01-15, 2)` evaluates to `2026-03-31` through the branch's CLI.
 - `docs/example-invoice.md` and `-drift.md` untouched; §13 transcript unchanged.
-- `docs/visimark-design.md` describes ten builtins.
-- PR #8 carries spec + plan + implementation.
+- `docs/visimark-design.md` describes ten builtins; `CHANGELOG.md` `## Unreleased` carries an `EOMONTH` line.
+- PR #8 carries spec + plan + implementation, CI is green, and the PR is promoted out of draft.

@@ -4,6 +4,16 @@
 
 ### Added
 
+- **`EOMONTH(d, months)`** — the tenth builtin, and the first primitive to come
+  through the vocabulary catalogue (issue #6). A map, `(date, whole number) →
+  date`, returning the last day of the month `months` calendar months from `d`;
+  the day of `d` is discarded, so `EOMONTH(2026-01-31, 1)` is `2026-02-28` and
+  `EOMONTH(2024-01-31, 1)` is `2024-02-29`. It exists because "net two months,
+  end of month" payment terms cannot be reached by `date ± number` and a
+  hand-typed due date is exactly the derived value that drifts silently after an
+  edit. A `months` value with a fractional part is a `TYPE` error; a result
+  outside years 1–9999 is a `DATE` error. A general `date ± n months` is
+  deliberately still absent — it carries a day-clamp ambiguity `EOMONTH` sidesteps.
 - [`docs/vocabulary-catalogue.md`](docs/vocabulary-catalogue.md): the register
   of every proposed mapper, operator and aggregate and the decision taken on
   each, so a request is not re-argued from scratch and a "no" carries a citable
@@ -12,7 +22,7 @@
   and are judged against the design doc's constraints, not against Excel. Seeded
   from the 2026-09-06 discussion — string concatenation, date helpers, the
   predicate aggregates, `TODAY()`, and the sorting-rule question — with nothing
-  approved.
+  approved at the outset.
 
 ### Changed
 
