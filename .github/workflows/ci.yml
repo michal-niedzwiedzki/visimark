@@ -1,8 +1,11 @@
 name: ci
 
+# Branch pushes are covered by `pull_request`; restricting `push` to master and
+# release tags stops every PR from running this workflow twice.
 on:
   push:
-    branches: ["**"]
+    branches: [master]
+    tags: ["v*"]
   pull_request:
 
 jobs:

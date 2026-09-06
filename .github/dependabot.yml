@@ -1,0 +1,20 @@
+version: 2
+updates:
+  # GitHub Actions used by the workflows and the composite action in action.yml.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+
+  # The bun workspace at the repo root (packages/* and editors/*).
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      dev-dependencies:
+        dependency-type: development
