@@ -14,12 +14,12 @@
 
 - No new npm dependencies.
 - No change to `lang/`, `parse/`, `model/`, `write/`, `infer/`, or `packages/visimark-lsp` — the parser is function-agnostic (builds a call node for any name), completion/hover carry no builtin list, and `infer` never proposes named functions.
-- No new `§10` error code — every `SQRT` failure is `TYPE`. `SQRT` does not touch `EvalError.code` or `DateError`.
+- No new [§10](../visimark-design.md#10-error-taxonomy) error code — every `SQRT` failure is `TYPE`. `SQRT` does not touch `EvalError.code` or `DateError`.
 - Rounding / precision is untouched — the irrational result is rounded at its binding by the existing rule, exactly like `Net / SUM(Net)`.
 - Error message strings, verbatim: non-number operand → `SQRT expects a number`; negative operand → `SQRT of a negative number`.
 - Reporting granularity: a row-varying negative operand is one `TYPE` finding **on that row**; a scalar binding is one finding on the binding. A row-invariant negative operand in a column rule emitting N identical findings is an accepted, pre-existing property shared with `EOMONTH(Start, 1.5)` — do **not** add row-variance analysis here.
 - Work on branch `vocab/issue-18-sqrt-impl` (the spec PR #20); do not open a new PR.
-- Acceptance additions are unit tests + one test-only fixture (`packages/visimark/test/fixtures/`). `docs/example-invoice.md` and `docs/example-invoice-drift.md` stay byte-for-byte identical and the §13 transcript does not move.
+- Acceptance additions are unit tests + one test-only fixture (`packages/visimark/test/fixtures/`). `docs/example-invoice.md` and `docs/example-invoice-drift.md` stay byte-for-byte identical and the [§13](../visimark-design.md#13-testing) transcript does not move.
 - Every commit ends with the trailer `Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>`.
 
 ---
@@ -365,7 +365,7 @@ git commit -m "$(printf 'test: end-to-end SQRT fixture — diagonal brace schedu
 ### Task 4: documentation
 
 **Files:**
-- Edit: `docs/visimark-design.md` (§4 builtin table + the "Ten, chosen…" sentence; §14 "beyond the nine")
+- Edit: `docs/visimark-design.md` ([§4](../visimark-design.md#4-syntax) builtin table + the "Ten, chosen…" sentence; [§14](../visimark-design.md#14-deferred) "beyond the nine")
 - Edit: `docs/vocabulary-catalogue.md` (line 3 count; the `SQRT` row → `SHIPPED`)
 - Edit: `docs/vocabulary-review.md` (the "nine builtins" phrase, stale since EOMONTH)
 - Edit: `docs/cli-reference.md` (only if it enumerates builtins — it does not today; grep to confirm)
@@ -376,17 +376,17 @@ git commit -m "$(printf 'test: end-to-end SQRT fixture — diagonal brace schedu
 - Consumes: shipped behaviour from Tasks 1–3.
 - Produces: the design doc describes eleven builtins; the catalogue row is `SHIPPED` linking this PR; a `## Unreleased` changelog line so a release cut from `master` ships an accurate note.
 
-- [ ] **Step 1: §4 builtin table** — in `docs/visimark-design.md`, add a row after the `EOMONTH` row:
+- [ ] **Step 1: [§4](../visimark-design.md#4-syntax) builtin table** — in `docs/visimark-design.md`, add a row after the `EOMONTH` row:
 ```
 | `SQRT(x)` | map | 1 | non-negative square root of a non-negative number; a negative operand is a `TYPE` error |
 ```
 and change the section's opening word `Ten, chosen to cover the examples and the one catalogued addition a real document needed (`EOMONTH`, issue #6).` → `Eleven, chosen to cover the examples and the two catalogued additions a real document needed (`EOMONTH`, issue #6; `SQRT`, issue #18).` Re-read the sentence so it still parses.
 
-- [ ] **Step 2: §14** — `docs/visimark-design.md` line ~457 reads `A function library beyond the nine —`. It was already stale after `EOMONTH`. Change `nine` → `eleven`.
+- [ ] **Step 2: [§14](../visimark-design.md#14-deferred)** — `docs/visimark-design.md` line ~457 reads `A function library beyond the nine —`. It was already stale after `EOMONTH`. Change `nine` → `eleven`.
 
 - [ ] **Step 3: catalogue count** — `docs/vocabulary-catalogue.md` line 3: `The language ships **ten functions and a fixed operator set**` → `**eleven functions and a fixed operator set**`.
 
-- [ ] **Step 4: catalogue row → SHIPPED** — in `docs/vocabulary-catalogue.md` §A, the `SQRT(x)` row: set its `Status` cell to `[SHIPPED](https://github.com/michal-niedzwiedzki/visimark/pull/20) · [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/18#issuecomment-5560992652)` — matching the format the `EOMONTH` row uses (`[SHIPPED](pull/8) · [APPROVED](comment)`). Leave `Request`, `What it does`, `Pros`, `Cons` as they are.
+- [ ] **Step 4: catalogue row → SHIPPED** — in `docs/vocabulary-catalogue.md` [§A](../vocabulary-catalogue.md#a-mappers-scalar--scalar), the `SQRT(x)` row: set its `Status` cell to `[SHIPPED](https://github.com/michal-niedzwiedzki/visimark/pull/20) · [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/18#issuecomment-5560992652)` — matching the format the `EOMONTH` row uses (`[SHIPPED](pull/8) · [APPROVED](comment)`). Leave `Request`, `What it does`, `Pros`, `Cons` as they are.
 
 - [ ] **Step 5: runbook phrasing** — `docs/vocabulary-review.md` line ~75: `overlap with the nine builtins` → `overlap with the eleven builtins`.
 
@@ -437,6 +437,6 @@ Do **not** use `bunx visimark` — it runs the published build, not this branch.
 
 - `bun test`, `bun run typecheck`, `bun run build` all green, including the new functions / check / cli cases and the updated EOMONTH assertion.
 - `SQRT(9)` evaluates to `3` and `SQRT(-1)` is a `TYPE` "SQRT of a negative number" through the branch's CLI; `eval --get braces.longest` on the fixture prints `6708.20`.
-- `docs/example-invoice.md` and `-drift.md` untouched; the §13 acceptance transcript (including the `schedule.Days` NOTE) is byte-identical.
-- `docs/visimark-design.md` §4 lists eleven builtins; `docs/vocabulary-catalogue.md` shows `SQRT` as `SHIPPED`; `CHANGELOG.md` `## Unreleased` carries the `SQRT` line and the NOTE-fix line.
+- `docs/example-invoice.md` and `-drift.md` untouched; the [§13](../visimark-design.md#13-testing) acceptance transcript (including the `schedule.Days` NOTE) is byte-identical.
+- `docs/visimark-design.md` [§4](../visimark-design.md#4-syntax) lists eleven builtins; `docs/vocabulary-catalogue.md` shows `SQRT` as `SHIPPED`; `CHANGELOG.md` `## Unreleased` carries the `SQRT` line and the NOTE-fix line.
 - PR #20 carries spec + plan + implementation, CI is green, and the PR is promoted out of draft.

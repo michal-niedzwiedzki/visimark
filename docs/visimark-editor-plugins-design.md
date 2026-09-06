@@ -34,8 +34,11 @@ become a client each, later, with no server work.
 **Out of scope for v1** — section 12.
 
 **Sequencing.** Two engine amendments in the engine design — `DUP` for
-duplicate bindings and `UNIT` for column unit decorations (engine design §6,
-§7, §10) — land first, on their own plan. They add finding codes and want
+duplicate bindings and `UNIT` for column unit decorations
+([§6](visimark-design.md#6-name-resolution-and-scoping),
+[§7](visimark-design.md#7-numeric-semantics),
+[§10](visimark-design.md#10-error-taxonomy) of the engine design) — land
+first, on their own plan. They add finding codes and want
 source spans anyway, so the "spans on every finding" work in section 4.1
 batches with them rather than being done twice.
 
@@ -130,8 +133,11 @@ Populate it at each `emit()` in `eval/check.ts` from data already in hand:
 | `WARN` | `binding.span` |
 | `NOTE` | none — not surfaced as a diagnostic |
 
-`DUP` and `UNIT` are engine additions specified in the engine design (§6, §7,
-§10). They land before this work — see section 1.
+`DUP` and `UNIT` are engine additions specified in the engine design
+([§6](visimark-design.md#6-name-resolution-and-scoping),
+[§7](visimark-design.md#7-numeric-semantics),
+[§10](visimark-design.md#10-error-taxonomy)). They land before this work — see
+section 1.
 
 `report/format.ts` ignores `span`. The console output does not change.
 

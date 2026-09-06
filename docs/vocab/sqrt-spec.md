@@ -7,7 +7,7 @@
 `SQRT(x)` returns the non-negative square root of a non-negative number. It is a
 map: one number in, one number out. The result is irrational in general and
 carries full internal precision until it is rounded at its binding, exactly like
-every other computed number (design §7).
+every other computed number (design [§7](../visimark-design.md#7-numeric-semantics)).
 
 **The document that motivated it** (issue #18) is a diagonal-brace cutting
 schedule — each brace spans a rectangular bay corner to corner, so the length to
@@ -34,7 +34,7 @@ input column; a length computed from two dimensions in the same table does not.
 
 **Why existing vocabulary does not reach it.** No builtin computes a root: the
 numeric maps are `ROUND`, `ABS`, `MOD` and none of the reducers apply (design
-§4). `x ^ 0.5` *does* reach the value — `^` is `Decimal.prototype.pow`, which
+[§4](../visimark-design.md#4-syntax)). `x ^ 0.5` *does* reach the value — `^` is `Decimal.prototype.pow`, which
 accepts a fractional exponent — but it is a workaround, not a reason to withhold
 the name. A bare `0.5` is a magic constant the reader must decode as "square
 root", and a half-power sitting beside a genuine `Width^2` in the same rule
@@ -49,10 +49,10 @@ hand" objection.
 | | |
 |---|---|
 | Call | `SQRT(x)` |
-| Kind | **map** (scalar → scalar), design §4 "Shape: map and reduce" |
-| Arity | **1**, exact and checked statically (§4) |
-| `x` | a **number**; may be zero; a negative value is a domain error (§4 below). May be a literal, a column reference, or any scalar sub-expression. |
-| Result | a **number** — never a boolean, never a date or string (§4) |
+| Kind | **map** (scalar → scalar), design [§4](../visimark-design.md#4-syntax) "Shape: map and reduce" |
+| Arity | **1**, exact and checked statically ([§4](../visimark-design.md#4-syntax)) |
+| `x` | a **number**; may be zero; a negative value is a domain error ([§4](#4-type-rules-and-errors) below). May be a literal, a column reference, or any scalar sub-expression. |
+| Result | a **number** — never a boolean, never a date or string ([§4](../visimark-design.md#4-syntax)) |
 
 `SQRT` adds no new value type and no new in-flight value. It consumes a number
 and returns a number; it is in the same class as `ABS` and `MOD`.
@@ -61,10 +61,10 @@ and returns a number; it is in the same class as `ABS` and `MOD`.
 
 `SQRT(x)` is the unique `r ≥ 0` with `r * r = x`. It is computed with
 `Decimal.prototype.sqrt`, which is correctly rounded to the active
-40-significant-digit working precision (design §7) — a decimal operation, not a
+40-significant-digit working precision (design [§7](../visimark-design.md#7-numeric-semantics)) — a decimal operation, not a
 binary-float one. `Decimal(-1).sqrt()` returns `NaN` rather than throwing, so a
 negative operand is caught by an explicit guard *before* `.sqrt()` is called
-(§4).
+([§4](#4-type-rules-and-errors)).
 
 | Case | Input | Result (full working precision) | Written at 2 dp |
 |---|---|---|---|
@@ -76,10 +76,10 @@ negative operand is caught by an explicit guard *before* `.sqrt()` is called
 | Motivating row B1 | `SQRT(3600^2 + 4200^2)` = `SQRT(30600000)` | `5531.726674375732386001364569057675894348` | `5531.73` |
 | Motivating row B2 | `SQRT(3600^2 + 2400^2)` = `SQRT(18720000)` | `4326.661530556787151743065520964595135502` | `4326.66` |
 | Motivating row B3 | `SQRT(6000^2 + 3000^2)` = `SQRT(45000000)` | `6708.203932499369089227521006193828706322` | `6708.20` |
-| Negative | `SQRT(-1)` | — | `TYPE` error (§4) |
+| Negative | `SQRT(-1)` | — | `TYPE` error ([§4](#4-type-rules-and-errors)) |
 
 The result is rounded **once, at the binding it is assigned to**, to that
-binding's inferred decimal-place count (design §7): the column's existing cells,
+binding's inferred decimal-place count (design [§7](../visimark-design.md#7-numeric-semantics)): the column's existing cells,
 or the anchor's text, or the document `precision` constant (default 2). Nothing
 about `SQRT` changes this rule — `Length` writes `5531.73` because its column
 cells carry two decimals, not because `SQRT` chose a precision. A trailing zero
@@ -94,23 +94,23 @@ column feeding a reducer, unchanged here.
 
 `SQRT` introduces **no new error code** — `TYPE` covers every case.
 
-**Static, once per binding, before evaluation** (design §4):
+**Static, once per binding, before evaluation** (design [§4](../visimark-design.md#4-syntax)):
 
-| Situation | Code (§10) | Reported |
+| Situation | Code ([§10](../visimark-design.md#10-error-taxonomy)) | Reported |
 |---|---|---|
 | `SQRT()` / `SQRT(a, b)` — wrong arity | `TYPE` | against the span of the call, once. Message from `describeCallProblem`: `SQRT() takes 1 argument, got N`. |
 | `SQRT` misspelled (`SQR`, `SQRT2`, `SQTR`) | `TYPE` with a did-you-mean to `SQRT` | automatic once `SQRT` is a key of `FUNCTIONS` — `closest()` with edit distance ≤ 2 ([check.ts:156](../../packages/visimark/src/eval/check.ts)). |
 
-**At evaluation** (design §8):
+**At evaluation** (design [§8](../visimark-design.md#8-evaluation)):
 
-| Situation | Code (§10) | Message | Notes |
+| Situation | Code ([§10](../visimark-design.md#10-error-taxonomy)) | Message | Notes |
 |---|---|---|---|
 | `x` is not a number (a date, a string, a boolean) | `TYPE` | `SQRT expects a number` | the ordinary numeric-map operand error, identical in form to `ABS`; produced by the shared `asNum` helper. |
-| `x` is a negative number | `TYPE` | `SQRT of a negative number` | a negative operand has no real square root; VisiMark reports the domain error rather than returning a complex value or silently taking `SQRT(ABS(x))`. Excel / Sheets raise `#NUM!` here. A unit decoration on `x` is stripped first (design §7), then the bare number's sign is tested. |
+| `x` is a negative number | `TYPE` | `SQRT of a negative number` | a negative operand has no real square root; VisiMark reports the domain error rather than returning a complex value or silently taking `SQRT(ABS(x))`. Excel / Sheets raise `#NUM!` here. A unit decoration on `x` is stripped first (design [§7](../visimark-design.md#7-numeric-semantics)), then the bare number's sign is tested. |
 
 ### Reporting granularity
 
-`SQRT` follows the language's split (design §4, §8):
+`SQRT` follows the language's split (design [§4](../visimark-design.md#4-syntax), [§8](../visimark-design.md#8-evaluation)):
 
 - **Row-data error** — `x` varies by row (`SQRT(Width)`, `SQRT(a - b)`) and a
   particular row's value is negative: **one `TYPE` finding on that row's cell**.
@@ -147,7 +147,7 @@ counts a row only when that row was made unevaluable by a *dependency's* error
 
 - `example-invoice-drift.md` is **unaffected** — its `NOTE schedule.Days · 2
   rows not verified (upstream DATE errors)` is genuinely upstream (`Days = Due -
-  issued` and `Due` has two malformed dates), so the §13 transcript stays
+  issued` and `Due` has two malformed dates), so the [§13](../visimark-design.md#13-testing) transcript stays
   byte-identical.
 - One **unreleased** `EOMONTH` test shifts: `test/eval/check.test.ts`
   "an out-of-range row is a DATE finding plus a NOTE" — the direct `DATE` row
@@ -156,26 +156,26 @@ counts a row only when that row was made unevaluable by a *dependency's* error
 
 ## 5. Interaction with the rest of the language
 
-- **Numeric semantics and write precision (§7).** The result is an ordinary
+- **Numeric semantics and write precision ([§7](../visimark-design.md#7-numeric-semantics)).** The result is an ordinary
   decimal number with no special precision rule: full working precision
   internally, rounded at the binding to the inferred decimal-place count, like
   `Net / SUM(Net)` or any other irrational-valued expression. `SQRT` is
   explicitly **not** in the "dents the re-add-on-a-calculator promise" class
-  that `SIN` / `COS` / `LN` / `PI()` occupy (catalogue §A): `Decimal.sqrt` is
+  that `SIN` / `COS` / `LN` / `PI()` occupy (catalogue [§A](../vocabulary-catalogue.md#a-mappers-scalar--scalar)): `Decimal.sqrt` is
   correctly-rounded decimal, and `x ^ 0.5` already admits exactly this
   approximation today.
-- **Units (§7).** A computed column does not inherit a unit from its operands
+- **Units ([§7](../visimark-design.md#7-numeric-semantics)).** A computed column does not inherit a unit from its operands
   (no dimensional analysis), so a `SQRT`-valued column writes bare numbers until
   its own cells are decorated, then the decoration is re-applied on write-back
   like any other column. A unit on the operand is stripped before the
   arithmetic and the sign test.
-- **Dates (§5).** `SQRT` neither accepts nor produces a date. Its result
+- **Dates ([§5](../visimark-design.md#5-dates)).** `SQRT` neither accepts nor produces a date. Its result
   composes into `date ± number` only as the number operand, which must be a
   whole number of days — the ordinary rule, nothing `SQRT`-specific.
-- **Write-back (§9).** A computed cell or anchor whose formula is `SQRT(...)` is
+- **Write-back ([§9](../visimark-design.md#9-write-back)).** A computed cell or anchor whose formula is `SQRT(...)` is
   tool-owned like any computed value; `fmt` rewrites it when stale and leaves it
   byte-stable when not. No new write-back behaviour.
-- **Name resolution (§6).** `SQRT` is a function name, not a bindable name; `x`
+- **Name resolution ([§6](../visimark-design.md#6-name-resolution-and-scoping)).** `SQRT` is a function name, not a bindable name; `x`
   resolves by the ordinary rules (own columns, own scalars, document scope).
 - **`infer`.** `infer` proposes rules only for a document that has none, and
   never emits `SQRT` — like `EOMONTH`, the primitive is too specific to guess
@@ -186,12 +186,12 @@ counts a row only when that row was made unevaluable by a *dependency's* error
 - **What does not change:** the operator set, the error taxonomy (no new code),
   `fmt` idempotence, and the two acceptance example documents
   (`docs/example-invoice.md`, `docs/example-invoice-drift.md`) — neither uses
-  `SQRT`, so the design §13 acceptance transcript does not move.
+  `SQRT`, so the design [§13](../visimark-design.md#13-testing) acceptance transcript does not move.
 
 ## 6. Acceptance
 
 Covered by **unit tests plus a test-only fixture**; the two example documents
-are untouched, so the §13 acceptance transcript does not move.
+are untouched, so the [§13](../visimark-design.md#13-testing) acceptance transcript does not move.
 
 1. **`test/eval/functions.test.ts`**
    - `SQRT` registered as `{ kind: "map", arity: 1 }`.
@@ -234,10 +234,10 @@ are untouched, so the §13 acceptance transcript does not move.
 - **Complex results, or a `SQRT` that returns `SQRT(ABS(x))` for negative
   input.** A negative operand is a domain error, full stop.
 - **A per-column or per-call precision declaration** for the irrational result
-  (design §7, §14 — deferred, and dismissed for this request in review: it would
+  (design [§7](../visimark-design.md#7-numeric-semantics), [§14](../visimark-design.md#14-deferred) — deferred, and dismissed for this request in review: it would
   break the WYSIWYG precision rule).
 - **Static row-variance analysis** to collapse N identical per-row findings for
-  a row-invariant bad operand — noted in §4, a uniform change across all maps,
+  a row-invariant bad operand — noted in [§4](#4-type-rules-and-errors), a uniform change across all maps,
   not part of this work.
 - **Changing `infer` to recognise or propose square-root rules.**
 
