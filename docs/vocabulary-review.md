@@ -5,15 +5,19 @@ A vocabulary request
 ([`.github/ISSUE_TEMPLATE/vocabulary-request.yml`](../.github/ISSUE_TEMPLATE/vocabulary-request.yml))
 is judged against the design doc's constraints, recorded as a comment that
 [`vocabulary-catalogue.md`](vocabulary-catalogue.md) then links, and catalogued
-through one pull request to `master`. Two Claude Code commands carry the
+through one pull request to `master`. Three Claude Code commands carry the
 mechanics; every judgement call is yours.
 
-## The two commands
+## The commands
 
 | Command | What it does | What it writes |
 |---------|--------------|----------------|
 | `/vocab-review <n> [--draft]` | Parses the request, checks it against every constraint, runs `visimark check` / `infer` on the motivating document, drafts a recommendation | A pre-review comment on the issue and a PR adding the row as `NEW` — or, with `--draft`, nothing |
+| `/vocab-discuss <n>` | Condenses the review conversation you had with Claude in the session into a neutral summary, shows it to you, and posts it only if you approve | A `**Discussion summary**` comment on the issue — nothing else |
 | `/vocab-decide <n> [notes]` | Reconciles the pre-review with your steer and the conversation, writes the decision | A `Decision:` comment on the issue and a PR moving the row to the verdict |
+
+`/vocab-discuss` is optional and repeatable — reach for it when the session
+argument mattered and the issue thread should carry it before the decision.
 
 ## The sequence
 
@@ -22,6 +26,8 @@ mechanics; every judgement call is yours.
    pre-review and opens the `NEW`-row PR on `vocab/issue-<n>-<name>`.
 2. **Talk it over.** Reply on the issue, or just keep talking to Claude in the
    session — "isn't this `MID`?", "re-check criterion 3". No command needed.
+   If that conversation produced reasoning the thread should keep, run
+   **`/vocab-discuss <n>`** and approve the summary it drafts.
 3. **Merge the `NEW`-row PR** once you're satisfied the request belongs in the
    catalogue at all. It is a one-row change.
 4. **`/vocab-decide <n> <your verdict and reason>`** — posts the deciding
