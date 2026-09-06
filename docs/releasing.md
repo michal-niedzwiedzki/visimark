@@ -17,6 +17,7 @@ and left an untraceable tarball on the registry for good.
 | `visimark-vscode` on the VS Code Marketplace | `editors/vscode/package.json` | `vsce show` — skip if the version is listed |
 | `visimark-vscode` on Open VSX | `editors/vscode/package.json` | Open VSX API — skip if the version is there; create the namespace only if it is genuinely missing |
 | GitHub Release, with the `.vsix` attached | the tag | tag pushes only, not `workflow_dispatch` |
+| Each vocabulary-request issue whose primitive ships in this release, closed | the `vocab/issue-<n>-<slug>-impl` merge commit is an ancestor of the tag | the issue is still open — a re-run skips what is already closed |
 
 `packages/visimark-lsp` is bundled into the extension and is not published on
 its own, but its version moves in lockstep. The root `visimark-monorepo`
@@ -49,9 +50,20 @@ never logged as "already done". A green `release` run still is not proof: see
    They must match each other and the tag exactly. Edit all three and confirm
    they agree — `grep -r '"version"' packages/*/package.json editors/*/package.json`.
 4. **Write the changelog** — see [Preparing the changelog](#preparing-the-changelog).
-5. **Commit** as `chore: release vX.Y.Z`, push to `master`, and wait for CI on
+5. **Promote the shipped vocabulary.** In
+   [`docs/vocabulary-catalogue.md`](vocabulary-catalogue.md)'s
+   [Shipped register](vocabulary-catalogue.md#shipped), every row with an
+   empty **Released** cell is a primitive about to ship. For each: confirm it is
+   in [`visimark-design.md`](visimark-design.md) §4, then set its
+   **Released** cell to
+   `[vX.Y.Z](https://github.com/michal-niedzwiedzki/visimark/releases/tag/vX.Y.Z)`.
+   A filled **Released** cell is what makes the row `SHIPPED` rather than
+   `UNRELEASED` — there is no separate status word. Commit with the changelog,
+   or as its own `docs: promote <names> to SHIPPED`. The issues themselves are
+   closed by `release.yml` after the tag — do not close them here.
+6. **Commit** as `chore: release vX.Y.Z`, push to `master`, and wait for CI on
    that commit to pass.
-6. **Tag and push the tag** — and only now:
+7. **Tag and push the tag** — and only now:
    ```bash
    git tag vX.Y.Z
    git push origin vX.Y.Z
@@ -121,6 +133,7 @@ pipeline.**
 | The tag is the only publisher. No hand-run `npm publish` / `vsce publish` / `ovsx publish`. | npm keeps the version number forever on the first publish it sees. `visimark@0.1.0` is a mis-publish that can never be reissued. |
 | All three `package.json` versions equal the tag, exactly. | One tag then publishes mismatched version numbers, or a leg fails mid-release with the others already out. |
 | The changelog entry is written, dated and merged **before** the tag. | The GitHub Release body is built from `CHANGELOG.md` at the tagged commit — a tag ahead of the changelog ships the previous version's notes. |
+| The Shipped-register **Released** cells are filled **before** the tag (step 5). | The released `vocabulary-catalogue.md` shows shipped primitives as still pending, while `release.yml` closes their issues — the catalogue and the tracker disagree. |
 | Tag a commit already on `origin/master` with green `ci` and `dogfood`. | `release.yml` builds from the tag. Uncommitted, unpushed or red work is silently not in the release. |
 | Changelog dates are ISO 8601, `YYYY-MM-DD`. | The project's own date rule, unenforced here because nothing runs `check` with date repair on the changelog. |
 | Never retag, force-push a tag, or `npm unpublish` to tidy a botched release. | It rewrites history to look like the pipeline did something it did not. Bump to the next patch and let the record stand — the move `infer`'s near-miss refusal exists to enforce, applied to the release instead of a spreadsheet. |

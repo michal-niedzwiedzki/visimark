@@ -32,13 +32,19 @@ links the issue, the **Status** column links the comment that decided it. The
 process for getting from an issue to that comment is
 [`vocabulary-review.md`](vocabulary-review.md).
 
+Once a primitive is implemented its row leaves its section table and is
+condensed into the [Shipped register](#shipped) at the foot of this file — the
+section tables stay a register of open questions and standing decisions, not an
+ever-growing changelog.
+
 ## Status values
 
 | Value | Meaning |
 |-------|---------|
 | `NEW` | Requested and catalogued; not yet decided. |
-| `APPROVED` | Accepted and tracked to implementation. Becomes a row in a design-doc §4 table when it ships. |
-| `SHIPPED` | Implemented and in the engine; it is now a `visimark-design.md` §4 row. The link is the implementing PR. |
+| `APPROVED` | Accepted and tracked to implementation. Stays in its section table until the implementation PR merges. |
+| `UNRELEASED` | Implemented and merged to `master`; ships in the next tagged release — not yet on npm or the Marketplace. Listed in the [Shipped register](#shipped) with an empty **Released** cell; **Landed** links the implementing PR. |
+| `SHIPPED` | In a published release, and a [`visimark-design.md` §4](visimark-design.md) row. Listed in the [Shipped register](#shipped) with **Released** linking the release; the **Decision** link holds the full reasoning its section-table row once carried. |
 | `DEFERRED` | Plausible, but no motivating document yet, or it waits on another decision. Not a "no". |
 | `REJECTED` | Declined on a constraint. The linked comment is the reason; reopen only with new information. |
 
@@ -56,10 +62,8 @@ number, a date, or a string — never a boolean (§4).
 |------|--------------|------|------|---------|--------|
 | `TEXT(n, places)` | Format a number as a string with exactly `places` decimals: `TEXT(5.5, 2)` → `"5.50"`. | The safe half of string concatenation — an explicit format instead of a guessed one. Cheap, map-shaped. | One more name in the did-you-mean space. Only useful alongside `&`. | — | `DEFERRED` |
 | `YEAR(d)` / `MONTH(d)` / `DAY(d)` | Integer field of a date. | Pure, config-free, unambiguous (date → integer). Pairs with `&` for reference numbers. | Thin on its own without `&`. | — | `DEFERRED` |
-| `SQRT(x)` | Non-negative square root of a non-negative number. A negative operand is a `TYPE` error — no complex result, no silent `SQRT(ABS(x))`. | Closes the one reason the seed row was `DEFERRED` — a verified motivating document (a diagonal-brace schedule, `Length = SQRT(Width^2 + Height^2)`). Map-shaped, arity 1, in the `ABS` / `MOD` register. `Decimal.js` `.sqrt()` is correctly-rounded decimal, so it is **not** in the binary-float precision class that keeps `SIN` / `LN` deferred (§7): the irrational result is rounded at its binding like any other computed number. Established name (Excel / Sheets). | `(x) ^ 0.5` already reaches the value with the same rounding, so the case is readability — a named `SQRT` beats a `0.5` exponent beside a genuine `^2` — not a capability gap. A row-invariant negative operand in a column rule emits one finding per row (shared with `EOMONTH(Start, 1.5)`); collapsing it needs a static row-variance pass, deferred. | [#18](https://github.com/michal-niedzwiedzki/visimark/issues/18) | [SHIPPED](https://github.com/michal-niedzwiedzki/visimark/pull/20) · [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/18#issuecomment-5560992652) |
 | `CEILING(x, mult)` / `FLOOR(x, mult)` | Round `x` up / down to a multiple of `mult`: `CEILING(load, 50)` → next 50. | "Round up to the next standard size / price tier" is a genuine pricing and spec need. | The `mult` argument must be mandatory — a bare `CEILING(x)` invites a hidden "to 1" default. | — | `DEFERRED` |
 | `TRUNC(x, places)` | Drop decimals past `places` without rounding. | Distinct from `ROUND`; occasionally the correct operation (tax floors). | Overlaps `ROUND`; easy to reach for by mistake. | — | `DEFERRED` |
-| `EOMONTH(d, months)` | Last day of the month `months` calendar months from `d`; the day component of `d` is discarded. Returns a plain date. | "Net EOM" payment terms are common and unreachable by `date ± number`. Needs no month type — a date goes in, a date comes out (§5). The day is discarded before the offset, so it needs no clamp rule and is the ambiguity-free subset of month arithmetic. Leap/calendar math is already required by `date − date`. | Calendar/leap math in the engine. Definitional point pinned here: a `months` offset that overflows the year rolls over (month 13 → January); `months` must be an integer or `TYPE`. A general `date ± n months` / `EDATE` is out of scope of this row and unaddressed by it. | [#6](https://github.com/michal-niedzwiedzki/visimark/issues/6) | [SHIPPED](https://github.com/michal-niedzwiedzki/visimark/pull/8) · [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/6#issuecomment-5559247913) |
 | `DATE(y, m, d)` | Build a date from numeric parts. | — | You would otherwise write the literal `2026-09-03`; computed components are rare. | — | `DEFERRED` |
 | `COALESCE(a, b, …)` | First non-blank argument. | Real tables have optional columns (override price, ad-hoc discount) with no clean path today. | Introduces a **`blank` in-flight value** — a fourth kind beside number/date/string/boolean. `blank + 5` must be defined, and any `blank → 0` is a silent guess (constraint 3). The single change that most "becomes Excel". | — | `DEFERRED` |
 | `LEN(s)` / `LEFT` / `RIGHT` / `MID` / `FIND` | String length and substring extraction. | Prefix / embedded-code extraction. | Index base (0 vs 1) is an off-by-one farm; Unicode unit policy (code point vs grapheme) is a real correctness question; `FIND` returns a position that then feeds arithmetic, multiplying the surface. Neither worked example needs it. | — | `DEFERRED` |
@@ -163,5 +167,24 @@ handing row order to the tool, and `fmt` should reorder only when asked
 `by` has tool-managed rows. Syntax `by Col, Col` with per-key `desc` is the
 shape to specify. A decision moves this section from "discussed" to a real
 proposal with a `Status`.
+
+---
+
+## Shipped
+
+Primitives that have been approved and implemented. Each is now a
+[`visimark-design.md` §4](visimark-design.md) row — that document, not this one,
+is where its behaviour is specified. The **Decision** link holds the full
+reasoning the row carried while it was under review in sections A–C.
+
+A row enters this table `UNRELEASED` — merged to `master`, **Released** empty —
+and is promoted to `SHIPPED` with the release link when the next `vX.Y.Z` tag
+ships it (see [`releasing.md`](releasing.md)). Its request issue is closed at
+the same time.
+
+| Name | Kind | Request | Landed | Released | Decision |
+|------|------|---------|--------|----------|----------|
+| `EOMONTH(d, months)` | mapper | [#6](https://github.com/michal-niedzwiedzki/visimark/issues/6) | [#8](https://github.com/michal-niedzwiedzki/visimark/pull/8) | — | [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/6#issuecomment-5559247913) |
+| `SQRT(x)` | mapper | [#18](https://github.com/michal-niedzwiedzki/visimark/issues/18) | [#20](https://github.com/michal-niedzwiedzki/visimark/pull/20) | — | [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/18#issuecomment-5560992652) |
 
 <!--vmark:no-formulas-->

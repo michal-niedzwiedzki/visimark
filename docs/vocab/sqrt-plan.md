@@ -2,13 +2,13 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Ship `SQRT(x)` — the eleventh builtin, map-shaped, `number → number` — returning the non-negative square root of a non-negative number, per `docs/vocab/sqrt.md`.
+**Goal:** Ship `SQRT(x)` — the eleventh builtin, map-shaped, `number → number` — returning the non-negative square root of a non-negative number, per `docs/vocab/sqrt-spec.md`.
 
 **Architecture:** `SQRT` is a one-line numeric map: `Decimal.prototype.sqrt` (correctly-rounded decimal, already the numeric core) guarded by an explicit negative-operand check, added directly to the `evalCall` map `switch` in `eval/evaluate.ts` — no new module, unlike `EOMONTH`. It is registered in the single builtin table (`eval/functions.ts`) as `{ kind: "map", arity: 1 }`, which the dependency walk, the static arity check and the did-you-mean suggestion all read from automatically. Separately, this change narrows one pre-existing wart the spec review surfaced: the trailing `NOTE` after a column rule (`eval/check.ts`) currently counts rows that raised their *own* error as well as rows suppressed by an upstream dependency failure; it is scoped to upstream suppression only. No parser, model, write, LSP or infer change.
 
 **Tech Stack:** TypeScript; `decimal.js` (already the numeric core); Bun test runner; the engine package `packages/visimark`.
 
-**Spec:** `docs/vocab/sqrt.md`
+**Spec:** `docs/vocab/sqrt-spec.md`
 
 ## Global Constraints
 

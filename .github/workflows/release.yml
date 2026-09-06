@@ -11,12 +11,15 @@ on:
 permissions:
   contents: write # cut the GitHub Release
   id-token: write # mint the OIDC token that signs the npm provenance attestation
+  issues: write # close vocabulary-request issues whose primitive ships in this release
 
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # the vocab issue-close step walks history back to the previous tag
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
@@ -100,3 +103,40 @@ jobs:
           files: editors/vscode/visimark.vsix
           body_path: CHANGELOG.md
           generate_release_notes: true
+
+      # An approved vocabulary primitive is implemented on a branch named
+      # `vocab/issue-<n>-<slug>-impl` and its request issue is left open until
+      # the primitive ships. Close each such issue whose implementation PR
+      # merged into this release. "Issue still open" is the guard, so a
+      # workflow_dispatch backfill or a re-run is a no-op. Skipped on
+      # workflow_dispatch (no tag) by the same guard as the release above.
+      - name: Close shipped vocabulary-request issues
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          prev="$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || true)"
+          echo "This tag: ${TAG}. Previous tag: ${prev:-<none>}."
+          gh pr list --state merged --base master --limit 200 \
+            --json number,headRefName,mergeCommit \
+            --jq '.[] | select(.headRefName | test("^vocab/issue-[0-9]+-.+-impl$")) | [.headRefName, .mergeCommit.oid] | @tsv' \
+          | while IFS="$(printf '\t')" read -r branch sha; do
+              [ -n "$sha" ] || continue
+              # only PRs whose merge commit is actually in this release
+              git merge-base --is-ancestor "$sha" "$TAG" 2>/dev/null || continue
+              if [ -n "$prev" ] && git merge-base --is-ancestor "$sha" "$prev" 2>/dev/null; then
+                continue # shipped in an earlier release already
+              fi
+              n="${branch#vocab/issue-}"; n="${n%%-*}"
+              state="$(gh issue view "$n" --repo "$REPO" --json state --jq .state 2>/dev/null || echo MISSING)"
+              if [ "$state" = "OPEN" ]; then
+                echo "Closing #$n (impl branch $branch)"
+                gh issue close "$n" --repo "$REPO" --reason completed \
+                  --comment "Shipped in [\`${TAG}\`](https://github.com/${REPO}/releases/tag/${TAG})."
+              else
+                echo "#$n is $state — skipping"
+              fi
+            done
