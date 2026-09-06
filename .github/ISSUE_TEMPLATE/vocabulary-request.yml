@@ -6,18 +6,14 @@ body:
   - type: markdown
     attributes:
       value: |
-        One primitive per issue. The decision is recorded in
-        [`docs/vocabulary-catalogue.md`](../blob/master/docs/vocabulary-catalogue.md);
-        read its preface first. A request is judged against the design doc's
-        constraints, not against Excel:
+        One primitive per issue. The decision is recorded in [`docs/vocabulary-catalogue.md`](../blob/master/docs/vocabulary-catalogue.md); read its preface first.
+        The maintainer reviews it with the process in [`docs/vocabulary-review.md`](../blob/master/docs/vocabulary-review.md).
+        A request is judged against the design doc's constraints, not against Excel:
 
-        - it fits the shape system (mapper is scalar → scalar; reducer is
-          vector → scalar over a bare column reference; no vector → vector);
-        - its value is document-local — no locale, clock, network, ambient
-          data, or config;
+        - it fits the shape system (mapper is scalar → scalar; reducer is vector → scalar over a bare column reference; no vector → vector);
+        - its value is document-local — no locale, clock, network, ambient data, or config;
         - it adds no ambiguity — no context-dependent coercion;
-        - a real document needs it. A request with no motivating document is
-          deferred by default.
+        - a real document needs it. A request with no motivating document is deferred by default.
   - type: input
     id: name
     attributes:
@@ -32,8 +28,8 @@ body:
       label: Kind
       options:
         - Mapper (scalar → scalar)
-        - Operator
         - Reducer (vector → scalar)
+        - Operator
         - Sorting rule
         - Not sure
     validations:
