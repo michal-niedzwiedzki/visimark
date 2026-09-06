@@ -189,3 +189,82 @@ test("an advisory finding is reported without failing the run", () => {
   expect(r.findings.map((f) => f.code)).toEqual(["WARN"]);
   expect(r.exitCode).toBe(0);
 });
+
+// ---- EOMONTH (issue #6) ---------------------------------------------
+
+test("EOMONTH: a clean net-EOM payment term", () => {
+  const src = `
+Payment is due **2026-03-31**<!--vmark=terms.due-->.
+
+\`\`\`vmark #terms
+issued = 2026-01-15
+due    = EOMONTH(issued, 2)
+\`\`\`
+`;
+  const r = run(src);
+  expect(r.findings).toEqual([]);
+  expect(r.exitCode).toBe(0);
+});
+
+test("EOMONTH: a result outside the date range is one DATE finding, not TYPE", () => {
+  const src = `
+**9999-12-31**<!--vmark=terms.far-->
+
+\`\`\`vmark #terms
+edge = 9999-12-01
+far  = EOMONTH(edge, 1)
+\`\`\`
+`;
+  const r = run(src);
+  const errs = r.findings.filter((f) => f.code === "DATE" || f.code === "TYPE");
+  expect(errs.map((f) => f.code)).toEqual(["DATE"]);
+  expect(errs[0]!.name).toBe("far");
+});
+
+test("EOMONTH: an out-of-range row is a DATE finding plus a NOTE, other rows still verified", () => {
+  const src = `
+| Job | Start      | End        |
+|-----|------------|------------|
+| a   | 2026-01-10 | 2026-02-28 |
+| b   | 9999-12-10 | 9999-12-31 |
+
+\`\`\`vmark #jobs
+End = EOMONTH(Start, 1)
+\`\`\`
+`;
+  const r = run(src);
+  const codes = r.findings.map((f) => f.code).sort();
+  expect(codes).toEqual(["DATE", "NOTE"]);
+  const date = r.findings.find((f) => f.code === "DATE")!;
+  expect(date).toMatchObject({ name: "End", rowLabel: "b" });
+  const note = r.findings.find((f) => f.code === "NOTE")!;
+  expect(note).toMatchObject({ name: "End", suppressedCount: 1 });
+});
+
+test("EOMONTH: wrong arity is still a static TYPE finding", () => {
+  const src = `
+\`\`\`vmark #terms
+issued = 2026-01-15
+due    = EOMONTH(issued)
+\`\`\`
+`;
+  const ts = run(src).findings.filter((f) => f.code === "TYPE");
+  expect(ts).toHaveLength(1);
+  expect(ts[0]!.message).toBe("EOMONTH() takes 2 arguments, got 1");
+});
+
+test("EOMONTH: a non-integer months is a TYPE finding on the binding", () => {
+  const src = `
+| Job | Start      | End        |
+|-----|------------|------------|
+| a   | 2026-01-10 | 2026-02-28 |
+
+\`\`\`vmark #jobs
+half = 1.5
+End  = EOMONTH(Start, half)
+\`\`\`
+`;
+  const ts = run(src).findings.filter((f) => f.code === "TYPE");
+  expect(ts).toHaveLength(1);
+  expect(ts[0]!.message).toBe("EOMONTH expects a whole number of months");
+});
