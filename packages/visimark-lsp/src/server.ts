@@ -6,7 +6,7 @@ import {
   TextDocumentSyncKind,
   type InitializeParams,
   type InitializeResult,
-} from "vscode-languageserver/node.js";
+} from "vscode-languageserver/node";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { analyzeDocument, forgetDocument } from "./analysis.js";
 import { DEFAULTS, mergeSettings, type Settings } from "./settings.js";
