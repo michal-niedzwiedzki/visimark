@@ -335,7 +335,9 @@ documents whose arithmetic cannot be checked from the document, which is the
 one thing the format exists to prevent. When the built-in vocabulary is too
 small the answer is a new primitive in the engine, readable by everyone and
 runnable by everyone; when a value genuinely comes from outside, it belongs in
-an input column where a human wrote it down.
+an input column where a human wrote it down. Requests to grow that vocabulary go
+through [`docs/vocabulary-catalogue.md`](docs/vocabulary-catalogue.md), which
+records every proposed function and the decision on it.
 
 This makes the format smaller, not merely stricter: there is no locale, no
 configuration, and no rule for what a bare `/` means.
@@ -374,7 +376,8 @@ every diagnostic twice.
 
 Releases are tag-driven: pushing a `vX.Y.Z` tag publishes the engine to npm and
 the extension to both the VS Code Marketplace and Open VSX. The workflow needs
-three repository secrets — `NPM_TOKEN`, `VSCE_PAT` and `OVSX_PAT`.
+three repository secrets — `NPM_TOKEN`, `VSCE_PAT` and `OVSX_PAT`. The checklist
+for cutting one is [`docs/releasing.md`](docs/releasing.md).
 
 ## For agents
 

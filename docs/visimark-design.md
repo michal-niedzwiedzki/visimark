@@ -47,7 +47,9 @@ point is closed.
 
 Where the built-in vocabulary is too small, the fix is to grow it in this
 document and ship it in the engine — a primitive everyone can read and everyone
-can run — never to let a document reach outside itself. Values that genuinely
+can run — never to let a document reach outside itself. Proposed additions and
+the standing decision on each live in
+[`vocabulary-catalogue.md`](vocabulary-catalogue.md). Values that genuinely
 come from elsewhere (an FX rate, a quoted price) belong in an input column,
 where a human or an agent writes them down, dated and diffable. The single
 exception to constraint 2, `fmt --fix-dates`, is the shape any future exception
@@ -447,8 +449,9 @@ under a second `fmt`.
 ## 14. Deferred
 
 Month and partial-date types. Joining sheets by key. Per-column precision and
-output formats. Per-row exceptions. A function library beyond the nine.
-Incremental reparse.
+output formats. Per-row exceptions. A function library beyond the nine —
+proposals and the decision on each are tracked in
+[`vocabulary-catalogue.md`](vocabulary-catalogue.md). Incremental reparse.
 
 **Named inline function definitions — `NAME(params) = expression` in a block —
 are deferred, to be reconsidered on 2028-01-01 if a v2 of this spec is

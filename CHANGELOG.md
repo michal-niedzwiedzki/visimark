@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### Added
+
+- [`docs/vocabulary-catalogue.md`](docs/vocabulary-catalogue.md): the register
+  of every proposed mapper, operator and aggregate and the decision taken on
+  each, so a request is not re-argued from scratch and a "no" carries a citable
+  reason. New requests go through a GitHub issue template
+  ([`.github/ISSUE_TEMPLATE/vocabulary-request.yml`](.github/ISSUE_TEMPLATE/vocabulary-request.yml))
+  and are judged against the design doc's constraints, not against Excel. Seeded
+  from the 2026-09-06 discussion — string concatenation, date helpers, the
+  predicate aggregates, `TODAY()`, and the sorting-rule question — with nothing
+  approved.
+
 ### Changed
 
 - npm releases now carry a [provenance attestation](https://docs.npmjs.com/generating-provenance-statements):

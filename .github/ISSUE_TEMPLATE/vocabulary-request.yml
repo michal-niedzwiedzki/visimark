@@ -1,0 +1,93 @@
+name: Vocabulary request
+description: Propose a new mapper, operator, or aggregate for the VisiMark language
+title: "vocabulary: <name>"
+labels: ["vocabulary"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        One primitive per issue. The decision is recorded in
+        [`docs/vocabulary-catalogue.md`](../blob/master/docs/vocabulary-catalogue.md);
+        read its preface first. A request is judged against the design doc's
+        constraints, not against Excel:
+
+        - it fits the shape system (mapper is scalar → scalar; reducer is
+          vector → scalar over a bare column reference; no vector → vector);
+        - its value is document-local — no locale, clock, network, ambient
+          data, or config;
+        - it adds no ambiguity — no context-dependent coercion;
+        - a real document needs it. A request with no motivating document is
+          deferred by default.
+  - type: input
+    id: name
+    attributes:
+      label: Name
+      description: The proposed spelling.
+      placeholder: EOMONTH
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind
+      options:
+        - Mapper (scalar → scalar)
+        - Operator
+        - Reducer (vector → scalar)
+        - Sorting rule
+        - Not sure
+    validations:
+      required: true
+  - type: input
+    id: signature
+    attributes:
+      label: Signature and shape
+      description: Arguments, result type, arity, and whether it is a map or a reduce.
+      placeholder: "EOMONTH(date, months) -> date   |   map, arity 2"
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What it does
+      description: One or two sentences, precise enough to implement. Give a worked value.
+      placeholder: "Last day of the month `months` away from `date`. EOMONTH(2026-01-15, 1) -> 2026-02-28."
+    validations:
+      required: true
+  - type: textarea
+    id: document
+    attributes:
+      label: The real document that needs it
+      description: >
+        Paste the table and its vmark block, or link to a file in a repo. Show
+        the binding that would use the primitive. A request with no motivating
+        document is deferred by default.
+      render: markdown
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Why not existing vocabulary or an input column
+      description: >
+        Show that a column rule, an existing function, string concatenation, or
+        a human-written input cell does not already cover this.
+    validations:
+      required: true
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Constraint check
+      description: >
+        Does it need a locale, the clock, the network, ambient data, or a
+        type-coercion rule (constraints 3 and 4 in the design doc)? If it does,
+        say how the value still depends only on the document's own text.
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else
+      description: Prior art, edge cases, naming alternatives.
+    validations:
+      required: false
