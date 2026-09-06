@@ -14,7 +14,7 @@ mechanics; every judgement call is yours.
 |---------|--------------|----------------|
 | `/vocab-review <n> [--draft]` | Parses the request, checks it against every constraint, runs `visimark check` / `infer` on the motivating document, drafts a recommendation | A pre-review comment on the issue and a PR adding the row as `NEW` — or, with `--draft`, nothing |
 | `/vocab-discuss <n>` | Condenses the review conversation you had with Claude in the session into a neutral summary, shows it to you, and posts it only if you approve | A `**Discussion summary**` comment on the issue — nothing else |
-| `/vocab-decide <n> [notes]` | Reconciles the pre-review with your steer and the conversation, writes the decision | A `Decision:` comment on the issue and a PR moving the row to the verdict |
+| `/vocab-decide <n> [notes]` | Reconciles the pre-review with your steer and the conversation, writes the decision, and lands it | A `Decision:` comment on the issue; the catalogue PR **merged** to `master` with the row at its verdict (the merge commit quotes the decision); and the issue **closed** for `DEFERRED` / `REJECTED`, left open for `APPROVED` |
 
 `/vocab-discuss` is optional and repeatable — reach for it when the session
 argument mattered and the issue thread should carry it before the decision.
@@ -28,14 +28,17 @@ argument mattered and the issue thread should carry it before the decision.
    session — "isn't this `MID`?", "re-check criterion 3". No command needed.
    If that conversation produced reasoning the thread should keep, run
    **`/vocab-discuss <n>`** and approve the summary it drafts.
-3. **Merge the `NEW`-row PR** once you're satisfied the request belongs in the
-   catalogue at all. It is a one-row change.
+3. **Optionally merge the `NEW`-row PR** if you want the catalogue to show the
+   request as `NEW` before the decision lands. You can also leave it open —
+   `/vocab-decide` pushes the final row onto the same PR and merges it.
 4. **`/vocab-decide <n> <your verdict and reason>`** — posts the deciding
-   comment in your voice and opens the PR that sets the row's `Status` to
-   `[APPROVED|DEFERRED|REJECTED](<comment link>)`.
-5. **Merge that PR.** Then close the issue by hand if the verdict was
-   `DEFERRED` or `REJECTED`; leave it open if `APPROVED` — it now tracks the
+   comment in your voice, sets the row's `Status` to
+   `[APPROVED|DEFERRED|REJECTED](<comment link>)`, **merges the catalogue PR**
+   (the merge commit quotes the decision), and **closes the issue** for
+   `DEFERRED` / `REJECTED`. An `APPROVED` issue stays open — it now tracks the
    implementation and becomes a design-doc §4 row when the primitive ships.
+   If the PR cannot merge (conflict, red check), the command stops and leaves
+   it for you.
 
 ## Reopening
 

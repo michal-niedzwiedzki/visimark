@@ -70,12 +70,40 @@ git push -u origin HEAD
 - **New branch** → `gh pr create --base master --title "Catalogue #<n>: <Name> (<VERDICT>)" --body "$(printf '%s\n\n%s\n\nDeciding comment: %s\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)' '<the decision>' '<the reason>' '<comment-url>')"`
 - **Existing PR #1** → the push updates it; `gh pr edit <num> --title "Catalogue #<n>: <Name> (<VERDICT>)"` and append the decision to its body with `gh pr edit <num> --body ...`.
 
-Do **not** put `closes #<n>` anywhere.
+Do **not** put `closes #<n>` anywhere in the PR body — the issue's state is set explicitly in step 5, not by a merge keyword.
 
 `git switch -`.
 
-Print the PR URL and: "Merge the PR. Then close #<n> by hand if DEFERRED or REJECTED; leave it open if APPROVED — it now tracks implementation."
+## 5. Land the decision
 
-## 5. Reopen note
+Every verdict is recorded as a catalogue row — the catalogue exists so a "no"
+has a citable reason too — so the PR is **merged in all three cases**, never
+closed unmerged.
 
-If the issue already had a `Decision:` comment (this is a re-decision with new information), everything above still holds: post the new `Decision:` comment, and the PR **edits the existing row** — never add a second row for the same issue.
+1. **Merge, quoting the decision.** Write the merge-commit body to a temp file:
+   the line `Decision: <VERDICT>. <comment-url>`, a blank line, then the full
+   deciding comment with every line prefixed `> `. Then:
+   ```bash
+   gh pr merge <num> --merge --delete-branch \
+     --subject "docs: decide #<n> (<Name>) — <VERDICT>" \
+     --body-file <file>
+   ```
+   If `gh pr merge` fails (merge conflict, or a required check not green), stop:
+   print the PR URL and the error, say "resolve and merge by hand, then re-run
+   `/vocab-decide <n>`", and do nothing else. Never `--admin`, never force.
+2. **Set the issue state:**
+   - `APPROVED` → leave it **open**. It now tracks implementation and becomes a
+     design-doc §4 row when the primitive ships.
+   - `DEFERRED` / `REJECTED` → close it:
+     `gh issue close <n> --reason "not planned" --comment "$(printf 'Catalogued %s — see %s\n\nReopen only with new information.' <VERDICT> '<comment-url>')"`
+
+Print: the deciding-comment URL, the merged-PR URL, and whether the issue was
+left open or closed.
+
+## 6. Reopen note
+
+If the issue already had a `Decision:` comment (this is a re-decision with new
+information), everything above still holds: reopen the issue first if it was
+closed (`gh issue reopen <n>`), post the new `Decision:` comment, and the PR
+**edits the existing row** — never add a second row for the same issue — then
+step 5 re-merges and re-closes as needed.
