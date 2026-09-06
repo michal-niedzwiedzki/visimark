@@ -217,9 +217,12 @@ are untouched, so the §13 acceptance transcript does not move.
 3. **`test/cli/sqrt.test.ts` + `test/fixtures/sqrt-braces.md`** — the issue's
    brace schedule as a standalone clean document (with the
    `**6708.20**<!--vmark=braces.longest-->` anchor):
-   - `visimark check <fixture>` exits `0` and its output contains `0 problems`.
-   - `visimark eval <fixture> --get braces.longest` exits `0` and prints exactly
-     `6708.20`.
+   - `visimark check <fixture>` exits `0` and its output contains `0 problems`
+     (which proves the anchor `6708.20` is non-stale — the write form is
+     verified).
+   - `visimark eval <fixture> --get braces.longest` exits `0` and prints the raw
+     decimal `6708.2` (`eval` is the script-readable form and does not pad
+     trailing zeros; the padded `6708.20` is the write form checked above).
 
 ## 7. Non-goals
 
