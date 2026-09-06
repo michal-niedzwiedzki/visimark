@@ -3,9 +3,14 @@ name: release
 on:
   push:
     tags: ["v*"]
+  # Manual runs re-check every registry and backfill whatever is missing for the
+  # versions currently in the package manifests. Every publish leg is guarded by
+  # a version-exists check, so a dispatch with nothing to do is a no-op.
+  workflow_dispatch: {}
 
 permissions:
-  contents: write
+  contents: write # cut the GitHub Release
+  id-token: write # mint the OIDC token that signs the npm provenance attestation
 
 jobs:
   release:
@@ -25,16 +30,29 @@ jobs:
       - run: bun run build
       - run: bun test
 
+      - name: Resolve the versions to publish
+        run: |
+          {
+            echo "ENGINE_VERSION=$(node -p "require('./packages/visimark/package.json').version")"
+            echo "EXT_VERSION=$(node -p "require('./editors/vscode/package.json').version")"
+            echo "EXT_NS=$(node -p "require('./editors/vscode/package.json').publisher")"
+            echo "EXT_NAME=$(node -p "require('./editors/vscode/package.json').name")"
+          } >> "$GITHUB_ENV"
+
+      # Every publish leg below asks the registry whether this exact version is
+      # already there, and publishes or skips on that answer. None of them reads
+      # "already published" off a command's exit code: an unexpected failure has
+      # to fail the job, not be mistaken for a no-op.
+
       - name: Publish the engine to npm
         working-directory: packages/visimark
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          VERSION=$(node -p "require('./package.json').version")
-          if npm view "visimark@$VERSION" version >/dev/null 2>&1; then
-            echo "visimark@$VERSION is already published; skipping."
+          if npm view "visimark@$ENGINE_VERSION" version >/dev/null 2>&1; then
+            echo "visimark@$ENGINE_VERSION is already on npm; skipping."
           else
-            npm publish --access public
+            npm publish --provenance --access public
           fi
 
       - name: Package the extension
@@ -45,15 +63,38 @@ jobs:
         working-directory: editors/vscode
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
-        run: bunx @vscode/vsce publish --no-dependencies --packagePath visimark.vsix || echo "already published; skipping"
+        run: |
+          # `vsce show --json` exits 0 whether or not the extension exists (it
+          # prints "undefined" when it doesn't), so a non-zero exit here is a
+          # real error and `bash -e` fails the job on it. On success the parsed
+          # version list decides: a version not listed means the publish runs.
+          bunx @vscode/vsce show "$EXT_NS.$EXT_NAME" --json >/tmp/marketplace.json 2>/dev/null
+          if node -e 'const fs=require("fs"); let d; try { d = JSON.parse(fs.readFileSync("/tmp/marketplace.json","utf8")) } catch { process.exit(1) } process.exit((d.versions||[]).some(v => v.version === process.env.EXT_VERSION) ? 0 : 1)'; then
+            echo "$EXT_NS.$EXT_NAME@$EXT_VERSION is already on the Marketplace; skipping."
+          else
+            bunx @vscode/vsce publish --no-dependencies --packagePath visimark.vsix
+          fi
 
       - name: Publish to Open VSX
         working-directory: editors/vscode
         env:
           OVSX_PAT: ${{ secrets.OVSX_PAT }}
-        run: bunx ovsx publish visimark.vsix -p "$OVSX_PAT" || echo "already published; skipping"
+        run: |
+          # The namespace has to exist before the first publish, and Open VSX
+          # has no create-if-absent. Check for it, and create it only when it is
+          # genuinely missing — rather than running create-namespace every time
+          # and swallowing the error when it is already there.
+          if [ "$(curl -sS -o /dev/null -w '%{http_code}' "https://open-vsx.org/api/$EXT_NS")" = "404" ]; then
+            bunx ovsx create-namespace "$EXT_NS" -p "$OVSX_PAT"
+          fi
+          if [ "$(curl -sS -o /dev/null -w '%{http_code}' "https://open-vsx.org/api/$EXT_NS/$EXT_NAME/$EXT_VERSION")" = "200" ]; then
+            echo "$EXT_NS.$EXT_NAME@$EXT_VERSION is already on Open VSX; skipping."
+          else
+            bunx ovsx publish visimark.vsix -p "$OVSX_PAT"
+          fi
 
       - name: GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: editors/vscode/visimark.vsix

@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- npm releases now carry a [provenance attestation](https://docs.npmjs.com/generating-provenance-statements):
+  the publish is signed with a statement of the exact commit and workflow run
+  that built the tarball, verifiable with `npm audit signatures` and shown on
+  the package page. The release workflow was also reworked so that a registry
+  rejecting a publish fails the release, instead of being logged as
+  already-done.
+
 ## 0.1.1 - 2026-09-05
 
 First release. VisiMark is a spreadsheet-mechanics tool for Markdown: a
@@ -88,5 +99,17 @@ proves the numbers in the document still agree with them.
   would write that value back — at the value's own decimals, carrying the
   column's decoration.
 - The installed `visimark` binary did not run when invoked directly.
+
+## 0.1.0 — not a release
+
+`visimark@0.1.0` on npm was published by hand from a work-in-progress tree,
+before any tag existed and before the `COVERAGE` rule, the CLI reference and
+the single definition of "problem". It has no matching commit, no tag and no
+provenance. Use 0.1.1.
+
+It is left on the registry rather than unpublished: the version is a true
+record that the publish happened, and making the history read clean after the
+fact is the kind of underived edit this project exists to catch. There is no
+0.1.0 of the VS Code extension.
 
 [0.1.1]: https://github.com/michal-niedzwiedzki/visimark/releases/tag/v0.1.1
