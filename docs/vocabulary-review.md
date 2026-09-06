@@ -73,7 +73,7 @@ second one.
 
 `/vocab-review` and `/vocab-decide` judge the request against the four criteria in the
 [catalogue preface](vocabulary-catalogue.md#requesting-an-addition) and the
-constraints in [`visimark-design.md`](visimark-design.md) §2, §4, §7 and §14 —
+constraints in `visimark-design.md` [§2](visimark-design.md#2-constraints-that-shaped-the-design), [§4](visimark-design.md#4-syntax), [§7](visimark-design.md#7-numeric-semantics) and [§14](visimark-design.md#14-deferred) —
 shape system, document-local value, no ambiguity, a real document that needs
 it — plus overlap with the eleven builtins, the operator set, and every row
 already catalogued. The pre-review comment shows its working and is labelled

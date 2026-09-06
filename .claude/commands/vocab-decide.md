@@ -9,7 +9,7 @@ You are running the **decision** stage of the vocabulary-review workflow.
 Read first, every run:
 - `docs/superpowers/specs/2026-09-06-vocabulary-review-workflow-design.md` — the design
 - `docs/vocabulary-catalogue.md` — the register and its four criteria and status values
-- `docs/visimark-design.md` — §2, §4, §5, §7, §9, §10, §13, §14
+- `docs/visimark-design.md` — [§2](../../docs/visimark-design.md#2-constraints-that-shaped-the-design), [§4](../../docs/visimark-design.md#4-syntax), [§5](../../docs/visimark-design.md#5-dates), [§7](../../docs/visimark-design.md#7-numeric-semantics), [§9](../../docs/visimark-design.md#9-write-back), [§10](../../docs/visimark-design.md#10-error-taxonomy), [§13](../../docs/visimark-design.md#13-testing), [§14](../../docs/visimark-design.md#14-deferred)
 
 Arguments: `$ARGUMENTS`
 - First token: the issue number `<n>`.
@@ -31,7 +31,7 @@ Recompute `<slug>` from the `Name` field (lowercase, non-`[a-z0-9]` runs → `-`
 ## 2. Evaluate
 
 - **Pre-review exists** → reconcile it with the maintainer's input. On any conflict the maintainer wins.
-- **No pre-review** → run the rubric now: in scope; criterion 1 shape (§4); criterion 2 document-local (§2 constraint 4); criterion 3 no ambiguity (§2 constraint 3); criterion 4 a real document needs it (§14); overlap with the nine builtins / operators / existing rows; precision cost (§7).
+- **No pre-review** → run the rubric now: in scope; criterion 1 shape ([§4](../../docs/visimark-design.md#4-syntax)); criterion 2 document-local ([§2](../../docs/visimark-design.md#2-constraints-that-shaped-the-design) constraint 4); criterion 3 no ambiguity ([§2](../../docs/visimark-design.md#2-constraints-that-shaped-the-design) constraint 3); criterion 4 a real document needs it ([§14](../../docs/visimark-design.md#14-deferred)); overlap with the nine builtins / operators / existing rows; precision cost ([§7](../../docs/visimark-design.md#7-numeric-semantics)).
 
 Settle on `APPROVED` / `DEFERRED` / `REJECTED` and the reason, citing the design-doc section that governs.
 
@@ -67,11 +67,11 @@ Header:
 
 Sections, in order:
 1. **Purpose** — what the primitive is; the document that motivated it (quote the `#…` block from the issue); why existing vocabulary does not reach it. A paragraph each.
-2. **Signature and shape** — `<Name>(args) -> <type>`; map or reduce; exact arity; each argument's type. Cite §4.
+2. **Signature and shape** — `<Name>(args) -> <type>`; map or reduce; exact arity; each argument's type. Cite [§4](../../docs/visimark-design.md#4-syntax).
 3. **Semantics** — a table, one row per behavioural case, each with a worked input → output. Cover the normal case; boundary inputs (zero, negative, empty); everything the arithmetic makes special (year / "month" / leap boundaries for a date primitive; empty column for a reduce; precision for a number primitive). Every worked value in the issue appears here, plus the ones the issue did not think of.
-4. **Type rules and errors** — wrong arity, wrong operand types, and any argument that must be further constrained (e.g. integer-only). Name the `§10` error code for each; cite §4 for static arity/shape checking.
-5. **Interaction with the rest of the language** — dates §5 (does the result feed `date ± number`, sorting, anchors?), numeric semantics and write precision §7, write-back §9, name resolution §6, units §7 where relevant. State explicitly what does **not** change.
-6. **Acceptance** — in §13 style: the new fixture or the edit to an existing example document, and the exact `visimark check` / `eval` output it must produce. This is what the plan turns into a test.
+4. **Type rules and errors** — wrong arity, wrong operand types, and any argument that must be further constrained (e.g. integer-only). Name the [§10](../../docs/visimark-design.md#10-error-taxonomy) error code for each; cite [§4](../../docs/visimark-design.md#4-syntax) for static arity/shape checking.
+5. **Interaction with the rest of the language** — dates [§5](../../docs/visimark-design.md#5-dates) (does the result feed `date ± number`, sorting, anchors?), numeric semantics and write precision [§7](../../docs/visimark-design.md#7-numeric-semantics), write-back [§9](../../docs/visimark-design.md#9-write-back), name resolution [§6](../../docs/visimark-design.md#6-name-resolution-and-scoping), units [§7](../../docs/visimark-design.md#7-numeric-semantics) where relevant. State explicitly what does **not** change.
+6. **Acceptance** — in [§13](../../docs/visimark-design.md#13-testing) style: the new fixture or the edit to an existing example document, and the exact `visimark check` / `eval` output it must produce. This is what the plan turns into a test.
 7. **Non-goals** — adjacent things this spec does not cover, especially anything the deciding comment carved out.
 8. **Open questions** — must be **empty** before handoff. Anything left here blocks step 4.
 
@@ -81,7 +81,7 @@ Walk this checklist against the draft and turn every gap into a concrete questio
 
 - Is every argument's type pinned — including "integer, not merely number" where it matters?
 - Every boundary — zero / negative / empty / overflow / leap / out-of-range component — is the result **specified**, not implied?
-- For each error case, is the §10 code chosen (not "an error")?
+- For each error case, is the [§10](../../docs/visimark-design.md#10-error-taxonomy) code chosen (not "an error")?
 - Does the result type compose with what the motivating document then does with it (arithmetic, sort, anchor)?
 - Write precision / decoration: what does a written cell or anchor look like?
 - Does `visimark infer` need to know about it? `explain`? the did-you-mean list once the name is known?
@@ -223,7 +223,7 @@ Ask the maintainer via `AskUserQuestion` — "Write the implementation plan now?
   Iterate until nothing low-certainty remains.
 
   The plan's **final task is always "documentation"**, and it must list, at
-  minimum: the `visimark-design.md` §4 builtin table (or the relevant section);
+  minimum: the `visimark-design.md` [§4](../../docs/visimark-design.md#4-syntax) builtin table (or the relevant section);
   a `CHANGELOG.md` entry under `## Unreleased` → `### Added` (and a one-line
   `editors/vscode/CHANGELOG.md` entry when the LSP/extension surface changes —
   e.g. a name that used to flag as unknown no longer does); the

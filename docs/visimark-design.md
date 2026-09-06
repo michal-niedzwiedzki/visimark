@@ -235,7 +235,7 @@ matters:
 **Date arithmetic** is closed and small: date − date is a number of days, date ±
 number is a date, everything else is a `TYPE` error. Times, timezones, week
 dates (`2026-W37`) and partial dates (`2026-09`) are out of scope. A month type
-is the omission a reporting table will miss first — `EOMONTH(d, months)` (§4)
+is the omission a reporting table will miss first — `EOMONTH(d, months)` ([§4](#4-syntax))
 covers the end-of-month case without one, by discarding the day of `d` and
 returning an ordinary date, but a general `date ± n months` still awaits a
 motivating document and a day-clamp rule.

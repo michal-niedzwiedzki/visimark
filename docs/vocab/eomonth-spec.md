@@ -20,13 +20,13 @@ due    = EOMONTH(issued, 2)
 With `issued` at 2026-01-15 the due date is 2026-03-31, and it re-derives
 whenever `issued` changes — a hand-typed `2026-03-31` would still look right
 after someone moved the issue date to 2026-01-20, which is exactly the class of
-silently-wrong derived value VisiMark exists to catch (design §14).
+silently-wrong derived value VisiMark exists to catch (design [§14](../visimark-design.md#14-deferred)).
 
 **Why existing vocabulary does not reach it.** `date ± number` moves a fixed
 number of days, never to a month end — there is no offset from 2026-01-15 that
 lands on "the last day of March" without already knowing the length of February
 and March. None of the nine builtins (`SUM MIN MAX AVG COUNT ROUND ABS MOD IF`,
-design §4) navigate the calendar. `YEAR` / `MONTH` / `DAY` and `DATE(y, m, d)`
+design [§4](../visimark-design.md#4-syntax)) navigate the calendar. `YEAR` / `MONTH` / `DAY` and `DATE(y, m, d)`
 are both catalogued `DEFERRED`, so the compositional route
 `DATE(YEAR(d), MONTH(d) + n, 1) − 1` is unavailable and would itself need
 month-overflow handling. A human-typed input column defeats the point, since the
@@ -37,15 +37,15 @@ value is derived purely from `issued` and the fixed term.
 | | |
 |---|---|
 | Call | `EOMONTH(d, months)` |
-| Kind | **map** (scalar → scalar), design §4 "Shape: map and reduce" |
-| Arity | **2**, exact and checked statically (§4) |
+| Kind | **map** (scalar → scalar), design [§4](../visimark-design.md#4-syntax) "Shape: map and reduce" |
+| Arity | **2**, exact and checked statically ([§4](../visimark-design.md#4-syntax)) |
 | `d` | a **date** |
 | `months` | a **number** with no fractional part (a whole-number offset); may be negative or zero; may be a computed scalar, not only a literal |
-| Result | a **date** — never a boolean, never a "month" value (§4, §5) |
+| Result | a **date** — never a boolean, never a "month" value ([§4](../visimark-design.md#4-syntax), [§5](../visimark-design.md#5-dates)) |
 
 `EOMONTH` adds no new value type. It consumes an ordinary date and returns an
 ordinary date; the month-offset arithmetic happens internally and no "month"
-ever surfaces for the rest of the language to interpret (design §5 keeps the
+ever surfaces for the rest of the language to interpret (design [§5](../visimark-design.md#5-dates) keeps the
 month type deferred).
 
 ## 3. Semantics
@@ -73,25 +73,25 @@ The day of `d` is never read. Leap years are handled by `daysInMonth`
 
 The result is a plain date and composes wherever a date does: `due + 7`,
 `MIN(due)` in a reducer over a column, a `<!--vmark=terms.due-->` anchor,
-lexical sorting (design §5).
+lexical sorting (design [§5](../visimark-design.md#5-dates)).
 
 ## 4. Type rules and errors
 
-Static, once per binding, before evaluation (design §4):
+Static, once per binding, before evaluation (design [§4](../visimark-design.md#4-syntax)):
 
-| Situation | Code (§10) | Reported |
+| Situation | Code ([§10](../visimark-design.md#10-error-taxonomy)) | Reported |
 |---|---|---|
 | `EOMONTH(x)` / `EOMONTH(a, b, c)` — wrong arity | `TYPE` | against the span of the call, once |
 | `EOMONTH` misspelled (`EOMONT`, `EOM`) | `TYPE` with a did-you-mean, once `EOMONTH` is in the known-name set |
 
 At evaluation, reported once against the binding and suppressed downstream
-(design §8):
+(design [§8](../visimark-design.md#8-evaluation)):
 
-| Situation | Code (§10) | Notes |
+| Situation | Code ([§10](../visimark-design.md#10-error-taxonomy)) | Notes |
 |---|---|---|
 | `d` is not a date (a number, a string) | `TYPE` | e.g. `EOMONTH("2026-01", 1)` |
 | `months` is not a number | `TYPE` | e.g. `EOMONTH(d, "two")` |
-| `months` has a non-zero fractional part | `TYPE` | **no tolerance** — `2` and `2.0` are fine, `2.5` and `2.0000001` are errors. A unit decoration on `months` is stripped first (design §7), then the stripped number must be integral. |
+| `months` has a non-zero fractional part | `TYPE` | **no tolerance** — `2` and `2.0` are fine, `2.5` and `2.0000001` are errors. A unit decoration on `months` is stripped first (design [§7](../visimark-design.md#7-numeric-semantics)), then the stripped number must be integral. |
 | the result year falls outside 1–9999 | `DATE` | e.g. `EOMONTH(9999-12-01, 1)`; the failure is "the result is not a representable calendar date", so it reuses the `DATE` code, not `TYPE` |
 
 **Implementation note.** check.ts currently maps every `EvalError` to a `TYPE`
@@ -101,21 +101,21 @@ emits a `DATE` finding directly).
 
 ## 5. Interaction with the rest of the language
 
-- **Dates (§5).** The result is an ordinary ISO date. `date − date` and
+- **Dates ([§5](../visimark-design.md#5-dates)).** The result is an ordinary ISO date. `date − date` and
   `date ± number` already require the same proleptic-Gregorian calendar and
   leap arithmetic `EOMONTH` needs, so nothing new about the calendar is
   introduced. No month / partial-date type is added.
-- **Numeric semantics and write precision (§7).** A date is not a decimal
+- **Numeric semantics and write precision ([§7](../visimark-design.md#7-numeric-semantics)).** A date is not a decimal
   number; it has no decimal-place count and takes no `precision` inference. A
   written cell or anchor is the 10-character ISO string, exactly as for any
   other date-valued binding (`Due` in the payment-schedule example).
-- **Units (§7).** Dates carry no unit decoration. A unit on the `months`
+- **Units ([§7](../visimark-design.md#7-numeric-semantics)).** Dates carry no unit decoration. A unit on the `months`
   operand is stripped before the integer check, per the standard rule; the
   result is bare.
-- **Write-back (§9).** A computed cell or anchor whose formula is `EOMONTH(...)`
+- **Write-back ([§9](../visimark-design.md#9-write-back)).** A computed cell or anchor whose formula is `EOMONTH(...)`
   is tool-owned like any computed value; `fmt` rewrites it when stale. No new
   write-back behaviour.
-- **Name resolution (§6).** `EOMONTH` is a function name, not a bindable name;
+- **Name resolution ([§6](../visimark-design.md#6-name-resolution-and-scoping)).** `EOMONTH` is a function name, not a bindable name;
   `d` and `months` resolve by the ordinary rules (own columns, own scalars,
   document scope).
 - **`infer`.** `infer` proposes rules only for a document that has none and
@@ -130,11 +130,11 @@ emits a `DATE` finding directly).
 
 Covered by **unit tests plus a test-only fixture** — the two example documents
 (`docs/example-invoice.md`, `docs/example-invoice-drift.md`) are untouched, so
-the §13 acceptance transcript does not move.
+the [§13](../visimark-design.md#13-testing) acceptance transcript does not move.
 
 1. **`test/eval/dates.test.ts`** — a pure `eomonth(iso, months) → iso` helper
    (added next to `addDays` / `daysBetween` in `eval/dates.ts`) against every
-   row of the §3 table, plus: month 13 and month 0 carries in both directions;
+   row of the [§3](#3-semantics) table, plus: month 13 and month 0 carries in both directions;
    February in a leap and a non-leap year; the year-1 and year-9999 boundaries
    (in range succeeds, one step past raises).
 2. **`test/eval/functions.test.ts`** — `EOMONTH` registered as `{ kind: "map",
@@ -168,7 +168,7 @@ docs/../test/fixtures/eomonth-terms.md
   the day. It needs its own vocabulary request and its own motivating document.
 - **`YEAR` / `MONTH` / `DAY`, `DATE(y, m, d)`.** Still `DEFERRED`; not required
   by this primitive and not unblocked by it.
-- **A surfaced "month" value or a month type** (design §5).
+- **A surfaced "month" value or a month type** (design [§5](../visimark-design.md#5-dates)).
 - **Business-day or holiday-aware variants** (`WORKDAY`, already `REJECTED`).
 - **Configurable first argument as a "year-month" string** — `d` is a full ISO
   date only.

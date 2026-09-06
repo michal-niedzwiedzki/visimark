@@ -54,7 +54,7 @@ never logged as "already done". A green `release` run still is not proof: see
    [`docs/vocabulary-catalogue.md`](vocabulary-catalogue.md)'s
    [Shipped register](vocabulary-catalogue.md#shipped), every row with an
    empty **Released** cell is a primitive about to ship. For each: confirm it is
-   in [`visimark-design.md`](visimark-design.md) §4, then set its
+   in `visimark-design.md` [§4](visimark-design.md#4-syntax), then set its
    **Released** cell to
    `[vX.Y.Z](https://github.com/michal-niedzwiedzki/visimark/releases/tag/vX.Y.Z)`.
    A filled **Released** cell is what makes the row `SHIPPED` rather than

@@ -18,7 +18,7 @@
 - Rounding / precision is untouched — a date is not a decimal.
 - Every commit ends with the trailer `Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>`.
 - Work on branch `vocab/issue-6-eomonth-impl` (the spec PR #8); do not open a new PR.
-- Acceptance additions are unit tests + one test-only fixture (`packages/visimark/test/fixtures/`). `docs/example-invoice.md` and `docs/example-invoice-drift.md` stay byte-for-byte identical and the §13 transcript does not move.
+- Acceptance additions are unit tests + one test-only fixture (`packages/visimark/test/fixtures/`). `docs/example-invoice.md` and `docs/example-invoice-drift.md` stay byte-for-byte identical and the [§13](../visimark-design.md#13-testing) transcript does not move.
 
 ---
 
@@ -65,7 +65,7 @@ export function eomonth(iso: string, months: number): string {
 ```
 Import `DateError` from `value.js` (watch for an import cycle — `value.ts` must not import `dates.ts`; it does not today, keep it that way).
 
-- [ ] **Step 3: tests** — every row of the spec §3 table; plus month-13 and month-0 carries both directions; Feb in a leap (2024) and non-leap (2026) year; `eomonth("0001-01-15", 0)` succeeds, `eomonth("0001-01-15", -1)` throws `DateError`; `eomonth("9999-12-01", 0)` succeeds, `eomonth("9999-12-01", 1)` throws `DateError`.
+- [ ] **Step 3: tests** — every row of the spec [§3](eomonth-spec.md#3-semantics) table; plus month-13 and month-0 carries both directions; Feb in a leap (2024) and non-leap (2026) year; `eomonth("0001-01-15", 0)` succeeds, `eomonth("0001-01-15", -1)` throws `DateError`; `eomonth("9999-12-01", 0)` succeeds, `eomonth("9999-12-01", 1)` throws `DateError`.
 
 **Verify:** `bun test packages/visimark/test/eval/dates.test.ts`
 
@@ -192,7 +192,7 @@ Terms are net two months, end of month. Payment falls due
 ### Task 5: documentation
 
 **Files:**
-- Edit: `docs/visimark-design.md` (§4 builtin table, §5 month note, the "Nine, chosen…" sentence)
+- Edit: `docs/visimark-design.md` ([§4](../visimark-design.md#4-syntax) builtin table, [§5](../visimark-design.md#5-dates) month note, the "Nine, chosen…" sentence)
 - Edit: `docs/cli-reference.md` (if it enumerates builtins)
 - Edit: `docs/vocabulary-catalogue.md` (the EOMONTH row + the "nine functions" count)
 - Edit: `CHANGELOG.md` (the `## Unreleased` section)
@@ -202,13 +202,13 @@ Terms are net two months, end of month. Payment falls due
 - Consumes: shipped behaviour from Tasks 1–4.
 - Produces: the design doc describes ten builtins and no longer implies `EOMONTH` is unavailable; a `## Unreleased` changelog line so a release cut from `master` ships an accurate note.
 
-- [ ] **Step 1: §4** — add the row to the builtin table:
+- [ ] **Step 1: [§4](../visimark-design.md#4-syntax)** — add the row to the builtin table:
   `| \`EOMONTH(d, months)\` | map | 2 | last day of the month \`months\` calendar months from \`d\`; \`months\` is a whole number, \`d\`'s day is discarded |`
   and change "Nine, chosen to cover the examples and nothing more" → "Ten" (and re-read the surrounding sentence so it still parses).
 
-- [ ] **Step 2: §5** — the line "A month type is the omission a reporting table will miss first" stays true, but add a clause that `EOMONTH` covers the end-of-month case without one. Keep it to a sentence.
+- [ ] **Step 2: [§5](../visimark-design.md#5-dates)** — the line "A month type is the omission a reporting table will miss first" stays true, but add a clause that `EOMONTH` covers the end-of-month case without one. Keep it to a sentence.
 
-- [ ] **Step 3: §3 opening** — "The language ships **nine functions and a fixed operator set**" appears in `docs/vocabulary-catalogue.md` line 3 too — update both to "ten functions".
+- [ ] **Step 3: [§3](../visimark-design.md#3-document-model) opening** — "The language ships **nine functions and a fixed operator set**" appears in `docs/vocabulary-catalogue.md` line 3 too — update both to "ten functions".
 
 - [ ] **Step 4: catalogue row** — set the EOMONTH row's `Status` cell to note it shipped, linking this PR, keeping the `[APPROVED](…)` link. Follow whatever convention the catalogue's "Status values" section lands on for a shipped primitive (if none exists, add one: `SHIPPED`).
 
@@ -226,6 +226,6 @@ Terms are net two months, end of month. Payment falls due
 
 - `bun test`, `bun run typecheck`, `bun run build` all green, including the new dates / functions / check / cli cases.
 - `EOMONTH(2026-01-15, 2)` evaluates to `2026-03-31` through the branch's CLI.
-- `docs/example-invoice.md` and `-drift.md` untouched; §13 transcript unchanged.
+- `docs/example-invoice.md` and `-drift.md` untouched; [§13](../visimark-design.md#13-testing) transcript unchanged.
 - `docs/visimark-design.md` describes ten builtins; `CHANGELOG.md` `## Unreleased` carries an `EOMONTH` line.
 - PR #8 carries spec + plan + implementation, CI is green, and the PR is promoted out of draft.
