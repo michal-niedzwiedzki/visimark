@@ -1,6 +1,6 @@
 import { Decimal } from "decimal.js";
 import type { Expr, Ref } from "../lang/ast.js";
-import { addDays, daysBetween } from "./dates.js";
+import { addDays, daysBetween, eomonth } from "./dates.js";
 import { callProblem, describeCallProblem, isReduce } from "./functions.js";
 import { bool, date, EvalError, num, roundToPlaces, str, Value, valueEquals } from "./value.js";
 
@@ -32,6 +32,11 @@ export function evalExpr(expr: Expr, env: EvalEnv): Value {
 function asNum(v: Value, what: string): Decimal {
   if (v.t !== "num") throw new EvalError(`${what} expects a number`);
   return v.d;
+}
+
+function asDate(v: Value, what: string): string {
+  if (v.t !== "date") throw new EvalError(`${what} expects a date`);
+  return v.iso;
 }
 
 function evalUnary(op: "-" | "not", v: Value): Value {
@@ -126,6 +131,14 @@ function evalCall(expr: Extract<Expr, { type: "call" }>, env: EvalEnv): Value {
       const c = vals[0]!;
       if (c.t !== "bool") throw new EvalError("IF() needs a boolean condition");
       return c.b ? vals[1]! : vals[2]!;
+    }
+    case "EOMONTH": {
+      const d = asDate(vals[0]!, "EOMONTH");
+      const months = asNum(vals[1]!, "EOMONTH");
+      if (!months.isInteger()) {
+        throw new EvalError("EOMONTH expects a whole number of months");
+      }
+      return date(eomonth(d, months.toNumber()));
     }
     default:
       throw new EvalError(`unknown function \`${name}\``);

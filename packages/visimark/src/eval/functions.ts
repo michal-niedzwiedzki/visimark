@@ -37,6 +37,7 @@ export const FUNCTIONS: ReadonlyMap<string, FnSpec> = new Map<string, FnSpec>([
   ["ABS", { kind: "map", arity: 1 }],
   ["MOD", { kind: "map", arity: 2 }],
   ["IF", { kind: "map", arity: 3 }],
+  ["EOMONTH", { kind: "map", arity: 2 }],
 ]);
 
 export const isReduce = (name: string): boolean => FUNCTIONS.get(name)?.kind === "reduce";

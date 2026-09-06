@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- The engine now recognises `EOMONTH(d, months)` (end-of-month date
+  arithmetic), so a formula that uses it no longer shows an "unknown function"
+  diagnostic.
+
 ## 0.1.1 - 2026-09-05
 
 First release, versioned in lockstep with the `visimark` engine.

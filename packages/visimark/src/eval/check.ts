@@ -342,7 +342,7 @@ export function check(model: DocModel): CheckResult {
           const cell = table.rows[r]?.cells[idx];
           emit(
             {
-              code: "TYPE",
+              code: e.code,
               sheetId: sheet.id,
               name: binding.name,
               rowLabel: rowLabel(table, r),
@@ -430,7 +430,7 @@ export function check(model: DocModel): CheckResult {
         unevaluable.add(binding.id);
         emit(
           {
-            code: "TYPE",
+            code: e.code,
             sheetId: binding.sheetId,
             name: binding.name,
             message: e.message,

@@ -1,5 +1,7 @@
 import { Decimal } from "decimal.js";
 
+import { DateError } from "./value.js";
+
 export type IsoResult =
   | { ok: true; iso: string }
   | {
@@ -94,4 +96,24 @@ export function addDays(isoStr: string, days: number): string {
   const ms = (epochDay(isoStr) + days) * 86_400_000;
   const dt = new Date(ms);
   return iso(dt.getUTCFullYear(), dt.getUTCMonth() + 1, dt.getUTCDate());
+}
+
+/**
+ * The last day of the month `months` calendar months from `isoStr`. The day
+ * component of `isoStr` is discarded — only its year and month select the
+ * target month. `months` is a whole number (may be negative or zero); the
+ * caller guarantees integrality. Throws `DateError` if the result year falls
+ * outside 1–9999.
+ */
+export function eomonth(isoStr: string, months: number): string {
+  const [y, m] = isoStr.split("-").map(Number) as [number, number, number];
+  const monthIndex = y * 12 + (m - 1) + months; // months since 0000-01
+  const ty = Math.floor(monthIndex / 12);
+  const tm = monthIndex - ty * 12 + 1; // 1..12
+  if (ty < 1 || ty > 9999) {
+    throw new DateError(
+      `EOMONTH result ${String(ty).padStart(4, "0")}-${String(tm).padStart(2, "0")} is outside the supported date range`,
+    );
+  }
+  return iso(ty, tm, daysInMonth(ty, tm));
 }

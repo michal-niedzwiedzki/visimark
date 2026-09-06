@@ -17,10 +17,23 @@ export const str = (s: string): Value => ({ t: "str", s });
 export const bool = (b: boolean): Value => ({ t: "bool", b });
 
 export class EvalError extends Error {
-  readonly code = "TYPE" as const;
+  readonly code: "TYPE" | "DATE" = "TYPE";
   constructor(message: string) {
     super(message);
     this.name = "EvalError";
+  }
+}
+
+/**
+ * An `EvalError` whose root cause is that a computed value is not a
+ * representable calendar date (e.g. an `EOMONTH` result outside years
+ * 1–9999). `check` reports it as a `DATE` finding rather than `TYPE`.
+ */
+export class DateError extends EvalError {
+  override readonly code = "DATE" as const;
+  constructor(message: string) {
+    super(message);
+    this.name = "DateError";
   }
 }
 
