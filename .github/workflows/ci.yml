@@ -12,7 +12,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
@@ -25,7 +25,7 @@ jobs:
       - name: Package the extension
         working-directory: editors/vscode
         run: bunx @vscode/vsce package --no-dependencies --out visimark.vsix
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: visimark-vsix
           path: editors/vscode/visimark.vsix
