@@ -182,11 +182,12 @@ unrelated restrictions all follow from this one:
 
 ### Builtin functions
 
-Nine, chosen to cover the examples and nothing more. Each is declared with its
-shape and its exact argument count, in one table in `eval/functions.ts` — the
-single home for a classification the dependency walk, the evaluator and the
-reporter each need. The parser stays function-agnostic: it builds a call node
-for any name, and the name is judged afterwards.
+Ten, chosen to cover the examples and the one catalogued addition a real
+document needed (`EOMONTH`, issue #6). Each is declared with its shape and its
+exact argument count, in one table in `eval/functions.ts` — the single home for
+a classification the dependency walk, the evaluator and the reporter each need.
+The parser stays function-agnostic: it builds a call node for any name, and the
+name is judged afterwards.
 
 | Function | Kind | Arity | Meaning |
 |----------|------|------:|---------|
@@ -199,6 +200,7 @@ for any name, and the name is judged afterwards.
 | `ABS(x)` | map | 1 | absolute value |
 | `MOD(x, y)` | map | 2 | remainder; the language has no `%` operator |
 | `IF(cond, a, b)` | map | 3 | `cond` must be a boolean; returns `a` or `b` |
+| `EOMONTH(d, months)` | map | 2 | last day of the month `months` calendar months from `d`; `d`'s day is discarded; `months` is a whole number; a result outside years 1–9999 is a `DATE` error |
 
 **Arity is exact and checked statically**, once per binding, before anything is
 evaluated. `ROUND(Qty)` is a `TYPE` error blaming the span of the call, not a
@@ -232,7 +234,10 @@ matters:
 **Date arithmetic** is closed and small: date − date is a number of days, date ±
 number is a date, everything else is a `TYPE` error. Times, timezones, week
 dates (`2026-W37`) and partial dates (`2026-09`) are out of scope. A month type
-is the omission a reporting table will miss first.
+is the omission a reporting table will miss first — `EOMONTH(d, months)` (§4)
+covers the end-of-month case without one, by discarding the day of `d` and
+returning an ordinary date, but a general `date ± n months` still awaits a
+motivating document and a day-clamp rule.
 
 ## 6. Name resolution and scoping
 
