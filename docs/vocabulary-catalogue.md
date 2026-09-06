@@ -66,7 +66,7 @@ number, a date, or a string — never a boolean (§4).
 | `TODAY()` / `NOW()` | Current date / time. | The most-requested Excel date function. | **Violates constraint 4 (no clock)** — the same commit must evaluate identically forever. A due date is `Issued + 30` with `Issued` an input column. | — | `REJECTED` |
 | `WORKDAY(d, n)` / `NETWORKDAYS(a, b)` | Business-day arithmetic. | Business-day due dates. | A holiday calendar is ambient data (constraint 4) unless holidays are an input column; "weekend = Sat/Sun" is itself a locale assumption (constraint 3). | — | `REJECTED` |
 | `BITAND` / `BITOR` / `XOR` / shifts | Bitwise integer operations. | — | No plausible quote, invoice, budget, or structural-engineering document; an integer-only island in a decimal-number language. | — | `REJECTED` |
-| `DRYRUN(x)` | Doubles a number: `DRYRUN(21)` → `42`. | — | — | [#3](https://github.com/michal-niedzwiedzki/visimark/issues/3) | `NEW` |
+| `DRYRUN(x)` | Doubles a number: `DRYRUN(21)` → `42`. | — | `x * 2` already expresses it; no motivating document (§14). | [#3](https://github.com/michal-niedzwiedzki/visimark/issues/3) | [`REJECTED`](https://github.com/michal-niedzwiedzki/visimark/issues/3#issuecomment-5558928728) |
 
 ## B. Operators
 
