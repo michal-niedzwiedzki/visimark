@@ -20,6 +20,9 @@ same CLI straight from source.
 `check` is the one CI runs. The others exist to get a document into a state
 `check` can be strict about, or to explain what it did.
 
+`visimark --version` (also `-v` or `version`) prints `visimark <version>` and
+exits `0`. `visimark --help` (also `-h` or `help`) prints the usage summary.
+
 ## Options
 
 | Option | Command | What it does |

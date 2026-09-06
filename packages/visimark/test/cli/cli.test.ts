@@ -108,6 +108,25 @@ test("an unrecognised flag is ignored rather than failing the run", async () => 
   expect(await runCli(["check", cleanPath, "--require-formulas"], c.io)).toBe(0);
 });
 
+const pkgVersion = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8"))
+  .version as string;
+
+test("--version prints `visimark <version>` and exits 0", async () => {
+  const c = capture();
+  const code = await runCli(["--version"], c.io);
+  expect(code).toBe(0);
+  expect(c.out()).toBe(`visimark ${pkgVersion}`);
+});
+
+test("-v and `version` behave the same as --version", async () => {
+  for (const arg of ["-v", "version"]) {
+    const c = capture();
+    const code = await runCli([arg], c.io);
+    expect(code).toBe(0);
+    expect(c.out()).toBe(`visimark ${pkgVersion}`);
+  }
+});
+
 test("no command is a usage error", async () => {
   const c = capture();
   const code = await runCli([], c.io);

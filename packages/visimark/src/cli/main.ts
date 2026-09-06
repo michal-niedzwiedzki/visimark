@@ -1,5 +1,13 @@
+import { readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { cmdCheck, cmdEval, cmdExplain, cmdFmt, cmdInfer, type Writer } from "./commands.js";
+
+// Single source of truth: the published `package.json` ships alongside `dist/`,
+// and `../../package.json` resolves from both `src/cli/` and the bundled
+// `dist/cli/`.
+const { version } = JSON.parse(
+  readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
+) as { version: string };
 
 const USAGE = `visimark — spreadsheet mechanics for Markdown
 
@@ -13,6 +21,7 @@ usage:
   visimark infer FILE... [--write]     propose rules for a document with none
   visimark eval  FILE [--get NAME] [--json]
   visimark explain FILE [#sheet]       print rules and dependency order
+  visimark --version | -v | version    print the version and exit
 
 exit codes: 0 clean, 1 findings, 2 usage or read failure`;
 
@@ -37,6 +46,11 @@ export async function runCli(argv: string[], io: CliIO = {}): Promise<number> {
       return cmdEval(rest, out, err);
     case "explain":
       return cmdExplain(rest, out, err);
+    case "-v":
+    case "--version":
+    case "version":
+      out(`visimark ${version}`);
+      return 0;
     case "-h":
     case "--help":
     case "help":
