@@ -14,7 +14,7 @@ mechanics; every judgement call is yours.
 |---------|--------------|----------------|
 | `/vocab-review <n> [--draft]` | Parses the request, checks it against every constraint, runs `visimark check` / `infer` on the motivating document, drafts a recommendation | A pre-review comment on the issue and a PR adding the row as `NEW` — or, with `--draft`, nothing |
 | `/vocab-discuss <n>` | Condenses the review conversation you had with Claude in the session into a neutral summary, shows it to you, and posts it only if you approve | A `**Discussion summary**` comment on the issue — nothing else |
-| `/vocab-decide <n> [notes]` | Reconciles the pre-review with your steer, writes the decision, and lands it. **On `APPROVED` it first drafts the feature spec with you** — a gap hunt and a round of questions — and does nothing public until you call the spec ready | A `Decision:` comment on the issue; the catalogue PR **merged** to `master` with the row at its verdict (the merge commit quotes the decision); the issue **closed** for `DEFERRED` / `REJECTED`, left open for `APPROVED`; and, for `APPROVED`, a second PR on `vocab/issue-<n>-<slug>-impl` carrying `docs/vocab/<slug>.md` for handoff to an implementation plan |
+| `/vocab-decide <n> [notes]` | Reconciles the pre-review with your steer, writes the decision, and lands it. **On `APPROVED` it first drafts the feature spec with you** — a gap hunt and a round of questions — and does nothing public until you call the spec ready; then it offers to draft the implementation plan too | A `Decision:` comment on the issue; the catalogue PR **merged** to `master` with the row at its verdict (the merge commit quotes the decision); the issue **closed** for `DEFERRED` / `REJECTED`, left open for `APPROVED`; and, for `APPROVED`, a second PR on `vocab/issue-<n>-<slug>-impl` carrying `docs/vocab/<slug>.md` and, if you asked for it, `docs/vocab/<slug>-plan.md` |
 
 `/vocab-discuss` is optional and repeatable — reach for it when the session
 argument mattered and the issue thread should carry it before the decision.
@@ -41,12 +41,17 @@ argument mattered and the issue thread should carry it before the decision.
      puts them to you as questions. Nothing is posted or merged until you
      answer "Spec ready to hand off?" with **Ready**. *Then* it posts the
      deciding comment, merges the catalogue PR, and opens a second PR on
-     `vocab/issue-<n>-<slug>-impl` with the spec committed. The issue stays
-     open and now tracks that PR.
+     `vocab/issue-<n>-<slug>-impl` with the spec committed. Finally it asks
+     whether to **write the implementation plan** now — if yes, it drafts
+     `docs/vocab/<slug>-plan.md`, asking you about any decision the spec does
+     not settle, and commits it onto the same PR. The issue stays open and now
+     tracks that PR.
    If a PR cannot merge (conflict, red check), the command stops and leaves it
    for you.
-5. **Hand the spec PR to an implementation-plan writer** (`superpowers:writing-plans`).
-   The catalogue row becomes a design-doc §4 entry when the primitive ships.
+5. **Execute the plan** (`superpowers:executing-plans` or
+   `superpowers:subagent-driven-development`) — or, if you deferred it, write it
+   first with `superpowers:writing-plans` against the spec PR. The catalogue row
+   becomes a design-doc §4 entry when the primitive ships.
 
 ## Reopening
 

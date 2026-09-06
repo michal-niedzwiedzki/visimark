@@ -1,5 +1,5 @@
 ---
-description: Decide a vocabulary-request issue — on APPROVED, draft the feature spec with the maintainer, then post the decision, merge the catalogue PR, and open the implementation PR
+description: Decide a vocabulary-request issue — on APPROVED, draft the feature spec (and optionally the implementation plan) with the maintainer, then post the decision, merge the catalogue PR, and open the implementation PR
 argument-hint: <issue-number> [verdict and/or notes]
 allowed-tools: Bash(gh:*), Bash(git:*), Bash(bunx:*), Bash(mktemp:*), Bash(cat:*), Bash(mkdir:*), Read, Write, Edit, Glob, WebFetch, AskUserQuestion
 ---
@@ -189,18 +189,51 @@ git push -u origin HEAD
 
 No `closes #<n>` — #<n> stays open and now also tracks this PR.
 
-`git switch -`.
+Stay on `vocab/issue-<n>-<slug>-impl` and continue to step 8.
 
-Print: the deciding-comment URL, the merged catalogue-PR URL, the spec-PR URL,
-and: "Issue #<n> stays open. Hand the spec PR to an implementation-plan writer
-(`superpowers:writing-plans`)."
+## 8. Implementation plan — APPROVED only
 
-## 8. Reopen note
+Ask the maintainer via `AskUserQuestion` — "Write the implementation plan now?":
+**Write it** / **Not now**.
+
+- **Not now** → `git switch -`; print the deciding-comment URL, the merged
+  catalogue-PR URL and the spec-PR URL, and: "Issue #<n> stays open. The plan
+  can be written later with `superpowers:writing-plans` against the spec PR."
+  Stop.
+
+- **Write it** → draft the plan against the finalised step-3 spec, in the
+  `superpowers:writing-plans` house format — `Goal`, `Architecture`,
+  `Tech Stack`, a `Spec:` link to `docs/vocab/<slug>.md`, `Global Constraints`,
+  then checkbox `Task` sections each with `Files`, `Interfaces`, and `Step`s.
+
+  **While drafting, do not silently fill a gap the spec does not settle.** Any
+  decision you cannot infer with high confidence — module boundaries and which
+  files change, where the primitive's classification row goes in
+  `eval/functions.ts`, test-file layout and fixtures, evaluation-order and
+  error-suppression edge handling, exact error-message wording, whether an
+  example document is edited or a new one added — is put to the maintainer
+  (`AskUserQuestion` for discrete choices, prose otherwise) and folded in.
+  Iterate until nothing low-certainty remains.
+
+  Then:
+  ```bash
+  git add docs/vocab/<slug>-plan.md
+  git commit -m "$(printf 'docs: implementation plan for #%s (%s)\n\nCo-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>' <n> <Name>)"
+  git push
+  git switch -
+  ```
+  The push updates the spec PR, which now carries the spec and the plan.
+
+  Print: the deciding-comment URL, the merged catalogue-PR URL, the spec-PR URL,
+  and: "Issue #<n> stays open. Execute the plan with
+  `superpowers:executing-plans` or `superpowers:subagent-driven-development`."
+
+## 9. Reopen note
 
 If the issue already had a `Decision:` comment (this is a re-decision with new
 information), everything above still holds: reopen the issue first if it was
 closed (`gh issue reopen <n>`), post the new `Decision:` comment, and the
 catalogue PR **edits the existing row** — never add a second row. If the
 re-decision lands on `APPROVED` and `vocab/issue-<n>-<slug>-impl` already
-exists, step 7 commits the revised `docs/vocab/<slug>.md` onto it rather than
-opening a second spec PR.
+exists, steps 7–8 commit the revised `docs/vocab/<slug>.md` (and
+`-plan.md` if present) onto it rather than opening a second PR.
