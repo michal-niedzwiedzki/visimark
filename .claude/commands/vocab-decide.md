@@ -1,7 +1,7 @@
 ---
-description: Decide a vocabulary-request issue — on APPROVED, draft the feature spec (and optionally the implementation plan) with the maintainer, then post the decision, merge the catalogue PR, and open the implementation PR
+description: Decide a vocabulary-request issue — on APPROVED, draft the feature spec and implementation plan with the maintainer, post the decision, merge the catalogue PR, open the implementation PR, and on confirmation execute the plan to green
 argument-hint: <issue-number> [verdict and/or notes]
-allowed-tools: Bash(gh:*), Bash(git:*), Bash(bunx:*), Bash(mktemp:*), Bash(cat:*), Bash(mkdir:*), Read, Write, Edit, Glob, WebFetch, AskUserQuestion
+allowed-tools: Bash(gh:*), Bash(git:*), Bash(bun:*), Bash(bunx:*), Bash(mktemp:*), Bash(cat:*), Bash(mkdir:*), Read, Write, Edit, Glob, Grep, WebFetch, AskUserQuestion
 ---
 
 You are running the **decision** stage of the vocabulary-review workflow.
@@ -220,20 +220,50 @@ Ask the maintainer via `AskUserQuestion` — "Write the implementation plan now?
   git add docs/vocab/<slug>-plan.md
   git commit -m "$(printf 'docs: implementation plan for #%s (%s)\n\nCo-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>' <n> <Name>)"
   git push
+  ```
+  The push updates the spec PR, which now carries the spec and the plan. Stay on
+  `vocab/issue-<n>-<slug>-impl` and continue to step 9.
+
+## 9. Implement — APPROVED only
+
+Ask the maintainer via `AskUserQuestion` — "Start implementation now?":
+**Start** / **Not now**.
+
+- **Not now** → `git switch -`; print the deciding-comment URL, the merged
+  catalogue-PR URL and the spec-PR URL, and: "Plan ready on <spec-PR>. Execute
+  it with `superpowers:executing-plans` when ready." Stop.
+
+- **Start** → on `vocab/issue-<n>-<slug>-impl`, invoke **`superpowers:executing-plans`**
+  against `docs/vocab/<slug>-plan.md` and work it task by task under that skill's
+  discipline. After each task, and again at the end, run the project's checks —
+  `bun test` in `packages/visimark` (and any other package the plan touches),
+  plus `bunx visimark check` on every example document the plan says must stay
+  clean. **Loop test → fix → test until the whole suite is green.** Do not stop
+  on a red suite, a skipped task, or a `.skip`/`.only` left in a test; do not
+  loosen an assertion or delete a failing test to pass.
+
+  When the plan is complete and green:
+  ```bash
+  git push
   git switch -
   ```
-  The push updates the spec PR, which now carries the spec and the plan.
+  The push updates the spec PR, which now carries spec + plan + implementation.
 
-  Print: the deciding-comment URL, the merged catalogue-PR URL, the spec-PR URL,
-  and: "Issue #<n> stays open. Execute the plan with
-  `superpowers:executing-plans` or `superpowers:subagent-driven-development`."
+  Print: the deciding-comment URL, the merged catalogue-PR URL, the spec-PR URL
+  (now the implementation PR), the final `bun test` summary line, and:
+  "Implementation on <spec-PR> — review and merge to ship `<Name>`."
 
-## 9. Reopen note
+If execution cannot reach green because of a design gap the plan did not
+foresee, **stop**: push what is committed, add a comment on the spec PR naming
+the blocker, and tell the maintainer — never force a merge or weaken a test to
+get past it.
+
+## 10. Reopen note
 
 If the issue already had a `Decision:` comment (this is a re-decision with new
 information), everything above still holds: reopen the issue first if it was
 closed (`gh issue reopen <n>`), post the new `Decision:` comment, and the
 catalogue PR **edits the existing row** — never add a second row. If the
 re-decision lands on `APPROVED` and `vocab/issue-<n>-<slug>-impl` already
-exists, steps 7–8 commit the revised `docs/vocab/<slug>.md` (and
-`-plan.md` if present) onto it rather than opening a second PR.
+exists, steps 7–9 commit the revised `docs/vocab/<slug>.md` (and
+`-plan.md` / implementation if present) onto it rather than opening a second PR.
