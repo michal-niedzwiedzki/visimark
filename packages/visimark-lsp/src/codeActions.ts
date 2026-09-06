@@ -1,4 +1,4 @@
-import { CodeActionKind, type CodeAction, type Range } from "vscode-languageserver/node.js";
+import { CodeActionKind, type CodeAction, type Range } from "vscode-languageserver/node";
 import type { TextDocument } from "vscode-languageserver-textdocument";
 import { planFmt } from "visimark";
 import type { Analysis } from "./analysis.js";

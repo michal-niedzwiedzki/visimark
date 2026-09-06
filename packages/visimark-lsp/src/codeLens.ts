@@ -1,4 +1,4 @@
-import type { CodeLens } from "vscode-languageserver/node.js";
+import type { CodeLens } from "vscode-languageserver/node";
 import type { TextDocument } from "vscode-languageserver-textdocument";
 import type { Analysis } from "./analysis.js";
 
