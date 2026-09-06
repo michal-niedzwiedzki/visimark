@@ -347,7 +347,7 @@ continue to work for anyone who prefers to drive it that way.
 - Virtual document providers for `visimark-explain:` and `visimark-report:`.
 - Bundle with esbuild: `editors/vscode/dist/extension.js` and
   `.../server.js`, both including the engine. No `node_modules` in the VSIX.
-- `engines.vscode`: `^1.85.0`.
+- `engines.vscode`: `^1.91.0` (the floor `vscode-languageclient` 10 requires).
 
 No syntax highlighting, no snippets, no language contribution in v1.
 
