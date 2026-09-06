@@ -14,7 +14,7 @@ mechanics; every judgement call is yours.
 |---------|--------------|----------------|
 | `/vocab-review <n> [--draft]` | Parses the request, checks it against every constraint, runs `visimark check` / `infer` on the motivating document, drafts a recommendation | A pre-review comment on the issue and a PR adding the row as `NEW` — or, with `--draft`, nothing |
 | `/vocab-discuss <n>` | Condenses the review conversation you had with Claude in the session into a neutral summary, shows it to you, and posts it only if you approve | A `**Discussion summary**` comment on the issue — nothing else |
-| `/vocab-decide <n> [notes]` | Reconciles the pre-review with your steer, writes the decision, and lands it. **On `APPROVED` it first drafts the feature spec with you** — a gap hunt and a round of questions — and does nothing public until you call the spec ready; then it offers to draft the implementation plan, and then to execute it | A `Decision:` comment on the issue; the catalogue PR **merged** to `master` with the row at its verdict (the merge commit quotes the decision); the issue **closed** for `DEFERRED` / `REJECTED`, left open for `APPROVED`; and, for `APPROVED`, a **draft** PR on `vocab/issue-<n>-<slug>-impl` carrying `docs/vocab/<slug>.md` and, if you asked for them, `docs/vocab/<slug>-plan.md` and the implementation — promoted out of draft only once the build and CI are green |
+| `/vocab-decide <n> [notes]` | Reconciles the pre-review with your steer, writes the decision, and lands it. **On `APPROVED` it first drafts the feature spec with you** — a gap hunt and a round of questions — and does nothing public until you call the spec ready; then it offers to draft the implementation plan, and then to execute it | A `Decision:` comment on the issue; the catalogue PR **merged** to `master` with the row at its verdict (the merge commit quotes the decision); the issue **closed** for `DEFERRED` / `REJECTED`, left open for `APPROVED` (and closed automatically once the primitive ships in a release); and, for `APPROVED`, a **draft** PR on `vocab/issue-<n>-<slug>-impl` carrying `docs/vocab/<slug>-spec.md` and, if you asked for them, `docs/vocab/<slug>-plan.md` and the implementation — promoted out of draft only once the build and CI are green |
 
 `/vocab-discuss` is optional and repeatable — reach for it when the session
 argument mattered and the issue thread should carry it before the decision.
@@ -35,7 +35,7 @@ argument mattered and the issue thread should carry it before the decision.
    - On **`DEFERRED` / `REJECTED`**: posts the deciding comment in your voice,
      sets the row's `Status` to `[VERDICT](<comment link>)`, merges the
      catalogue PR (the merge commit quotes the decision), and closes the issue.
-   - On **`APPROVED`**: *first* drafts `docs/vocab/<slug>.md` in the house
+   - On **`APPROVED`**: *first* drafts `docs/vocab/<slug>-spec.md` in the house
      design-doc style from the issue, hunts for gaps (unpinned types,
      unspecified boundaries, un-coded errors, acceptance still hand-wavy), and
      puts them to you as questions. Nothing is posted or merged until you
@@ -47,15 +47,18 @@ argument mattered and the issue thread should carry it before the decision.
      not settle, and commits it onto the same PR. Last, it asks whether to
      **start implementation** — if yes, it runs `superpowers:executing-plans`
      against the plan (final task always: design doc, `CHANGELOG.md`
-     `## Unreleased`, catalogue → `SHIPPED`), loops check → fix until the local
-     build is green, pushes, waits for CI, and only on a full green build
-     **promotes the PR out of draft**. The issue stays open and tracks that PR.
+     `## Unreleased`, catalogue row moved to the Shipped register as
+     `UNRELEASED`), loops check → fix until the local build is green, pushes,
+     waits for CI, and only on a full green build **promotes the PR out of
+     draft**. The issue stays open and tracks that PR.
    The implementation PR stays a **draft** until CI is green — a blocked or
    red build leaves it draft for you to pick up.
 5. **Review and merge the implementation PR** to ship the primitive — or, if you
    deferred a step, pick it up with `superpowers:writing-plans` /
-   `superpowers:executing-plans` against the spec PR. The catalogue row becomes
-   a design-doc §4 entry when the primitive ships (the plan's final task).
+   `superpowers:executing-plans` against the spec PR. The catalogue row sits in
+   the [Shipped register](vocabulary-catalogue.md#shipped) as `UNRELEASED` from
+   the moment the implementation merges; the next `vX.Y.Z` tag promotes it to
+   `SHIPPED` and closes the issue (see [`releasing.md`](releasing.md)).
 
 ## Reopening
 

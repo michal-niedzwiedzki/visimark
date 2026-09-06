@@ -48,7 +48,7 @@ coming back with questions. Draft it now, with the maintainer.
 Guard: if `vocab/issue-<n>-<slug>-impl` already exists on the remote
 (`gh pr list --search "head:vocab/issue-<n>-<slug>-impl" --state all --json number,url,state`),
 a spec PR is already open — note it, skip to step 4, and in step 7 update that
-branch's `docs/vocab/<slug>.md` instead of creating a new PR.
+branch's `docs/vocab/<slug>-spec.md` instead of creating a new PR.
 
 Build the draft in a temp file — **do not touch the working tree yet**. Source
 material: the issue form fields (`Name`, `Kind`, `Signature and shape`,
@@ -126,7 +126,7 @@ Check PR #1: `gh pr list --search "head:vocab/issue-<n>-<slug>" --state all --js
 - **No row anywhere** (review was skipped):
   `git fetch origin && git switch -c vocab/issue-<n>-<slug> origin/master`, and add the full row.
 
-Edit the row: fill `Pros` / `Cons` from the decided reasoning; set `Status` to `[<VERDICT>](<deciding-comment-url>)`. Keep `Request` as `[#<n>](<url>)`.
+Edit the row **in its A–C section table**: fill `Pros` / `Cons` from the decided reasoning; set `Status` to `[<VERDICT>](<deciding-comment-url>)`. Keep `Request` as `[#<n>](<url>)`. For `APPROVED` the row stays in the section table here — step 8's documentation task later moves it, condensed, into the Shipped register. `DEFERRED` / `REJECTED` rows stay in the section table permanently.
 
 ```bash
 git add docs/vocabulary-catalogue.md
@@ -159,7 +159,10 @@ closed unmerged.
    print the PR URL and the error, say "resolve and merge by hand, then re-run
    `/vocab-decide <n>`", and do nothing else. Never `--admin`, never force.
 2. **Set the issue state:**
-   - `APPROVED` → leave it **open**; continue to step 7.
+   - `APPROVED` → leave it **open**; continue to step 7. It is closed
+     automatically when the primitive ships in a tagged release
+     (`.github/workflows/release.yml`; see `docs/releasing.md`) — never close it
+     by hand here.
    - `DEFERRED` / `REJECTED` → close it and **stop**:
      `gh issue close <n> --reason "not planned" --comment "$(printf 'Catalogued %s — see %s\n\nReopen only with new information.' <VERDICT> '<comment-url>')"`
      Print: the deciding-comment URL, the merged-PR URL, and "Issue closed."
@@ -174,11 +177,12 @@ git switch -c vocab/issue-<n>-<slug>-impl origin/master   # or: git switch to th
 mkdir -p docs/vocab
 ```
 
-Write the finalised step-3 spec to `docs/vocab/<slug>.md` (the header's
-`**Decision:**` now carries the real comment URL).
+Write the finalised step-3 spec to `docs/vocab/<slug>-spec.md` (the header's
+`**Decision:**` now carries the real comment URL). The `-spec` suffix mirrors
+the `-plan` suffix step 8 uses for the implementation plan.
 
 ```bash
-git add docs/vocab/<slug>.md
+git add docs/vocab/<slug>-spec.md
 git commit -m "$(printf 'docs: spec for #%s (%s)\n\nApproved on #%s. Feature spec for handoff to an implementation plan.\n\nCo-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>' <n> <Name> <n>)"
 git push -u origin HEAD
 ```
@@ -206,7 +210,7 @@ Ask the maintainer via `AskUserQuestion` — "Write the implementation plan now?
 
 - **Write it** → draft the plan against the finalised step-3 spec, in the
   `superpowers:writing-plans` house format — `Goal`, `Architecture`,
-  `Tech Stack`, a `Spec:` link to `docs/vocab/<slug>.md`, `Global Constraints`,
+  `Tech Stack`, a `Spec:` link to `docs/vocab/<slug>-spec.md`, `Global Constraints`,
   then checkbox `Task` sections each with `Files`, `Interfaces`, and `Step`s.
 
   **While drafting, do not silently fill a gap the spec does not settle.** Any
@@ -223,9 +227,16 @@ Ask the maintainer via `AskUserQuestion` — "Write the implementation plan now?
   a `CHANGELOG.md` entry under `## Unreleased` → `### Added` (and a one-line
   `editors/vscode/CHANGELOG.md` entry when the LSP/extension surface changes —
   e.g. a name that used to flag as unknown no longer does); the
-  `vocabulary-catalogue.md` row moved to `SHIPPED` linking this PR; and
+  `vocabulary-catalogue.md` row **moved out of its A–C section table into the
+  Shipped register** as `UNRELEASED` — condensed to that table's columns
+  (`Name`, `Kind`, `Request`, `Landed` = this PR, `Released` = `—`, `Decision` =
+  the deciding comment), dropping the `Pros` / `Cons` prose; and
   `docs/cli-reference.md` if it enumerates the changed surface. A merged
   implementation PR with no `## Unreleased` line is a bug in the plan.
+
+  The row stays `UNRELEASED` until a tagged release ships it — `releasing.md`
+  fills its `Released` cell and `release.yml` closes issue #<n>. Neither the
+  plan nor this command promotes it to `SHIPPED` or closes the issue.
 
   Then:
   ```bash
@@ -248,7 +259,8 @@ Ask the maintainer via `AskUserQuestion` — "Start implementation now?":
 - **Start** → on `vocab/issue-<n>-<slug>-impl`, invoke **`superpowers:executing-plans`**
   against `docs/vocab/<slug>-plan.md` and work it task by task under that skill's
   discipline, **including the final documentation task** (design doc,
-  `CHANGELOG.md` `## Unreleased`, catalogue → `SHIPPED`, cli-reference). After
+  `CHANGELOG.md` `## Unreleased`, catalogue row → Shipped register as
+  `UNRELEASED`, cli-reference). After
   each task, and again at the end, run the full local checks — `bun test`,
   `bun run typecheck` and `bun run build` from the repo root, plus
   `bun run packages/visimark/src/cli/main.ts check` on every example document
@@ -265,7 +277,9 @@ Ask the maintainer via `AskUserQuestion` — "Start implementation now?":
   - **All checks pass** → promote the PR: `gh pr ready <spec-PR>`. `git switch -`.
     Print: the deciding-comment URL, the merged catalogue-PR URL, the now-ready
     PR URL, the final `bun test` summary, the CI conclusion, and: "PR promoted
-    from draft — review and merge to ship `<Name>`."
+    from draft — review and merge to ship `<Name>`. The catalogue row is
+    `UNRELEASED`; issue #<n> closes and the row promotes to `SHIPPED` when the
+    next release tag ships it."
   - **A check fails** → treat it as part of the loop: fix, commit, push, wait
     again. The PR **stays a draft** until CI is green.
 
@@ -281,5 +295,7 @@ information), everything above still holds: reopen the issue first if it was
 closed (`gh issue reopen <n>`), post the new `Decision:` comment, and the
 catalogue PR **edits the existing row** — never add a second row. If the
 re-decision lands on `APPROVED` and `vocab/issue-<n>-<slug>-impl` already
-exists, steps 7–9 commit the revised `docs/vocab/<slug>.md` (and
+exists, steps 7–9 commit the revised `docs/vocab/<slug>-spec.md` (and
 `-plan.md` / implementation if present) onto it rather than opening a second PR.
+A row already condensed into the Shipped register stays there — the re-decision
+edits it in place, never restores a section-table row.

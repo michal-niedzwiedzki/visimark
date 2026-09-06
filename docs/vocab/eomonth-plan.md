@@ -2,13 +2,13 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Ship `EOMONTH(d, months)` — a tenth builtin, map-shaped, `(date, integer) → date` — returning the last day of the month `months` calendar months from `d`, per `docs/vocab/eomonth.md`.
+**Goal:** Ship `EOMONTH(d, months)` — a tenth builtin, map-shaped, `(date, integer) → date` — returning the last day of the month `months` calendar months from `d`, per `docs/vocab/eomonth-spec.md`.
 
 **Architecture:** The primitive is a pure calendar function (`eomonth`) in `eval/dates.ts` beside `addDays` / `daysBetween`, built on the existing `daysInMonth` / `isLeap`. It is registered in the one builtin table (`eval/functions.ts`) as `{ kind: "map", arity: 2 }`, which is all the dependency walk, the arity check and the did-you-mean suggestion need. `eval/evaluate.ts` gains an `EOMONTH` case in the map switch, an `asDate` operand helper mirroring `asNum`, and the integer check on `months`. Out-of-range results (result year outside 1–9999) raise a new `DateError` (a subclass of `EvalError`), which `eval/check.ts` surfaces as a `DATE` finding rather than the default `TYPE` by emitting `e.code` instead of a hardcoded string. No parser, model, write, LSP or infer change.
 
 **Tech Stack:** TypeScript; `decimal.js` (already the numeric core); Bun test runner; the engine package `packages/visimark`.
 
-**Spec:** `docs/vocab/eomonth.md`
+**Spec:** `docs/vocab/eomonth-spec.md`
 
 ## Global Constraints
 
