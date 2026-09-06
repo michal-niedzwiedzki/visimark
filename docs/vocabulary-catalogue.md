@@ -28,7 +28,9 @@ A request is judged against the design doc's constraints, not against Excel:
    table and its `vmark` block into the issue.
 
 The maintainer records the outcome in the tables below: the **Request** column
-links the issue, the **Status** column links the comment that decided it.
+links the issue, the **Status** column links the comment that decided it. The
+process for getting from an issue to that comment is
+[`vocabulary-review.md`](vocabulary-review.md).
 
 ## Status values
 
