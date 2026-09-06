@@ -36,6 +36,7 @@ export const FUNCTIONS: ReadonlyMap<string, FnSpec> = new Map<string, FnSpec>([
   ["ROUND", { kind: "map", arity: 2 }],
   ["ABS", { kind: "map", arity: 1 }],
   ["MOD", { kind: "map", arity: 2 }],
+  ["SQRT", { kind: "map", arity: 1 }],
   ["IF", { kind: "map", arity: 3 }],
   ["EOMONTH", { kind: "map", arity: 2 }],
 ]);
