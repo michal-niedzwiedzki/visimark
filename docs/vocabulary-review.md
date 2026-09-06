@@ -72,6 +72,6 @@ second one.
 [catalogue preface](vocabulary-catalogue.md#requesting-an-addition) and the
 constraints in [`visimark-design.md`](visimark-design.md) §2, §4, §7 and §14 —
 shape system, document-local value, no ambiguity, a real document that needs
-it — plus overlap with the nine builtins, the operator set, and every row
+it — plus overlap with the eleven builtins, the operator set, and every row
 already catalogued. The pre-review comment shows its working and is labelled
 as Claude's analysis, not a decision.

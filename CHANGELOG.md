@@ -14,6 +14,17 @@
   edit. A `months` value with a fractional part is a `TYPE` error; a result
   outside years 1–9999 is a `DATE` error. A general `date ± n months` is
   deliberately still absent — it carries a day-clamp ambiguity `EOMONTH` sidesteps.
+- **`SQRT(x)`** — the eleventh builtin, and the second primitive to come through
+  the vocabulary catalogue (issue #18). A map, `number → number`, returning the
+  non-negative square root of a non-negative number. It exists because a
+  diagonal-brace cutting schedule computes each length as
+  `SQRT(Width^2 + Height^2)` from two columns in the same table, and a
+  hand-typed length is exactly the derived value that drifts silently after an
+  edit. `(Width^2 + Height^2) ^ 0.5` already reaches the value; `SQRT` is the
+  spelling that says what the line does, and carries the same rounding —
+  `Decimal.js` `.sqrt()` is correctly-rounded decimal, so it is not in the
+  binary-float class that keeps `SIN` / `LN` deferred. A negative operand is a
+  `TYPE` error — no complex result, no silent `SQRT(ABS(x))`.
 - [`docs/vocabulary-catalogue.md`](docs/vocabulary-catalogue.md): the register
   of every proposed mapper, operator and aggregate and the decision taken on
   each, so a request is not re-argued from scratch and a "no" carries a citable
@@ -32,6 +43,12 @@
   the package page. The release workflow was also reworked so that a registry
   rejecting a publish fails the release, instead of being logged as
   already-done.
+
+### Fixed
+
+- The `N rows not verified` note after a column rule no longer counts rows that
+  raised their own error and already carry a per-row finding — only rows
+  suppressed by an upstream dependency error are summarised.
 
 ## 0.1.1 - 2026-09-05
 

@@ -45,6 +45,7 @@ test("every builtin declares a kind and an arity", () => {
     "MIN",
     "MOD",
     "ROUND",
+    "SQRT",
     "SUM",
   ]);
   for (const [name, spec] of FUNCTIONS) {
@@ -205,4 +206,53 @@ test("EOMONTH misspelled gets a did-you-mean", () => {
   expect(ts).toHaveLength(1);
   expect(ts[0]!.message).toBe("unknown function `EOMONT`");
   expect(ts[0]!.suggestion).toBe("EOMONTH");
+});
+
+// ---- SQRT -----------------------------------------------------------
+
+test("SQRT is a map of arity 1", () => {
+  expect(FUNCTIONS.get("SQRT")).toEqual({ kind: "map", arity: 1 });
+  expect(isReduce("SQRT")).toBe(false);
+  expect(callProblem("SQRT", [{ type: "num" }])).toBeNull();
+  expect(callProblem("SQRT", [])).toEqual({ kind: "arity", expected: 1, got: 0 });
+  expect(callProblem("SQRT", [{ type: "num" }, { type: "num" }])).toEqual({
+    kind: "arity",
+    expected: 1,
+    got: 2,
+  });
+});
+
+test("SQRT computes the non-negative root (anchor-verified)", () => {
+  const src = `
+Roots: **3.00**<!--vmark=r.a-->, **0.00**<!--vmark=r.b-->, **0.50**<!--vmark=r.c-->,
+**1.41**<!--vmark=r.d-->.
+
+\`\`\`vmark #r
+a = SQRT(9)
+b = SQRT(0)
+c = SQRT(0.25)
+d = SQRT(2)
+\`\`\`
+`;
+  expect(run(src).findings).toEqual([]);
+});
+
+test("SQRT of a non-number is a TYPE error", () => {
+  const fs = typeFindings(run(withScalar('SQRT("x")')).findings);
+  expect(fs).toHaveLength(1);
+  expect(fs[0]!.message).toBe("SQRT expects a number");
+});
+
+test("SQRT of a negative literal is a TYPE error", () => {
+  const fs = typeFindings(run(withScalar("SQRT(-1)")).findings);
+  expect(fs).toHaveLength(1);
+  expect(fs[0]!.message).toBe("SQRT of a negative number");
+});
+
+test("SQRT misspelled gets a did-you-mean", () => {
+  const r = run(withScalar("SQR(Price)"));
+  const ts = typeFindings(r.findings);
+  expect(ts).toHaveLength(1);
+  expect(ts[0]!.message).toBe("unknown function `SQR`");
+  expect(ts[0]!.suggestion).toBe("SQRT");
 });

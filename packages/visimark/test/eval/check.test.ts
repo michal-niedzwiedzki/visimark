@@ -221,7 +221,7 @@ far  = EOMONTH(edge, 1)
   expect(errs[0]!.name).toBe("far");
 });
 
-test("EOMONTH: an out-of-range row is a DATE finding plus a NOTE, other rows still verified", () => {
+test("EOMONTH: an out-of-range row is a DATE finding, other rows still verified", () => {
   const src = `
 | Job | Start      | End        |
 |-----|------------|------------|
@@ -233,12 +233,12 @@ End = EOMONTH(Start, 1)
 \`\`\`
 `;
   const r = run(src);
+  // the offending row carries its own DATE finding; it is not also folded into
+  // a trailing "not verified" NOTE (that NOTE is for upstream suppression only)
   const codes = r.findings.map((f) => f.code).sort();
-  expect(codes).toEqual(["DATE", "NOTE"]);
+  expect(codes).toEqual(["DATE"]);
   const date = r.findings.find((f) => f.code === "DATE")!;
   expect(date).toMatchObject({ name: "End", rowLabel: "b" });
-  const note = r.findings.find((f) => f.code === "NOTE")!;
-  expect(note).toMatchObject({ name: "End", suppressedCount: 1 });
 });
 
 test("EOMONTH: wrong arity is still a static TYPE finding", () => {
@@ -267,4 +267,51 @@ End  = EOMONTH(Start, half)
   const ts = run(src).findings.filter((f) => f.code === "TYPE");
   expect(ts).toHaveLength(1);
   expect(ts[0]!.message).toBe("EOMONTH expects a whole number of months");
+});
+
+test("SQRT: a clean brace-length column verifies", () => {
+  const src = `
+| Brace | Width | Height |  Length |
+|-------|------:|-------:|--------:|
+| B1    |  3600 |   4200 | 5531.73 |
+| B2    |  3600 |   2400 | 4326.66 |
+| B3    |  6000 |   3000 | 6708.20 |
+
+\`\`\`vmark #braces
+Length = SQRT(Width^2 + Height^2)
+\`\`\`
+`;
+  expect(run(src).findings).toEqual([]);
+});
+
+test("SQRT: one negative-operand row is a single TYPE finding, no NOTE", () => {
+  const src = `
+| Bay | Area |  Side |
+|-----|-----:|------:|
+| a   |    9 |  3.00 |
+| b   |   -4 |  0.00 |
+| c   |   25 |  5.00 |
+
+\`\`\`vmark #bays
+Side = SQRT(Area)
+\`\`\`
+`;
+  const r = run(src);
+  expect(r.findings.map((f) => f.code).sort()).toEqual(["TYPE"]);
+  expect(r.findings.find((f) => f.code === "TYPE")).toMatchObject({
+    name: "Side",
+    rowLabel: "b",
+    message: "SQRT of a negative number",
+  });
+});
+
+test("SQRT: a negative scalar operand is one TYPE finding on the binding", () => {
+  const src = `
+\`\`\`vmark #s
+x = SQRT(-1)
+\`\`\`
+`;
+  const fs = run(src).findings.filter((f) => f.code === "TYPE");
+  expect(fs).toHaveLength(1);
+  expect(fs[0]!).toMatchObject({ name: "x", message: "SQRT of a negative number" });
 });

@@ -297,6 +297,9 @@ export function check(model: DocModel): CheckResult {
     const unit = columnUnits.get(colId) ?? null;
     const suppressed = unitConflicts.has(colId);
     const out: (Value | null)[] = [];
+    // rows left unevaluable by an *upstream* dependency error, not by a row's
+    // own error (which already carries its per-row finding)
+    let suppressedUpstream = 0;
 
     for (let r = 0; r < table.rows.length; r++) {
       try {
@@ -337,6 +340,7 @@ export function check(model: DocModel): CheckResult {
       } catch (e) {
         if (e instanceof Unevaluable) {
           out.push(null);
+          suppressedUpstream++;
         } else if (e instanceof EvalError) {
           out.push(null);
           const cell = table.rows[r]?.cells[idx];
@@ -357,15 +361,14 @@ export function check(model: DocModel): CheckResult {
 
     cells.set(colId, out);
 
-    const missing = out.filter((v) => v === null).length;
-    if (missing > 0) {
+    if (suppressedUpstream > 0) {
       emit(
         {
           code: "NOTE",
           sheetId: sheet.id,
           name: binding.name,
-          suppressedCount: missing,
-          message: `${missing} row${missing === 1 ? "" : "s"} not verified (upstream DATE errors)`,
+          suppressedCount: suppressedUpstream,
+          message: `${suppressedUpstream} row${suppressedUpstream === 1 ? "" : "s"} not verified (upstream DATE errors)`,
         },
         { sheetId: sheet.id },
       );

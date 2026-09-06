@@ -127,6 +127,11 @@ function evalCall(expr: Extract<Expr, { type: "call" }>, env: EvalEnv): Value {
       return num(asNum(vals[0]!, "ABS").abs());
     case "MOD":
       return num(asNum(vals[0]!, "MOD").mod(asNum(vals[1]!, "MOD")));
+    case "SQRT": {
+      const x = asNum(vals[0]!, "SQRT");
+      if (x.isNegative() && !x.isZero()) throw new EvalError("SQRT of a negative number");
+      return num(x.sqrt());
+    }
     case "IF": {
       const c = vals[0]!;
       if (c.t !== "bool") throw new EvalError("IF() needs a boolean condition");
