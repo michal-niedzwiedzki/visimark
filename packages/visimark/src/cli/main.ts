@@ -1,5 +1,20 @@
+import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
 import { cmdCheck, cmdEval, cmdExplain, cmdFmt, cmdInfer, type Writer } from "./commands.js";
+
+// The package's own version, from the single source of truth. Deliberately not a
+// top-level `import ... with { type: "json" }`: that makes tsc treat the repo
+// root as the source root and scatter the declaration output, and it inlines a
+// stale literal into the VS Code extension bundle. Instead read it lazily, only
+// when `version` is actually the command — the extension bundles `runCli` but
+// never asks for the version, so this line never runs there (esbuild's empty
+// `import.meta` warning for the CJS bundle is expected and harmless for that
+// reason). `../../package.json` resolves from `src/cli/` in dev and from the
+// bundled `dist/cli/` once installed.
+function readVersion(): string {
+  const pkg = createRequire(import.meta.url)("../../package.json") as { version: string };
+  return pkg.version;
+}
 
 const USAGE = `visimark — spreadsheet mechanics for Markdown
 
@@ -13,6 +28,7 @@ usage:
   visimark infer FILE... [--write]     propose rules for a document with none
   visimark eval  FILE [--get NAME] [--json]
   visimark explain FILE [#sheet]       print rules and dependency order
+  visimark --version | -v | version    print the version and exit
 
 exit codes: 0 clean, 1 findings, 2 usage or read failure`;
 
@@ -37,6 +53,11 @@ export async function runCli(argv: string[], io: CliIO = {}): Promise<number> {
       return cmdEval(rest, out, err);
     case "explain":
       return cmdExplain(rest, out, err);
+    case "-v":
+    case "--version":
+    case "version":
+      out(`visimark ${readVersion()}`);
+      return 0;
     case "-h":
     case "--help":
     case "help":

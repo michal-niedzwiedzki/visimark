@@ -4,6 +4,9 @@
 
 ### Added
 
+- **`visimark --version`** (also `-v` or `version`) — prints `visimark
+  <version>`, read from the package's own `package.json`, and exits `0`. Follows
+  the `--help` / `-h` / `help` trio already there (issue #24).
 - **`EOMONTH(d, months)`** — the tenth builtin, and the first primitive to come
   through the vocabulary catalogue (issue #6). A map, `(date, whole number) →
   date`, returning the last day of the month `months` calendar months from `d`;
