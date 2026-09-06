@@ -6,7 +6,7 @@ import {
   StreamMessageReader,
   StreamMessageWriter,
   type MessageConnection,
-} from "vscode-jsonrpc/node.js";
+} from "vscode-jsonrpc/node";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const serverEntry = join(here, "..", "src", "server.ts");
