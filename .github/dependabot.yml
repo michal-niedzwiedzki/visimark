@@ -10,7 +10,12 @@ updates:
         patterns: ["*"]
 
   # The bun workspace at the repo root (packages/* and editors/*).
-  - package-ecosystem: npm
+  #
+  # `bun`, not `npm`: the npm ecosystem updates package.json but leaves
+  # bun.lock untouched (there is no package-lock.json for it to work from),
+  # so every dependency bump PR failed `bun install --frozen-lockfile` in CI.
+  # The `bun` ecosystem (Dependabot GA 2025-02) understands the text bun.lock.
+  - package-ecosystem: bun
     directory: "/"
     schedule:
       interval: weekly
