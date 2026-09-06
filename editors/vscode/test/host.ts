@@ -76,7 +76,7 @@ export function createHost(): Host {
   };
 
   const vscode: Record<string, unknown> = {
-    version: "1.85.0",
+    version: "1.91.0",
     env: { language: "en" },
     Uri: {
       parse: fakeUri,
@@ -133,6 +133,11 @@ export function createHost(): Host {
         hide(): void {},
         dispose(): void {},
       }),
+      // `vscode-languageclient` 10 logs through a `LogOutputChannel`, so the
+      // fake needs the leveled methods (`error`, `warn`, …) as well as the
+      // plain `OutputChannel` ones — a server that exits during `start()`
+      // reaches for `outputChannel.error` and an unhandled rejection there
+      // pollutes unrelated tests.
       createOutputChannel: () => ({
         name: "VisiMark",
         append(): void {},
@@ -140,7 +145,13 @@ export function createHost(): Host {
         clear(): void {},
         replace(): void {},
         show(): void {},
+        hide(): void {},
         dispose(): void {},
+        trace(): void {},
+        debug(): void {},
+        info(): void {},
+        warn(): void {},
+        error(): void {},
       }),
       showTextDocument: async (doc: FakeDocument) => {
         shown.push(doc);

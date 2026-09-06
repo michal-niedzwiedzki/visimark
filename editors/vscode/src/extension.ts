@@ -7,7 +7,7 @@ import {
   TransportKind,
   type LanguageClientOptions,
   type ServerOptions,
-} from "vscode-languageclient/node.js";
+} from "vscode-languageclient/node";
 import { StatusBar, type Status } from "./status.js";
 import { show, TextProvider } from "./virtualDocs.js";
 
