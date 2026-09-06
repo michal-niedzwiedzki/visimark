@@ -1,4 +1,4 @@
-import { DiagnosticSeverity, type Diagnostic, type Range } from "vscode-languageserver/node.js";
+import { DiagnosticSeverity, type Diagnostic, type Range } from "vscode-languageserver/node";
 import type { TextDocument } from "vscode-languageserver-textdocument";
 import { ERROR_CODES, type Finding, type Span } from "visimark";
 import type { Analysis } from "./analysis.js";

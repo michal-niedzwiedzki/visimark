@@ -1,4 +1,4 @@
-import { MarkupKind, type Hover, type Position } from "vscode-languageserver/node.js";
+import { MarkupKind, type Hover, type Position } from "vscode-languageserver/node";
 import type { TextDocument } from "vscode-languageserver-textdocument";
 import { dependencies, refText, type Binding } from "visimark";
 import type { Analysis } from "./analysis.js";
