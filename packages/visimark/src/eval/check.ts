@@ -41,7 +41,22 @@ export interface CheckResult {
   scalarUnits: Map<string, Unit | null>;
   /** column ids whose cells disagree about their decoration */
   unitConflicts: Set<string>;
+  /** one entry per `assert` statement, in document order */
+  assertions: AssertionResult[];
   exitCode: 0 | 1;
+}
+
+export interface AssertionResult {
+  sheetId: string;
+  /** the `assert …` line verbatim */
+  source: string;
+  /** `true` / `false`, or `null` when a dependency stopped it being evaluated */
+  holds: boolean | null;
+  /** each named operand in the expression → its evaluated value */
+  operands: Record<string, string>;
+  /** the expression as written with each named operand replaced by its value;
+   *  equals the bare expression when `holds` is `null` */
+  substituted: string;
 }
 
 class Unevaluable extends Error {}
@@ -59,6 +74,7 @@ export function check(model: DocModel): CheckResult {
   /** per-sheet count of assertions not evaluated because a dependency failed */
   const assertSuppressed = new Map<string, number>();
   const assertionsHandled = new Set<string>();
+  const assertionResults = new Map<string, AssertionResult>();
   const bumpSuppressed = (sheetId: string): void => {
     assertSuppressed.set(sheetId, (assertSuppressed.get(sheetId) ?? 0) + 1);
   };
@@ -256,7 +272,15 @@ export function check(model: DocModel): CheckResult {
   // cycle, or otherwise never evaluated. One NOTE per sheet, like a column rule.
   for (const id of assertionIds) {
     if (assertionsHandled.has(id)) continue;
-    bumpSuppressed(assertionById.get(id)!.sheetId);
+    const a = assertionById.get(id)!;
+    assertionResults.set(id, {
+      sheetId: a.sheetId,
+      source: a.source,
+      holds: null,
+      operands: {},
+      substituted: a.source.replace(/^assert\s+/, ""),
+    });
+    bumpSuppressed(a.sheetId);
   }
   for (const [sheetId, n] of assertSuppressed) {
     if (n > 0) {
@@ -312,6 +336,13 @@ export function check(model: DocModel): CheckResult {
   }
 
   const findings = orderFindings(entries, sheetSeen);
+  const assertions: AssertionResult[] = [];
+  for (const sheet of model.sheets.values()) {
+    for (const a of sheet.assertions) {
+      const r = assertionResults.get(a.id);
+      if (r) assertions.push(r);
+    }
+  }
   return {
     findings,
     values,
@@ -321,6 +352,7 @@ export function check(model: DocModel): CheckResult {
     columnUnits,
     scalarUnits,
     unitConflicts,
+    assertions,
     exitCode: findings.some(isProblem) ? 1 : 0,
   };
 
@@ -492,8 +524,18 @@ export function check(model: DocModel): CheckResult {
   function evalAssertion(a: Assertion, node: Binding, dep: ReturnType<typeof dependencies>): void {
     assertionsHandled.add(a.id);
     const base = { sheetId: a.sheetId, source: a.source, span: a.span } as const;
+    const record = (holds: boolean | null): void => {
+      assertionResults.set(a.id, {
+        sheetId: a.sheetId,
+        source: a.source,
+        holds,
+        operands: holds === null ? {} : operandMap(node),
+        substituted: holds === null ? payloadOf(a) : substituteOperands(node),
+      });
+    };
 
     if (dep.callErrors.length > 0) {
+      record(null);
       for (const { call, problem } of dep.callErrors) {
         emit(
           {
@@ -512,6 +554,7 @@ export function check(model: DocModel): CheckResult {
       return;
     }
     if (dep.undefRefs.length > 0) {
+      record(null);
       for (const ref of dep.undefRefs) {
         const r = resolve(model, a.sheetId, ref);
         emit(
@@ -528,6 +571,7 @@ export function check(model: DocModel): CheckResult {
       return;
     }
     if (dep.vectorRefs.length > 0) {
+      record(null);
       for (const ref of dep.vectorRefs) {
         emit(
           { ...base, code: "VECTOR", raw: refText(ref), span: { start: ref.start, end: ref.end } },
@@ -537,6 +581,7 @@ export function check(model: DocModel): CheckResult {
       return;
     }
     if ([...dep.deps].some((d) => unevaluable.has(d))) {
+      record(null);
       bumpSuppressed(a.sheetId);
       return;
     }
@@ -544,6 +589,7 @@ export function check(model: DocModel): CheckResult {
     try {
       const v = evalExpr(node.expr, scalarEnv(node));
       if (v.t !== "bool") {
+        record(null);
         emit(
           {
             ...base,
@@ -554,6 +600,7 @@ export function check(model: DocModel): CheckResult {
         );
         return;
       }
+      record(v.b);
       if (v.b === false) {
         emit(
           { ...base, code: "ASSERT", message: substituteOperands(node) },
@@ -562,11 +609,27 @@ export function check(model: DocModel): CheckResult {
       }
     } catch (e) {
       if (e instanceof Unevaluable) {
+        record(null);
         bumpSuppressed(a.sheetId);
       } else if (e instanceof EvalError) {
+        record(null);
         emit({ ...base, code: e.code, message: e.message }, { sheetId: a.sheetId });
       } else throw e;
     }
+  }
+
+  function operandMap(node: Binding): Record<string, string> {
+    const out: Record<string, string> = {};
+    const walk = (n: Expr): void => {
+      if (n.type === "ref") out[refText(n)] = operandText(node, n);
+      else if (n.type === "unary") walk(n.operand);
+      else if (n.type === "binary") {
+        walk(n.left);
+        walk(n.right);
+      } else if (n.type === "call") n.args.forEach(walk);
+    };
+    walk(node.expr);
+    return out;
   }
 
   /** the assertion source with the leading `assert` keyword stripped */

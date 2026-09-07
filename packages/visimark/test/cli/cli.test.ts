@@ -146,3 +146,54 @@ test("a document whose only finding is advice prints 0 problems and exits 0", as
   expect(c.out()).toContain("WARN");
   expect(c.out()).toContain("0 problems");
 });
+
+// ---- assert statements ----------------------------------------------
+
+import { assertFailPath } from "../examples.js";
+
+test("check on a false assertion: transcript-exact, exit 1", async () => {
+  const c = capture();
+  const code = await runCli(["check", assertFailPath], c.io);
+  expect(code).toBe(1);
+  const [pathLine, ...body] = c.out().split("\n");
+  expect(pathLine).toBe(assertFailPath);
+  expect(body.join("\n")).toBe(
+    [
+      "",
+      "  ASSERT  #plan           total == 1",
+      "          0.90 == 1   is false",
+      "",
+      "  1 problem (0 stale, 1 error)",
+    ].join("\n"),
+  );
+});
+
+test("eval exits 1 on a false assertion, value first then the failure on stderr", async () => {
+  const c = capture();
+  const code = await runCli(["eval", assertFailPath, "--get", "plan.total"], c.io);
+  expect(code).toBe(1);
+  expect(c.out()).toBe("0.9");
+  expect(c.err()).toContain("ASSERT  #plan");
+  expect(c.err()).toContain("0.90 == 1   is false");
+});
+
+test("eval --json carries an assertions array", async () => {
+  const c = capture();
+  await runCli(["eval", assertFailPath, "--json"], c.io);
+  const j = JSON.parse(c.out());
+  expect(j.assertions).toEqual([
+    {
+      sheetId: "plan",
+      source: "assert total == 1",
+      holds: false,
+      operands: { total: "0.90" },
+      substituted: "0.90 == 1",
+    },
+  ]);
+});
+
+test("explain lists a sheet's assertions", async () => {
+  const c = capture();
+  await runCli(["explain", assertFailPath], c.io);
+  expect(c.out()).toContain("  assertions:\n    total == 1");
+});

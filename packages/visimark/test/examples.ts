@@ -19,6 +19,9 @@ export const clean = readFileSync(cleanPath, "utf8");
 export const drift = readFileSync(driftPath, "utf8");
 export const quote = readFileSync(quotePath, "utf8");
 
+/** a minimal fixture whose one assertion is false — the ASSERT acceptance */
+export const assertFailPath = join(here, "fixtures", "assert-fail.md");
+
 /** the body of the nth ```console block in a worked example, `$` lines dropped */
 export function transcript(source: string, nth = 0): string {
   const lines = source.split("\n");
