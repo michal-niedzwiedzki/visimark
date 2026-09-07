@@ -111,11 +111,14 @@ jobs:
       - name: global install under Bun only
         run: |
           set -e
+          # GitHub injects its own Node into container jobs to run JS actions.
+          # Reset PATH to a clean set (plus Bun's global bin) so the launcher
+          # actually exercises the Bun path, not that injected Node.
+          export PATH="$(bun pm bin -g):/usr/local/bin:/usr/bin:/bin"
           if command -v node >/dev/null 2>&1; then
-            echo "::error::node is on PATH in the bun container; smoke-bun must be Bun-only"; exit 1
+            echo "::error::node still on PATH; smoke-bun must be Bun-only"; exit 1
           fi
           bun add -g ./visimark-*.tgz
-          export PATH="$(bun pm bin -g):$PATH"
           visimark --version | grep -qE '^visimark [0-9]'
           printf '# smoke\n' > smoke.md
           visimark check smoke.md

@@ -167,13 +167,17 @@ Then two jobs, each `needs: pack`, each downloading the tarball:
   - `visimark check docs/example-invoice.md` → exit 0 (repo is checked out for the fixture)
 
 - **`smoke-bun`** — runs in `container: oven/bun:latest` (that image ships Bun
-  and **no Node**), **no setup-node**:
-  - `bun add -g ./visimark-*.tgz`; put `~/.bun/bin` on `PATH`
+  and no Node), **no setup-node**:
+  - GitHub injects its own Node into container jobs to run JS actions, so the
+    step first resets `PATH` to `"$(bun pm bin -g):/usr/local/bin:/usr/bin:/bin"`
+    and asserts `command -v node` finds nothing — otherwise the Node-first
+    launcher would run under the injected Node and never exercise Bun.
+  - `bun add -g ./visimark-*.tgz`
   - `visimark --version` → prints `visimark <version>`, exit 0
-  - `visimark check <fixture>` → exit 0, where `<fixture>` is a two-line `vmark`
-    document the job writes itself (a full `actions/checkout` is avoided because
-    the `oven/bun` image may lack `git`; `--version` alone would not exercise the
-    payload's `dist/` import path, so a minimal check is kept)
+  - `visimark check <fixture>` → exit 0, where `<fixture>` is a one-line Markdown
+    file the job writes itself (no `actions/checkout` — the `oven/bun` image may
+    lack `git`; `--version` alone would not exercise the payload's `dist/`
+    import path, so a minimal check is kept)
 
 `smoke-bun` on `master` before this change fails with `env: 'node': No such file
 or directory` — it is the regression test for #29.
@@ -273,3 +277,5 @@ install.
 ## 9. Open questions
 
 None.
+
+<!--vmark:no-formulas-->

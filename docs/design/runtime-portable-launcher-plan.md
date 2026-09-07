@@ -296,21 +296,24 @@ Append to `.github/workflows/ci.yml` under `jobs:` (sibling of `build`):
       - name: global install under Bun only
         run: |
           set -e
+          # GitHub injects its own Node into container jobs to run JS actions.
+          # Reset PATH to a clean set (plus Bun's global bin) so the launcher
+          # actually exercises the Bun path, not that injected Node.
+          export PATH="$(bun pm bin -g):/usr/local/bin:/usr/bin:/bin"
           if command -v node >/dev/null 2>&1; then
-            echo "::error::node is on PATH in the bun container; smoke-bun must be Bun-only"; exit 1
+            echo "::error::node still on PATH; smoke-bun must be Bun-only"; exit 1
           fi
           bun add -g ./visimark-*.tgz
-          export PATH="$(bun pm bin -g):$PATH"
           visimark --version | grep -qE '^visimark [0-9]'
           printf '# smoke\n' > smoke.md
           visimark check smoke.md
 ```
 
-Note: GitHub injects its own Node for JS actions in a container at `/__e/...`,
-which is not on `PATH`, so `command -v node` inside the step correctly reports
-none. If `download-artifact` misbehaves in the container during execution, that
-is a fix-and-repush inside the plan's green loop — do not weaken the Bun-only
-guarantee to work around it.
+Note: GitHub puts its own Node on `PATH` inside container jobs (to run JS
+actions like `download-artifact`), so the step resets `PATH` before the
+Bun-only assertion. If `download-artifact` itself misbehaves in the container,
+that is a fix-and-repush inside the plan's green loop — do not weaken the
+Bun-only guarantee to work around it.
 
 - [ ] **Step 5: Validate the YAML locally**
 
@@ -626,3 +629,5 @@ git commit -m "$(printf 'docs: changelog + move the launcher row to the Shipped 
 used identically in Tasks 1 and 2. `engines.bun` value `">=1.0.0"` matches the
 Global Constraints. The deciding-comment URL and PR number (#34) are identical
 in Task 5 and the spec header.
+
+<!--vmark:no-formulas-->
