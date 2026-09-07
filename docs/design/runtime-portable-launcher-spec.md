@@ -214,11 +214,14 @@ install.
   `bun add -g visimark` **or** `npm i -g visimark`, `npx visimark` runs it
   without installing, and the command runs under whichever of Bun/Node is on
   PATH. State the Windows caveat (below).
-- **`README.md` extension block (currently `bun run vscode-install` /
-  `bun run vscode-uninstall`)** — reframed as an explicit *from-a-clone
-  contributor* step, sitting with the other `bun` commands, and pointing plain
-  users at the Marketplace / `code --install-extension` instead. The `bun run`
-  commands themselves are unchanged (the underlying scripts are Bun-only).
+- **`README.md` extension block (currently under "To try the extension in your
+  own VS Code:", `bun run vscode-install` / `bun run vscode-uninstall`)** —
+  retitled so it reads as the *from-a-clone, Bun* step it is, sitting with the
+  other `bun` commands rather than as a generic-user instruction. The `bun run`
+  commands are unchanged (the underlying scripts are Bun-only). No Marketplace
+  pointer is added — as of this change the extension is not published to the
+  Marketplace or Open VSX (both 404; see `releasing.md` "Verify every leg"), so
+  building from a clone is still the only way to get it.
 - **`README.md` "In CI" section** — unchanged (`npx visimark check …` is
   correct); no Bun form added.
 - **`docs/cli-reference.md`** — line 6 gains the `bun add -g` alternative and the
