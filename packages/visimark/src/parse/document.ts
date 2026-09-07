@@ -8,6 +8,7 @@ export type { RawBinding };
 interface MdNode {
   type: string;
   value?: string;
+  url?: string;
   lang?: string | null;
   meta?: string | null;
   children?: MdNode[];
@@ -44,15 +45,21 @@ export interface RawTable {
   span: Span;
 }
 
-export type AnchorTargetKind = "strong" | "emphasis" | "inlineCode" | "text";
+/** `image` is the odd one out: it is never rewritten. A chart anchor names
+ *  the artifact's location rather than a value to splice. */
+export type AnchorTargetKind = "strong" | "emphasis" | "inlineCode" | "text" | "image";
 
 export interface RawAnchor {
   sheetId: string;
   name: string;
   /** span of the `<!--vmark=...-->` comment itself */
   commentSpan: Span;
-  /** the rewritable value span in the preceding inline node, or null if there is none */
+  /** the rewritable value span in the preceding inline node, or null if there is none.
+   *  A `kind: "image"` span is **not** rewritable — see `imageUrl`. */
   value: (Span & { kind: AnchorTargetKind }) | null;
+  /** the image's URL when the anchor follows an image node — the artifact path a
+   *  chart declaration writes to. Absent for every other anchor kind. */
+  imageUrl?: string;
 }
 
 /**
@@ -274,12 +281,18 @@ function collectAnchors(root: MdNode, source: string, out: RawAnchor[]): void {
         name: m[2]!,
         commentSpan,
         value: prev ? anchorValueSpan(prev) : null,
+        ...(prev?.type === "image" && prev.url !== undefined ? { imageUrl: prev.url } : {}),
       });
     }
   });
 }
 
 function anchorValueSpan(prev: MdNode): (Span & { kind: AnchorTargetKind }) | null {
+  if (prev.type === "image") {
+    // an artifact reference, not a value: the span exists so the anchor is not
+    // reported as targetless, but nothing ever splices it
+    return { start: off(prev, "start"), end: off(prev, "end"), kind: "image" };
+  }
   if (prev.type === "strong" || prev.type === "emphasis" || prev.type === "inlineCode") {
     return innerValueSpan(prev);
   }

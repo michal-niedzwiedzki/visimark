@@ -158,7 +158,7 @@ function renderGroup(f: Finding): string[] {
         prefix("ANCHOR") +
           id(f).padEnd(ID_FIELD) +
           "  " +
-          "no value to rewrite in front of this anchor",
+          (f.message ?? "no value to rewrite in front of this anchor"),
       ];
     case "TYPE": {
       const label = isAssertionScoped(f) ? sheetId(f) : id(f);

@@ -65,7 +65,7 @@ const PERCENT_RE = /^(\d+(?:\.\d+)?)%$/;
 const DATEISH_RE = /^\d{1,4}[./-]\d{1,4}[./-]\d{1,4}$/;
 
 export function check(model: DocModel): CheckResult {
-  const { order, cycles, assertionIds } = topoOrder(model);
+  const { order, cycles, assertionIds, chartIds } = topoOrder(model);
 
   const assertionById = new Map<string, Assertion>();
   for (const sheet of model.sheets.values()) {
@@ -162,6 +162,9 @@ export function check(model: DocModel): CheckResult {
     }
   }
 
+  /** charts whose operands resolved — the artifact pass picks these up */
+  const buildableCharts = new Set<string>();
+
   const sheetSeen: string[] = [];
 
   for (const binding of order) {
@@ -239,6 +242,14 @@ export function check(model: DocModel): CheckResult {
       continue;
     }
 
+    // A chart's operands have now been checked for resolution and shape. Its
+    // synthetic expression is never evaluated — the artifact is built on its
+    // own branch, after this loop.
+    if (chartIds.has(binding.id)) {
+      buildableCharts.add(binding.id);
+      continue;
+    }
+
     // a rule whose operands are in conflict is unverifiable too
     if (
       [...dep.deps].some((d) => unitConflicts.has(d)) ||
@@ -297,18 +308,35 @@ export function check(model: DocModel): CheckResult {
   }
 
   // anchors: collapse staleness, flag rewrite-less anchors
+  const chartIdSet = new Set<string>();
+  for (const sheet of model.sheets.values()) {
+    for (const c of sheet.charts) chartIdSet.add(`${c.sheetId}.${c.name}`);
+  }
   let staleAnchorCount = 0;
   for (const a of model.anchors) {
     const id = `${a.sheetId}.${a.name}`;
     if (staleScalars.has(id)) staleAnchorCount++;
-    if (a.value === null) {
+    const anchorFinding = (message?: string) =>
       emit({
         code: "ANCHOR",
         sheetId: a.sheetId,
         name: a.name,
         sourceOffset: a.commentSpan.start,
         span: a.commentSpan,
+        ...(message ? { message } : {}),
       });
+    if (a.value === null) {
+      anchorFinding();
+      continue;
+    }
+    const isChart = chartIdSet.has(id);
+    if (a.value.kind === "image" && !isChart) {
+      // an image holds no value to rewrite; only a chart may be anchored to one
+      anchorFinding("an image anchor must name a chart");
+      continue;
+    }
+    if (a.value.kind !== "image" && isChart) {
+      anchorFinding("a chart must be anchored to an image");
     }
   }
   if (staleAnchorCount > 0) {

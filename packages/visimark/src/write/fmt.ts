@@ -72,6 +72,8 @@ export function planFmt(model: DocModel, result: CheckResult, opts: FmtOptions):
   // 2. anchored scalar values
   for (const a of model.anchors) {
     if (!a.value) continue;
+    // an image anchor points at a generated artifact; it is never spliced
+    if (a.value.kind === "image") continue;
     const id = `${a.sheetId}.${a.name}`;
     const v = result.values.get(id);
     if (!v) continue;

@@ -323,9 +323,21 @@ function parseChart(toks: Token[], kw: Token): ChartDecl {
   const engine = ident("a chart type").value;
   word("of");
 
+  // a qualified `sheet.Col` parses here and is refused later as a VECTOR
+  // finding, the same way any foreign column is — a parse error would hide
+  // the real rule behind a syntax complaint
+  const colRef = (what: string): string => {
+    const head = ident(what).value;
+    if (at().kind === "dot") {
+      i++;
+      return `${head}.${ident(what).value}`;
+    }
+    return head;
+  };
+
   const series: string[] = [];
   for (;;) {
-    series.push(ident("a column name").value);
+    series.push(colRef("a column name"));
     if (at().kind === "comma") {
       i++;
       continue;
@@ -334,7 +346,7 @@ function parseChart(toks: Token[], kw: Token): ChartDecl {
   }
 
   word("labelled");
-  const labels = ident("a label column").value;
+  const labels = colRef("a label column");
 
   let aspect: { w: number; h: number } | null = null;
   if (at().kind === "ident" && at().value === "aspect") {
