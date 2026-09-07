@@ -17,7 +17,7 @@ and left an untraceable tarball on the registry for good.
 | `visimark-vscode` on the VS Code Marketplace | `editors/vscode/package.json` | `vsce show` — skip if the version is listed |
 | `visimark-vscode` on Open VSX | `editors/vscode/package.json` | Open VSX API — skip if the version is there; create the namespace only if it is genuinely missing |
 | GitHub Release, with the `.vsix` attached | the tag | tag pushes only, not `workflow_dispatch` |
-| Each vocabulary-request issue whose primitive ships in this release, closed | the `vocab/issue-<n>-<slug>-impl` merge commit is an ancestor of the tag | the issue is still open — a re-run skips what is already closed |
+| Each request issue whose change ships in this release, closed | the `vocab/issue-<n>-<slug>-impl` or `issue/<n>-<slug>-impl` merge commit is an ancestor of the tag | the issue is still open — a re-run skips what is already closed |
 
 `packages/visimark-lsp` is bundled into the extension and is not published on
 its own, but its version moves in lockstep. The root `visimark-monorepo`
@@ -50,11 +50,13 @@ never logged as "already done". A green `release` run still is not proof: see
    They must match each other and the tag exactly. Edit all three and confirm
    they agree — `grep -r '"version"' packages/*/package.json editors/*/package.json`.
 4. **Write the changelog** — see [Preparing the changelog](#preparing-the-changelog).
-5. **Promote the shipped vocabulary.** In
+5. **Promote the shipped rows.** In
    [`docs/vocabulary-catalogue.md`](vocabulary-catalogue.md)'s
    [Shipped register](vocabulary-catalogue.md#shipped), every row with an
-   empty **Released** cell is a primitive about to ship. For each: confirm it is
-   in `visimark-design.md` [§4](visimark-design.md#4-syntax), then set its
+   empty **Released** cell is about to ship. For each: confirm the behaviour is
+   specified where it belongs — a vocabulary primitive in `visimark-design.md`
+   [§4](visimark-design.md#4-syntax), a language feature in the section it
+   changed, a tooling / process change in its own doc — then set its
    **Released** cell to
    `[vX.Y.Z](https://github.com/michal-niedzwiedzki/visimark/releases/tag/vX.Y.Z)`.
    A filled **Released** cell is what makes the row `SHIPPED` rather than
