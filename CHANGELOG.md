@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Fixed
+
+- **`bun add -g visimark` on a machine without Node.js** produced a `visimark`
+  command that could not start (`env: 'node': No such file or directory`) — the
+  `#!/usr/bin/env node` shebang was honoured against the bare symlink Bun's
+  global install creates. The `visimark` bin is now a POSIX `sh` launcher that
+  runs the CLI under whichever of Node or Bun is on PATH (issue #29).
+
+### Changed
+
+- **The `visimark` command runs under Node or Bun.** `bun add -g visimark` and
+  `npm i -g visimark` both produce a working command; `package.json` gains an
+  advisory `engines.bun`. On Windows the `npx` / `npm i -g` shims need `sh` on
+  PATH (Git Bash or WSL).
+
 ### Added
 
 - **`assert` statements** — a `vmark` block may carry `assert <boolean expr>`
