@@ -23,7 +23,7 @@
     "directory": "packages/visimark"
   },
   "bin": {
-    "visimark": "bin/visimark.js"
+    "visimark": "bin/visimark"
   },
   "files": [
     "dist",
@@ -59,6 +59,7 @@
     "typescript": "^7.0.2"
   },
   "engines": {
+    "bun": ">=1.0.0",
     "node": ">=18"
   }
 }

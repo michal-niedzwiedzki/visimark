@@ -1,0 +1,25 @@
+#!/bin/sh
+# visimark launcher. The published package links this file as the `visimark`
+# command. It runs the real CLI (bin/visimark.js) under whichever JS runtime is
+# on PATH — Node preferred, Bun as fallback — so that `npm i -g visimark` and
+# `bun add -g visimark` both produce a working command.
+# See docs/design/runtime-portable-launcher-spec.md.
+
+# npm links node_modules/.bin/visimark and bun links ~/.bun/bin/visimark
+# straight at this file, so $0 is a symlink chain — walk it to the real path.
+target=$0
+while [ -L "$target" ]; do
+  link=$(readlink "$target")
+  case $link in
+    /*) target=$link ;;
+    *) target=$(dirname "$target")/$link ;;
+  esac
+done
+dir=$(CDPATH= cd -- "$(dirname -- "$target")" && pwd)
+
+runtime=$(command -v node || command -v bun) || {
+  echo "visimark: needs Node.js or Bun on PATH" >&2
+  exit 127
+}
+
+exec "$runtime" "$dir/visimark.js" "$@"
