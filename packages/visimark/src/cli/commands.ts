@@ -179,6 +179,18 @@ export function cmdEval(args: string[], out: Writer, err: Writer): number {
     all.set(k, col.map((v) => (v ? showValue(v) : "?")).join(", "));
   }
 
+  // A false assertion means the document's stated invariants do not hold; `eval`
+  // will not hand back values as if it were sound. It prints the failure to
+  // stderr and exits 1 — after the requested value, so a pipeline still gets it.
+  const failed = result.assertions.filter((a) => a.holds === false);
+  const assertExit = failed.length > 0 ? 1 : 0;
+  const reportFailures = (): void => {
+    for (const a of failed) {
+      err(`  ASSERT  #${a.sheetId}   ${a.source.replace(/^assert\s+/, "")}`);
+      err(`          ${a.substituted}   is false`);
+    }
+  };
+
   const get = options.get("get");
   if (get !== undefined) {
     const v = all.get(get) ?? all.get(bareToQualified(model, get));
@@ -187,16 +199,18 @@ export function cmdEval(args: string[], out: Writer, err: Writer): number {
       return 2;
     }
     out(flags.has("json") ? JSON.stringify({ [get]: v }) : v);
-    return 0;
+    reportFailures();
+    return assertExit;
   }
 
   if (flags.has("json")) {
-    out(JSON.stringify(Object.fromEntries(all), null, 2));
+    out(JSON.stringify({ ...Object.fromEntries(all), assertions: result.assertions }, null, 2));
   } else {
     const width = Math.max(...[...all.keys()].map((k) => k.length), 0);
     for (const [k, v] of all) out(`${k.padEnd(width)}  ${v}`);
   }
-  return 0;
+  reportFailures();
+  return assertExit;
 }
 
 function bareToQualified(model: DocModel, name: string): string {
@@ -223,7 +237,7 @@ export function cmdExplain(args: string[], out: Writer, err: Writer): number {
     return 2;
   }
   const model = build(locate(source));
-  const { order } = topoOrder(model);
+  const { order, assertionIds } = topoOrder(model);
 
   if (model.docScope.size > 0) {
     out("document scope");
@@ -252,8 +266,14 @@ export function cmdExplain(args: string[], out: Writer, err: Writer): number {
       out("  scalars:");
       for (const b of sheet.scalars.values()) out(`    ${b.name} = ${slice(model, b)}`);
     }
-    const localOrder = order.filter((b) => b.sheetId === sid).map((b) => b.name);
+    const localOrder = order
+      .filter((b) => b.sheetId === sid && !assertionIds.has(b.id))
+      .map((b) => b.name);
     if (localOrder.length > 0) out(`  order:   ${localOrder.join(" → ")}`);
+    if (sheet.assertions.length > 0) {
+      out("  assertions:");
+      for (const a of sheet.assertions) out(`    ${a.source.replace(/^assert\s+/, "")}`);
+    }
     out("");
   }
   return 0;

@@ -315,3 +315,84 @@ x = SQRT(-1)
   expect(fs).toHaveLength(1);
   expect(fs[0]!).toMatchObject({ name: "x", message: "SQRT of a negative number" });
 });
+
+// ---- assert statements -----------------------------------------------
+
+const planDoc = (assertLine: string, shares = ["30%", "40%", "20%"]) =>
+  [
+    "| M | Share |",
+    "|---|------:|",
+    ...shares.map((s, i) => `| ${String.fromCharCode(97 + i)} | ${s.padStart(5)} |`),
+    "",
+    "```vmark #plan",
+    "total = SUM(Share)",
+    assertLine,
+    "```",
+    "",
+  ].join("\n");
+
+test("assert: a true assertion is silent", () => {
+  const r = run(planDoc("assert total == 0.9"));
+  expect(r.findings).toEqual([]);
+  expect(r.exitCode).toBe(0);
+});
+
+test("assert: a false assertion is an ASSERT problem, exit 1", () => {
+  const r = run(planDoc("assert total == 1"));
+  const a = r.findings.filter((f) => f.code === "ASSERT");
+  expect(a.length).toBe(1);
+  expect(a[0]!.sheetId).toBe("plan");
+  expect(a[0]!.source).toBe("assert total == 1");
+  expect(a[0]!.message).toBe("0.90 == 1");
+  expect(r.exitCode).toBe(1);
+});
+
+test("assert: a non-boolean expression is a TYPE finding", () => {
+  const r = run(planDoc("assert total + 1"));
+  const t = r.findings.filter((f) => f.code === "TYPE");
+  expect(t.length).toBe(1);
+  expect(t[0]!.message).toBe("assert needs a boolean; `total + 1` is a number");
+});
+
+test("assert: a bare column reference is a VECTOR finding", () => {
+  const r = run(planDoc("assert Share > 0"));
+  const v = r.findings.filter((f) => f.code === "VECTOR");
+  expect(v.length).toBe(1);
+  expect(v[0]!.raw).toBe("Share");
+});
+
+test("assert: suppressed to a single NOTE when a dependency is unevaluable", () => {
+  const src = [
+    "| M | Share |",
+    "|---|------:|",
+    "| a |   50% |",
+    "",
+    "```vmark #plan",
+    "total = nope + 1",
+    "assert total == 5",
+    "assert total > 0",
+    "```",
+    "",
+  ].join("\n");
+  const r = run(src);
+  expect(r.findings.some((f) => f.code === "ASSERT")).toBe(false);
+  const note = r.findings.filter((f) => f.code === "NOTE");
+  expect(note.length).toBe(1);
+  expect(note[0]!.message).toBe("2 assertions not verified (upstream errors)");
+});
+
+test("assert: a sheet with only an assert + a table does not trip COVERAGE", () => {
+  const src = [
+    "| M | Share |",
+    "|---|------:|",
+    "| a |  100% |",
+    "",
+    "```vmark #plan",
+    "assert SUM(Share) == 1",
+    "```",
+    "",
+  ].join("\n");
+  const r = run(src);
+  expect(r.findings.some((f) => f.code === "COVERAGE")).toBe(false);
+  expect(r.findings).toEqual([]);
+});

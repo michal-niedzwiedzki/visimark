@@ -94,3 +94,17 @@ test("unrecognised character throws with offset", () => {
     expect((e as LangError).start).toBe(2);
   }
 });
+
+test("`assert` lexes as its own keyword token", () => {
+  expect(pairs("assert x == 1")).toEqual([
+    ["assert", "assert"],
+    ["ident", "x"],
+    ["op", "=="],
+    ["number", "1"],
+    ["eof", ""],
+  ]);
+});
+
+test("`assertion` is an ordinary identifier, not the keyword", () => {
+  expect(kinds("assertion + 1")).toEqual(["ident", "op", "number", "eof"]);
+});

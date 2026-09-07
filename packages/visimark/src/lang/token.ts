@@ -4,6 +4,7 @@ export type TokenKind =
   | "date"
   | "string"
   | "ident"
+  | "assert"
   | "op"
   | "dot"
   | "lparen"

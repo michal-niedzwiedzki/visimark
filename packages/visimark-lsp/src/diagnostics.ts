@@ -14,6 +14,7 @@ const SEVERITY: Record<string, DiagnosticSeverity> = {
   TYPE: DiagnosticSeverity.Error,
   SHEET: DiagnosticSeverity.Error,
   ANCHOR: DiagnosticSeverity.Warning,
+  ASSERT: DiagnosticSeverity.Error,
   WARN: DiagnosticSeverity.Hint,
 };
 
@@ -57,6 +58,8 @@ export function messageOf(f: Finding): string {
       return f.suggestion
         ? `${f.message ?? "type error"} — did you mean \`${f.suggestion}\`?`
         : (f.message ?? "type error");
+    case "ASSERT":
+      return `assertion is false: ${f.message}`;
     default:
       return f.message ?? f.code;
   }

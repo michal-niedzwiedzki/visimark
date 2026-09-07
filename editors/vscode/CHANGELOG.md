@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `assert` statements are now supported: a false `assert` shows as an `ASSERT`
+  diagnostic on that line, like any other `visimark check` finding.
 - The engine now recognises `EOMONTH(d, months)` (end-of-month date
   arithmetic), so a formula that uses it no longer shows an "unknown function"
   diagnostic.

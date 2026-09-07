@@ -41,3 +41,10 @@ export interface Call extends Pos {
 export type Expr = NumberLit | DateLit | StrLit | Ref | Unary | Binary | Call;
 
 export const COMPARISON_OPS = new Set(["==", "!=", "<", "<=", ">", ">="]);
+
+/** An `assert <expression>` statement. Binds nothing; carries an invariant that
+ *  `check` evaluates. See the design doc, section 17. */
+export interface Assertion extends Pos {
+  type: "assert";
+  expr: Expr;
+}

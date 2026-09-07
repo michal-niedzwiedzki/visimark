@@ -198,7 +198,9 @@ touches expressions, and diffability ([§9](visimark-design.md#9-write-back)). A
 
 | Feature | What it changes | Pros | Cons | Request | Status |
 |---------|-----------------|------|------|---------|--------|
-| `assert` statements | A `#id` sheet block may carry `assert <boolean expr>` lines; `check` evaluates each and reports `ASSERT` (exit 1, not auto-fixable, suppressed to `NOTE` under an upstream error) when one is false. Stores nothing; `fmt` never touches it. | Generalises `STALE` from "value == its formula" to "any stated invariant holds"; turns the `#recon` eyeball-the-variance idiom into an enforced check; cheap — booleans, the dependency graph and suppression already exist. | The language's first non-binding statement (grammar + a new node kind + a new [§10](visimark-design.md#10-error-taxonomy) finding). Scalar-only; no rounding tolerance (explicit `ROUND`); per-row, document-scope and prose-anchored assertions deferred. | [#27](https://github.com/michal-niedzwiedzki/visimark/issues/27) | [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/27#issuecomment-5570701059) |
+| _(none open)_ | | | | | |
+
+`assert` statements shipped — see the [Shipped register](#shipped).
 
 ## F. Tooling and process
 
@@ -208,7 +210,7 @@ decision worth a citable reason.
 
 | Change | What it changes | Pros | Cons | Request | Status |
 |--------|-----------------|------|------|---------|--------|
-| _(none yet)_ | | | | | |
+| Runtime-portable CLI launcher | The `visimark` bin becomes a `#!/bin/sh` trampoline that runs the CLI under Node or Bun (Node preferred); `package.json` gains `engines.bun`; CI runs the acceptance checks under Node and smoke-tests a global install both Node-only and Bun-only. `bun add -g visimark` and `npm i -g visimark` both produce a working command. | Fixes `bun add -g` on a machine with no Node ([#29](https://github.com/michal-niedzwiedzki/visimark/issues/29)); brings the published executable in line with the repo's Bun-first tooling; the installed CLI stops depending on which runtime the user happens to have; a regression is caught in CI. | A second file in `bin/`; npm's *global* Windows shim for a bin whose shebang is `#!/bin/sh` needs `sh` on PATH (Git Bash / WSL); `engines.bun` is advisory — no installer enforces it. | [#29](https://github.com/michal-niedzwiedzki/visimark/issues/29) | [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/29#issuecomment-5572442105) |
 
 ---
 
@@ -229,5 +231,6 @@ the same time.
 |------|------|---------|--------|----------|----------|
 | `EOMONTH(d, months)` | mapper | [#6](https://github.com/michal-niedzwiedzki/visimark/issues/6) | [#8](https://github.com/michal-niedzwiedzki/visimark/pull/8) | — | [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/6#issuecomment-5559247913) |
 | `SQRT(x)` | mapper | [#18](https://github.com/michal-niedzwiedzki/visimark/issues/18) | [#20](https://github.com/michal-niedzwiedzki/visimark/pull/20) | — | [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/18#issuecomment-5560992652) |
+| `assert` statements | language feature | [#27](https://github.com/michal-niedzwiedzki/visimark/issues/27) | [#32](https://github.com/michal-niedzwiedzki/visimark/pull/32) | — | [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/27#issuecomment-5570701059) |
 
 <!--vmark:no-formulas-->

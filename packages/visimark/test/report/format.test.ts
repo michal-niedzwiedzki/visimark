@@ -4,6 +4,7 @@ import { locate } from "../../src/parse/document.js";
 import { build } from "../../src/model/build.js";
 import { check } from "../../src/eval/check.js";
 import { formatCheck } from "../../src/report/format.js";
+import type { Finding } from "../../src/model/types.js";
 import { levenshtein } from "../../src/report/levenshtein.js";
 
 /** the normative transcript, read straight out of the example doc */
@@ -51,4 +52,17 @@ test("padding for labels shorter than the field is untouched", () => {
     },
   ]);
   expect(out).toContain(`Delivery of backend   "15.10.2026"`);
+});
+
+test("ASSERT renders the source on the head and the substituted form below", () => {
+  const f: Finding = {
+    code: "ASSERT",
+    sheetId: "recon",
+    source: "assert variance == 0",
+    message: "2865.90 == 0",
+  };
+  const lines = formatCheck("x.md", [f]).split("\n");
+  expect(lines[2]).toBe("  ASSERT  #recon          variance == 0");
+  expect(lines[3]).toBe("          2865.90 == 0   is false");
+  expect(lines.at(-1)).toBe("  1 problem (0 stale, 1 error)");
 });

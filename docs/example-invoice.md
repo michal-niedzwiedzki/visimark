@@ -71,6 +71,7 @@ For reference, the gross total is approximately
 ```vmark #recon
 scheduled = SUM(schedule.Amount)
 variance  = lines.gross_total - scheduled
+assert variance == 0
 ```
 
 Scheduled instalments total **28659.00**<!--vmark=recon.scheduled--> PLN against a
@@ -108,6 +109,14 @@ Sheets address each other by qualified name, as `#schedule` does when it reads
 foreign column is a vector, so it is legal only inside an aggregate — bare
 `schedule.Amount` in a column formula is an error, because the two sheets have
 no reason to share a row count.
+
+**An `assert` states an invariant.** `assert variance == 0` in `#recon` is not a
+binding — it stores nothing and `fmt` never touches it — but `check` evaluates it
+and fails if it is ever false. Without it, a payment schedule whose shares stop
+summing to the invoice total would leave a non-zero `variance`, and `check`
+would still pass: every number would agree with its own formula. The assertion
+is what turns "the reconciliation is computed" into "the reconciliation is
+enforced".
 
 The payoff is the last section. `visimark check` recomputes every formula and
 exits non-zero if any stored number disagrees, so an arithmetic error in this
