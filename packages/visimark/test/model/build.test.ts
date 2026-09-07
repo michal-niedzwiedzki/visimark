@@ -70,3 +70,45 @@ test("drift: schedule sheet owns a Days column rule", () => {
   expect([...sch.columns.keys()]).toEqual(["Amount", "Days"]);
   expect(sch.inputColumns.has("Due")).toBe(true);
 });
+
+// ---- assert statements ------------------------------------------------
+
+test("an `assert` line in a #id block is collected on the sheet", () => {
+  const src = [
+    "| M | Share |",
+    "|---|------:|",
+    "| a |   50% |",
+    "",
+    "```vmark #plan",
+    "total = SUM(Share)",
+    "assert total == 1",
+    "```",
+    "",
+  ].join("\n");
+  const m = build(locate(src));
+  const plan = m.sheets.get("plan")!;
+  expect(plan.assertions.length).toBe(1);
+  expect(plan.assertions[0]!.source).toBe("assert total == 1");
+  expect(plan.assertions[0]!.sheetId).toBe("plan");
+  expect(plan.assertions[0]!.id).toContain("plan::assert@");
+  // expr offsets are absolute into the source
+  const e = plan.assertions[0]!.expr;
+  expect(src.slice(e.start, e.end)).toBe("total == 1");
+  expect(m.findings.filter((f) => f.code === "SHEET")).toEqual([]);
+});
+
+test("an `assert` line in a document-scope block is a SHEET finding", () => {
+  const src = ["```vmark", "assert 1 == 1", "```", ""].join("\n");
+  const m = build(locate(src));
+  const sheet = m.findings.filter((f) => f.code === "SHEET");
+  expect(sheet.length).toBe(1);
+  expect(sheet[0]!.message).toBe("`assert` must be in a `#id` sheet block");
+});
+
+test("`assert` as a binding name is a TYPE finding", () => {
+  const src = ["```vmark #s", "assert = 1", "```", ""].join("\n");
+  const m = build(locate(src));
+  const t = m.findings.filter((f) => f.code === "TYPE");
+  expect(t.length).toBe(1);
+  expect(t[0]!.message).toBe("`assert` is a keyword");
+});

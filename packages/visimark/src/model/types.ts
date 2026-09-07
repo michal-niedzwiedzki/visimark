@@ -13,6 +13,7 @@ export type FindingCode =
   | "TYPE"
   | "SHEET"
   | "ANCHOR"
+  | "ASSERT"
   | "WARN"
   | "NOTE"
   | "COVERAGE";
@@ -34,6 +35,7 @@ export const ERROR_CODES: ReadonlySet<FindingCode> = new Set<FindingCode>([
   "TYPE",
   "SHEET",
   "ANCHOR",
+  "ASSERT",
   "COVERAGE",
 ]);
 
@@ -57,6 +59,8 @@ export interface Finding {
   suppressedCount?: number;
   anchorGroup?: boolean;
   cyclePath?: string[];
+  /** verbatim assertion source (the `assert …` line), for the ASSERT finding */
+  source?: string;
   sourceOffset?: number;
   /** absolute source span of the text this finding is about. Absent only on
    *  NOTE and on the collapsed anchor-group STALE, which have no single site. */
@@ -85,6 +89,17 @@ export interface Binding {
   parseError?: LangError;
 }
 
+export interface Assertion {
+  sheetId: string;
+  expr: Expr;
+  /** absolute source span of the `assert …` line */
+  span: { start: number; end: number };
+  /** the line verbatim, `assert ` prefix included */
+  source: string;
+  /** synthetic dependency-graph id, `<sheetId>::assert@<offset>` */
+  id: string;
+}
+
 export interface Sheet {
   id: string;
   table: RawTable | null;
@@ -96,6 +111,8 @@ export interface Sheet {
   columnIndex: Map<string, number>;
   /** header names with no rule — human-owned inputs */
   inputColumns: Set<string>;
+  /** `assert` statements, in block-declaration order */
+  assertions: Assertion[];
 }
 
 export interface DocModel {

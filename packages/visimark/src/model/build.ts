@@ -1,8 +1,15 @@
 import type { Expr } from "../lang/ast.js";
-import { parseBinding } from "../lang/parser.js";
+import { parseStatement } from "../lang/parser.js";
 import { LangError } from "../lang/token.js";
 import type { LocatedDoc, RawBlock } from "../parse/document.js";
-import { type Binding, type DocModel, DOC_SCOPE, type Finding, type Sheet } from "./types.js";
+import {
+  type Assertion,
+  type Binding,
+  type DocModel,
+  DOC_SCOPE,
+  type Finding,
+  type Sheet,
+} from "./types.js";
 
 export function build(doc: LocatedDoc): DocModel {
   const sheets = new Map<string, Sheet>();
@@ -13,8 +20,18 @@ export function build(doc: LocatedDoc): DocModel {
   for (const block of doc.blocks) {
     if (block.sheetId === null) {
       for (const rb of block.bindings) {
-        const parsed = parseOne(rb, doc.source, findings, DOC_SCOPE);
-        if (!parsed) continue;
+        const stmt = parseOne(rb, doc.source, findings, DOC_SCOPE);
+        if (!stmt) continue;
+        if (stmt.kind === "assert") {
+          findings.push({
+            code: "SHEET",
+            message: "`assert` must be in a `#id` sheet block",
+            sourceOffset: stmt.assertion.span.start,
+            span: stmt.assertion.span,
+          });
+          continue;
+        }
+        const parsed = stmt.binding;
         const first = docScope.get(parsed.name);
         if (first) {
           findings.push({
@@ -49,8 +66,13 @@ export function build(doc: LocatedDoc): DocModel {
     (table?.headers ?? []).forEach((h, i) => headerIndex.set(h.text, i));
 
     for (const rb of block.bindings) {
-      const parsed = parseOne(rb, doc.source, findings, sheetId);
-      if (!parsed) continue;
+      const stmt = parseOne(rb, doc.source, findings, sheetId);
+      if (!stmt) continue;
+      if (stmt.kind === "assert") {
+        sheet.assertions.push(stmt.assertion);
+        continue;
+      }
+      const parsed = stmt.binding;
       const first = sheet.columns.get(parsed.name) ?? sheet.scalars.get(parsed.name);
       if (first) {
         findings.push({
@@ -101,6 +123,7 @@ function ensureSheet(sheets: Map<string, Sheet>, id: string, table: Sheet["table
       scalars: new Map(),
       columnIndex: new Map(),
       inputColumns: new Set(),
+      assertions: [],
     };
     sheets.set(id, s);
   } else if (s.table === null && table !== null) {
@@ -109,22 +132,42 @@ function ensureSheet(sheets: Map<string, Sheet>, id: string, table: Sheet["table
   return s;
 }
 
+type Stmt =
+  | { kind: "binding"; binding: Binding }
+  | { kind: "assert"; assertion: Assertion };
+
 function parseOne(
   rb: { raw: string; start: number; end: number },
   source: string,
   findings: Finding[],
   sheetId: string,
-): Binding | null {
+): Stmt | null {
   try {
-    const b = parseBinding(rb.raw);
-    rebase(b.expr, rb.start);
+    const s = parseStatement(rb.raw);
+    if ("type" in s) {
+      rebase(s.expr, rb.start);
+      return {
+        kind: "assert",
+        assertion: {
+          sheetId,
+          expr: s.expr,
+          span: { start: rb.start, end: rb.end },
+          source: rb.raw,
+          id: `${sheetId}::assert@${rb.start}`,
+        },
+      };
+    }
+    rebase(s.expr, rb.start);
     return {
-      id: sheetId === DOC_SCOPE ? b.name : `${sheetId}.${b.name}`,
-      sheetId,
-      name: b.name,
-      expr: b.expr,
-      kind: "scalar",
-      span: { start: rb.start, end: rb.end },
+      kind: "binding",
+      binding: {
+        id: sheetId === DOC_SCOPE ? s.name : `${sheetId}.${s.name}`,
+        sheetId,
+        name: s.name,
+        expr: s.expr,
+        kind: "scalar",
+        span: { start: rb.start, end: rb.end },
+      },
     };
   } catch (e) {
     if (e instanceof LangError) {

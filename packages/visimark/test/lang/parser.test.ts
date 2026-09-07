@@ -133,3 +133,36 @@ test("expr offsets are relative to the binding line", () => {
   const e = b.expr as Expr;
   expect(e.start).toBe("Days   = ".length);
 });
+
+// ---- assert statements --------------------------------------------------
+
+import { parseStatement } from "../../src/lang/parser.js";
+
+test("parseStatement: an `assert` line yields an Assertion node", () => {
+  const st = parseStatement("assert variance == 0");
+  expect("type" in st && st.type).toBe("assert");
+  expect(strip((st as { expr: Expr }).expr)).toEqual({
+    type: "binary",
+    op: "==",
+    left: { type: "ref", name: "variance" },
+    right: { type: "num", value: "0" },
+  });
+});
+
+test("parseStatement: an ordinary binding is unchanged", () => {
+  const st = parseStatement("Net = Qty * Rate");
+  expect("type" in st).toBe(false);
+  expect((st as { name: string }).name).toBe("Net");
+});
+
+test("parseStatement: `assert` cannot be a bound name", () => {
+  expect(() => parseStatement("assert = 1")).toThrow("`assert` is a keyword");
+});
+
+test("parseStatement: `assert` with no expression is rejected", () => {
+  expect(() => parseStatement("assert")).toThrow("assert needs an expression");
+});
+
+test("parseStatement: `assert` mid-binding is rejected", () => {
+  expect(() => parseStatement("x = assert")).toThrow("`assert` is a keyword");
+});

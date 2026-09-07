@@ -1,5 +1,5 @@
 import { Decimal } from "decimal.js";
-import { COMPARISON_OPS, type Call, type Expr, type Ref } from "./ast.js";
+import { type Assertion, COMPARISON_OPS, type Call, type Expr, type Ref } from "./ast.js";
 import { lex } from "./lexer.js";
 import { LangError, type Token } from "./token.js";
 
@@ -197,6 +197,44 @@ export function parseBinding(line: string): Binding {
     }
     throw e;
   }
+}
+
+/**
+ * Parse one `vmark` block line: an `assert <expression>` statement, or an
+ * ordinary `name = expression` binding. `assert` is a keyword — `assert = 1`
+ * and a binding named `assert` are rejected here rather than silently parsed.
+ */
+export function parseStatement(line: string): Binding | Assertion {
+  try {
+    return parseStatementInner(line);
+  } catch (e) {
+    if (e instanceof LangError && e.bindingName === undefined) {
+      const m = LEADING_NAME_RE.exec(line);
+      if (m) e.bindingName = m[1];
+    }
+    throw e;
+  }
+}
+
+function parseStatementInner(line: string): Binding | Assertion {
+  const toks = lex(line);
+  const first = toks.find((t) => t.kind !== "eof");
+  if (first?.kind === "assert") {
+    const rest = toks.slice(toks.indexOf(first) + 1);
+    if (rest[0]?.kind === "op" && rest[0].value === "=") {
+      throw new LangError("`assert` is a keyword", first.start, first.end);
+    }
+    if (rest.length === 1 && rest[0]!.kind === "eof") {
+      throw new LangError("assert needs an expression", first.start, first.end);
+    }
+    const expr = new Parser(rest).parseTopLevel();
+    return { type: "assert", expr, start: first.start, end: expr.end };
+  }
+  if (toks.some((t) => t.kind === "assert")) {
+    const at = toks.find((t) => t.kind === "assert")!;
+    throw new LangError("`assert` is a keyword", at.start, at.end);
+  }
+  return parseBinding(line);
 }
 
 function parseBindingInner(line: string): Binding {
