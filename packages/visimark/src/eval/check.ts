@@ -681,9 +681,9 @@ export function check(model: DocModel): CheckResult {
     if (v.t === "str") return v.s;
     if (v.t === "bool") return String(v.b);
     const res = resolve(model, node.sheetId, ref);
-    const pid =
-      res.kind === "scalar" || res.kind === "doc-scalar" ? res.binding.id : undefined;
-    const prec = pid !== undefined ? (scalarPrecision.get(pid) ?? fallbackPrecision) : fallbackPrecision;
+    const pid = res.kind === "scalar" || res.kind === "doc-scalar" ? res.binding.id : undefined;
+    const prec =
+      pid !== undefined ? (scalarPrecision.get(pid) ?? fallbackPrecision) : fallbackPrecision;
     return showValue(v, prec);
   }
 

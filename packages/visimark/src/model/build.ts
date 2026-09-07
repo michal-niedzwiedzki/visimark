@@ -132,9 +132,7 @@ function ensureSheet(sheets: Map<string, Sheet>, id: string, table: Sheet["table
   return s;
 }
 
-type Stmt =
-  | { kind: "binding"; binding: Binding }
-  | { kind: "assert"; assertion: Assertion };
+type Stmt = { kind: "binding"; binding: Binding } | { kind: "assert"; assertion: Assertion };
 
 function parseOne(
   rb: { raw: string; start: number; end: number },
