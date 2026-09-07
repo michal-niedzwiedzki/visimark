@@ -1,5 +1,12 @@
 import { Decimal } from "decimal.js";
-import { type Assertion, COMPARISON_OPS, type Call, type Expr, type Ref } from "./ast.js";
+import {
+  type Assertion,
+  type ChartDecl,
+  COMPARISON_OPS,
+  type Call,
+  type Expr,
+  type Ref,
+} from "./ast.js";
 import { lex } from "./lexer.js";
 import { LangError, type Token } from "./token.js";
 
@@ -204,7 +211,7 @@ export function parseBinding(line: string): Binding {
  * ordinary `name = expression` binding. `assert` is a keyword — `assert = 1`
  * and a binding named `assert` are rejected here rather than silently parsed.
  */
-export function parseStatement(line: string): Binding | Assertion {
+export function parseStatement(line: string): Binding | Assertion | ChartDecl {
   try {
     return parseStatementInner(line);
   } catch (e) {
@@ -216,9 +223,16 @@ export function parseStatement(line: string): Binding | Assertion {
   }
 }
 
-function parseStatementInner(line: string): Binding | Assertion {
+function parseStatementInner(line: string): Binding | Assertion | ChartDecl {
   const toks = lex(line);
   const first = toks.find((t) => t.kind !== "eof");
+  if (first?.kind === "chart") {
+    return parseChart(toks, first);
+  }
+  if (toks.some((t) => t.kind === "chart")) {
+    const at = toks.find((t) => t.kind === "chart")!;
+    throw new LangError("`chart` is a keyword", at.start, at.end);
+  }
   if (first?.kind === "assert") {
     const rest = toks.slice(toks.indexOf(first) + 1);
     if (rest[0]?.kind === "op" && rest[0].value === "=") {
@@ -259,4 +273,92 @@ function parseBindingInner(line: string): Binding {
     nameStart: nameTok.start,
     nameEnd: nameTok.end,
   };
+}
+
+
+const ASPECT_MESSAGE = "aspect needs two positive integers, as `16:9`";
+
+/**
+ * `chart <name> as <engine> of <col>[, <col>]* labelled <col> [aspect <w>:<h>]`
+ *
+ * Operands are bare column names. An expression is refused here rather than
+ * parsed, for the same reason `SUM(Price * Qty)` is refused: the calculation
+ * model belongs to the language, and a chart consumes it.
+ */
+function parseChart(toks: Token[], kw: Token): ChartDecl {
+  let i = toks.indexOf(kw) + 1;
+  const at = (): Token => toks[i] ?? toks[toks.length - 1]!;
+
+  const ident = (what: string): Token => {
+    const t = at();
+    if (t.kind === "op") {
+      throw new LangError("a chart takes a column, not an expression", t.start, t.end);
+    }
+    if (t.kind !== "ident") {
+      throw new LangError(`expected ${what}`, t.start, t.end);
+    }
+    i++;
+    return t;
+  };
+  const word = (w: string): void => {
+    const t = at();
+    if (t.kind === "op") {
+      throw new LangError("a chart takes a column, not an expression", t.start, t.end);
+    }
+    if (t.kind !== "ident" || t.value !== w) {
+      throw new LangError(`expected \`${w}\``, t.start, t.end);
+    }
+    i++;
+  };
+
+  if (at().kind === "op" && at().value === "=") {
+    throw new LangError("`chart` is a keyword", kw.start, kw.end);
+  }
+  if (at().kind === "ident" && at().value === "as") {
+    throw new LangError("a chart needs a name", kw.start, at().end);
+  }
+
+  const name = ident("a chart name").value;
+  word("as");
+  const engine = ident("a chart type").value;
+  word("of");
+
+  const series: string[] = [];
+  for (;;) {
+    series.push(ident("a column name").value);
+    if (at().kind === "comma") {
+      i++;
+      continue;
+    }
+    break;
+  }
+
+  word("labelled");
+  const labels = ident("a label column").value;
+
+  let aspect: { w: number; h: number } | null = null;
+  if (at().kind === "ident" && at().value === "aspect") {
+    const kwAspect = at();
+    i++;
+    const w = at();
+    if (w.kind !== "number") throw new LangError(ASPECT_MESSAGE, kwAspect.start, w.end);
+    i++;
+    if (at().kind !== "colon") throw new LangError(ASPECT_MESSAGE, kwAspect.start, at().end);
+    i++;
+    const h = at();
+    if (h.kind !== "number") throw new LangError(ASPECT_MESSAGE, kwAspect.start, h.end);
+    i++;
+    const wn = Number(w.value);
+    const hn = Number(h.value);
+    if (!Number.isInteger(wn) || !Number.isInteger(hn) || wn < 1 || hn < 1) {
+      throw new LangError(ASPECT_MESSAGE, kwAspect.start, h.end);
+    }
+    aspect = { w: wn, h: hn };
+  }
+
+  const end = at();
+  if (end.kind !== "eof") {
+    throw new LangError(`unexpected ${end.kind === "op" ? `operator \`${end.value}\`` : end.kind}`, end.start, end.end);
+  }
+  return { type: "chart", name, engine, series, labels, aspect, start: kw.start, end: end.start };
 }

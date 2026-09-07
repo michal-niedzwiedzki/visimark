@@ -4,6 +4,7 @@ import { LangError } from "../lang/token.js";
 import type { LocatedDoc, RawBlock } from "../parse/document.js";
 import {
   type Assertion,
+  type Chart,
   type Binding,
   type DocModel,
   DOC_SCOPE,
@@ -28,6 +29,15 @@ export function build(doc: LocatedDoc): DocModel {
             message: "`assert` must be in a `#id` sheet block",
             sourceOffset: stmt.assertion.span.start,
             span: stmt.assertion.span,
+          });
+          continue;
+        }
+        if (stmt.kind === "chart") {
+          findings.push({
+            code: "SHEET",
+            message: "`chart` must be in a `#id` sheet block",
+            sourceOffset: stmt.chart.span.start,
+            span: stmt.chart.span,
           });
           continue;
         }
@@ -70,6 +80,36 @@ export function build(doc: LocatedDoc): DocModel {
       if (!stmt) continue;
       if (stmt.kind === "assert") {
         sheet.assertions.push(stmt.assertion);
+        continue;
+      }
+      if (stmt.kind === "chart") {
+        // a chart reads columns, so a sheet with no table cannot carry one —
+        // the same rule column rules already follow
+        if (table === null) {
+          findings.push({
+            code: "SHEET",
+            sheetId,
+            message: "a chart needs a table",
+            sourceOffset: stmt.chart.span.start,
+            span: stmt.chart.span,
+          });
+          continue;
+        }
+        const clash =
+          sheet.columns.get(stmt.chart.name) ??
+          sheet.scalars.get(stmt.chart.name) ??
+          sheet.charts.find((c) => c.name === stmt.chart.name);
+        if (clash) {
+          findings.push({
+            code: "DUP",
+            sheetId,
+            name: stmt.chart.name,
+            span: stmt.chart.span,
+            relatedSpan: clash.span,
+          });
+          continue;
+        }
+        sheet.charts.push(stmt.chart);
         continue;
       }
       const parsed = stmt.binding;
@@ -124,6 +164,7 @@ function ensureSheet(sheets: Map<string, Sheet>, id: string, table: Sheet["table
       columnIndex: new Map(),
       inputColumns: new Set(),
       assertions: [],
+      charts: [],
     };
     sheets.set(id, s);
   } else if (s.table === null && table !== null) {
@@ -132,7 +173,10 @@ function ensureSheet(sheets: Map<string, Sheet>, id: string, table: Sheet["table
   return s;
 }
 
-type Stmt = { kind: "binding"; binding: Binding } | { kind: "assert"; assertion: Assertion };
+type Stmt =
+  | { kind: "binding"; binding: Binding }
+  | { kind: "assert"; assertion: Assertion }
+  | { kind: "chart"; chart: Chart };
 
 function parseOne(
   rb: { raw: string; start: number; end: number },
@@ -142,6 +186,22 @@ function parseOne(
 ): Stmt | null {
   try {
     const s = parseStatement(rb.raw);
+    if ("type" in s && s.type === "chart") {
+      return {
+        kind: "chart",
+        chart: {
+          id: `${sheetId}::chart@${rb.start}`,
+          sheetId,
+          name: s.name,
+          engine: s.engine,
+          series: s.series,
+          labels: s.labels,
+          aspect: s.aspect,
+          span: { start: rb.start, end: rb.end },
+          source: rb.raw,
+        },
+      };
+    }
     if ("type" in s) {
       rebase(s.expr, rb.start);
       return {
