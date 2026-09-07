@@ -1,4 +1,5 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
 import { check } from "../eval/check.js";
 import { topoOrder } from "../eval/graph.js";
 import type { Value } from "../eval/value.js";
@@ -66,7 +67,7 @@ export function cmdCheck(args: string[], out: Writer, err: Writer): number {
       exit = 2;
       continue;
     }
-    const result = check(build(locate(source)));
+    const result = check(build(locate(source)), { docPath: path });
     out(formatCheck(path, result.findings));
     if (result.exitCode === 1 && exit === 0) exit = 1;
   }
@@ -90,13 +91,21 @@ export function cmdFmt(args: string[], out: Writer, err: Writer): number {
       exit = 2;
       continue;
     }
-    const r = fmt(source, { fixDates });
-    if (r.changed) {
-      writeFileSync(path, r.output);
+    const r = fmt(source, { fixDates, docPath: path });
+    // a generated artifact is written whole; the document itself is spliced
+    for (const a of r.artifacts) {
+      mkdirSync(dirname(a.target), { recursive: true });
+      writeFileSync(a.target, a.svg);
+    }
+    if (r.changed) writeFileSync(path, r.output);
+    if (r.changed || r.artifacts.length > 0) {
       const bits = [
         r.cellsUpdated ? `${r.cellsUpdated} cell${r.cellsUpdated === 1 ? "" : "s"}` : "",
         r.anchorsUpdated ? `${r.anchorsUpdated} anchor${r.anchorsUpdated === 1 ? "" : "s"}` : "",
         r.datesFixed ? `${r.datesFixed} date${r.datesFixed === 1 ? "" : "s"}` : "",
+        r.artifacts.length
+          ? `${r.artifacts.length} artifact${r.artifacts.length === 1 ? "" : "s"}`
+          : "",
       ].filter(Boolean);
       out(`${path}: updated ${bits.join(", ")}`);
     } else {
