@@ -1,5 +1,6 @@
 import type { Decimal } from "decimal.js";
 import { closest } from "../report/levenshtein.js";
+import { svgDocument } from "./svg.js";
 
 /**
  * A generated artifact and the engines that build one.
@@ -29,7 +30,13 @@ export interface EngineInput {
   aspect: { w: number; h: number };
 }
 
-export type EngineResult = { svg: string } | { err: string };
+/** what an engine draws: body elements and the height it chose */
+export interface EngineOutput {
+  body: string[];
+  height: number;
+}
+
+export type EngineResult = EngineOutput | { err: string };
 export type Engine = (input: EngineInput) => EngineResult;
 
 const ENGINES = new Map<string, Engine>();
@@ -56,8 +63,27 @@ export function suggestEngine(name: string): string | null {
   return closest(name, ENGINES.keys(), 3);
 }
 
-export function buildArtifact(name: string, input: EngineInput): EngineResult {
+/**
+ * Build one artifact. The engine draws; the registry wraps its body in the
+ * document scaffold and stamps the identity marker, so no engine can write its
+ * own provenance.
+ */
+export function buildArtifact(
+  name: string,
+  input: EngineInput,
+  id: { sheetId: string; chart: string },
+): { svg: string } | { err: string } {
   const engine = ENGINES.get(name);
   if (!engine) return { err: "unknown chart type `" + name + "`" };
-  return engine(input);
+  const drawn = engine(input);
+  if ("err" in drawn) return drawn;
+  return { svg: svgDocument(id.sheetId, id.chart, drawn.height, drawn.body) };
 }
+
+// The built-in engine set, registered once at load. It is closed: a document
+// selects the name `pie` exactly as it selects the name `SUM`.
+import { bar } from "./engines/bar.js";
+import { pie } from "./engines/pie.js";
+
+registerEngine("pie", pie);
+registerEngine("bar", bar);

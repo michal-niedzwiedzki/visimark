@@ -10,7 +10,7 @@ import { installStub } from "../support/stub-engine.js";
 
 // the isolation proof: a third engine, registered by a test, drives the whole
 // pipeline without a line changing in graph/check/fmt/staleness
-beforeAll(() => installStub("stub", "order", "cost"));
+beforeAll(() => installStub("stub"));
 
 const TABLE = `| Item | Price | Qty |  Net |
 |------|------:|----:|-----:|
@@ -87,7 +87,7 @@ test("a file that is not visimark's is never overwritten", () => {
 });
 
 test("two charts writing to one path is an ARTIFACT finding", () => {
-  installStub("stub2", "order", "other");
+  installStub("stub2");
   const src = `${TABLE}
 \`\`\`vmark #order
 Net = Price * Qty

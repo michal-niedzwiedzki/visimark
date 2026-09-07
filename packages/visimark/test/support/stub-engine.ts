@@ -1,5 +1,4 @@
 import { type EngineInput, type EngineResult, registerEngine } from "../../src/artifact/index.js";
-import { marker } from "../../src/artifact/stale.js";
 
 /**
  * A throwaway engine, registered only by tests.
@@ -9,20 +8,15 @@ import { marker } from "../../src/artifact/stale.js";
  * anchoring, staleness, `check` or `fmt`. If this stub can be driven end to
  * end through the real pipeline, a future `line` engine can be too.
  */
-export function stubEngine(sheetId: string, chart: string) {
-  return (input: EngineInput): EngineResult => {
-    const total = input.series[0]!.values.reduce((a, b) => a.plus(b), input.series[0]!.values[0]!.mul(0));
-    return {
-      svg:
-        `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400">` +
-        marker(sheetId, chart) +
-        `<title>${input.labels.join(",")}=${total.toString()}</title>` +
-        `</svg>\n`,
-    };
+export function stubEngine(input: EngineInput): EngineResult {
+  const first = input.series[0]!;
+  const total = first.values.reduce((a, b) => a.plus(b), first.values[0]!.mul(0));
+  return {
+    body: [`<title>${input.labels.join(",")}=${total.toString()}</title>`],
+    height: 400,
   };
 }
 
-/** register under a name no built-in uses */
-export function installStub(name: string, sheetId: string, chart: string): void {
-  registerEngine(name, stubEngine(sheetId, chart));
+export function installStub(name: string): void {
+  registerEngine(name, stubEngine);
 }

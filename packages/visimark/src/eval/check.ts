@@ -455,11 +455,11 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
       }
       claimedPaths.set(url, label);
 
-      const rendered = buildArtifact(c.engine, {
-        series: built,
-        labels,
-        aspect: c.aspect ?? { w: 16, h: 10 },
-      });
+      const rendered = buildArtifact(
+        c.engine,
+        { series: built, labels, aspect: c.aspect ?? { w: 16, h: 10 } },
+        { sheetId: c.sheetId, chart: c.name },
+      );
       if ("err" in rendered) {
         artifactFinding(rendered.err);
         charts.push({ ...base(c), path: url, state: "error" });
