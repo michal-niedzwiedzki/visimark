@@ -105,13 +105,12 @@ launcher.
 
 ### 2.5 Correct regardless of current Bun behaviour
 
-The report observed Bun 1.4.x writing a bare symlink for a global bin. If a
-newer Bun already writes a wrapper script instead, this launcher is still
-correct and still the right fix: it also covers older Bun, the neither-runtime
-case, and any installer that links rather than shims. The plan's first task
-packs the tarball and records what `bun add -g` actually does on the pinned Bun
-version, but the outcome does not change the design — only the size of the "was
-broken" set the smoke test demonstrates.
+Confirmed during implementation on Bun 1.4.2: `bun add -g <tarball>` links
+`~/.bun/bin/visimark → ../install/global/node_modules/visimark/bin/visimark` — a
+bare symlink, exactly as the report described. The launcher resolves that chain
+and runs. Were a newer Bun to write a wrapper instead, the launcher would still
+be correct — it also covers older Bun, the neither-runtime case, and any
+installer that links rather than shims.
 
 ## 3. package.json
 
@@ -172,7 +171,8 @@ Then two jobs, each `needs: pack`, each downloading the tarball:
     step first resets `PATH` to `"$(bun pm bin -g):/usr/local/bin:/usr/bin:/bin"`
     and asserts `command -v node` finds nothing — otherwise the Node-first
     launcher would run under the injected Node and never exercise Bun.
-  - `bun add -g ./visimark-*.tgz`
+  - `bun add -g "$(pwd)/$(ls visimark-*.tgz)"` — bun needs an absolute tarball
+    path; a relative `./x.tgz` is parsed as a package name
   - `visimark --version` → prints `visimark <version>`, exit 0
   - `visimark check <fixture>` → exit 0, where `<fixture>` is a one-line Markdown
     file the job writes itself (no `actions/checkout` — the `oven/bun` image may

@@ -118,7 +118,9 @@ jobs:
           if command -v node >/dev/null 2>&1; then
             echo "::error::node still on PATH; smoke-bun must be Bun-only"; exit 1
           fi
-          bun add -g ./visimark-*.tgz
+          # bun add -g needs an absolute tarball path; a relative ./x.tgz is
+          # parsed as a package name.
+          bun add -g "$(pwd)/$(ls visimark-*.tgz)"
           visimark --version | grep -qE '^visimark [0-9]'
           printf '# smoke\n' > smoke.md
           visimark check smoke.md
