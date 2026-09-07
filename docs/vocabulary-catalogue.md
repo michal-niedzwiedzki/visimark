@@ -198,7 +198,7 @@ touches expressions, and diffability ([§9](visimark-design.md#9-write-back)). A
 
 | Feature | What it changes | Pros | Cons | Request | Status |
 |---------|-----------------|------|------|---------|--------|
-| _(none yet)_ | | | | | |
+| `assert` statements | A `vmark` block may carry `assert <boolean expr>` lines; `check` evaluates each and reports `ASSERT` (exit 1, not auto-fixable) when one is false. Stores nothing; `fmt` never touches it. | Generalises `STALE` from "value == its formula" to "any stated invariant holds"; turns the `#recon` eyeball-the-variance idiom into an enforced check; cheap — booleans, the dependency graph and suppression already exist. | The language's first non-binding statement (grammar + a new node kind + a new [§10](visimark-design.md#10-error-taxonomy) finding); the `== 1` / `== 0` rounding edge needs an explicit rule; scalar-only vs per-row is an open fork. | [#27](https://github.com/michal-niedzwiedzki/visimark/issues/27) | |
 
 ## F. Tooling and process
 
