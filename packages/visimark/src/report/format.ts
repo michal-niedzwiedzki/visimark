@@ -57,6 +57,11 @@ const isAssertionScoped = (f: Finding): boolean =>
   f.source !== undefined || (f.code === "NOTE" && !f.name);
 
 function staleLine(f: Finding): string {
+  if (f.artifact !== undefined) {
+    // a generated artifact has no stored-vs-computed pair to show; the message
+    // says which file and what to do about it
+    return prefix("STALE") + id(f).padEnd(ID_FIELD) + "  " + (f.message ?? "");
+  }
   if (f.anchorGroup) {
     return prefix("STALE") + `${f.suppressedCount} prose anchors bound to the values above`;
   }
@@ -151,6 +156,16 @@ function renderGroup(f: Finding): string[] {
       return [
         head + (f.message ?? ""),
         ...(f.suggestion ? [" ".repeat(head.length) + f.suggestion] : []),
+      ];
+    }
+    case "ARTIFACT": {
+      // `ARTIFACT` is eight characters and fills the code field exactly, so its
+      // payload starts one column right of `CONT` — the same case `COVERAGE`
+      // already carries. Indent continuations to the head they follow.
+      const head = prefix("ARTIFACT") + id(f).padEnd(ID_FIELD) + "  " + (f.message ?? "");
+      return [
+        head,
+        ...(f.suggestion ? [" ".repeat(prefix("ARTIFACT").length) + `did you mean \`${f.suggestion}\`?`] : []),
       ];
     }
     case "ANCHOR":

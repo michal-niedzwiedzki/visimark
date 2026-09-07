@@ -52,6 +52,9 @@ export interface Finding {
   name?: string;
   /** first-column label of the offending table row */
   rowLabel?: string;
+  /** the artifact path a STALE/ARTIFACT finding is about; marks the finding
+   *  as being about a generated file rather than a cell or an anchor */
+  artifact?: string;
   stored?: string;
   computed?: string;
   formula?: string;
