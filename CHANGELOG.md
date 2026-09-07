@@ -4,6 +4,27 @@
 
 ### Added
 
+- **Generated artifacts (`chart` statements)** — a `vmark` block may declare
+  `chart <name> as pie|bar of <cols> labelled <col> [aspect w:h]` (issue #36).
+  The author states where the artifact lives, in an ordinary Markdown image
+  carrying an anchor; `fmt` writes a deterministic SVG there and `check` proves
+  it current by **rendering and comparing bytes** — there is no checksum, so
+  there is no algorithm anything external can depend on, and a renderer change
+  restales correctly. A new `ARTIFACT` finding covers everything `fmt` cannot
+  repair (a pie over negatives or summing to zero, a blank or non-numeric
+  series, an unknown engine, an illegal path, a target that is not ours); the
+  existing `STALE` widens to cover an artifact that is out of date **or
+  absent**, and `fmt` repairs both. Operands are bare column references in the
+  chart's own sheet, the same rule a reduce follows, so series and labels share
+  a row count by construction. Paths are gated — relative, contained against
+  the resolved real path, lowercase `.svg` — and VisiMark refuses to overwrite
+  any file not carrying its own marker, so a hand-drawn SVG is safe. Rendering
+  is monospace and greyscale with no styling surface at all. `explain` lists a
+  sheet's charts and `eval --json` gains a `charts` array; `infer` never
+  proposes one. Artifacts are generated and overwritten, never deleted. The new
+  worked example is `docs/example-charts.md`. `numbered` labels, cross-sheet
+  series, further engines and orphan cleanup are deferred.
+
 - **`assert` statements** — a `vmark` block may carry `assert <boolean expr>`
   lines next to its bindings (issue #27). `check` evaluates each and reports a
   new `ASSERT` finding — an error, not auto-fixable, exit `1` — when it is

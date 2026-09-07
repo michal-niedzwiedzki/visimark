@@ -14,6 +14,7 @@ export type FindingCode =
   | "SHEET"
   | "ANCHOR"
   | "ASSERT"
+  | "ARTIFACT"
   | "WARN"
   | "NOTE"
   | "COVERAGE";
@@ -36,6 +37,7 @@ export const ERROR_CODES: ReadonlySet<FindingCode> = new Set<FindingCode>([
   "SHEET",
   "ANCHOR",
   "ASSERT",
+  "ARTIFACT",
   "COVERAGE",
 ]);
 
@@ -50,6 +52,9 @@ export interface Finding {
   name?: string;
   /** first-column label of the offending table row */
   rowLabel?: string;
+  /** the artifact path a STALE/ARTIFACT finding is about; marks the finding
+   *  as being about a generated file rather than a cell or an anchor */
+  artifact?: string;
   stored?: string;
   computed?: string;
   formula?: string;
@@ -113,6 +118,26 @@ export interface Sheet {
   inputColumns: Set<string>;
   /** `assert` statements, in block-declaration order */
   assertions: Assertion[];
+  /** `chart` declarations, in block-declaration order */
+  charts: Chart[];
+}
+
+/**
+ * A `chart` declaration: a generated artifact derived from columns of its
+ * own sheet. It binds nothing and produces no value — the document states
+ * where the artifact lives, via an image anchor, and the tool writes it.
+ */
+export interface Chart {
+  /** stable graph key, `<sheetId>::chart@<offset>` */
+  id: string;
+  sheetId: string;
+  name: string;
+  engine: string;
+  series: string[];
+  labels: string;
+  aspect: { w: number; h: number } | null;
+  span: Span;
+  source: string;
 }
 
 export interface DocModel {

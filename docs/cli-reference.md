@@ -17,10 +17,10 @@ and WSL provide it, plain PowerShell does not).
 | Command | What it does | Reads | Writes | Fails the run when |
 |---|---|---|---|---|
 | `visimark check FILE...` | Recomputes every formula and reports each number that no longer agrees with it | the files you name | nothing, ever | the document has at least one problem |
-| `visimark fmt FILE...` | Repairs stale numbers in place, by splicing the bytes of each value it owns | the files you name | computed cells and anchored values, in place | a problem it cannot repair remains |
+| `visimark fmt FILE...` | Repairs stale numbers in place, by splicing the bytes of each value it owns, and writes any stale or missing generated artifact | the files you name | computed cells and anchored values, in place; generated artifacts, whole | a problem it cannot repair remains |
 | `visimark infer FILE...` | Works out which rules reproduce the numbers a document already has, and proposes them | the files you name | nothing, unless `--write` | never — it is advisory |
 | `visimark eval FILE` | Prints the computed values, so a script can read one out | one file | nothing | never |
-| `visimark explain FILE` | Prints each sheet's inputs, rules, evaluation order and assertions | one file | nothing | never |
+| `visimark explain FILE` | Prints each sheet's inputs, rules, evaluation order, assertions and charts | one file | nothing | never |
 
 `check` is the one CI runs. The others exist to get a document into a state
 `check` can be strict about, or to explain what it did.
@@ -61,7 +61,7 @@ nothing.
 
 | Code | Class | What it means | How it gets fixed |
 |---|---|---|---|
-| `STALE` | problem | A stored number disagrees with the formula that owns it. The report shows both, and the formula. | `visimark fmt` |
+| `STALE` | problem | A stored number disagrees with the formula that owns it, or a generated artifact disagrees with the data it was drawn from — including one that is missing. The report shows both values and the formula, or names the artifact. | `visimark fmt` |
 | `DATE` | problem | A date is not ISO 8601. Reported with the ISO reading when there is only one, or with both readings and the days between them when there are two. | `fmt --fix-dates` if unambiguous, otherwise by hand |
 | `UNIT` | problem | One column means two things — mixed decoration such as `$5.00` beside `€5.00`, or a cell decorated on both sides. | by hand |
 | `UNDEF` | problem | A formula names something that does not exist, with a spelling suggestion when one is close. | by hand |
@@ -70,11 +70,12 @@ nothing.
 | `CYCLE` | problem | Values depend on each other in a circle. The report prints the whole path round it. | by hand |
 | `TYPE` | problem | An expression produced something that cannot go where it was asked to go — storing a boolean in a cell, or calling a function wrongly. | by hand |
 | `SHEET` | problem | A `vmark` block's relationship to its table is broken: no table above it, or a table that belongs to something else. | by hand |
-| `ANCHOR` | problem | An anchor comment has no number in front of it to rewrite. | by hand |
+| `ANCHOR` | problem | An anchor comment has no number in front of it to rewrite, or an image anchor and a chart declaration do not match up. | by hand |
 | `ASSERT` | problem | An `assert` statement evaluated false. The report shows the expression and, below it, the same expression with each named value filled in. | by hand |
+| `ARTIFACT` | problem | A declared artifact cannot be built or written — a pie of negative values or summing to zero, a blank or non-numeric series, an unknown chart type, a path outside the document's directory, or a target file VisiMark did not generate. | by hand |
 | `COVERAGE` | problem | Either a table has no `vmark` rules anywhere in its document, so nothing in it is checked — or the document carries a `no-formulas` marker that its rules now contradict. | `visimark infer`, the marker, or deleting a marker that is no longer true |
 | `WARN` | advice | Something is defined and never read. Often a typo in the name that reads it. | your call |
-| `NOTE` | advice | Rows or assertions that could not be verified because something they depend on is broken. It disappears when the real problem is fixed. | fix the finding above it |
+| `NOTE` | advice | Rows, assertions or charts that could not be verified because something they depend on is broken. It disappears when the real problem is fixed. | fix the finding above it |
 
 ## The no-formulas marker
 

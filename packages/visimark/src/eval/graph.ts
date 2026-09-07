@@ -1,6 +1,6 @@
 import type { Call, Expr, Ref } from "../lang/ast.js";
 import { closest } from "../report/levenshtein.js";
-import type { Assertion, Binding, DocModel } from "../model/types.js";
+import type { Assertion, Binding, Chart, DocModel } from "../model/types.js";
 import { type CallProblem, callProblem, isReduce } from "./functions.js";
 
 /**
@@ -12,6 +12,43 @@ import { type CallProblem, callProblem, isReduce } from "./functions.js";
  */
 export function assertionNode(a: Assertion): Binding {
   return { id: a.id, sheetId: a.sheetId, name: "", expr: a.expr, kind: "scalar", span: a.span };
+}
+
+/**
+ * A chart as a graph node. The expression is **synthetic** — a chain over the
+ * series and label columns, built only so the ordinary dependency walk finds
+ * them. It is never evaluated: `check` handles charts on their own branch, so
+ * the arithmetic implied by the chain never runs.
+ *
+ * `kind` is `"column"` rather than `"scalar"` deliberately. That is what makes
+ * a same-sheet column reference legal (a chart consumes columns) while a
+ * foreign one stays a `VECTOR` error, with no rule of its own.
+ */
+export function chartNode(c: Chart): Binding {
+  const names = [...c.series, c.labels];
+  const refs: Expr[] = names.map((full) => {
+    const dot = full.indexOf(".");
+    return {
+      type: "ref" as const,
+      ...(dot === -1
+        ? { name: full }
+        : { qualifier: full.slice(0, dot), name: full.slice(dot + 1) }),
+      start: c.span.start,
+      end: c.span.end,
+    };
+  });
+  let expr: Expr = refs[0]!;
+  for (let i = 1; i < refs.length; i++) {
+    expr = {
+      type: "binary",
+      op: "+",
+      left: expr,
+      right: refs[i]!,
+      start: c.span.start,
+      end: c.span.end,
+    };
+  }
+  return { id: c.id, sheetId: c.sheetId, name: c.name, expr, kind: "column", span: c.span };
 }
 
 export type Resolution =
@@ -162,11 +199,13 @@ export interface TopoResult {
   depMap: Map<string, DepInfo>;
   /** ids in `order` that are assertions, not bindings */
   assertionIds: Set<string>;
+  chartIds: Set<string>;
 }
 
 export function topoOrder(model: DocModel): TopoResult {
   const nodes = new Map<string, Binding>();
   const assertionIds = new Set<string>();
+  const chartIds = new Set<string>();
   for (const b of model.docScope.values()) nodes.set(b.id, b);
   for (const sheet of model.sheets.values()) {
     for (const b of sheet.columns.values()) nodes.set(b.id, b);
@@ -174,6 +213,10 @@ export function topoOrder(model: DocModel): TopoResult {
     for (const a of sheet.assertions) {
       nodes.set(a.id, assertionNode(a));
       assertionIds.add(a.id);
+    }
+    for (const c of sheet.charts) {
+      nodes.set(c.id, chartNode(c));
+      chartIds.add(c.id);
     }
   }
 
@@ -225,7 +268,7 @@ export function topoOrder(model: DocModel): TopoResult {
   const stuck = docOrder.filter((id) => !emitted.has(id));
   const cycles = extractCycles(stuck, deps, nodes, rank);
 
-  return { order, cycles, depMap, assertionIds };
+  return { order, cycles, depMap, assertionIds, chartIds };
 }
 
 function extractCycles(

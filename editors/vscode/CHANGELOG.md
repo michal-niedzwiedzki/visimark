@@ -4,6 +4,9 @@
 
 - `assert` statements are now supported: a false `assert` shows as an `ASSERT`
   diagnostic on that line, like any other `visimark check` finding.
+- `chart` declarations are now supported: a chart that cannot be built or
+  written shows as an `ARTIFACT` diagnostic on that line, and a stale or
+  missing artifact as `STALE`.
 - The engine now recognises `EOMONTH(d, months)` (end-of-month date
   arithmetic), so a formula that uses it no longer shows an "unknown function"
   diagnostic.

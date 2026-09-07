@@ -1,4 +1,5 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
 import { check } from "../eval/check.js";
 import { topoOrder } from "../eval/graph.js";
 import type { Value } from "../eval/value.js";
@@ -66,7 +67,7 @@ export function cmdCheck(args: string[], out: Writer, err: Writer): number {
       exit = 2;
       continue;
     }
-    const result = check(build(locate(source)));
+    const result = check(build(locate(source)), { docPath: path });
     out(formatCheck(path, result.findings));
     if (result.exitCode === 1 && exit === 0) exit = 1;
   }
@@ -90,13 +91,21 @@ export function cmdFmt(args: string[], out: Writer, err: Writer): number {
       exit = 2;
       continue;
     }
-    const r = fmt(source, { fixDates });
-    if (r.changed) {
-      writeFileSync(path, r.output);
+    const r = fmt(source, { fixDates, docPath: path });
+    // a generated artifact is written whole; the document itself is spliced
+    for (const a of r.artifacts) {
+      mkdirSync(dirname(a.target), { recursive: true });
+      writeFileSync(a.target, a.svg);
+    }
+    if (r.changed) writeFileSync(path, r.output);
+    if (r.changed || r.artifacts.length > 0) {
       const bits = [
         r.cellsUpdated ? `${r.cellsUpdated} cell${r.cellsUpdated === 1 ? "" : "s"}` : "",
         r.anchorsUpdated ? `${r.anchorsUpdated} anchor${r.anchorsUpdated === 1 ? "" : "s"}` : "",
         r.datesFixed ? `${r.datesFixed} date${r.datesFixed === 1 ? "" : "s"}` : "",
+        r.artifacts.length
+          ? `${r.artifacts.length} artifact${r.artifacts.length === 1 ? "" : "s"}`
+          : "",
       ].filter(Boolean);
       out(`${path}: updated ${bits.join(", ")}`);
     } else {
@@ -204,7 +213,17 @@ export function cmdEval(args: string[], out: Writer, err: Writer): number {
   }
 
   if (flags.has("json")) {
-    out(JSON.stringify({ ...Object.fromEntries(all), assertions: result.assertions }, null, 2));
+    out(
+      JSON.stringify(
+        {
+          ...Object.fromEntries(all),
+          assertions: result.assertions,
+          charts: result.charts,
+        },
+        null,
+        2,
+      ),
+    );
   } else {
     const width = Math.max(...[...all.keys()].map((k) => k.length), 0);
     for (const [k, v] of all) out(`${k.padEnd(width)}  ${v}`);
@@ -237,7 +256,7 @@ export function cmdExplain(args: string[], out: Writer, err: Writer): number {
     return 2;
   }
   const model = build(locate(source));
-  const { order, assertionIds } = topoOrder(model);
+  const { order, assertionIds, chartIds } = topoOrder(model);
 
   if (model.docScope.size > 0) {
     out("document scope");
@@ -246,6 +265,10 @@ export function cmdExplain(args: string[], out: Writer, err: Writer): number {
     }
     out("");
   }
+
+  const chartState = new Map(
+    check(model, { docPath: path }).charts.map((c) => [`${c.sheetId}.${c.name}`, c]),
+  );
 
   const wanted = sheets.length > 0 ? sheets : [...model.sheets.keys()];
   for (const sid of wanted) {
@@ -267,12 +290,23 @@ export function cmdExplain(args: string[], out: Writer, err: Writer): number {
       for (const b of sheet.scalars.values()) out(`    ${b.name} = ${slice(model, b)}`);
     }
     const localOrder = order
-      .filter((b) => b.sheetId === sid && !assertionIds.has(b.id))
+      .filter((b) => b.sheetId === sid && !assertionIds.has(b.id) && !chartIds.has(b.id))
       .map((b) => b.name);
     if (localOrder.length > 0) out(`  order:   ${localOrder.join(" → ")}`);
     if (sheet.assertions.length > 0) {
       out("  assertions:");
       for (const a of sheet.assertions) out(`    ${a.source.replace(/^assert\s+/, "")}`);
+    }
+    if (sheet.charts.length > 0) {
+      out("  charts:");
+      for (const c of sheet.charts) {
+        const r = chartState.get(`${c.sheetId}.${c.name}`);
+        const where = r?.path ? ` → ${r.path}` : "";
+        const state = r ? `  [${r.state}]` : "";
+        out(
+          `    ${c.name} = ${c.engine} of ${c.series.join(", ")} labelled ${c.labels}${where}${state}`,
+        );
+      }
     }
     out("");
   }

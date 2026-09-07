@@ -47,6 +47,12 @@ export function lex(src: string): Token[] {
       i++;
       continue;
     }
+    if (c === ":") {
+      // only meaningful inside a chart `aspect w:h`; the parser judges it
+      push("colon", ":", i, i + 1);
+      i++;
+      continue;
+    }
 
     if (c === '"') {
       const start = i;
@@ -116,6 +122,10 @@ export function lex(src: string): Token[] {
       }
       if (WORD_OPS.has(text)) {
         push("op", text, start, i);
+      } else if (text === "chart") {
+        // `chart` is a statement keyword, like `assert`. See the design doc,
+        // section 4 and the generated-artifacts section.
+        push("chart", text, start, i);
       } else if (text === "assert") {
         // `assert` is a statement keyword — recognised anywhere it is written,
         // rejected by the parser wherever a statement is not expected. See the

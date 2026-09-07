@@ -14,6 +14,14 @@ import { applyEdits, type Edit } from "./splice.js";
 
 export interface FmtOptions {
   fixDates?: boolean;
+  /** the document's own path — needed to resolve and write its artifacts */
+  docPath?: string;
+}
+
+/** a generated artifact `fmt` must write: absolute target, and its bytes */
+export interface ArtifactWrite {
+  target: string;
+  svg: string;
 }
 
 export interface FmtResult {
@@ -23,6 +31,8 @@ export interface FmtResult {
   anchorsUpdated: number;
   datesFixed: number;
   unfixable: Finding[];
+  /** artifacts that are stale or missing — the caller writes them */
+  artifacts: ArtifactWrite[];
 }
 
 /** an edit together with the finding it resolves, so a diagnostic can be
@@ -72,6 +82,8 @@ export function planFmt(model: DocModel, result: CheckResult, opts: FmtOptions):
   // 2. anchored scalar values
   for (const a of model.anchors) {
     if (!a.value) continue;
+    // an image anchor points at a generated artifact; it is never spliced
+    if (a.value.kind === "image") continue;
     const id = `${a.sheetId}.${a.name}`;
     const v = result.values.get(id);
     if (!v) continue;
@@ -130,7 +142,7 @@ const FIXABLE_BY_FMT = new Set(["STALE"]);
 
 export function fmt(source: string, opts: FmtOptions = {}): FmtResult {
   const model = build(locate(source));
-  const result = check(model);
+  const result = check(model, { docPath: opts.docPath });
   const edits = planFmt(model, result, opts);
   const output = applyEdits(source, edits);
 
@@ -146,6 +158,12 @@ export function fmt(source: string, opts: FmtOptions = {}): FmtResult {
     return true;
   });
 
+  // an artifact carrying an ARTIFACT error is not written at all — the same
+  // rule a column with a UNIT conflict already follows
+  const artifacts = result.charts
+    .filter((c) => (c.state === "stale" || c.state === "missing") && c.target && c.svg)
+    .map((c) => ({ target: c.target!, svg: c.svg! }));
+
   return {
     output,
     changed: output !== source,
@@ -153,6 +171,7 @@ export function fmt(source: string, opts: FmtOptions = {}): FmtResult {
     anchorsUpdated,
     datesFixed,
     unfixable,
+    artifacts,
   };
 }
 

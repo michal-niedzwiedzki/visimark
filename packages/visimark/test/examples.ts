@@ -22,6 +22,12 @@ export const quote = readFileSync(quotePath, "utf8");
 /** a minimal fixture whose one assertion is false — the ASSERT acceptance */
 export const assertFailPath = join(here, "fixtures", "assert-fail.md");
 
+/** the charts worked example, and its committed artifacts */
+export const chartsPath = join(docDir, "example-charts.md");
+export const charts = readFileSync(chartsPath, "utf8");
+/** a minimal fixture whose pie cannot be drawn — the ARTIFACT acceptance */
+export const chartFailPath = join(here, "fixtures", "chart-fail.md");
+
 /** the body of the nth ```console block in a worked example, `$` lines dropped */
 export function transcript(source: string, nth = 0): string {
   const lines = source.split("\n");

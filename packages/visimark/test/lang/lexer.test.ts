@@ -108,3 +108,24 @@ test("`assert` lexes as its own keyword token", () => {
 test("`assertion` is an ordinary identifier, not the keyword", () => {
   expect(kinds("assertion + 1")).toEqual(["ident", "op", "number", "eof"]);
 });
+
+// --- charts (#36) -----------------------------------------------------------
+
+test("`chart` lexes as its own keyword kind", () => {
+  const t = lex("chart cost as pie")[0]!;
+  expect(t.kind).toBe("chart");
+  expect(t.value).toBe("chart");
+});
+
+test("`chart` in a name position still lexes as the keyword", () => {
+  // the parser, not the lexer, decides where a keyword may stand
+  expect(kinds("chart = 1")).toEqual(["chart", "op", "number", "eof"]);
+});
+
+test("`:` lexes as a colon token for aspect ratios", () => {
+  expect(kinds("16:9")).toEqual(["number", "colon", "number", "eof"]);
+});
+
+test("a word merely starting with `chart` is an ident", () => {
+  expect(lex("charts")[0]!.kind).toBe("ident");
+});

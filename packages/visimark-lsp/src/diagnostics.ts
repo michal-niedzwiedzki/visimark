@@ -15,6 +15,7 @@ const SEVERITY: Record<string, DiagnosticSeverity> = {
   SHEET: DiagnosticSeverity.Error,
   ANCHOR: DiagnosticSeverity.Warning,
   ASSERT: DiagnosticSeverity.Error,
+  ARTIFACT: DiagnosticSeverity.Error,
   WARN: DiagnosticSeverity.Hint,
 };
 
@@ -60,6 +61,8 @@ export function messageOf(f: Finding): string {
         : (f.message ?? "type error");
     case "ASSERT":
       return `assertion is false: ${f.message}`;
+    case "ARTIFACT":
+      return f.message ?? "the artifact cannot be built";
     default:
       return f.message ?? f.code;
   }

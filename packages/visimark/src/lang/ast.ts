@@ -48,3 +48,16 @@ export interface Assertion extends Pos {
   type: "assert";
   expr: Expr;
 }
+
+/** A `chart <name> as <engine> of <cols> labelled <col> [aspect w:h]` statement.
+ *  Binds nothing and produces no value; it declares a generated artifact.
+ *  Operands are bare column names — a chart consumes the calculation model,
+ *  it does not extend it. */
+export interface ChartDecl extends Pos {
+  type: "chart";
+  name: string;
+  engine: string;
+  series: string[];
+  labels: string;
+  aspect: { w: number; h: number } | null;
+}

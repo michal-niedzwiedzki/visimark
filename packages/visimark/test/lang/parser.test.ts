@@ -166,3 +166,56 @@ test("parseStatement: `assert` with no expression is rejected", () => {
 test("parseStatement: `assert` mid-binding is rejected", () => {
   expect(() => parseStatement("x = assert")).toThrow("`assert` is a keyword");
 });
+
+// --- charts (#36) -----------------------------------------------------------
+
+import type { ChartDecl } from "../../src/lang/ast.js";
+
+const chart = (line: string) => parseStatement(line) as ChartDecl;
+
+test("chart statement: minimal form", () => {
+  const c = chart("chart cost_component as pie of Net labelled Item");
+  expect(c.type).toBe("chart");
+  expect(c.name).toBe("cost_component");
+  expect(c.engine).toBe("pie");
+  expect(c.series).toEqual(["Net"]);
+  expect(c.labels).toBe("Item");
+  expect(c.aspect).toBeNull();
+});
+
+test("chart statement: multi-series and an explicit aspect", () => {
+  const c = chart("chart perf as bar of Revenue, Cost, Profit labelled Month aspect 16:9");
+  expect(c.series).toEqual(["Revenue", "Cost", "Profit"]);
+  expect(c.engine).toBe("bar");
+  expect(c.aspect).toEqual({ w: 16, h: 9 });
+});
+
+test("chart statement: `as` is mandatory", () => {
+  expect(() => chart("chart cost pie of Net labelled Item")).toThrow(LangError);
+});
+
+test("chart statement: `of` and `labelled` are mandatory", () => {
+  expect(() => chart("chart cost as pie Net labelled Item")).toThrow(LangError);
+  expect(() => chart("chart cost as pie of Net Item")).toThrow(LangError);
+});
+
+test("chart statement: an expression operand is refused", () => {
+  expect(() => chart("chart m as bar of Profit / Revenue labelled Item")).toThrow(
+    "a chart takes a column, not an expression",
+  );
+});
+
+test("chart statement: malformed aspect", () => {
+  expect(() => chart("chart c as pie of Net labelled Item aspect 0:9")).toThrow(
+    "aspect needs two positive integers, as `16:9`",
+  );
+  expect(() => chart("chart c as pie of Net labelled Item aspect 16:x")).toThrow(LangError);
+});
+
+test("`chart` may not be a bound name", () => {
+  expect(() => parseStatement("chart = 1")).toThrow("`chart` is a keyword");
+});
+
+test("a chart needs a name", () => {
+  expect(() => chart("chart as pie of Net labelled Item")).toThrow(LangError);
+});

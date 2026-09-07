@@ -5,6 +5,8 @@ export type TokenKind =
   | "string"
   | "ident"
   | "assert"
+  | "chart"
+  | "colon"
   | "op"
   | "dot"
   | "lparen"

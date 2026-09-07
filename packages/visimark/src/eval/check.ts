@@ -4,6 +4,7 @@ import { NO_FORMULAS_MARKER, type RawTable, type Span } from "../parse/document.
 import {
   type Assertion,
   type Binding,
+  type Chart,
   type DocModel,
   type Finding,
   isProblem,
@@ -13,7 +14,10 @@ import { closest } from "../report/levenshtein.js";
 import { parseIsoDate } from "./dates.js";
 import { evalExpr, type EvalEnv } from "./evaluate.js";
 import { describeCallProblem, FUNCTIONS, isReduce } from "./functions.js";
-import { dependencies, refText, resolve, topoOrder } from "./graph.js";
+import { chartNode, dependencies, refText, resolve, topoOrder } from "./graph.js";
+import { buildArtifact, hasEngine, type Series, suggestEngine } from "../artifact/index.js";
+import { resolveArtifactPath } from "../artifact/path.js";
+import { classify } from "../artifact/stale.js";
 import { applyUnit, inferColumnUnit, numericValue, parseDecorated, type Unit } from "./units.js";
 import { date, EvalError, num, roundToPlaces, str, type Value } from "./value.js";
 
@@ -29,6 +33,28 @@ const MAX_FN_SUGGESTION_DISTANCE = 2;
 const BOOLEAN_BINDING_MESSAGE =
   "a boolean cannot be stored; wrap it in `IF()` to produce a number or a string";
 
+export interface CheckOptions {
+  /** the document's own path — required to resolve and compare artifacts.
+   *  Without it charts are still validated, but staleness cannot be judged. */
+  docPath?: string;
+}
+
+/** one entry per `chart` declaration, in document order */
+export interface ChartResult {
+  sheetId: string;
+  name: string;
+  engine: string;
+  series: string[];
+  labels: string;
+  /** the path as the document wrote it, or null when there is no image line */
+  path: string | null;
+  state: "current" | "stale" | "missing" | "error" | "skipped";
+  /** absolute target, present when the path passed the gate */
+  target?: string;
+  /** the rendered artifact, present when it built — `fmt` writes this */
+  svg?: string;
+}
+
 export interface CheckResult {
   findings: Finding[];
   values: Map<string, Value>;
@@ -43,6 +69,8 @@ export interface CheckResult {
   unitConflicts: Set<string>;
   /** one entry per `assert` statement, in document order */
   assertions: AssertionResult[];
+  /** one entry per `chart` declaration, in document order */
+  charts: ChartResult[];
   exitCode: 0 | 1;
 }
 
@@ -64,8 +92,8 @@ class Unevaluable extends Error {}
 const PERCENT_RE = /^(\d+(?:\.\d+)?)%$/;
 const DATEISH_RE = /^\d{1,4}[./-]\d{1,4}[./-]\d{1,4}$/;
 
-export function check(model: DocModel): CheckResult {
-  const { order, cycles, assertionIds } = topoOrder(model);
+export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
+  const { order, cycles, assertionIds, chartIds } = topoOrder(model);
 
   const assertionById = new Map<string, Assertion>();
   for (const sheet of model.sheets.values()) {
@@ -162,6 +190,9 @@ export function check(model: DocModel): CheckResult {
     }
   }
 
+  /** charts whose operands resolved — the artifact pass picks these up */
+  const buildableCharts = new Set<string>();
+
   const sheetSeen: string[] = [];
 
   for (const binding of order) {
@@ -239,6 +270,14 @@ export function check(model: DocModel): CheckResult {
       continue;
     }
 
+    // A chart's operands have now been checked for resolution and shape. Its
+    // synthetic expression is never evaluated — the artifact is built on its
+    // own branch, after this loop.
+    if (chartIds.has(binding.id)) {
+      buildableCharts.add(binding.id);
+      continue;
+    }
+
     // a rule whose operands are in conflict is unverifiable too
     if (
       [...dep.deps].some((d) => unitConflicts.has(d)) ||
@@ -296,19 +335,233 @@ export function check(model: DocModel): CheckResult {
     }
   }
 
+  // ---- generated artifacts -------------------------------------------------
+  // A chart's operands have already been resolved and shape-checked by the
+  // loop above. What remains is data validation the engine cannot see, the
+  // path gate, and byte comparison against the file on disk.
+  const charts: ChartResult[] = [];
+  const claimedPaths = new Map<string, string>();
+
+  for (const sheet of model.sheets.values()) {
+    let skipped = 0;
+    for (const c of sheet.charts) {
+      const label = `${c.sheetId}.${c.name}`;
+      const artifactFinding = (message: string, suggestion?: string) =>
+        emit(
+          {
+            code: "ARTIFACT",
+            sheetId: c.sheetId,
+            name: c.name,
+            message,
+            ...(suggestion ? { suggestion } : {}),
+            sourceOffset: c.span.start,
+            span: c.span,
+          },
+          { sheetId: c.sheetId },
+        );
+
+      if (!buildableCharts.has(c.id)) {
+        // an upstream error stopped its series being computed; one note per
+        // sheet, never one per chart
+        skipped++;
+        charts.push({ ...base(c), path: null, state: "skipped" });
+        continue;
+      }
+
+      if (!hasEngine(c.engine)) {
+        artifactFinding(
+          "unknown chart type `" + c.engine + "`",
+          suggestEngine(c.engine) ?? undefined,
+        );
+        charts.push({ ...base(c), path: null, state: "error" });
+        continue;
+      }
+
+      // series
+      const node = chartNode(c);
+      const built: Series[] = [];
+      let failure: string | null = null;
+      for (const name of c.series) {
+        const vals = readColumn(node, name);
+        if (typeof vals === "string") {
+          failure = vals;
+          break;
+        }
+        if (vals.length === 0) {
+          failure = "`" + name + "` has no rows";
+          break;
+        }
+        if (vals.some((v) => v.t !== "num")) {
+          failure = "`" + name + "` needs numbers";
+          break;
+        }
+        const plain = name.includes(".") ? name.slice(name.indexOf(".") + 1) : name;
+        const colId = `${c.sheetId}.${plain}`;
+        built.push({
+          name,
+          values: vals.map((v) => (v as { t: "num"; d: Decimal }).d),
+          unit: columnUnits.get(colId) ?? null,
+          precision: columnPrecision.get(colId) ?? inputPrecision(c.sheetId, plain),
+        });
+      }
+      if (failure) {
+        artifactFinding(failure);
+        charts.push({ ...base(c), path: null, state: "error" });
+        continue;
+      }
+
+      // a chart whose series disagree about their decoration is the §7 unit
+      // rule one level up
+      const units = built.map((b) => (b.unit ? `${b.unit.side}:${b.unit.text}` : ""));
+      if (new Set(units).size > 1) {
+        emit(
+          {
+            code: "UNIT",
+            sheetId: c.sheetId,
+            name: c.name,
+            message: "a chart's series must agree about their unit",
+            sourceOffset: c.span.start,
+            span: c.span,
+          },
+          { sheetId: c.sheetId },
+        );
+        charts.push({ ...base(c), path: null, state: "error" });
+        continue;
+      }
+
+      // Labels are the cell text as the document writes it, never a coerced
+      // value: `Under 25` is a label, not the number 25 wearing a `Under`
+      // decoration, and a reader must find every rendered string on the page.
+      const labelVals = readLabels(c.sheetId, c.labels);
+      if (typeof labelVals === "string") {
+        artifactFinding(labelVals);
+        charts.push({ ...base(c), path: null, state: "error" });
+        continue;
+      }
+      const labels = labelVals;
+
+      // the document states the path, in an image line carrying the anchor
+      const anchor = model.anchors.find(
+        (a) => a.sheetId === c.sheetId && a.name === c.name && a.imageUrl !== undefined,
+      );
+      if (!anchor?.imageUrl) {
+        artifactFinding(
+          "no image reference for this chart — add `![...](path)<!--vmark=" + label + "-->`",
+        );
+        charts.push({ ...base(c), path: null, state: "error" });
+        continue;
+      }
+      const url = anchor.imageUrl;
+
+      const claimant = claimedPaths.get(url);
+      if (claimant && claimant !== label) {
+        artifactFinding("two charts write to `" + url + "`");
+        charts.push({ ...base(c), path: url, state: "error" });
+        continue;
+      }
+      claimedPaths.set(url, label);
+
+      const rendered = buildArtifact(
+        c.engine,
+        { series: built, labels, aspect: c.aspect ?? { w: 16, h: 10 } },
+        { sheetId: c.sheetId, chart: c.name },
+      );
+      if ("err" in rendered) {
+        artifactFinding(rendered.err);
+        charts.push({ ...base(c), path: url, state: "error" });
+        continue;
+      }
+
+      if (opts.docPath === undefined) {
+        // no file to compare against — the chart is valid, staleness unknown
+        charts.push({ ...base(c), path: url, state: "skipped", svg: rendered.svg });
+        continue;
+      }
+      const gated = resolveArtifactPath(opts.docPath, url);
+      if ("err" in gated) {
+        artifactFinding(gated.err);
+        charts.push({ ...base(c), path: url, state: "error" });
+        continue;
+      }
+
+      const st = classify(gated.ok, rendered.svg, c.sheetId, c.name);
+      if (st.state === "unowned") {
+        artifactFinding("`" + url + "` exists and was not generated by visimark");
+        charts.push({ ...base(c), path: url, state: "error", target: gated.ok });
+        continue;
+      }
+      if (st.state === "foreign") {
+        artifactFinding("`" + url + "` belongs to chart `" + st.sheet + "." + st.chart + "`");
+        charts.push({ ...base(c), path: url, state: "error", target: gated.ok });
+        continue;
+      }
+      if (st.state !== "current") {
+        emit(
+          {
+            code: "STALE",
+            sheetId: c.sheetId,
+            name: c.name,
+            artifact: url,
+            message:
+              st.state === "missing"
+                ? "artifact missing at `" + url + "`"
+                : "artifact is out of date — run `visimark fmt`",
+            sourceOffset: c.span.start,
+            span: c.span,
+          },
+          { sheetId: c.sheetId },
+        );
+      }
+      charts.push({
+        ...base(c),
+        path: url,
+        state: st.state === "current" ? "current" : st.state,
+        target: gated.ok,
+        svg: rendered.svg,
+      });
+    }
+    if (skipped > 0) {
+      emit(
+        {
+          code: "NOTE",
+          sheetId: sheet.id,
+          message: `${skipped} chart${skipped === 1 ? "" : "s"} not built (upstream errors)`,
+        },
+        { sheetId: sheet.id },
+      );
+    }
+  }
+
   // anchors: collapse staleness, flag rewrite-less anchors
+  const chartIdSet = new Set<string>();
+  for (const sheet of model.sheets.values()) {
+    for (const c of sheet.charts) chartIdSet.add(`${c.sheetId}.${c.name}`);
+  }
   let staleAnchorCount = 0;
   for (const a of model.anchors) {
     const id = `${a.sheetId}.${a.name}`;
     if (staleScalars.has(id)) staleAnchorCount++;
-    if (a.value === null) {
+    const anchorFinding = (message?: string) =>
       emit({
         code: "ANCHOR",
         sheetId: a.sheetId,
         name: a.name,
         sourceOffset: a.commentSpan.start,
         span: a.commentSpan,
+        ...(message ? { message } : {}),
       });
+    if (a.value === null) {
+      anchorFinding();
+      continue;
+    }
+    const isChart = chartIdSet.has(id);
+    if (a.value.kind === "image" && !isChart) {
+      // an image holds no value to rewrite; only a chart may be anchored to one
+      anchorFinding("an image anchor must name a chart");
+      continue;
+    }
+    if (a.value.kind !== "image" && isChart) {
+      anchorFinding("a chart must be anchored to an image");
     }
   }
   if (staleAnchorCount > 0) {
@@ -353,8 +606,64 @@ export function check(model: DocModel): CheckResult {
     scalarUnits,
     unitConflicts,
     assertions,
+    charts,
     exitCode: findings.some(isProblem) ? 1 : 0,
   };
+
+  // ---- artifact helpers ----
+
+  function base(c: Chart) {
+    return {
+      sheetId: c.sheetId,
+      name: c.name,
+      engine: c.engine,
+      series: c.series,
+      labels: c.labels,
+    };
+  }
+
+  /** a column's values, or a message saying why it cannot be read */
+  function readColumn(node: Binding, name: string): Value[] | string {
+    const dot = name.indexOf(".");
+    const ref: Ref =
+      dot === -1
+        ? { type: "ref", name, start: node.span.start, end: node.span.end }
+        : {
+            type: "ref",
+            qualifier: name.slice(0, dot),
+            name: name.slice(dot + 1),
+            start: node.span.start,
+            end: node.span.end,
+          };
+    try {
+      return lookupVector(node, ref, undefined);
+    } catch {
+      return "`" + name + "` contains a blank cell";
+    }
+  }
+
+  /** a label column's cells, verbatim */
+  function readLabels(sheetId: string, name: string): string[] | string {
+    const sheet = model.sheets.get(sheetId);
+    const idx = sheet?.columnIndex.get(name);
+    if (!sheet?.table || idx === undefined) {
+      return "`" + name + "` is not a column of this sheet";
+    }
+    return sheet.table.rows.map((r) => (r.cells[idx]?.text ?? "").trim());
+  }
+
+  /** an input column carries no computed precision, so read it off its cells */
+  function inputPrecision(sheetId: string, name: string): number {
+    const sheet = model.sheets.get(sheetId);
+    const idx = sheet?.columnIndex.get(name);
+    if (sheet?.table && idx !== undefined) {
+      for (const row of sheet.table.rows) {
+        const t = (row.cells[idx]?.text ?? "").trim();
+        if (t) return decimalPlaces(t, 2);
+      }
+    }
+    return 2;
+  }
 
   // ---- helpers bound to the closures above ----
 
