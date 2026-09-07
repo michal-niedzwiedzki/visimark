@@ -29,3 +29,93 @@ jobs:
         with:
           name: visimark-vsix
           path: editors/vscode/visimark.vsix
+
+  # The published CLI must run under Node, not only Bun. Build with Bun (the
+  # only supported build path), then exercise the built dist/ under Node.
+  acceptance-node:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20
+      - run: bun install --frozen-lockfile
+      - run: bun run build
+      - name: the built CLI runs under Node against the worked examples
+        run: |
+          set -e
+          bin=packages/visimark/bin/visimark.js
+          node "$bin" --version | grep -qE '^visimark [0-9]'
+          node "$bin" check docs/example-invoice.md
+          if node "$bin" check docs/example-invoice-drift.md; then
+            echo "::error::drift example passed under Node; it must fail"; exit 1
+          fi
+          if node "$bin" check docs/example-quote-plain.md; then
+            echo "::error::plain quote passed under Node; it must fail (COVERAGE)"; exit 1
+          fi
+
+  # Pack once, then install the tarball globally in two isolated environments —
+  # a Node-only runner and a Bun-only container — and run the command. This is
+  # the regression test for #29 (bun add -g on a machine with no Node).
+  pack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bun run build
+      - name: pack the tarball
+        working-directory: packages/visimark
+        run: npm pack --pack-destination "$RUNNER_TEMP"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: visimark-tarball
+          path: ${{ runner.temp }}/visimark-*.tgz
+          if-no-files-found: error
+
+  smoke-node:
+    needs: pack
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20
+      - uses: actions/download-artifact@v7
+        with:
+          name: visimark-tarball
+      - name: global install under Node only
+        run: |
+          set -e
+          if command -v bun >/dev/null 2>&1; then
+            echo "::error::bun is present; smoke-node must be Node-only"; exit 1
+          fi
+          npm i -g ./visimark-*.tgz
+          vm="$(npm prefix -g)/bin/visimark"
+          "$vm" --version | grep -qE '^visimark [0-9]'
+          printf '# smoke\n' > smoke.md
+          "$vm" check smoke.md
+
+  smoke-bun:
+    needs: pack
+    runs-on: ubuntu-latest
+    container: oven/bun:latest
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: visimark-tarball
+      - name: global install under Bun only
+        run: |
+          set -e
+          if command -v node >/dev/null 2>&1; then
+            echo "::error::node is on PATH in the bun container; smoke-bun must be Bun-only"; exit 1
+          fi
+          bun add -g ./visimark-*.tgz
+          export PATH="$(bun pm bin -g):$PATH"
+          visimark --version | grep -qE '^visimark [0-9]'
+          printf '# smoke\n' > smoke.md
+          visimark check smoke.md
