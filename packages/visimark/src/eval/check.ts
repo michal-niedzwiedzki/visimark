@@ -369,7 +369,10 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
       }
 
       if (!hasEngine(c.engine)) {
-        artifactFinding("unknown chart type `" + c.engine + "`", suggestEngine(c.engine) ?? undefined);
+        artifactFinding(
+          "unknown chart type `" + c.engine + "`",
+          suggestEngine(c.engine) ?? undefined,
+        );
         charts.push({ ...base(c), path: null, state: "error" });
         continue;
       }
@@ -606,7 +609,6 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
     charts,
     exitCode: findings.some(isProblem) ? 1 : 0,
   };
-
 
   // ---- artifact helpers ----
 

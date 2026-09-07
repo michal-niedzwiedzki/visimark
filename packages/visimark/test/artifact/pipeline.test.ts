@@ -1,5 +1,5 @@
 import { expect, test, beforeAll } from "bun:test";
-import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, existsSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { locate } from "../../src/parse/document.js";

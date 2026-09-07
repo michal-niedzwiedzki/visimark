@@ -18,8 +18,13 @@ export function pie(input: EngineInput): EngineResult {
   if (negative !== -1) {
     return {
       err:
-        "pie of `" + s.name + "` contains a negative value (" +
-        s.values[negative]!.toFixed(s.precision) + ", row " + (negative + 1) + ")",
+        "pie of `" +
+        s.name +
+        "` contains a negative value (" +
+        s.values[negative]!.toFixed(s.precision) +
+        ", row " +
+        (negative + 1) +
+        ")",
     };
   }
   const total = s.values.reduce((a, b) => a.plus(b), s.values[0]!.mul(0));

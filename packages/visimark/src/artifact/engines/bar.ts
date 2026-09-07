@@ -108,9 +108,7 @@ export function bar(input: EngineInput): EngineResult {
     for (let r = 0; r < rows; r++) {
       const v = s.values[r]!;
       const vy = y(v.toNumber());
-      body.push(
-        text(PAD_L + slot * r + slot / 2, vy - 5, showNumber(v, s), { size: 10 }),
-      );
+      body.push(text(PAD_L + slot * r + slot / 2, vy - 5, showNumber(v, s), { size: 10 }));
     }
   }
 

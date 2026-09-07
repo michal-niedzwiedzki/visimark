@@ -165,7 +165,9 @@ function renderGroup(f: Finding): string[] {
       const head = prefix("ARTIFACT") + id(f).padEnd(ID_FIELD) + "  " + (f.message ?? "");
       return [
         head,
-        ...(f.suggestion ? [" ".repeat(prefix("ARTIFACT").length) + `did you mean \`${f.suggestion}\`?`] : []),
+        ...(f.suggestion
+          ? [" ".repeat(prefix("ARTIFACT").length) + `did you mean \`${f.suggestion}\`?`]
+          : []),
       ];
     }
     case "ANCHOR":

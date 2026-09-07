@@ -20,6 +20,12 @@ is auditable in code review and enforceable in CI.
 **Non-goals.** No grid, no presentation layer, no cell styling, no locale, no
 Excel file compatibility, no attempt at Excel's function library.
 
+"No presentation layer" means **VisiMark never renders or displays a document
+and makes no claim about how it is displayed**. Producing a derived data
+artifact from a document is not that: a generated SVG is data in another form,
+committed beside the Markdown and verified like any other derived value
+([§18](#18-generated-artifacts)).
+
 ## 2. Constraints that shaped the design
 
 1. **A VisiMark document must render correctly in unmodified renderers** —
@@ -174,6 +180,10 @@ unrelated restrictions all follow from this one:
 - `Share = Net / SUM(Net)` is legal, because a reduce yields a scalar and a
   scalar composes anywhere a map accepts one — including back inside the column
   rule the reduce read from.
+- A **chart** is the one other consumer of vectors ([§18](#18-generated-artifacts)).
+  It takes one or more column references and produces no value at all — an
+  artifact, not a scalar. Like a reduce it takes bare column references, never
+  expressions, and for the same reason.
 - `SUM(Price * Qty)` is refused. **A reduce takes a column reference, never an
   expression.** This is the audit trail rather than a limit of the parser: it
   forces every intermediate to be materialised as a column the reader can see,
@@ -343,7 +353,9 @@ emitting noise about values it could not compute. Suppression is the general
 rule, not a special case: one root cause yields one finding. `assert` statements
 ([§17](#17-assertions)) are nodes in this graph too — ordered after everything
 they read, and folded into one per-sheet `NOTE` when a dependency is
-unevaluable.
+unevaluable. `chart` declarations ([§18](#18-generated-artifacts)) are nodes on
+the same footing: ordered after the columns they read, with no dependents, and
+folded into a per-sheet `NOTE` of their own when a series cannot be computed.
 
 Recomputation reparses the document. A full reparse of a large document is
 single-digit milliseconds; incremental range remapping is a later optimisation
@@ -351,10 +363,23 @@ to be justified by profiling, not assumed.
 
 ## 9. Write-back
 
-The tool owns exactly two things: **computed cells** and **anchored values**.
-Everything else — input columns, prose, headings, table alignment, the blocks
-themselves — is human territory and is never touched. The sole exception is
-`fmt --fix-dates`, which is opt-in precisely because it writes to input.
+The tool owns exactly three things: **computed cells**, **anchored values**, and
+**generated artifacts** ([§18](#18-generated-artifacts)). Everything else —
+input columns, prose, headings, table alignment, the blocks themselves — is
+human territory and is never touched. The sole exception is `fmt --fix-dates`,
+which is opt-in precisely because it writes to input.
+
+A generated artifact is a *category*, not a second exception. `--fix-dates` is
+gated because it overwrites human input in place; an artifact is a file nobody
+hand-edits, which makes it more exclusively tool-owned than a computed cell
+sitting inside a human-authored table. So it needs no flag — but the tool
+writes only where a document explicitly points it, and never over a file that
+does not carry its own marker. The category is named generically on purpose: a
+second kind of generated artifact should not reopen this question.
+
+**Artifacts are generated and overwritten, never deleted.** An artifact orphaned
+by a renamed or removed declaration is the author's to remove, and shows up at
+git staging like any other stray file.
 
 A rewritten cell or anchor keeps its column's or scalar's inferred unit: the
 number changes, the `$` or ` kg` around it does not. A column carrying a `UNIT`
@@ -373,7 +398,7 @@ justifies the project.
 
 | Code | Meaning | Auto-fixable |
 |------|---------|--------------|
-| `STALE` | stored value disagrees with its formula | yes, by `fmt` |
+| `STALE` | stored value **or artifact** disagrees with its formula | yes, by `fmt` |
 | `DATE` | not an ISO 8601 calendar date | only if decidable, with `--fix-dates` |
 | `UNIT` | a column mixes unit decorations, or a value is decorated on both sides | no |
 | `UNDEF` | unresolvable name | no |
@@ -384,6 +409,7 @@ justifies the project.
 | `SHEET` | column rules with no table, or an `assert` in a document-scope block | no |
 | `ANCHOR` | anchor with no rewritable target | no |
 | `ASSERT` | an `assert` statement evaluated false ([§17](#17-assertions)) | no |
+| `ARTIFACT` | a declared artifact cannot be built or written ([§18](#18-generated-artifacts)) | no |
 | `WARN` | scalar defined and never read | no |
 | `NOTE` | finding suppressed by an upstream error | n/a |
 
@@ -437,15 +463,24 @@ Pratt parser is a day's work and gives precise error positions.
 
 ## 13. Testing
 
-**The two example documents are the acceptance suite.**
+**The three example documents are the acceptance suite.**
 
 - `example-invoice.md` must produce zero findings, and `fmt` must leave it
   byte-for-byte identical.
+- `example-charts.md` must produce zero findings with both of its artifacts
+  committed and current; `fmt` must leave the document **and both SVGs**
+  byte-for-byte identical, and deleting an SVG must report `STALE` and
+  regenerate byte-identically ([§18](#18-generated-artifacts)).
 - `example-invoice-drift.md` must reproduce the transcript in its own appendix
   exactly — 26 problems, being 21 stale values and 5 errors, plus one
   suppression note. The test asserts `check` output against the fenced console
   block in that file, so the documentation cannot drift from the implementation
   without failing the build.
+
+The one-cell-change-touches-one-line guarantee is about **documents**. A
+generated artifact is regenerated whole, and is excluded from it — which is the
+point of keeping artifacts out of the Markdown rather than inlining them, since
+an inlined artifact would rewrite a line of the document on every data change.
 
 Beyond those: unit tests per module; golden-file tests for the splicer proving
 that a one-cell change touches one line; and a property test that `fmt` is
@@ -534,6 +569,7 @@ bare-number prose anchor, anchors in a table header cell and a body cell, and a
 | GitHub (`api.github.com/markdown`, gfm) | stripped from output | pass |
 | pandoc 3.11 → html5 | passed through as a comment | pass |
 | pandoc 3.11 → docx | dropped; values retained | pass |
+| pandoc 3.11 → docx, an SVG image | **untested** | accepted |
 | markdown-it `html: true` (VS Code preview) | passed through as a comment | pass |
 | marked, default options | passed through as a comment | pass |
 | remark-rehype, default | stripped from output | pass |
@@ -633,5 +669,122 @@ evidence of an intended invariant, and the false-positive cost is too high.
 document-scope assertions (an `assert` in an id-less block is a `SHEET` finding
 for now), and prose-anchored assertions (`<!--vmark-assert=name-->`). Each waits
 on a document that needs it.
+
+## 18. Generated artifacts
+
+A `vmark` block may declare a **chart**: a picture derived from columns of its
+own sheet, written to a file the document names and verified like any other
+derived value.
+
+````markdown
+| Item  | Price | Qty |   Net |
+|-------|------:|----:|------:|
+| pen   |  2.00 |  10 | 20.00 |
+
+```vmark #items
+Net = Price * Qty
+chart cost_component as pie of Net labelled Item
+```
+
+![cost breakdown](charts/cost.svg)<!--vmark=items.cost_component-->
+````
+
+`fmt` writes `charts/cost.svg`; `check` proves the file on disk is what the
+current data renders to. The worked example is
+[`example-charts.md`](example-charts.md).
+
+The category is **generated verifiable artifacts**, not charts specifically.
+Charts are its first instance; [§9](#9-write-back) names the category so a
+second kind does not reopen the ownership question.
+
+**Syntax.**
+
+```
+chart <name> as <engine> of <col>[, <col>]* labelled <col> [aspect <w>:<h>]
+```
+
+`chart` is a keyword, like `assert`; `chart = 1` is a `TYPE` finding. `<name>`
+is an ordinary identifier occupying the sheet's namespace, so a collision with
+a column, a scalar or another chart is a `DUP`. There is no `#` sigil — `#`
+already begins a comment inside a block body ([§4](#4-syntax)). `as` is
+mandatory: it marks the name/engine boundary structurally rather than
+positionally, which keeps a misspelled engine diagnosable. The engines are
+`pie` and `bar`, a closed built-in set — a document selects `pie` exactly as it
+selects `SUM`, and there is no plugin point ([§2](#2-constraints-that-shaped-the-design)).
+
+Operands are **bare column references in the statement's own sheet**, the same
+rule a reduce follows: `of Profit / Revenue` is refused, so every series is a
+column the reader can see. A foreign column is a `VECTOR` finding, which means
+series and labels share a row count by construction. `aspect` sets the shape of
+the viewBox — geometry, not a display size; the width is always 640 units and
+the default is `16:10`.
+
+**Where the artifact lives is the document's choice.** The author writes an
+ordinary Markdown image carrying an anchor, and the tool writes to exactly that
+path. This mirrors the anchor model: the tool never invents an anchor, and the
+alt text and surrounding prose own the caption — which is why there is no
+`title` parameter. A declaration with no image line, and an image anchor naming
+no chart, are both findings.
+
+The path is gated: relative only, contained against its resolved real path so
+no traversal or symlink escapes the document's directory, lowercase `.svg`, no
+control characters or Windows device names. Subdirectories under the document
+are allowed. The backstop is ownership — **VisiMark refuses to overwrite any
+file not carrying its own marker**, so a hand-drawn `diagram.svg` cannot be
+destroyed by a misaimed declaration.
+
+**Staleness is byte comparison, not a checksum.** `check` renders the chart into
+memory and compares it to the file. That is exact — no hash coverage to define,
+no output-version to maintain, no algorithm anything external can depend on —
+and it restales correctly when the renderer itself changes. The consequence is
+binding: **nothing volatile may appear in the output**, no version, no
+timestamp, no absolute path, or every artifact would be permanently stale. The
+metadata carries identity alone:
+
+```xml
+<metadata><visimark sheet="items" chart="cost_component"/></metadata>
+```
+
+Line endings are normalised to LF before comparison, so an `autocrlf` checkout
+does not report every artifact stale.
+
+**Rendering** is deterministic given the resolved values, the declaration and
+the `visimark` version — no clock, no randomness, no network, no ambient fonts.
+All text is monospace, so advance width is exact arithmetic and layout needs no
+font metrics. Fills step evenly across a restricted greyscale band
+(`#333333`–`#cccccc`, first series darkest) with `#808080` ink: a fixed artifact
+cannot know its background, pure white vanishes on a light page and pure black
+on a dark one, and GitHub sanitizes SVG so an internal `prefers-color-scheme`
+block cannot be relied on. Value labels carry the column's own precision and
+unit decoration ([§7](#7-numeric-semantics)); label columns render their cell
+text verbatim, so every string in the picture is on the page. There is no
+styling surface at all — no colours, fonts, spacing or themes.
+
+**Findings.** `STALE` covers an artifact that is out of date *or absent*; `fmt`
+repairs both. `ARTIFACT` covers everything `fmt` cannot repair: a pie over
+negative values or summing to zero, a blank cell, an empty or non-numeric
+series, an unknown engine, a malformed `aspect`, an illegal path, a target that
+is not ours, and two declarations claiming one path. One finding per artifact,
+never one per row; a series that cannot be computed folds into a per-sheet
+`NOTE`, as an assertion does.
+
+Refusing is the **builder's** obligation: an engine returns bytes or a
+diagnostic, and receives resolved data only — series, labels, aspect — with no
+handle on the document, the AST or the evaluator. Filtering or aggregation
+inside an engine is therefore unrepresentable rather than merely discouraged,
+and a new engine is a registry entry plus one file.
+
+**What `check` does not prove.** That the picture faithfully depicts the data.
+An artifact's provenance is verifiable; its draughtsmanship is not. Artifacts sit
+downstream of the primary mechanics, and this is stated rather than hidden.
+
+**Elsewhere.** `explain` lists a sheet's charts with their target and current
+state; `eval --json` carries a `charts` array. `infer` never proposes a chart —
+a chartable column is not evidence of an intended chart.
+
+**Deferred.** `numbered` labels (they would render strings appearing nowhere in
+the document — add a visible column instead), cross-sheet series, further
+engines (`line`, `area`, `scatter`, `stacked-bar`), orphan cleanup, and any
+output format other than SVG.
 
 <!--vmark:no-formulas-->

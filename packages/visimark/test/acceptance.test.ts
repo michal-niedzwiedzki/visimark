@@ -53,7 +53,6 @@ describe("the two worked examples are the acceptance suite", () => {
   });
 });
 
-
 describe("example-charts.md is the generated-artifact acceptance", () => {
   const run = (s: string, docPath: string) => check(build(locate(s)), { docPath });
 

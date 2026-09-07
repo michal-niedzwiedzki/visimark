@@ -79,7 +79,10 @@ export interface TextOpts {
 export function text(x: number, y: number, s: string, opts: TextOpts = {}): string {
   const size = opts.size ?? 12;
   const anchor = opts.anchor ?? "middle";
-  const len = opts.length !== undefined ? ` textLength="${n2(opts.length)}" lengthAdjust="spacingAndGlyphs"` : "";
+  const len =
+    opts.length !== undefined
+      ? ` textLength="${n2(opts.length)}" lengthAdjust="spacingAndGlyphs"`
+      : "";
   return (
     `<text x="${n2(x)}" y="${n2(y)}" font-family="${FONT}" font-size="${size}" ` +
     `text-anchor="${anchor}" fill="${INK}"${len}>${esc(s)}</text>`

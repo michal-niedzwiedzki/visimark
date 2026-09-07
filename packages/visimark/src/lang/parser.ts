@@ -275,7 +275,6 @@ function parseBindingInner(line: string): Binding {
   };
 }
 
-
 const ASPECT_MESSAGE = "aspect needs two positive integers, as `16:9`";
 
 /**
@@ -370,7 +369,11 @@ function parseChart(toks: Token[], kw: Token): ChartDecl {
 
   const end = at();
   if (end.kind !== "eof") {
-    throw new LangError(`unexpected ${end.kind === "op" ? `operator \`${end.value}\`` : end.kind}`, end.start, end.end);
+    throw new LangError(
+      `unexpected ${end.kind === "op" ? `operator \`${end.value}\`` : end.kind}`,
+      end.start,
+      end.end,
+    );
   }
   return { type: "chart", name, engine, series, labels, aspect, start: kw.start, end: end.start };
 }

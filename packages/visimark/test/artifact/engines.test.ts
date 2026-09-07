@@ -62,7 +62,7 @@ test("pie: renders, is byte-stable, and carries the marker", () => {
   expect(a).toEqual(b);
   if ("err" in a) throw new Error(a.err);
   expect(a.svg).toContain('<visimark sheet="s" chart="c"/>');
-  expect(a.svg).toContain("viewBox=\"0 0 640 400\"");
+  expect(a.svg).toContain('viewBox="0 0 640 400"');
   expect(a.svg).toContain("57.1%");
   expect(a.svg).toContain("42.9%");
 });

@@ -53,7 +53,9 @@ test("a chart name colliding with a column or scalar is DUP", () => {
 
 test("two charts sharing a name is DUP", () => {
   const m = model(
-    doc("Net = Price * Qty\nchart c as pie of Net labelled Item\nchart c as bar of Net labelled Item"),
+    doc(
+      "Net = Price * Qty\nchart c as pie of Net labelled Item\nchart c as bar of Net labelled Item",
+    ),
   );
   expect(m.findings.some((f) => f.code === "DUP" && f.name === "c")).toBe(true);
   expect(m.sheets.get("order")!.charts).toHaveLength(1);

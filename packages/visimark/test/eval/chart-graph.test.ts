@@ -49,9 +49,7 @@ chart cost as pie of order.Net labelled Amount
 
 test("a chart reading an unevaluable column produces no arithmetic finding", () => {
   // `Net` is a CYCLE; the chart must not add TYPE noise of its own
-  const r = check(
-    build(locate(doc("Net = Net + 1\nchart cost as pie of Net labelled Item", IMG))),
-  );
+  const r = check(build(locate(doc("Net = Net + 1\nchart cost as pie of Net labelled Item", IMG))));
   expect(r.findings.some((x) => x.code === "CYCLE")).toBe(true);
   expect(r.findings.some((x) => x.code === "TYPE")).toBe(false);
 });

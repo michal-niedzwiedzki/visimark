@@ -198,9 +198,10 @@ touches expressions, and diffability ([§9](visimark-design.md#9-write-back)). A
 
 | Feature | What it changes | Pros | Cons | Request | Status |
 |---------|-----------------|------|------|---------|--------|
-| Generated artifacts (`chart` statements) | A `chart <name> as pie\|bar of <cols> labelled <col> [aspect w:h]` statement in a `vmark` block. The author states the artifact's path in an ordinary Markdown image carrying an anchor; `fmt` writes a deterministic SVG there and `check` proves it current by rendering and comparing bytes. Introduces a **third category of tool-owned output** — generated artifacts — plus an `ARTIFACT` finding, and widens `STALE` to cover an artifact that is out of date or absent. | A visualisation stops being a second source of truth: one dataset, regenerated and CI-verified like every other derived value, and readable on GitHub by anyone without VisiMark installed. Constraint 4 holds fully — no clock, network, ambient fonts or config, and a closed built-in engine set. The document states the path, mirroring the anchor model, so there is no naming convention, no normalisation and no collision analysis. Byte comparison replaces any checksum, giving exact invalidation with no algorithm anyone can depend on. Forbidding formulas in declarations keeps the calculation model in the language. | Requires clarifying [§1](visimark-design.md#1-purpose)'s "no presentation layer" non-goal, naming a third owned category in [§9](visimark-design.md#9-write-back), and scoping [§13](visimark-design.md#13-testing)'s one-line-diff guarantee to documents. `check` proves an artifact's provenance, never that the picture depicts the data faithfully — a limit new in kind, accepted as downstream of the primary mechanics. Author-chosen paths need a hard gate (relative, contained, no symlink escape, lowercase `.svg`, refuse to overwrite anything not VisiMark-marked). Cost is **L** — a rendering engine plus artifact writing, path validation and staleness. Greyscale discrimination weakens past ~5 series. | [#36](https://github.com/michal-niedzwiedzki/visimark/issues/36) | [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/36#issuecomment-5575507072) |
+| _(none open)_ | | | | | |
 
-`assert` statements shipped — see the [Shipped register](#shipped).
+`assert` statements and generated artifacts (`chart`) shipped — see the
+[Shipped register](#shipped).
 
 ## F. Tooling and process
 
@@ -234,5 +235,6 @@ the same time.
 | `SQRT(x)` | mapper | [#18](https://github.com/michal-niedzwiedzki/visimark/issues/18) | [#20](https://github.com/michal-niedzwiedzki/visimark/pull/20) | — | [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/18#issuecomment-5560992652) |
 | `assert` statements | language feature | [#27](https://github.com/michal-niedzwiedzki/visimark/issues/27) | [#32](https://github.com/michal-niedzwiedzki/visimark/pull/32) | — | [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/27#issuecomment-5570701059) |
 | Runtime-portable CLI launcher | tooling | [#29](https://github.com/michal-niedzwiedzki/visimark/issues/29) | [#34](https://github.com/michal-niedzwiedzki/visimark/pull/34) | — | [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/29#issuecomment-5572442105) |
+| Generated artifacts (`chart` statements) | language feature | [#36](https://github.com/michal-niedzwiedzki/visimark/issues/36) | [#39](https://github.com/michal-niedzwiedzki/visimark/pull/39) | — | [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/36#issuecomment-5575507072) |
 
 <!--vmark:no-formulas-->

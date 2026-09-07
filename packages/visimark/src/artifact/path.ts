@@ -18,6 +18,8 @@ export type PathResult = { ok: string } | { err: string };
 
 /** `CON`, `NUL`, `COM1`... are special on Windows whatever the extension. */
 const WINDOWS_DEVICE = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\.|$)/i;
+// matching control characters is the point: they must never reach a path
+// oxlint-disable-next-line no-control-regex
 const CONTROL_CHARS = /[\x00-\x1f\x7f]/;
 
 export function resolveArtifactPath(docPath: string, url: string): PathResult {
