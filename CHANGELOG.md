@@ -40,6 +40,15 @@
 
 ### Changed
 
+- The vocabulary-review workflow now covers **any** issue, not only
+  vocabulary-request-template ones (issue #27). The three commands were renamed
+  `vocab-review` / `vocab-discuss` / `vocab-decide` → `issue-review` /
+  `issue-discuss` / `issue-decide`; `docs/vocabulary-review.md` →
+  [`docs/issue-review.md`](docs/issue-review.md); and
+  [`docs/vocabulary-catalogue.md`](docs/vocabulary-catalogue.md) gained
+  section **E** (language features) and **F** (tooling / process). A free-form
+  issue is classified and judged against the design doc's constraints; one too
+  thin to assess is sent back for the missing pieces.
 - npm releases now carry a [provenance attestation](https://docs.npmjs.com/generating-provenance-statements):
   the publish is signed with a statement of the exact commit and workflow run
   that built the tarball, verifiable with `npm audit signatures` and shown on

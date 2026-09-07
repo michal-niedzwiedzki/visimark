@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         One primitive per issue. The decision is recorded in [`docs/vocabulary-catalogue.md`](../blob/master/docs/vocabulary-catalogue.md); read its preface first.
-        The maintainer reviews it with the process in [`docs/vocabulary-review.md`](../blob/master/docs/vocabulary-review.md).
+        The maintainer reviews it with the process in [`docs/issue-review.md`](../blob/master/docs/issue-review.md).
         A request is judged against the design doc's constraints, not against Excel:
 
         - it fits the shape system (mapper is scalar → scalar; reducer is vector → scalar over a bare column reference; no vector → vector);
