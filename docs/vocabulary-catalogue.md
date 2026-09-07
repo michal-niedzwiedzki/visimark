@@ -210,7 +210,7 @@ decision worth a citable reason.
 
 | Change | What it changes | Pros | Cons | Request | Status |
 |--------|-----------------|------|------|---------|--------|
-| _(none yet)_ | | | | | |
+| Runtime-portable CLI launcher | The `visimark` bin becomes a `#!/bin/sh` trampoline that runs the CLI under Node or Bun (Node preferred); `package.json` gains `engines.bun`; CI runs the acceptance checks under Node and smoke-tests a global install both Node-only and Bun-only. `bun add -g visimark` and `npm i -g visimark` both produce a working command. | Fixes `bun add -g` on a machine with no Node ([#29](https://github.com/michal-niedzwiedzki/visimark/issues/29)); brings the published executable in line with the repo's Bun-first tooling; the installed CLI stops depending on which runtime the user happens to have; a regression is caught in CI. | A second file in `bin/`; npm's *global* Windows shim for a bin whose shebang is `#!/bin/sh` needs `sh` on PATH (Git Bash / WSL); `engines.bun` is advisory — no installer enforces it. | [#29](https://github.com/michal-niedzwiedzki/visimark/issues/29) | [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/29#issuecomment-5572442105) |
 
 ---
 
