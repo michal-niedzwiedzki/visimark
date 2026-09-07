@@ -142,7 +142,7 @@ assert variance == 0
   1 problem (0 stale, 1 error)
 ```
 
-and exit `1`. `visimark eval <path>/assert-fail.md --get plan.total` prints `0.90` to stdout, the `ASSERT` block to stderr, and exits `1`.
+and exit `1`. `visimark eval <path>/assert-fail.md --get plan.total` prints `0.9` to stdout (`eval` formats values at their natural precision, not a binding's), the `ASSERT` block to stderr, and exits `1`.
 
 **Unit coverage:** a true assertion (silent, no finding); the fixture above (`ASSERT`, counted, exit 1, value-substituted line); a non-boolean expression (`TYPE`); a vector expression (`VECTOR`, with the wrap-it hint); a document-scope `assert` (`SHEET`); assertions suppressed by an unevaluable dependency (one per-sheet `NOTE`, gone once the upstream finding is fixed); an assertion over a merely-`STALE` value still evaluating; `explain` listing a sheet's assertions; `eval` exiting `1` on a false assertion; the `eval --json` `assertions` array shape; `assert` rejected as a bound name; `fmt` idempotent and byte-stable with an `assert` present.
 

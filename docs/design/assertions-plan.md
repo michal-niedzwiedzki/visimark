@@ -44,10 +44,10 @@
 - Produces: `parseStatement("assert a == b")` → `{ type: "assert", expr: <Binary ==>, … }`; `parseStatement("x = 1")` → `Binding` unchanged; `parseStatement("assert = 1")` throws `LangError("`assert` is a keyword")`. `build(doc).sheets.get("recon").assertions` is a populated `Assertion[]`. A document-scope `assert` line yields a `SHEET` finding in `model.findings`.
 - Consumes: existing `lex`, `Parser`, `parseBinding`, `rebase`.
 
-- [ ] **Step 1: lexer + token tests (RED).** In `lexer.test.ts` assert `lex("assert x")[0]` is `{ kind: "assert", value: "assert" }` and that `assert` mid-expression (e.g. `a + assert`) still lexes the word as `assert` (the parser, not the lexer, rejects misplacement). Add `"assert"` to `TokenKind` and the lexer word-scan.
-- [ ] **Step 2: `parseStatement` tests (RED), then implement.** Cover: `assert` statement returns an `Assertion`; a normal binding still returns a `Binding`; `assert = 1` and `assert=1` throw the keyword message; `assert` with a trailing comparison chain error still surfaces (`comparisons do not chain`). Implement `parseStatement` and the `ast.ts` type.
-- [ ] **Step 3: model tests (RED), then implement.** In `build.test.ts`: a `#recon` block with `assert variance == 0` populates `sheet.assertions` with the right `source`, `span`, and rebased `expr` offsets; a document-scope `assert` → one `SHEET` finding; `assert` as a **column header** in a table + a `#id` block referencing it → `TYPE` "`assert` is a keyword" (or the header simply cannot be a rule name — pick the path that the parser already forces and assert it). Wire `parseStatement` + `sheet.assertions` into `build.ts`.
-- [ ] **Step 4:** `bun test`, `typecheck`, `build`; both example docs still check clean (no assertions in them yet).
+- [x] **Step 1: lexer + token tests (RED).** In `lexer.test.ts` assert `lex("assert x")[0]` is `{ kind: "assert", value: "assert" }` and that `assert` mid-expression (e.g. `a + assert`) still lexes the word as `assert` (the parser, not the lexer, rejects misplacement). Add `"assert"` to `TokenKind` and the lexer word-scan.
+- [x] **Step 2: `parseStatement` tests (RED), then implement.** Cover: `assert` statement returns an `Assertion`; a normal binding still returns a `Binding`; `assert = 1` and `assert=1` throw the keyword message; `assert` with a trailing comparison chain error still surfaces (`comparisons do not chain`). Implement `parseStatement` and the `ast.ts` type.
+- [x] **Step 3: model tests (RED), then implement.** In `build.test.ts`: a `#recon` block with `assert variance == 0` populates `sheet.assertions` with the right `source`, `span`, and rebased `expr` offsets; a document-scope `assert` → one `SHEET` finding; `assert` as a **column header** in a table + a `#id` block referencing it → `TYPE` "`assert` is a keyword" (or the header simply cannot be a rule name — pick the path that the parser already forces and assert it). Wire `parseStatement` + `sheet.assertions` into `build.ts`.
+- [x] **Step 4:** `bun test`, `typecheck`, `build`; both example docs still check clean (no assertions in them yet).
 
 ---
 
@@ -62,9 +62,9 @@
 - Produces: `topoOrder(model).order` contains the assertion nodes, each ordered after every binding it reads; `topoOrder(model).cycles` pulls in an assertion that sits on a cycle path; `dependencies(model, <assertion>)` returns `vectorRefs` for `assert Net > 0` (Net a column) and `deps` for `assert SUM(col) == 1`.
 - Consumes: existing `resolve`, `dependencies`, `topoOrder` internals.
 
-- [ ] **Step 1: graph tests (RED).** `assert SUM(schedule.Amount) == lines.gross_total` in `#recon` → two `deps`, no `vectorRefs`. `assert Net > 0` in a sheet with a `Net` column → one `vectorRef`. `assert missing == 0` → one `undefRef`. An assertion reading a name on a `CYCLE` path appears in `cycles`.
-- [ ] **Step 2:** implement the synthetic-node insertion and the assertion→`dependencies` adapter.
-- [ ] **Step 3:** `bun test`, `typecheck`, `build`.
+- [x] **Step 1: graph tests (RED).** `assert SUM(schedule.Amount) == lines.gross_total` in `#recon` → two `deps`, no `vectorRefs`. `assert Net > 0` in a sheet with a `Net` column → one `vectorRef`. `assert missing == 0` → one `undefRef`. An assertion reading a name on a `CYCLE` path appears in `cycles`.
+- [x] **Step 2:** implement the synthetic-node insertion and the assertion→`dependencies` adapter.
+- [x] **Step 3:** `bun test`, `typecheck`, `build`.
 
 ---
 
@@ -84,9 +84,9 @@
 - Produces: `check(model).findings` contains a single `ASSERT` finding (with `source` + substituted `message`) for a false assertion; nothing for a true one; a `TYPE` for `assert Net + 1`; a `VECTOR` for `assert Net > 0`; one `NOTE` per sheet whose assertions are all upstream-suppressed. `check(model).exitCode` is `1` whenever an `ASSERT` is present.
 - Consumes: `evalExpr`, `EvalEnv`, value formatting, `Unevaluable`.
 
-- [ ] **Step 1: check tests (RED).** true → 0 findings; false → 1 `ASSERT`, `exitCode 1`; assertion whose dependency is **unevaluable** (`UNDEF`/`VECTOR`/`TYPE`/`CYCLE`/`DATE`) → per-sheet `NOTE` only, `ASSERT` absent; a merely-`STALE` dependency still evaluates; non-boolean → `TYPE`; vector → `VECTOR`; assertion + no column rules + a table → **no** `COVERAGE`. (Note: the spec originally said "STALE suppresses"; corrected — the engine computes behind a `STALE` and the assertion is about the computed value.)
-- [ ] **Step 2:** implement the branch, the substitution helper, the per-sheet `NOTE`, the coverage count.
-- [ ] **Step 3:** `bun test`, `typecheck`, `build`; example docs still clean.
+- [x] **Step 1: check tests (RED).** true → 0 findings; false → 1 `ASSERT`, `exitCode 1`; assertion whose dependency is **unevaluable** (`UNDEF`/`VECTOR`/`TYPE`/`CYCLE`/`DATE`) → per-sheet `NOTE` only, `ASSERT` absent; a merely-`STALE` dependency still evaluates; non-boolean → `TYPE`; vector → `VECTOR`; assertion + no column rules + a table → **no** `COVERAGE`. (Note: the spec originally said "STALE suppresses"; corrected — the engine computes behind a `STALE` and the assertion is about the computed value.)
+- [x] **Step 2:** implement the branch, the substitution helper, the per-sheet `NOTE`, the coverage count.
+- [x] **Step 3:** `bun test`, `typecheck`, `build`; example docs still clean.
 
 ---
 
@@ -105,9 +105,9 @@
 - Produces: the exact two-line `ASSERT` block from spec §4; `visimark eval FIXTURE` exit `1` with the block on stderr; `visimark eval FIXTURE --json` containing `assertions: [{ holds: false, … }]`; `visimark explain` showing the `assertions:` block.
 - Consumes: existing `formatCheck` / `renderGroup`, the CLI command wiring.
 
-- [ ] **Step 1: format test (RED)** for the exact `ASSERT` lines (both the simple and the compound example in spec §4). Implement `renderGroup`'s case.
-- [ ] **Step 2: CLI tests (RED)** for `eval` exit 1 + stderr, `eval --json` array, `explain` block. Implement in `commands.ts`.
-- [ ] **Step 3:** `bun test`, `typecheck`, `build`.
+- [x] **Step 1: format test (RED)** for the exact `ASSERT` lines (both the simple and the compound example in spec §4). Implement `renderGroup`'s case.
+- [x] **Step 2: CLI tests (RED)** for `eval` exit 1 + stderr, `eval --json` array, `explain` block. Implement in `commands.ts`.
+- [x] **Step 3:** `bun test`, `typecheck`, `build`.
 
 ---
 
@@ -137,11 +137,11 @@
 **Interfaces:**
 - Produces: `bun test` green including the new fixture acceptance; `visimark check docs/example-invoice.md` → `0 problems`; `visimark fmt docs/example-invoice.md` → no change; `visimark check docs/example-invoice-drift.md` → the unchanged 26-problem transcript.
 
-- [ ] **Step 1:** add the fixture + its acceptance test (RED — `ASSERT` unimplemented paths now all done, so this should pass once the fixture exists; if the transcript columns are off, fix `report/format.ts`, not the test).
-- [ ] **Step 2:** edit `docs/example-invoice.md`; run `check` (0 problems) and `fmt` (no diff); update the `fmt` no-op acceptance if it snapshots the file.
-- [ ] **Step 3:** the documentation edits — design doc section + cross-refs, cli-reference, both changelogs, catalogue row to Shipped register.
-- [ ] **Step 4:** LSP check + test.
-- [ ] **Step 5:** full green sweep — `bun test`, `bun run typecheck`, `bun run build`, and `check` on both example docs. Loop until green.
+- [x] **Step 1:** add the fixture + its acceptance test (RED — `ASSERT` unimplemented paths now all done, so this should pass once the fixture exists; if the transcript columns are off, fix `report/format.ts`, not the test).
+- [x] **Step 2:** edit `docs/example-invoice.md`; run `check` (0 problems) and `fmt` (no diff); update the `fmt` no-op acceptance if it snapshots the file.
+- [x] **Step 3:** the documentation edits — design doc section + cross-refs, cli-reference, both changelogs, catalogue row to Shipped register.
+- [x] **Step 4:** LSP check + test.
+- [x] **Step 5:** full green sweep — `bun test`, `bun run typecheck`, `bun run build`, and `check` on both example docs. Loop until green.
 
 ---
 

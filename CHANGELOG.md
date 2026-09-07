@@ -4,6 +4,19 @@
 
 ### Added
 
+- **`assert` statements** — a `vmark` block may carry `assert <boolean expr>`
+  lines next to its bindings (issue #27). `check` evaluates each and reports a
+  new `ASSERT` finding — an error, not auto-fixable, exit `1` — when it is
+  false, printing the expression with each named value filled in
+  (`0.90 == 1 is false`). An assertion binds and stores nothing, so `fmt` never
+  touches it and diffability is unchanged; it is the one place a top-level
+  boolean may go. Scalar boolean expressions only, in a `#id` sheet block; no
+  rounding tolerance, so `assert SUM(Share) == 1` over three `33%` cells is
+  false and the author writes `assert ROUND(SUM(Share), 2) == 1`. `explain`
+  lists a sheet's assertions; `eval` exits `1` on a false one (value printed
+  first) and `eval --json` gains an `assertions` array; `infer` never proposes
+  one. The worked invoice's `#recon` sheet now asserts `variance == 0`.
+  Per-row, document-scope and prose-anchored assertions are deferred.
 - **`visimark --version`** (also `-v` or `version`) — prints `visimark
   <version>`, read from the package's own `package.json`, and exits `0`. Follows
   the `--help` / `-h` / `help` trio already there (issue #24).
