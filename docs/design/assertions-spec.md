@@ -30,7 +30,7 @@ A **statement** form, new to the language — every other line in a `vmark` bloc
 assert <expression>
 ```
 
-- `assert` is a **reserved word**: it may not be used as a bound name or a column header. No example document uses it, and no migration tooling is added — the design-doc and changelog entries note the reservation.
+- `assert` is a **keyword**, tokenised by the lexer alongside `and` / `or` / `not`. It may not be used as a bound name or a column header — `assert = 1` is a `TYPE` error ("`assert` is a keyword"). No example document uses it as a name; the design-doc and changelog entries note the reservation.
 - An `assert` line may appear anywhere in a **`#id` sheet block** (`#lines`, or a table-less sheet like `#recon`). Order within the block is irrelevant; assertions evaluate after every binding they depend on, like any other node ([§8](../visimark-design.md#8-evaluation)).
 - An `assert` in a **document-scope block** (a `vmark` block with no `#id`) is a `SHEET` error — "`assert` must be in a `#id` sheet block". A cross-cutting invariant goes in whichever sheet is most related to it (`#recon` for a reconciliation check). Document-scope assertions are deferred to a later revision.
 - `<expression>` is an ordinary VisiMark expression using the full operator and function set. It resolves names by the [§6](../visimark-design.md#6-name-resolution-and-scoping) rules of the block it sits in: bare names against the sheet's columns, then scalars, then document scope; qualified `sheet.name` anywhere.
@@ -59,7 +59,7 @@ An assertion is **anonymous**: it defines no name, nothing can reference it, and
 
 ## 4. Type rules and errors
 
-New finding **`ASSERT`** ([§10](../visimark-design.md#10-error-taxonomy)): *class* problem; *auto-fixable* no. Added to the design-doc taxonomy table and to `docs/cli-reference.md`.
+New finding **`ASSERT`** ([§10](../visimark-design.md#10-error-taxonomy)): *class* problem; *auto-fixable* no. The design doc gains a **new dedicated section** stating the feature whole, with one-line cross-references from [§8](../visimark-design.md#8-evaluation) (assertion nodes, suppression), [§10](../visimark-design.md#10-error-taxonomy) (the `ASSERT` row) and [§11](../visimark-design.md#11-cli) (the `eval` exit-code widening); `docs/cli-reference.md` gains the finding row and the exit-code note.
 
 | Situation | Code | When |
 |---|---|---|
@@ -73,19 +73,21 @@ New finding **`ASSERT`** ([§10](../visimark-design.md#10-error-taxonomy)): *cla
 
 `ASSERT` is counted in the `N problems` line and makes `check` fail. It joins the `errors` tally in the summary line (`26 problems (21 stale, 5 errors)` → the error count rises). It is never auto-fixed — a false invariant is a question for a human, like `DATE`-undecidable or `CYCLE`.
 
-The `ASSERT` report line (transcript-exact, tested) prints the assertion's source verbatim, then a continuation line with **every named operand substituted by its evaluated value** at its binding precision, followed by `is false`:
+The `ASSERT` report line (transcript-exact, tested) follows the existing column grid: `ASSERT` in the code field, the sheet id (`#recon`) in the 16-wide id field, then the assertion's source verbatim as the payload. The continuation line, at the content column, is the source with **every named operand substituted by its evaluated value** at its binding precision, followed by `is false`:
 
 ```
-  ASSERT  #recon   variance == 0
+  ASSERT  #recon         variance == 0
           2865.90 == 0   is false
 ```
 
 For a compound assertion each named operand is substituted in place; literals and function calls stay as written:
 
 ```
-  ASSERT  #plan   margin >= 0 and covered == gross_total
+  ASSERT  #plan          margin >= 0 and covered == gross_total
           -140.00 >= 0 and 31217.40 == 31217.40   is false
 ```
+
+A named operand carrying a unit decoration is substituted **bare** (the number only) — the comparison is on the number, as everywhere else ([§7](../visimark-design.md#7-numeric-semantics)). A date operand is substituted as its ISO text.
 
 ## 5. Interaction with the rest of the language
 
@@ -99,7 +101,7 @@ For a compound assertion each named operand is substituted in place; literals an
 | `check` | Evaluates every assertion; reports `ASSERT` / `NOTE`. `COVERAGE` is satisfied by a sheet carrying at least one `assert` even with no column rules — something *is* checked. |
 | `fmt` | Evaluates assertions only to report them; writes nothing for them; exits `1` if one is false. |
 | `infer` | Never proposes an `assert` — a relation that happens to hold is not evidence of an intended invariant, and the false-positive risk is too high. `infer --write` leaves existing `assert` lines untouched (it only inserts). |
-| `explain` | Lists each sheet's assertions after its rules and evaluation order, under an `assertions:` heading, in source order. |
+| `explain` | After a sheet's inputs, rules and evaluation order, a trailing `assertions:` block lists each `assert` — its source text, one per line, in document order. |
 | `eval` | Evaluates assertions. If any is false, `eval` prints the same `ASSERT` block(s) to stderr and **exits `1`** rather than `0` — it will not return values as if the document were sound. `eval --get NAME` prints the value, then exits non-zero if an assertion anywhere failed. This widens `eval`'s exit contract (today `0` / `2`); noted in `cli-reference.md`. |
 | `eval --json` | Gains a top-level `"assertions"` array — one object per assertion: `{"sheet": "recon", "source": "variance == 0", "holds": false, "operands": {"variance": "2865.90"}}`. |
 | LSP / VS Code | A false assertion surfaces as a diagnostic on the `assert` line like any `check` finding — no code change beyond the engine. One line in `editors/vscode/CHANGELOG.md`. |
@@ -166,5 +168,12 @@ None. Resolved during the decision (#27):
 - Prose-anchored assertions deferred.
 - `infer` never proposes assertions.
 - Acceptance: `example-invoice.md` `#recon` gains a passing `assert`; `example-invoice-drift.md` untouched; a new fixture carries the failing-`ASSERT` transcript.
+
+Resolved during plan drafting:
+
+- `assert` is a lexer keyword (not a `build.ts` prefix); the parser grows an assert-statement production.
+- The `ASSERT` line puts `#sheet` in the id field and the source as payload; the continuation substitutes named operands.
+- `explain` shows a trailing `assertions:` block per sheet.
+- The design doc gains a new dedicated section, with cross-references from §8 / §10 / §11.
 
 <!--vmark:no-formulas-->
