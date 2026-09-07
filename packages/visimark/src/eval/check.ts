@@ -2,6 +2,7 @@ import { Decimal } from "decimal.js";
 import type { Expr, Ref } from "../lang/ast.js";
 import { NO_FORMULAS_MARKER, type RawTable, type Span } from "../parse/document.js";
 import {
+  type Assertion,
   type Binding,
   type DocModel,
   type Finding,
@@ -49,7 +50,18 @@ const PERCENT_RE = /^(\d+(?:\.\d+)?)%$/;
 const DATEISH_RE = /^\d{1,4}[./-]\d{1,4}[./-]\d{1,4}$/;
 
 export function check(model: DocModel): CheckResult {
-  const { order, cycles } = topoOrder(model);
+  const { order, cycles, assertionIds } = topoOrder(model);
+
+  const assertionById = new Map<string, Assertion>();
+  for (const sheet of model.sheets.values()) {
+    for (const a of sheet.assertions) assertionById.set(a.id, a);
+  }
+  /** per-sheet count of assertions not evaluated because a dependency failed */
+  const assertSuppressed = new Map<string, number>();
+  const assertionsHandled = new Set<string>();
+  const bumpSuppressed = (sheetId: string): void => {
+    assertSuppressed.set(sheetId, (assertSuppressed.get(sheetId) ?? 0) + 1);
+  };
 
   const values = new Map<string, Value>();
   const cells = new Map<string, (Value | null)[]>();
@@ -143,6 +155,11 @@ export function check(model: DocModel): CheckResult {
     }
     const dep = dependencies(model, binding);
 
+    if (assertionIds.has(binding.id)) {
+      evalAssertion(assertionById.get(binding.id)!, binding, dep);
+      continue;
+    }
+
     if (dep.callErrors.length > 0) {
       for (const { call, problem } of dep.callErrors) {
         emit(
@@ -233,6 +250,26 @@ export function check(model: DocModel): CheckResult {
       span: cyc[0]?.span,
     });
     for (const b of cyc) unevaluable.add(b.id);
+  }
+
+  // assertions the topological sort could not reach — a dependency is on a
+  // cycle, or otherwise never evaluated. One NOTE per sheet, like a column rule.
+  for (const id of assertionIds) {
+    if (assertionsHandled.has(id)) continue;
+    bumpSuppressed(assertionById.get(id)!.sheetId);
+  }
+  for (const [sheetId, n] of assertSuppressed) {
+    if (n > 0) {
+      emit(
+        {
+          code: "NOTE",
+          sheetId,
+          suppressedCount: n,
+          message: `${n} assertion${n === 1 ? "" : "s"} not verified (upstream errors)`,
+        },
+        { sheetId },
+      );
+    }
   }
 
   // anchors: collapse staleness, flag rewrite-less anchors
@@ -452,6 +489,141 @@ export function check(model: DocModel): CheckResult {
     };
   }
 
+  function evalAssertion(a: Assertion, node: Binding, dep: ReturnType<typeof dependencies>): void {
+    assertionsHandled.add(a.id);
+    const base = { sheetId: a.sheetId, source: a.source, span: a.span } as const;
+
+    if (dep.callErrors.length > 0) {
+      for (const { call, problem } of dep.callErrors) {
+        emit(
+          {
+            ...base,
+            code: "TYPE",
+            message: describeCallProblem(call.name, problem),
+            suggestion:
+              problem.kind === "unknown"
+                ? (closest(call.name, FUNCTIONS.keys(), MAX_FN_SUGGESTION_DISTANCE) ?? undefined)
+                : undefined,
+            span: { start: call.start, end: call.end },
+          },
+          { sheetId: a.sheetId },
+        );
+      }
+      return;
+    }
+    if (dep.undefRefs.length > 0) {
+      for (const ref of dep.undefRefs) {
+        const r = resolve(model, a.sheetId, ref);
+        emit(
+          {
+            ...base,
+            code: "UNDEF",
+            raw: refText(ref),
+            suggestion: r.kind === "unknown" ? (r.suggestion ?? undefined) : undefined,
+            span: { start: ref.start, end: ref.end },
+          },
+          { sheetId: a.sheetId },
+        );
+      }
+      return;
+    }
+    if (dep.vectorRefs.length > 0) {
+      for (const ref of dep.vectorRefs) {
+        emit(
+          { ...base, code: "VECTOR", raw: refText(ref), span: { start: ref.start, end: ref.end } },
+          { sheetId: a.sheetId },
+        );
+      }
+      return;
+    }
+    if ([...dep.deps].some((d) => unevaluable.has(d))) {
+      bumpSuppressed(a.sheetId);
+      return;
+    }
+
+    try {
+      const v = evalExpr(node.expr, scalarEnv(node));
+      if (v.t !== "bool") {
+        emit(
+          {
+            ...base,
+            code: "TYPE",
+            message: `assert needs a boolean; \`${payloadOf(a)}\` is ${typeWord(v)}`,
+          },
+          { sheetId: a.sheetId },
+        );
+        return;
+      }
+      if (v.b === false) {
+        emit(
+          { ...base, code: "ASSERT", message: substituteOperands(node) },
+          { sheetId: a.sheetId },
+        );
+      }
+    } catch (e) {
+      if (e instanceof Unevaluable) {
+        bumpSuppressed(a.sheetId);
+      } else if (e instanceof EvalError) {
+        emit({ ...base, code: e.code, message: e.message }, { sheetId: a.sheetId });
+      } else throw e;
+    }
+  }
+
+  /** the assertion source with the leading `assert` keyword stripped */
+  function payloadOf(a: Assertion): string {
+    return a.source.replace(/^assert\s+/, "");
+  }
+
+  function typeWord(v: Value): string {
+    return v.t === "num" ? "a number" : v.t === "date" ? "a date" : "a string";
+  }
+
+  /** the assertion expression as written, each named ref replaced by its value */
+  function substituteOperands(node: Binding): string {
+    const from = node.expr.start;
+    let text = model.source.slice(node.expr.start, node.expr.end);
+    const subs: { at: number; to: number; text: string }[] = [];
+    const walk = (n: Expr): void => {
+      switch (n.type) {
+        case "ref": {
+          subs.push({ at: n.start - from, to: n.end - from, text: operandText(node, n) });
+          break;
+        }
+        case "unary":
+          walk(n.operand);
+          break;
+        case "binary":
+          walk(n.left);
+          walk(n.right);
+          break;
+        case "call":
+          n.args.forEach(walk);
+          break;
+      }
+    };
+    walk(node.expr);
+    subs.sort((x, y) => y.at - x.at);
+    for (const s of subs) text = text.slice(0, s.at) + s.text + text.slice(s.to);
+    return text;
+  }
+
+  function operandText(node: Binding, ref: Ref): string {
+    let v: Value;
+    try {
+      v = lookupScalar(node, ref, null);
+    } catch {
+      return refText(ref);
+    }
+    if (v.t === "date") return v.iso;
+    if (v.t === "str") return v.s;
+    if (v.t === "bool") return String(v.b);
+    const res = resolve(model, node.sheetId, ref);
+    const pid =
+      res.kind === "scalar" || res.kind === "doc-scalar" ? res.binding.id : undefined;
+    const prec = pid !== undefined ? (scalarPrecision.get(pid) ?? fallbackPrecision) : fallbackPrecision;
+    return showValue(v, prec);
+  }
+
   function rowEnv(binding: Binding, sheet: Sheet, row: number): EvalEnv {
     return {
       scalar: (ref) => lookupScalar(binding, ref, { sheet, row }),
@@ -606,6 +778,7 @@ function orderFindings(
     DUP: 1,
     VECTOR: 1,
     CYCLE: 2,
+    ASSERT: 2,
     ANCHOR: 3,
     WARN: 4,
   };
@@ -673,7 +846,7 @@ function rowLabel(table: RawTable, row: number): string {
 export function countBindings(model: DocModel): number {
   let n = model.docScope.size;
   for (const sheet of model.sheets.values()) {
-    n += sheet.columns.size + sheet.scalars.size;
+    n += sheet.columns.size + sheet.scalars.size + sheet.assertions.length;
   }
   return n;
 }
@@ -773,6 +946,7 @@ function collectReferenced(model: DocModel): Set<string> {
   for (const sheet of model.sheets.values()) {
     for (const b of sheet.columns.values()) visit(b.expr, b.sheetId);
     for (const b of sheet.scalars.values()) visit(b.expr, b.sheetId);
+    for (const a of sheet.assertions) visit(a.expr, a.sheetId);
   }
   return out;
 }

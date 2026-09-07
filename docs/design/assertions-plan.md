@@ -84,7 +84,7 @@
 - Produces: `check(model).findings` contains a single `ASSERT` finding (with `source` + substituted `message`) for a false assertion; nothing for a true one; a `TYPE` for `assert Net + 1`; a `VECTOR` for `assert Net > 0`; one `NOTE` per sheet whose assertions are all upstream-suppressed. `check(model).exitCode` is `1` whenever an `ASSERT` is present.
 - Consumes: `evalExpr`, `EvalEnv`, value formatting, `Unevaluable`.
 
-- [ ] **Step 1: check tests (RED).** true → 0 findings; false → 1 `ASSERT`, `exitCode 1`; `assert variance == 0` where `variance` is `STALE` → `NOTE` only, `ASSERT` absent; non-boolean → `TYPE`; vector → `VECTOR`; two false assertions in one sheet → two `ASSERT` lines; assertion + no column rules + a table → **no** `COVERAGE`.
+- [ ] **Step 1: check tests (RED).** true → 0 findings; false → 1 `ASSERT`, `exitCode 1`; assertion whose dependency is **unevaluable** (`UNDEF`/`VECTOR`/`TYPE`/`CYCLE`/`DATE`) → per-sheet `NOTE` only, `ASSERT` absent; a merely-`STALE` dependency still evaluates; non-boolean → `TYPE`; vector → `VECTOR`; assertion + no column rules + a table → **no** `COVERAGE`. (Note: the spec originally said "STALE suppresses"; corrected — the engine computes behind a `STALE` and the assertion is about the computed value.)
 - [ ] **Step 2:** implement the branch, the substitution helper, the per-sheet `NOTE`, the coverage count.
 - [ ] **Step 3:** `bun test`, `typecheck`, `build`; example docs still clean.
 

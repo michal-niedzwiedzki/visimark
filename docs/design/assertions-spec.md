@@ -51,8 +51,9 @@ An `assert` line lives inside a fenced ```vmark block, which every target render
 | Summed fractions | shares `0.30 0.40 0.30` → `assert SUM(Share) == 1` passes; `0.33 0.33 0.33` → `0.99 == 1` → fail |
 | Date comparison | `assert delivery >= signature`, both scalar dates | pass / fail by [§5](../visimark-design.md#5-dates) date order |
 | Compound | `assert margin >= 0 and covered == gross_total` | `and` / `or` / `not` compose as in any condition ([§4](../visimark-design.md#4-syntax)) |
-| Depends on a `STALE` / errored binding | `assert variance == 0` where `variance` is itself `STALE` | not evaluated — suppressed to `NOTE` ([§8](../visimark-design.md#8-evaluation)); disappears when the upstream finding is fixed |
-| Reads a name on a `CYCLE` path | — | suppressed to `NOTE`, like any downstream node |
+| Depends on a merely-`STALE` binding | `assert variance == 0` where `variance` is `STALE` | **still evaluated**, against the computed value — a stale *stored* number does not stop the engine computing the real one, and the assertion is about the real one |
+| Depends on an unevaluable binding (`UNDEF` / `VECTOR` / `TYPE` / `CYCLE` / `DATE`) | `assert total == 1` where `total = nope + 1` | not evaluated — folded into one per-sheet `NOTE` ([§8](../visimark-design.md#8-evaluation)); disappears when the upstream finding is fixed |
+| Reads a name on a `CYCLE` path | — | suppressed into the same `NOTE` |
 | In a document-scope block | `assert` with no `#id` on the block | `SHEET` error (§4), static |
 
 An assertion is **anonymous**: it defines no name, nothing can reference it, and it is never a `WARN` for being unread.
@@ -69,7 +70,7 @@ New finding **`ASSERT`** ([§10](../visimark-design.md#10-error-taxonomy)): *cla
 | A name in the expression does not resolve | `UNDEF` | static, with did-you-mean |
 | `assert` used as a bound name / column header | `TYPE` | static — "`assert` is a reserved word" |
 | `assert` in a document-scope (`#id`-less) block | `SHEET` | static — "`assert` must be in a `#id` sheet block" |
-| Assertion depends on an upstream `STALE` / `DATE` / `CYCLE` / … | `NOTE` | the assertion is not evaluated; one `NOTE`, not one per assertion |
+| Assertion depends on an **unevaluable** binding (`UNDEF` / `VECTOR` / `TYPE` / `CYCLE` / `DATE`) | `NOTE` | one per sheet, not one per assertion. A merely-`STALE` dependency is not suppressed — the assertion runs against the computed value. |
 
 `ASSERT` is counted in the `N problems` line and makes `check` fail. It joins the `errors` tally in the summary line (`26 problems (21 stale, 5 errors)` → the error count rises). It is never auto-fixed — a false invariant is a question for a human, like `DATE`-undecidable or `CYCLE`.
 
@@ -94,7 +95,7 @@ A named operand carrying a unit decoration is substituted **bare** (the number o
 | Area | Effect |
 |---|---|
 | Shape system ([§4](../visimark-design.md#4-syntax)) | Unchanged. `assert` is a third consumer of an in-flight boolean, beside `IF()` and `and` / `or` / `not`. A boolean still never lands in a cell or an anchor. |
-| Evaluation / dependency graph ([§8](../visimark-design.md#8-evaluation)) | Each `assert` is a leaf node depending on the names it reads. It sorts and evaluates like any node and has no dependents. Suppression under an upstream error is the existing rule. |
+| Evaluation / dependency graph ([§8](../visimark-design.md#8-evaluation)) | Each `assert` is a leaf node depending on the names it reads. It sorts and evaluates like any node and has no dependents. It is suppressed to a per-sheet `NOTE` exactly when the engine's existing `Unevaluable` rule fires for one of its dependencies — a merely-`STALE` value is still computed, so an assertion over it still runs. |
 | Write-back ([§9](../visimark-design.md#9-write-back)) | Unchanged. `fmt` never reads, writes, or removes an `assert` line; the offset splicer is untouched. A document whose only remaining finding is `ASSERT` is not repairable — `fmt` reports it and exits `1` ("a problem it cannot repair remains"). |
 | Anchors ([§3](../visimark-design.md#3-document-model)) | Not used by v1. A prose-anchored assertion is deferred (§7). |
 | Name resolution ([§6](../visimark-design.md#6-name-resolution-and-scoping)) | `assert` expressions resolve names exactly as a binding in the same block would. |
@@ -143,7 +144,7 @@ assert variance == 0
 
 and exit `1`. `visimark eval <path>/assert-fail.md --get plan.total` prints `0.90` to stdout, the `ASSERT` block to stderr, and exits `1`.
 
-**Unit coverage:** a true assertion (silent, no finding); the fixture above (`ASSERT`, counted, exit 1, value-substituted line); a non-boolean expression (`TYPE`); a vector expression (`VECTOR`, with the wrap-it hint); a document-scope `assert` (`SHEET`); an assertion suppressed by an upstream `STALE` (`NOTE`, one line, gone once the `STALE` is fixed); `explain` listing a sheet's assertions; `eval` exiting `1` on a false assertion; the `eval --json` `assertions` array shape; `assert` rejected as a bound name; `fmt` idempotent and byte-stable with an `assert` present.
+**Unit coverage:** a true assertion (silent, no finding); the fixture above (`ASSERT`, counted, exit 1, value-substituted line); a non-boolean expression (`TYPE`); a vector expression (`VECTOR`, with the wrap-it hint); a document-scope `assert` (`SHEET`); assertions suppressed by an unevaluable dependency (one per-sheet `NOTE`, gone once the upstream finding is fixed); an assertion over a merely-`STALE` value still evaluating; `explain` listing a sheet's assertions; `eval` exiting `1` on a false assertion; the `eval --json` `assertions` array shape; `assert` rejected as a bound name; `fmt` idempotent and byte-stable with an `assert` present.
 
 ## 7. Non-goals
 
@@ -161,7 +162,7 @@ None. Resolved during the decision (#27):
 - No tolerance; rounding is explicit (`ROUND(...) == 1`).
 - Scalar expressions only; per-row assertions deferred.
 - `ASSERT` is a new [§10](../visimark-design.md#10-error-taxonomy) finding, exit 1, not auto-fixable, counted under "errors".
-- Suppressed to `NOTE` under an upstream error.
+- Suppressed to one per-sheet `NOTE` when a dependency is unevaluable (`UNDEF`/`VECTOR`/`TYPE`/`CYCLE`/`DATE`); a merely-`STALE` dependency does **not** suppress — corrected from the original "STALE suppresses" during implementation, because the engine still computes a value behind a `STALE` and the assertion is about that value.
 - The failure line substitutes named operands with their values (`0.90 == 1 is false`).
 - `eval` exits 1 (hard) on a false assertion, `--get` included.
 - v1 is sheet-blocks only; document-scope `assert` is a `SHEET` error, deferred.
