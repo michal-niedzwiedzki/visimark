@@ -346,9 +346,11 @@ configuration, and no rule for what a bare `/` means.
 
 ## Status
 
-All five commands are implemented, in TypeScript. `npm install -g visimark`
-puts a `visimark` command on your PATH; `npx visimark` runs it without
-installing. All three worked examples pass as the
+All five commands are implemented, in TypeScript. Install the `visimark`
+command with `bun add -g visimark` or `npm i -g visimark` — it runs under
+whichever of Bun or Node is on your PATH — or run it without installing with
+`npx visimark`. (On Windows the `npx` / `npm i -g` shims need `sh` on PATH,
+which Git Bash or WSL provide.) All three worked examples pass as the
 acceptance suite — `check` on the drift invoice reproduces the transcript above
 byte-for-byte, `fmt` leaves the clean invoice untouched, and `infer` on
 [`docs/example-quote-plain.md`](docs/example-quote-plain.md) — a quote with no
@@ -363,7 +365,8 @@ The editor support is implemented too: one language server
 (`editors/vscode`) — live diagnostics, `fmt` behind the editor's own
 format-on-save, quick fixes, inlay hints, CodeLens and hover.
 
-To try the extension in your own VS Code:
+The extension is not published to a marketplace yet; to build and install it
+from a clone (Bun, like the rest of the repo's tooling):
 
 ```bash
 bun run vscode-install     # build, package and install (also reinstalls)
