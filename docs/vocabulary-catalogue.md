@@ -210,17 +210,18 @@ decision worth a citable reason.
 
 | Change | What it changes | Pros | Cons | Request | Status |
 |--------|-----------------|------|------|---------|--------|
-| Runtime-portable CLI launcher | The `visimark` bin becomes a `#!/bin/sh` trampoline that runs the CLI under Node or Bun (Node preferred); `package.json` gains `engines.bun`; CI runs the acceptance checks under Node and smoke-tests a global install both Node-only and Bun-only. `bun add -g visimark` and `npm i -g visimark` both produce a working command. | Fixes `bun add -g` on a machine with no Node ([#29](https://github.com/michal-niedzwiedzki/visimark/issues/29)); brings the published executable in line with the repo's Bun-first tooling; the installed CLI stops depending on which runtime the user happens to have; a regression is caught in CI. | A second file in `bin/`; npm's *global* Windows shim for a bin whose shebang is `#!/bin/sh` needs `sh` on PATH (Git Bash / WSL); `engines.bun` is advisory — no installer enforces it. | [#29](https://github.com/michal-niedzwiedzki/visimark/issues/29) | [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/29#issuecomment-5572442105) |
+| _(none yet)_ | | | | | |
 
 ---
 
 ## Shipped
 
 Additions that have been approved and implemented — a vocabulary primitive
-(now a [`visimark-design.md` §4](visimark-design.md#4-syntax) row) or a language
-feature (specified in the design doc section it changed). That document, not this
-one, is where the behaviour is specified. The **Decision** link holds the full
-reasoning the row carried while it was under review in sections A–E.
+(now a [`visimark-design.md` §4](visimark-design.md#4-syntax) row), a language
+feature (specified in the design doc section it changed), or a tooling / process
+change. That document, not this one, is where the behaviour is specified. The
+**Decision** link holds the full reasoning the row carried while it was under
+review in sections A–F.
 
 A row enters this table `UNRELEASED` — merged to `master`, **Released** empty —
 and is promoted to `SHIPPED` with the release link when the next `vX.Y.Z` tag
@@ -232,5 +233,6 @@ the same time.
 | `EOMONTH(d, months)` | mapper | [#6](https://github.com/michal-niedzwiedzki/visimark/issues/6) | [#8](https://github.com/michal-niedzwiedzki/visimark/pull/8) | — | [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/6#issuecomment-5559247913) |
 | `SQRT(x)` | mapper | [#18](https://github.com/michal-niedzwiedzki/visimark/issues/18) | [#20](https://github.com/michal-niedzwiedzki/visimark/pull/20) | — | [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/18#issuecomment-5560992652) |
 | `assert` statements | language feature | [#27](https://github.com/michal-niedzwiedzki/visimark/issues/27) | [#32](https://github.com/michal-niedzwiedzki/visimark/pull/32) | — | [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/27#issuecomment-5570701059) |
+| Runtime-portable CLI launcher | tooling | [#29](https://github.com/michal-niedzwiedzki/visimark/issues/29) | [#34](https://github.com/michal-niedzwiedzki/visimark/pull/34) | — | [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/29#issuecomment-5572442105) |
 
 <!--vmark:no-formulas-->

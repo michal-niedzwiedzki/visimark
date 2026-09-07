@@ -73,8 +73,9 @@ export async function runCli(argv: string[], io: CliIO = {}): Promise<number> {
 // Run when invoked directly (`bun src/cli/main.ts check FILE`). `import.meta.main`
 // would be the obvious test, but bun's bundler rewrites it to a CommonJS check
 // that is always true in the ESM bundle, so dist/cli/main.js would run itself on
-// import as well. Comparing against argv[1] survives bundling: when bin/visimark.js
-// is the entry point this is false and that shim calls runCli itself.
+// import as well. Comparing against argv[1] survives bundling: when the `sh`
+// launcher execs `bin/visimark.js` as the entry point this is false, and
+// `bin/visimark.js` calls runCli itself.
 const invokedDirectly =
   process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
 

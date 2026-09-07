@@ -53,6 +53,11 @@
 
 ### Changed
 
+- **The `visimark` command runs under Node or Bun.** `bun add -g visimark` and
+  `npm i -g visimark` both produce a working command; `package.json` gains an
+  advisory `engines.bun`. On Windows the `npx` / `npm i -g` shims need `sh` on
+  PATH (Git Bash or WSL). The release job also closes general-track
+  `issue/<n>-<slug>-impl` request issues, not only the vocab form (issue #29).
 - The vocabulary-review workflow now covers **any** issue, not only
   vocabulary-request-template ones (issue #27). The three commands were renamed
   `vocab-review` / `vocab-discuss` / `vocab-decide` → `issue-review` /
@@ -71,6 +76,11 @@
 
 ### Fixed
 
+- **`bun add -g visimark` on a machine without Node.js** produced a `visimark`
+  command that could not start (`env: 'node': No such file or directory`) — the
+  `#!/usr/bin/env node` shebang was honoured against the bare symlink Bun's
+  global install creates. The `visimark` bin is now a POSIX `sh` launcher that
+  runs the CLI under whichever of Node or Bun is on PATH (issue #29).
 - The `N rows not verified` note after a column rule no longer counts rows that
   raised their own error and already carry a per-row finding — only rows
   suppressed by an upstream dependency error are summarised.
