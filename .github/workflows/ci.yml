@@ -8,6 +8,11 @@ on:
     tags: ["v*"]
   pull_request:
 
+# No job here needs to write to the repo, releases, or any other API surface —
+# they only check out code and run builds/tests.
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
