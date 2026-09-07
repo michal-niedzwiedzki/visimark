@@ -1,18 +1,29 @@
-# VisiMark — vocabulary catalogue
+# VisiMark — design-decision catalogue
 
 The language ships **eleven functions and a fixed operator set**
 ([`visimark-design.md` §4](visimark-design.md#4-syntax)). This file is the register of
-every proposed addition — mapper, operator, or aggregate — and the decision
-taken on it. It exists so the same request is not re-argued from scratch, and so
-a "no" has a citable reason.
+every proposed change to the language or its tooling — a mapper, operator, or
+aggregate (sections A–D); a language feature (section E); a tooling or process
+change (section F) — and the decision taken on it. It exists so the same request
+is not re-argued from scratch, and so a "no" has a citable reason. The filename
+is historical; the register is not vocabulary-only.
 
 ## Requesting an addition
 
-Open a GitHub issue with the **Vocabulary request** template
+**A vocabulary primitive** — one mapper, operator, or aggregate per issue — goes
+on the **Vocabulary request** template
 ([`.github/ISSUE_TEMPLATE/vocabulary-request.yml`](../.github/ISSUE_TEMPLATE/vocabulary-request.yml)).
-One primitive per issue.
 
-A request is judged against the design doc's constraints, not against Excel:
+**Anything else** — a language feature, a change to the format or the CLI, a
+tooling or workflow change — is a free-form issue. Give it a concrete proposal,
+a motivating document or scenario, and (for a language feature) a sketch of the
+syntax and what a document cannot express or verify without it. An issue too
+thin to assess is sent back for those pieces before review.
+
+Either way the process from issue to deciding comment is
+[`issue-review.md`](issue-review.md).
+
+A vocabulary request is judged against the design doc's constraints, not against Excel:
 
 1. **It fits the shape system.** A mapper is scalar → scalar; a reducer is
    vector → scalar and takes a bare column reference, never an expression; there
@@ -27,10 +38,16 @@ A request is judged against the design doc's constraints, not against Excel:
    user-defined functions are deferred, and the same bar applies here. Paste the
    table and its `vmark` block into the issue.
 
+A general issue (sections E–F) is judged against the same design doc: [§1](visimark-design.md#1-purpose)
+scope and non-goals, the four [§2](visimark-design.md#2-constraints-that-shaped-the-design)
+constraints and the no-plugin rule, the shape system where it touches
+expressions, and diffability ([§9](visimark-design.md#9-write-back)). Criterion 4
+above — a real document needs it — applies to every section.
+
 The maintainer records the outcome in the tables below: the **Request** column
 links the issue, the **Status** column links the comment that decided it. The
 process for getting from an issue to that comment is
-[`vocabulary-review.md`](vocabulary-review.md).
+[`issue-review.md`](issue-review.md).
 
 Once a primitive is implemented its row leaves its section table and is
 condensed into the [Shipped register](#shipped) at the foot of this file — the
@@ -168,14 +185,40 @@ handing row order to the tool, and `fmt` should reorder only when asked
 shape to specify. A decision moves this section from "discussed" to a real
 proposal with a `Status`.
 
+## E. Language features
+
+Changes to the syntax, the evaluation model, the finding set, the format, or the
+CLI surface — anything that is not a single mapper / operator / reducer (those
+are sections A–C) and not a sorting rule (section D). Judged against
+[§1](visimark-design.md#1-purpose) scope, the four
+[§2](visimark-design.md#2-constraints-that-shaped-the-design) constraints and the
+no-plugin rule, the shape system ([§4](visimark-design.md#4-syntax)) where it
+touches expressions, and diffability ([§9](visimark-design.md#9-write-back)). A
+`REJECTED` or `DEFERRED` row is reopened only with new information.
+
+| Feature | What it changes | Pros | Cons | Request | Status |
+|---------|-----------------|------|------|---------|--------|
+| _(none yet)_ | | | | | |
+
+## F. Tooling and process
+
+The review workflow, CI, releasing, the command / skill set, repo layout, the
+structure of the design docs. Not a language change — but still a standing
+decision worth a citable reason.
+
+| Change | What it changes | Pros | Cons | Request | Status |
+|--------|-----------------|------|------|---------|--------|
+| _(none yet)_ | | | | | |
+
 ---
 
 ## Shipped
 
-Primitives that have been approved and implemented. Each is now a
-[`visimark-design.md` §4](visimark-design.md#4-syntax) row — that document, not this one,
-is where its behaviour is specified. The **Decision** link holds the full
-reasoning the row carried while it was under review in sections A–C.
+Additions that have been approved and implemented — a vocabulary primitive
+(now a [`visimark-design.md` §4](visimark-design.md#4-syntax) row) or a language
+feature (specified in the design doc section it changed). That document, not this
+one, is where the behaviour is specified. The **Decision** link holds the full
+reasoning the row carried while it was under review in sections A–E.
 
 A row enters this table `UNRELEASED` — merged to `master`, **Released** empty —
 and is promoted to `SHIPPED` with the release link when the next `vX.Y.Z` tag

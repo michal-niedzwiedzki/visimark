@@ -335,9 +335,11 @@ documents whose arithmetic cannot be checked from the document, which is the
 one thing the format exists to prevent. When the built-in vocabulary is too
 small the answer is a new primitive in the engine, readable by everyone and
 runnable by everyone; when a value genuinely comes from outside, it belongs in
-an input column where a human wrote it down. Requests to grow that vocabulary go
-through [`docs/vocabulary-catalogue.md`](docs/vocabulary-catalogue.md), which
-records every proposed function and the decision on it.
+an input column where a human wrote it down. Requests to grow that vocabulary —
+and proposals for any other language or tooling change — go through
+[`docs/vocabulary-catalogue.md`](docs/vocabulary-catalogue.md), which records
+every one and the decision on it; the review process is
+[`docs/issue-review.md`](docs/issue-review.md).
 
 This makes the format smaller, not merely stricter: there is no locale, no
 configuration, and no rule for what a bare `/` means.
