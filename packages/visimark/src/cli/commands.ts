@@ -213,7 +213,17 @@ export function cmdEval(args: string[], out: Writer, err: Writer): number {
   }
 
   if (flags.has("json")) {
-    out(JSON.stringify({ ...Object.fromEntries(all), assertions: result.assertions }, null, 2));
+    out(
+      JSON.stringify(
+        {
+          ...Object.fromEntries(all),
+          assertions: result.assertions,
+          charts: result.charts,
+        },
+        null,
+        2,
+      ),
+    );
   } else {
     const width = Math.max(...[...all.keys()].map((k) => k.length), 0);
     for (const [k, v] of all) out(`${k.padEnd(width)}  ${v}`);
@@ -246,7 +256,7 @@ export function cmdExplain(args: string[], out: Writer, err: Writer): number {
     return 2;
   }
   const model = build(locate(source));
-  const { order, assertionIds } = topoOrder(model);
+  const { order, assertionIds, chartIds } = topoOrder(model);
 
   if (model.docScope.size > 0) {
     out("document scope");
@@ -255,6 +265,10 @@ export function cmdExplain(args: string[], out: Writer, err: Writer): number {
     }
     out("");
   }
+
+  const chartState = new Map(
+    check(model, { docPath: path }).charts.map((c) => [`${c.sheetId}.${c.name}`, c]),
+  );
 
   const wanted = sheets.length > 0 ? sheets : [...model.sheets.keys()];
   for (const sid of wanted) {
@@ -276,12 +290,23 @@ export function cmdExplain(args: string[], out: Writer, err: Writer): number {
       for (const b of sheet.scalars.values()) out(`    ${b.name} = ${slice(model, b)}`);
     }
     const localOrder = order
-      .filter((b) => b.sheetId === sid && !assertionIds.has(b.id))
+      .filter((b) => b.sheetId === sid && !assertionIds.has(b.id) && !chartIds.has(b.id))
       .map((b) => b.name);
     if (localOrder.length > 0) out(`  order:   ${localOrder.join(" → ")}`);
     if (sheet.assertions.length > 0) {
       out("  assertions:");
       for (const a of sheet.assertions) out(`    ${a.source.replace(/^assert\s+/, "")}`);
+    }
+    if (sheet.charts.length > 0) {
+      out("  charts:");
+      for (const c of sheet.charts) {
+        const r = chartState.get(`${c.sheetId}.${c.name}`);
+        const where = r?.path ? ` → ${r.path}` : "";
+        const state = r ? `  [${r.state}]` : "";
+        out(
+          `    ${c.name} = ${c.engine} of ${c.series.join(", ")} labelled ${c.labels}${where}${state}`,
+        );
+      }
     }
     out("");
   }

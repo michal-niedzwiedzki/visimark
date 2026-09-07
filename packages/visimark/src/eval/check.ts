@@ -392,12 +392,13 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
           failure = "`" + name + "` needs numbers";
           break;
         }
-        const colId = `${c.sheetId}.${name.includes(".") ? name.split(".")[1] : name}`;
+        const plain = name.includes(".") ? name.slice(name.indexOf(".") + 1) : name;
+        const colId = `${c.sheetId}.${plain}`;
         built.push({
           name,
           values: vals.map((v) => (v as { t: "num"; d: Decimal }).d),
           unit: columnUnits.get(colId) ?? null,
-          precision: columnPrecision.get(colId) ?? 2,
+          precision: columnPrecision.get(colId) ?? inputPrecision(c.sheetId, plain),
         });
       }
       if (failure) {
@@ -425,14 +426,16 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
         continue;
       }
 
-      // labels
-      const labelVals = readColumn(node, c.labels);
+      // Labels are the cell text as the document writes it, never a coerced
+      // value: `Under 25` is a label, not the number 25 wearing a `Under`
+      // decoration, and a reader must find every rendered string on the page.
+      const labelVals = readLabels(c.sheetId, c.labels);
       if (typeof labelVals === "string") {
         artifactFinding(labelVals);
         charts.push({ ...base(c), path: null, state: "error" });
         continue;
       }
-      const labels = labelVals.map(showLabel);
+      const labels = labelVals;
 
       // the document states the path, in an image line carrying the anchor
       const anchor = model.anchors.find(
@@ -637,11 +640,27 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
     }
   }
 
-  function showLabel(v: Value): string {
-    if (v.t === "str") return v.s;
-    if (v.t === "date") return v.iso;
-    if (v.t === "num") return v.d.toString();
-    return v.b ? "true" : "false";
+  /** a label column's cells, verbatim */
+  function readLabels(sheetId: string, name: string): string[] | string {
+    const sheet = model.sheets.get(sheetId);
+    const idx = sheet?.columnIndex.get(name);
+    if (!sheet?.table || idx === undefined) {
+      return "`" + name + "` is not a column of this sheet";
+    }
+    return sheet.table.rows.map((r) => (r.cells[idx]?.text ?? "").trim());
+  }
+
+  /** an input column carries no computed precision, so read it off its cells */
+  function inputPrecision(sheetId: string, name: string): number {
+    const sheet = model.sheets.get(sheetId);
+    const idx = sheet?.columnIndex.get(name);
+    if (sheet?.table && idx !== undefined) {
+      for (const row of sheet.table.rows) {
+        const t = (row.cells[idx]?.text ?? "").trim();
+        if (t) return decimalPlaces(t, 2);
+      }
+    }
+    return 2;
   }
 
   // ---- helpers bound to the closures above ----
