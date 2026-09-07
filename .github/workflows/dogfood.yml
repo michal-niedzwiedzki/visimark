@@ -14,6 +14,11 @@ on:
     tags: ["v*"]
   pull_request:
 
+# The self-check job only checks out code and runs the Action against local
+# fixtures — it writes nothing back.
+permissions:
+  contents: read
+
 jobs:
   self-check:
     runs-on: ubuntu-latest
