@@ -140,6 +140,13 @@ or **16236.00**<!--vmark=lines.gross_total--> PLN gross.
   tables stay rectangular.
 - **Anchors** put a scalar into a sentence. The HTML comment is invisible in
   GitHub, VS Code preview and pandoc.
+- **`assert <boolean expr>`** in a `#id` block states an invariant `check` must
+  hold — `assert variance == 0`, `assert ROUND(SUM(Share), 2) == 1`,
+  `assert delivery >= signature`. It stores nothing and `fmt` never touches it;
+  a false one is an `ASSERT` error. Scalar expressions only — a row-wise check is
+  `assert MIN(margin) >= 0`. No rounding tolerance: round explicitly. Reach for
+  one wherever a number's correctness depends on a relationship a later edit
+  could break.
 
 Write the table cells as `0.00` placeholders and run `visimark fmt` to fill
 them in. Do not compute them yourself.

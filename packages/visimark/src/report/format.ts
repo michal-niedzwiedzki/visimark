@@ -48,6 +48,14 @@ function id(f: Finding): string {
   return `${f.sheetId ?? ""}.${f.name ?? ""}`;
 }
 
+/** id for a finding that belongs to a whole sheet, not a named binding —
+ *  an assertion, or a per-sheet assertion NOTE: `#recon` rather than `recon.` */
+function sheetId(f: Finding): string {
+  return f.sheetId ? `#${f.sheetId}` : "";
+}
+const isAssertionScoped = (f: Finding): boolean =>
+  f.source !== undefined || (f.code === "NOTE" && !f.name);
+
 function staleLine(f: Finding): string {
   if (f.anchorGroup) {
     return prefix("STALE") + `${f.suppressedCount} prose anchors bound to the values above`;
@@ -93,13 +101,22 @@ function renderGroup(f: Finding): string[] {
         `"${f.raw ?? ""}"`;
       return [head, CONT + (f.message ?? "")];
     }
-    case "NOTE":
-      return [prefix("NOTE") + id(f).padEnd(ID_FIELD) + "· " + (f.message ?? "")];
-    case "UNDEF":
+    case "NOTE": {
+      const label = isAssertionScoped(f) ? sheetId(f) : id(f);
+      return [prefix("NOTE") + label.padEnd(ID_FIELD) + "· " + (f.message ?? "")];
+    }
+    case "ASSERT":
       return [
-        prefix("UNDEF") + id(f).padEnd(ID_FIELD) + "  " + "unknown name `" + f.raw + "`",
+        prefix("ASSERT") + sheetId(f).padEnd(ID_FIELD) + (f.source ?? "").replace(/^assert\s+/, ""),
+        CONT + (f.message ?? "") + "   is false",
+      ];
+    case "UNDEF": {
+      const label = isAssertionScoped(f) ? sheetId(f) : id(f);
+      return [
+        prefix("UNDEF") + label.padEnd(ID_FIELD) + "  " + "unknown name `" + f.raw + "`",
         ...(f.suggestion ? [CONT + "did you mean `" + f.suggestion + "`?"] : []),
       ];
+    }
     case "DUP":
       return [
         prefix("DUP") +
@@ -110,16 +127,18 @@ function renderGroup(f: Finding): string[] {
           "` is already defined in this scope",
         CONT + "the first binding wins; delete or rename one of them",
       ];
-    case "VECTOR":
+    case "VECTOR": {
+      const label = isAssertionScoped(f) ? sheetId(f) : id(f);
       return [
         prefix("VECTOR") +
-          id(f).padEnd(ID_FIELD) +
+          label.padEnd(ID_FIELD) +
           "  " +
           "`" +
           f.raw +
           "` is a column, not a value.",
         CONT + "Wrap it in an aggregate: SUM(" + f.raw + ")",
       ];
+    }
     case "CYCLE":
       return [prefix("CYCLE") + (f.cyclePath ?? []).join(" → ")];
     case "SHEET":
@@ -141,14 +160,16 @@ function renderGroup(f: Finding): string[] {
           "  " +
           "no value to rewrite in front of this anchor",
       ];
-    case "TYPE":
+    case "TYPE": {
+      const label = isAssertionScoped(f) ? sheetId(f) : id(f);
       return [
         prefix("TYPE") +
-          id(f).padEnd(ID_FIELD) +
+          label.padEnd(ID_FIELD) +
           (f.rowLabel ? "· " + f.rowLabel + "  " : "  ") +
           (f.message ?? ""),
         ...(f.suggestion ? [CONT + "did you mean `" + f.suggestion + "`?"] : []),
       ];
+    }
     case "WARN":
       return [
         prefix("WARN") +

@@ -15,7 +15,7 @@ same CLI straight from source.
 | `visimark fmt FILE...` | Repairs stale numbers in place, by splicing the bytes of each value it owns | the files you name | computed cells and anchored values, in place | a problem it cannot repair remains |
 | `visimark infer FILE...` | Works out which rules reproduce the numbers a document already has, and proposes them | the files you name | nothing, unless `--write` | never — it is advisory |
 | `visimark eval FILE` | Prints the computed values, so a script can read one out | one file | nothing | never |
-| `visimark explain FILE` | Prints each sheet's inputs, rules and evaluation order | one file | nothing | never |
+| `visimark explain FILE` | Prints each sheet's inputs, rules, evaluation order and assertions | one file | nothing | never |
 
 `check` is the one CI runs. The others exist to get a document into a state
 `check` can be strict about, or to explain what it did.
@@ -30,7 +30,7 @@ exits `0`. `visimark --help` (also `-h` or `help`) prints the usage summary.
 | `--fix-dates` | `fmt` | Also rewrites non-ISO dates that have only one reading. `15.10.2026` becomes `2026-10-15`; `11/12/2026` is left alone and still reported, because it is two different dates depending on who wrote it. |
 | `--write` | `infer` | Inserts what it proposed: a `vmark` block after each table, an anchor after each matched figure, or the `no-formulas` marker if there was nothing to derive. It only ever inserts — no existing byte is rewritten. |
 | `--get NAME` | `eval` | Prints one value instead of all of them. Takes `sheet.name` or a bare `name` when it is unambiguous. |
-| `--json` | `eval` | Prints JSON instead of aligned text. |
+| `--json` | `eval` | Prints JSON instead of aligned text — the computed values, plus an `assertions` array (`sheetId`, `source`, `holds`, `operands`, `substituted`). |
 | `#sheet` | `explain` | Limits the output to one sheet. Repeatable. |
 
 Unrecognised options are ignored rather than treated as an error, so a
@@ -41,7 +41,7 @@ workflow that passes an option this version does not know about still runs.
 | Code | Meaning | When you get it |
 |---|---|---|
 | `0` | Nothing to fix | No problems were found. Advisory findings (`WARN`, `NOTE`) can still be printed — they are reported, not counted, and never change the exit code. |
-| `1` | The document has problems | At least one stale value or error, from any of the files named. `check` and `fmt` return this; `infer`, `eval` and `explain` never do. |
+| `1` | The document has problems | At least one stale value or error, from any of the files named. `check` and `fmt` return this; so does `eval` when an `assert` statement is false (the value is still printed first); `infer` and `explain` never do. |
 | `2` | The command could not run | A missing or unreadable file, no file given at all, or an argument that names nothing — an unknown value for `eval --get`, an unknown sheet for `explain`. This means "your request did not make sense", not "your document is wrong". |
 
 With several files the codes do not add up, and the worst one wins: a file that
@@ -66,9 +66,10 @@ nothing.
 | `TYPE` | problem | An expression produced something that cannot go where it was asked to go — storing a boolean in a cell, or calling a function wrongly. | by hand |
 | `SHEET` | problem | A `vmark` block's relationship to its table is broken: no table above it, or a table that belongs to something else. | by hand |
 | `ANCHOR` | problem | An anchor comment has no number in front of it to rewrite. | by hand |
+| `ASSERT` | problem | An `assert` statement evaluated false. The report shows the expression and, below it, the same expression with each named value filled in. | by hand |
 | `COVERAGE` | problem | Either a table has no `vmark` rules anywhere in its document, so nothing in it is checked — or the document carries a `no-formulas` marker that its rules now contradict. | `visimark infer`, the marker, or deleting a marker that is no longer true |
 | `WARN` | advice | Something is defined and never read. Often a typo in the name that reads it. | your call |
-| `NOTE` | advice | Rows that could not be verified because something they depend on is broken. It disappears when the real problem is fixed. | fix the finding above it |
+| `NOTE` | advice | Rows or assertions that could not be verified because something they depend on is broken. It disappears when the real problem is fixed. | fix the finding above it |
 
 ## The no-formulas marker
 

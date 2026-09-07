@@ -63,3 +63,48 @@ test("clean example topo-sorts with sheets in dependency order and no cycles", (
   // every non-cycle binding is placed
   expect(order.length).toBeGreaterThanOrEqual(15);
 });
+
+// ---- assertions in the graph -----------------------------------------
+
+import { assertionNode } from "../../src/eval/graph.js";
+
+const planWith = (assertLine: string) =>
+  build(
+    locate(
+      [
+        "| M | Share |",
+        "|---|------:|",
+        "| a |   50% |",
+        "| b |   50% |",
+        "",
+        "```vmark #plan",
+        "total = SUM(Share)",
+        assertLine,
+        "```",
+        "",
+      ].join("\n"),
+    ),
+  );
+
+test("topoOrder lists assertion nodes, ordered after their dependencies", () => {
+  const m = planWith("assert total == 1");
+  const t = topoOrder(m);
+  const a = m.sheets.get("plan")!.assertions[0]!;
+  expect(t.assertionIds.has(a.id)).toBe(true);
+  const ids = t.order.map((n) => n.id);
+  expect(ids.indexOf(a.id)).toBeGreaterThan(ids.indexOf("plan.total"));
+});
+
+test("a bare foreign/own column in an assertion is a vector reference", () => {
+  const m = planWith("assert Share == 1");
+  const a = m.sheets.get("plan")!.assertions[0]!;
+  const info = dependencies(m, assertionNode(a));
+  expect(info.vectorRefs.map((r) => r.name)).toEqual(["Share"]);
+});
+
+test("an aggregate over a column in an assertion is a clean dependency", () => {
+  const m = planWith("assert SUM(Share) == 1");
+  const a = m.sheets.get("plan")!.assertions[0]!;
+  const info = dependencies(m, assertionNode(a));
+  expect(info.vectorRefs).toEqual([]);
+});

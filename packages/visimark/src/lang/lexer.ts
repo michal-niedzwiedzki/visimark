@@ -116,6 +116,11 @@ export function lex(src: string): Token[] {
       }
       if (WORD_OPS.has(text)) {
         push("op", text, start, i);
+      } else if (text === "assert") {
+        // `assert` is a statement keyword — recognised anywhere it is written,
+        // rejected by the parser wherever a statement is not expected. See the
+        // design doc, section 17.
+        push("assert", text, start, i);
       } else {
         push("ident", text, start, i);
       }

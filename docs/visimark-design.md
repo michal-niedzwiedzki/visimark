@@ -134,8 +134,8 @@ TYPE    s.Out     a boolean cannot be stored; wrap it in `IF()` to produce a
 
 So `Flag = Days > 30` is refused and `Status = IF(Days > 30, "late", "current")`
 is the way to write it. Comparisons, `and`, `or` and `not` are unaffected: they
-compose freely inside a condition, which is the only place a boolean was ever
-going.
+compose freely inside a condition, and — since [§17](#17-assertions) — inside an
+`assert` statement, which is the other place a top-level boolean may go.
 
 Two reasons. A literal boolean in a formula is dead code — `IF(true, a, b)` is
 just `a` — and its only real use is a document-level flag that switches which
@@ -340,7 +340,10 @@ at each binding.
 A finding is **suppressed** when it derives from an upstream error — the drift
 example reports two unverifiable `Days` rows as a single `NOTE` rather than
 emitting noise about values it could not compute. Suppression is the general
-rule, not a special case: one root cause yields one finding.
+rule, not a special case: one root cause yields one finding. `assert` statements
+([§17](#17-assertions)) are nodes in this graph too — ordered after everything
+they read, and folded into one per-sheet `NOTE` when a dependency is
+unevaluable.
 
 Recomputation reparses the document. A full reparse of a large document is
 single-digit milliseconds; incremental range remapping is a later optimisation
@@ -378,8 +381,9 @@ justifies the project.
 | `VECTOR` | foreign column outside an aggregate | no |
 | `CYCLE` | circular dependency | no |
 | `TYPE` | illegal operand types, or a malformed call (name, arity, shape) | no |
-| `SHEET` | column rules with no table | no |
+| `SHEET` | column rules with no table, or an `assert` in a document-scope block | no |
 | `ANCHOR` | anchor with no rewritable target | no |
+| `ASSERT` | an `assert` statement evaluated false ([§17](#17-assertions)) | no |
 | `WARN` | scalar defined and never read | no |
 | `NOTE` | finding suppressed by an upstream error | n/a |
 
@@ -396,10 +400,13 @@ must be able to verify a document without an editor.
 visimark check FILE...              read-only; exit 1 if any finding
 visimark fmt   FILE... [--fix-dates] rewrite computed cells and anchors
 visimark eval  FILE [--get NAME] [--json]
-visimark explain FILE [#sheet]      print rules and dependency order
+visimark explain FILE [#sheet]      print rules, dependency order, assertions
 ```
 
-Exit codes: `0` clean, `1` findings, `2` usage or parse failure.
+Exit codes: `0` clean, `1` findings, `2` usage or parse failure. `eval` also
+exits `1` if an `assert` statement is false ([§17](#17-assertions)) — the
+computed value is still printed first, so a pipeline reading it is not starved,
+but the non-zero code means the document's stated invariants do not hold.
 
 `explain` exists to recover what the format gives up by scattering rules across
 blocks: a single readable view of a sheet's logic and evaluation order.
@@ -556,5 +563,75 @@ Two findings that bear on the implementation:
 Obsidian was not tested; it is not scriptable in this environment. It is
 believed to hide HTML comments in reading view, but that is unverified and no
 document should claim it.
+
+## 17. Assertions
+
+A `vmark` block may carry `assert` statements next to its bindings:
+
+````markdown
+```vmark #recon
+scheduled = SUM(schedule.Amount)
+variance  = lines.gross_total - scheduled
+assert variance == 0
+```
+````
+
+`assert <expression>` is the language's one statement form — every other line in
+a block is a `name = expression` binding. It **binds nothing and stores
+nothing**: `check` evaluates the expression and reports an `ASSERT` finding
+([§10](#10-error-taxonomy)) when it is false, and `fmt` never reads, writes or
+removes an `assert` line. This is what lets an assertion consume a top-level
+boolean when a binding cannot ([§4](#4-syntax)): there is no storage point for
+the boolean to reach.
+
+It generalises the one invariant the tool enforced before it — `STALE`, "a value
+equals its formula" — to any stated relation. The worked invoice's `#recon`
+sheet shows why it earns a place: without `assert variance == 0`, a payment
+schedule whose shares stopped summing to the invoice total would leave a
+non-zero `variance` and `check` would still pass, because every number would
+still agree with its own formula.
+
+**Keyword.** `assert` is tokenised by the lexer. It may not be a bound name or a
+column header — `assert = 1` is a `TYPE` finding.
+
+**Shape.** The expression must be **scalar** and **boolean**. `assert MIN(margin)
+>= 0` is how a row-wise property is written; `assert margin >= 0` over a column
+is a `VECTOR` finding, with the same wrap-it hint bindings get. A non-boolean
+expression (`assert variance`) is a `TYPE` finding. Names resolve by the
+[§6](#6-name-resolution-and-scoping) rules of the block the `assert` sits in.
+
+**No tolerance.** Operands compare exactly, at the precision they already carry
+from their bindings ([§7](#7-numeric-semantics)). `SUM(Share)` over three `33%`
+cells is `0.99`, so `assert SUM(Share) == 1` is *false* — the author writes
+`assert ROUND(SUM(Share), 2) == 1`, or rounds `Share`. This is the same refusal
+to guess that produced ISO-only dates and the thousands-separator ban: no hidden
+coercion.
+
+**Report.** A false assertion prints its source and, below it, the expression
+with each named operand replaced by its value:
+
+```
+  ASSERT  #recon          variance == 0
+          2865.90 == 0   is false
+```
+
+`ASSERT` counts as an error and fails the run. It is never auto-fixed — a false
+invariant is a question for a human, like an undecidable `DATE` or a `CYCLE`.
+When a dependency is unevaluable (`UNDEF`, `VECTOR`, `TYPE`, `CYCLE`, `DATE`) the
+assertion is not evaluated and is folded into one per-sheet `NOTE`; a merely
+`STALE` dependency does not suppress it, because the engine still computes a
+value behind a `STALE` and the assertion is about that value.
+
+**Elsewhere.** `explain` lists a sheet's assertions after its rules and
+evaluation order. `eval` evaluates them and exits `1` if one is false
+([§11](#11-cli)), and `eval --json` carries an `assertions` array (`sheetId`,
+`source`, `holds`, `operands`, `substituted`). `infer` never proposes an
+`assert` — a relation that happens to hold in the current numbers is not
+evidence of an intended invariant, and the false-positive cost is too high.
+
+**Deferred.** Per-row assertions (an `assert` in the column-rule context),
+document-scope assertions (an `assert` in an id-less block is a `SHEET` finding
+for now), and prose-anchored assertions (`<!--vmark-assert=name-->`). Each waits
+on a document that needs it.
 
 <!--vmark:no-formulas-->

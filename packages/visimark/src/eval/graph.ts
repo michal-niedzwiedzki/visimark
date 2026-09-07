@@ -1,7 +1,18 @@
 import type { Call, Expr, Ref } from "../lang/ast.js";
 import { closest } from "../report/levenshtein.js";
-import type { Binding, DocModel } from "../model/types.js";
+import type { Assertion, Binding, DocModel } from "../model/types.js";
 import { type CallProblem, callProblem, isReduce } from "./functions.js";
+
+/**
+ * A `Binding`-shaped view of an assertion, so it flows through the dependency
+ * walk and the topological sort like any node. It stores nothing and is never
+ * a column rule, so `name` is empty and `kind` is `"scalar"` — a foreign or
+ * own-sheet column reference in an assertion therefore lands in `vectorRefs`,
+ * which is the scalar-only rule (spec §2) falling out for free.
+ */
+export function assertionNode(a: Assertion): Binding {
+  return { id: a.id, sheetId: a.sheetId, name: "", expr: a.expr, kind: "scalar", span: a.span };
+}
 
 export type Resolution =
   | { kind: "column"; binding: Binding; sheetId: string }
@@ -149,14 +160,21 @@ export interface TopoResult {
   order: Binding[];
   cycles: Binding[][];
   depMap: Map<string, DepInfo>;
+  /** ids in `order` that are assertions, not bindings */
+  assertionIds: Set<string>;
 }
 
 export function topoOrder(model: DocModel): TopoResult {
   const nodes = new Map<string, Binding>();
+  const assertionIds = new Set<string>();
   for (const b of model.docScope.values()) nodes.set(b.id, b);
   for (const sheet of model.sheets.values()) {
     for (const b of sheet.columns.values()) nodes.set(b.id, b);
     for (const b of sheet.scalars.values()) nodes.set(b.id, b);
+    for (const a of sheet.assertions) {
+      nodes.set(a.id, assertionNode(a));
+      assertionIds.add(a.id);
+    }
   }
 
   const docOrder = [...nodes.keys()];
@@ -207,7 +225,7 @@ export function topoOrder(model: DocModel): TopoResult {
   const stuck = docOrder.filter((id) => !emitted.has(id));
   const cycles = extractCycles(stuck, deps, nodes, rank);
 
-  return { order, cycles, depMap };
+  return { order, cycles, depMap, assertionIds };
 }
 
 function extractCycles(
