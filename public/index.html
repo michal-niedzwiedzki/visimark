@@ -296,9 +296,217 @@
         border-color: rgba(255, 255, 255, 0.65);
       }
 
+      /* Features (full-width, same width as the .cards row above it) */
+      .features {
+        margin-top: 20px;
+        background: #ffffff;
+        color: #1b1b1b;
+        border-radius: 16px;
+        padding: 34px 32px 40px;
+        box-shadow: 0 16px 50px rgba(0, 0, 0, 0.45);
+      }
+      .features > h2 {
+        margin: 0 0 8px;
+        font-size: 1.5rem;
+        font-weight: 750;
+      }
+      .features > .lede {
+        margin: 0 0 26px;
+        font-size: 0.98rem;
+        color: #363636;
+      }
+      .features code {
+        background: #f0f0f0;
+        border-radius: 4px;
+        padding: 1px 5px;
+        font-size: 0.88em;
+      }
+      .toc {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        list-style: none;
+        margin: 0 0 32px;
+        padding: 0;
+      }
+      .toc a {
+        display: inline-block;
+        padding: 8px 18px;
+        border-radius: 999px;
+        background: #f0f0f0;
+        color: #1b1b1b;
+        text-decoration: none;
+        font-size: 0.9rem;
+        font-weight: 650;
+        transition:
+          background 0.18s ease,
+          color 0.18s ease;
+      }
+      .toc a:hover {
+        background: #1b1b1b;
+        color: #ffffff;
+      }
+      .feature {
+        padding-top: 30px;
+        margin-top: 30px;
+        border-top: 1px solid #ececec;
+      }
+      .feature:first-of-type {
+        padding-top: 0;
+        margin-top: 0;
+        border-top: none;
+      }
+      .feature h3 {
+        margin: 0 0 8px;
+        font-size: 1.2rem;
+        font-weight: 750;
+        scroll-margin-top: 20px;
+      }
+      .feature > p {
+        margin: 0 0 6px;
+        font-size: 0.96rem;
+        color: #363636;
+      }
+      .feature ul {
+        margin: 10px 0 0;
+        padding-left: 1.2rem;
+        font-size: 0.96rem;
+        color: #363636;
+        list-style: square;
+      }
+      .feature li {
+        margin: 3px 0;
+      }
+      .feature li::marker {
+        color: #ff453a;
+      }
+      .feature-tag {
+        display: inline-block;
+        margin-left: 8px;
+        padding: 2px 9px;
+        border-radius: 999px;
+        background: #fff4e5;
+        color: #9a5b00;
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+        vertical-align: middle;
+      }
+      .feature > pre {
+        margin: 14px 0 0;
+        background: #1c1c1c;
+        color: #e6e6e6;
+        border-radius: 10px;
+        padding: 14px 15px;
+        font-family: "SF Mono", "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
+        font-size: 0.78rem;
+        line-height: 1.6;
+        overflow-x: auto;
+      }
+
+      /* Charts demo: source and rendered preview, side by side */
+      .chart-demo {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+        margin-top: 18px;
+      }
+      .chart-pane h4 {
+        margin: 0 0 8px;
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #7a7a7a;
+      }
+      .chart-source {
+        margin: 0;
+        height: 460px;
+        overflow: auto;
+        background: #1c1c1c;
+        color: #e6e6e6;
+        border-radius: 10px;
+        padding: 16px 17px;
+        font-family: "SF Mono", "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
+        font-size: 0.74rem;
+        line-height: 1.55;
+        white-space: pre-wrap;
+      }
+      .chart-preview {
+        height: 460px;
+        overflow: auto;
+        background: #fafafa;
+        border: 1px solid #e6e6e6;
+        border-radius: 10px;
+        padding: 16px 20px;
+        font-size: 0.85rem;
+      }
+      .chart-preview h1,
+      .chart-preview h2 {
+        font-size: 1.1rem;
+        margin: 0 0 10px;
+      }
+      .chart-preview h2 {
+        font-size: 1rem;
+        margin-top: 20px;
+      }
+      .chart-preview p {
+        margin: 0 0 10px;
+      }
+      .chart-preview table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 0 0 12px;
+        font-size: 0.82rem;
+      }
+      .chart-preview th,
+      .chart-preview td {
+        border: 1px solid #ddd;
+        padding: 4px 8px;
+      }
+      .chart-preview code {
+        background: #eee;
+        border-radius: 3px;
+        padding: 0 4px;
+        font-size: 0.88em;
+      }
+      .chart-preview pre {
+        background: #1c1c1c;
+        color: #e6e6e6;
+        border-radius: 8px;
+        padding: 10px 12px;
+        overflow-x: auto;
+        font-size: 0.72rem;
+      }
+      .chart-preview pre code {
+        background: none;
+        padding: 0;
+      }
+      .chart-preview img {
+        max-width: 100%;
+        margin: 6px 0 12px;
+        background: #ffffff;
+      }
+      .chart-caption {
+        margin: 10px 0 0;
+        font-size: 0.8rem;
+        color: #7a7a7a;
+      }
+      .chart-caption a {
+        color: #7a7a7a;
+      }
+
       @media (max-width: 880px) {
         .cards {
           grid-template-columns: 1fr;
+        }
+        .chart-demo {
+          grid-template-columns: 1fr;
+        }
+        .chart-source,
+        .chart-preview {
+          height: 360px;
         }
       }
       @media (max-width: 560px) {
@@ -488,6 +696,334 @@ Total: **35.00**<span class="c">&lt;!--vmark=order.total--&gt;</span>
         </article>
       </main>
 
+      <section class="features">
+        <h2>Explore</h2>
+        <p class="lede">
+          Four more places VisiMark shows up, beyond writing, adopting and enforcing formulas.
+        </p>
+
+        <nav class="toc" aria-label="Feature sections">
+          <a href="#feature-charts">Charts</a>
+          <a href="#feature-assertions">Assertions</a>
+          <a href="#feature-eval">Evaluating the document</a>
+          <a href="#feature-vscode">VS Code extension</a>
+        </nav>
+
+        <article class="feature" id="feature-charts">
+          <h3>Charts</h3>
+          <p>
+            A <code>chart</code> statement in a <code>vmark</code> block turns a sheet's own columns
+            into an SVG. <code>fmt</code> draws it; <code>check</code> proves the bytes on disk
+            still match the data &mdash; the same guarantee as any other computed value, just shaped
+            like a picture. Below is <code>docs/example-charts.md</code>, live: source on the left,
+            rendered page on the right, scrolling in lockstep.
+          </p>
+          <div class="chart-demo">
+            <div class="chart-pane">
+              <h4>docs/example-charts.md</h4>
+              <pre class="chart-source" id="chart-source" tabindex="0"></pre>
+            </div>
+            <div class="chart-pane">
+              <h4>Rendered preview</h4>
+              <div class="chart-preview" id="chart-preview" tabindex="0"></div>
+            </div>
+          </div>
+          <p class="chart-caption">
+            Rendered client-side with
+            <a href="https://marked.js.org/" target="_blank" rel="noopener">marked</a>, one of the
+            Markdown engines VisiMark verifies its HTML-comment anchors against.
+          </p>
+          <script type="text/plain" id="chart-source-md">
+            # Quarterly review — a worked example with charts
+
+            This document is part of the acceptance suite. It exists to exercise
+            **generated artifacts**: the two charts below are derived from the tables on
+            this page, written by `visimark fmt`, and verified by `visimark check`.
+
+            Nothing here is an invoice. Charts belong on data that is worth looking at as a
+            shape — a trend over months, a split across segments — and the worked invoice
+            is deliberately left alone.
+
+            ## Sales
+
+            Revenue and cost are human input; profit is computed.
+
+            | Month | Revenue  | Cost     | Profit   |
+            |-------|---------:|---------:|---------:|
+            | Jan   | 48200.00 | 31100.00 | 17100.00 |
+            | Feb   | 51400.00 | 33250.00 | 18150.00 |
+            | Mar   | 46900.00 | 32800.00 | 14100.00 |
+            | Apr   | 55300.00 | 34100.00 | 21200.00 |
+            | May   | 58750.00 | 36400.00 | 22350.00 |
+
+            ```vmark #sales
+            Profit = Revenue - Cost
+            total_revenue = SUM(Revenue)
+            total_profit = SUM(Profit)
+            assert total_profit > 0
+            chart performance as bar of Revenue, Cost, Profit labelled Month aspect 16:9
+            ```
+
+            Revenue across the five months totals **260550.00**<!--vmark=sales.total_revenue-->,
+            against a profit of **92900.00**<!--vmark=sales.total_profit-->.
+
+            ![revenue, cost and profit by month](charts/example-charts-sales.svg)<!--vmark=sales.performance-->
+
+            The chart takes three series from one sheet, so they share a row count by
+            construction. It carries an explicit `aspect 16:9`; the pie below takes the
+            default `16:10`.
+
+            ## Audience
+
+            | Segment     | Headcount |
+            |-------------|----------:|
+            | Under 25    |      1240 |
+            | 25 to 39    |      3180 |
+            | 40 to 54    |      2470 |
+            | 55 and over |      1610 |
+
+            ```vmark #audience
+            total = SUM(Headcount)
+            chart mix as pie of Headcount labelled Segment
+            ```
+
+            The sample covers **8500**<!--vmark=audience.total--> people.
+
+            ![audience by segment](charts/example-charts-audience.svg)<!--vmark=audience.mix-->
+
+            `Headcount` is a human-written input column with no decimals, so its total
+            writes bare — the same precision inference every other value gets.
+
+            ## What `check` guarantees here
+
+            `visimark check` proves that both SVGs on disk are exactly what the current
+            data renders to. Change a `Revenue` cell and the bar chart is `STALE` until
+            `fmt` regenerates it; delete either file and it is `STALE` as missing. What
+            `check` does **not** prove is that the picture is a faithful depiction of the
+            numbers — an artifact's provenance is verifiable, its draughtsmanship is not.
+          </script>
+        </article>
+
+        <article class="feature" id="feature-assertions">
+          <h3>Assertions<span class="feature-tag">Demo coming soon</span></h3>
+          <p>
+            <code>assert total_profit &gt; 0</code> stores nothing &mdash; <code>fmt</code> never
+            touches it &mdash; but <code>check</code> evaluates it on every run and fails the moment
+            it's false. Not a comment: an invariant with a truth value.
+          </p>
+          <pre>
+$ visimark check figures.md
+✗ figures.md
+  ASSERT  sales.total_profit
+          total_profit &gt; 0
+          -1200.00 &gt; 0
+  1 problem
+$ echo $?
+1</pre>
+        </article>
+
+        <article class="feature" id="feature-eval">
+          <h3>Evaluating the document</h3>
+          <p>
+            <code>visimark eval</code> prints every computed value in a document &mdash; or one, by
+            name &mdash; so a script (or an agent) can read a number out without parsing Markdown.
+            Below is <code>docs/example-executable-documentation.md</code>, live: an operating
+            budget where the worker-node count is derived, not typed &mdash; source on the left,
+            rendered page on the right, scrolling in lockstep.
+          </p>
+          <div class="chart-demo">
+            <div class="chart-pane">
+              <h4>docs/example-executable-documentation.md</h4>
+              <pre class="chart-source" id="eval-source" tabindex="0"></pre>
+            </div>
+            <div class="chart-pane">
+              <h4>Rendered preview</h4>
+              <div class="chart-preview" id="eval-preview" tabindex="0"></div>
+            </div>
+          </div>
+          <p class="chart-caption">The same document, read by the CLI instead of a browser:</p>
+          <pre>
+$ visimark eval infrastructure-budget.md --json
+{
+  "budget": {
+    "WorkerBudget": 12000,
+    "WorkerBudgetPercentage": 50
+  },
+  "kubernetes": {
+    "MaxNodes": 48,
+    "TotalCPU": 384,
+    "UsableCPU": 307,
+    "TotalMemory": 1536,
+    "UsableMemory": 1228
+  }
+}</pre>
+          <script type="text/plain" id="eval-source-md">
+            # IT Infrastructure Operating Budget
+
+            **Planning period:** 2026
+            **Environment:** Production
+            **Currency:** USD
+
+            The infrastructure operating budget for production is **$24,000/month**.
+
+            The Kubernetes cluster must run continuously and is expected to maintain enough spare capacity for normal workload fluctuations. We reserve **20% of compute capacity** as headroom.
+
+            ## Monthly operating budget
+
+            | Cost | Monthly USD |
+            |---|---:|
+            | Total infrastructure budget | 24000 |
+            | Managed Kubernetes control plane | 300 |
+            | Load balancers | 400 |
+            | Persistent storage | 1800 |
+            | Database | 4200 |
+            | Network egress | 2200 |
+            | Monitoring and logging | 1600 |
+            | Backups | 800 |
+            | Other infrastructure | 700 |
+
+            The remaining budget is available for Kubernetes worker nodes.
+
+            ```vmark #budget
+            WorkerBudget = TotalInfrastructureBudget
+                         - ManagedKubernetesControlPlane
+                         - LoadBalancers
+                         - PersistentStorage
+                         - Database
+                         - NetworkEgress
+                         - MonitoringAndLogging
+                         - Backups
+                         - OtherInfrastructure
+
+            WorkerBudgetPercentage = WorkerBudget / TotalInfrastructureBudget * 100
+            ```
+
+            **Worker-node budget:** **$12,000/month**<!--vmark=budget.WorkerBudget-->
+
+            **Available for worker nodes:** **50.00%** of the infrastructure budget<!--vmark=budget.WorkerBudgetPercentage-->
+
+            ## Kubernetes worker nodes
+
+            The standard production worker is an `m6i.2xlarge` instance.
+
+            | Parameter | Value |
+            |---|---:|
+            | Worker node monthly cost | 250 |
+            | CPU per worker (vCPU) | 8 |
+            | Memory per worker (GB) | 32 |
+            | Reserved capacity | 20% |
+
+            The cluster may spend at most the worker-node budget, while 20% of the resulting capacity must remain available as operational headroom.
+
+            ```vmark #kubernetes
+            MaxNodes = FLOOR(WorkerBudget / WorkerNodeMonthlyCost)
+
+            UsableNodes = FLOOR(MaxNodes * (1 - ReservedCapacity))
+
+            TotalCPU = MaxNodes * CPUPerWorker
+            UsableCPU = FLOOR(TotalCPU * (1 - ReservedCapacity))
+
+            TotalMemory = MaxNodes * MemoryPerWorker
+            UsableMemory = FLOOR(TotalMemory * (1 - ReservedCapacity))
+            ```
+
+            Therefore the maximum affordable Kubernetes cluster is:
+
+            **Maximum worker nodes:** **48**<!--vmark=kubernetes.MaxNodes-->
+
+            This provides:
+
+            **Total CPU:** **384 vCPU**<!--vmark=kubernetes.TotalCPU-->
+            **Usable CPU after 20% headroom:** **307 vCPU**<!--vmark=kubernetes.UsableCPU-->
+
+            **Total memory:** **1,536 GB**<!--vmark=kubernetes.TotalMemory-->
+            **Usable memory after 20% headroom:** **1,228 GB**<!--vmark=kubernetes.UsableMemory-->
+
+            ## Capacity decision
+
+            The production Kubernetes cluster is therefore budgeted for a maximum of **48 worker nodes**.
+
+            The number **48 is not an independently maintained configuration value**. It is derived from:
+
+            1. the total infrastructure budget,
+            2. all non-Kubernetes operating costs,
+            3. the worker-node price,
+            4. and the required capacity reserve.
+
+            If any of those assumptions change, the documented cluster capacity changes with them.
+
+            ## Machine-readable output
+
+            The same document can be queried by tooling:
+
+            ```text
+            visimark eval infrastructure-budget.md --json
+            ```
+
+            For example:
+
+            ```json
+            {
+              "budget": {
+                "WorkerBudget": 12000,
+                "WorkerBudgetPercentage": 50
+              },
+              "kubernetes": {
+                "MaxNodes": 48,
+                "TotalCPU": 384,
+                "UsableCPU": 307,
+                "TotalMemory": 1536,
+                "UsableMemory": 1228
+              }
+            }
+            ```
+
+            A deployment tool could consume `kubernetes.MaxNodes` directly rather than maintaining a second configuration file.
+
+            ## Why this is executable documentation
+
+            This document is not **code explaining a budget**.
+
+            It is **budget documentation that executes**.
+
+            The tables are the inputs.
+            The VisiMark formulas are the rules.
+            The anchored numbers are materialized results.
+            `eval` exposes those results to other tools.
+
+            For example, changing the worker price from `$250` to `$300` automatically changes the derived maximum cluster size:
+
+            ```text
+            $12,000 / $300 = 40 workers
+            ```
+
+            The document therefore remains the single place where both the **decision** and the **reasoning behind the decision** live.
+
+            The important direction is:
+
+            **documentation → computation → machine-readable output**
+
+            rather than:
+
+            **code → generated documentation**
+          </script>
+        </article>
+
+        <article class="feature" id="feature-vscode">
+          <h3>VS Code extension<span class="feature-tag">Demo coming soon</span></h3>
+          <p>
+            The same engine, wrapped as a language client: diagnostics as you type, no separate run
+            step.
+          </p>
+          <ul>
+            <li>Live diagnostics &mdash; the same findings as <code>check</code>, inline</li>
+            <li><code>fmt</code> behind the editor's own format-on-save</li>
+            <li>Quick fixes, inlay hints for computed values, and CodeLens actions</li>
+            <li>Hover to see a value's formula and its dependencies</li>
+          </ul>
+        </article>
+      </section>
+
       <footer class="footer">
         <a href="https://github.com/michal-niedzwiedzki/visimark">See how &rarr;</a>
       </footer>
@@ -499,6 +1035,65 @@ Total: **35.00**<span class="c">&lt;!--vmark=order.total--&gt;</span>
       crossorigin="anonymous"
       referrerpolicy="no-referrer"
     ></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/marked/18.0.11/lib/marked.umd.min.js"
+      integrity="sha512-spWXz/aNScpDSOz0auQxbzVBx6LmlxjgH7zilyCenKLGEyBje0iSJiLGsdPlrfNqFitWXRDdAXo1Bi7bonkZ6A=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+    <script>
+      // Source/preview demo panes: render an embedded docs/*.md file (public/
+      // is deployed alone, so it can't be fetched from ../docs at runtime)
+      // with marked, optionally swap image sources for embedded assets, and
+      // keep the two panes' scroll positions in lockstep.
+      function renderDemo(sourceId, previewId, mdId, images) {
+        var sourceEl = document.getElementById(sourceId);
+        var previewEl = document.getElementById(previewId);
+        var mdEl = document.getElementById(mdId);
+        if (!sourceEl || !previewEl || !mdEl || typeof marked === "undefined") return;
+
+        var raw = mdEl.textContent.replace(/^\n/, "");
+        sourceEl.textContent = raw;
+        previewEl.innerHTML = marked.parse(raw);
+        if (images) {
+          previewEl.querySelectorAll("img[src]").forEach(function (img) {
+            var uri = images[img.getAttribute("src")];
+            if (uri) img.src = uri;
+          });
+        }
+
+        // Lockstep scroll: moving either pane scrolls the other by the same
+        // fraction of its own scrollable range.
+        var syncingFrom = null;
+        function link(from, to) {
+          from.addEventListener("scroll", function () {
+            if (syncingFrom && syncingFrom !== from) return;
+            syncingFrom = from;
+            var range = from.scrollHeight - from.clientHeight;
+            var ratio = range > 0 ? from.scrollTop / range : 0;
+            to.scrollTop = ratio * (to.scrollHeight - to.clientHeight);
+            requestAnimationFrame(function () {
+              syncingFrom = null;
+            });
+          });
+        }
+        link(sourceEl, previewEl);
+        link(previewEl, sourceEl);
+      }
+
+      (function () {
+        // Embedded verbatim from docs/charts/example-charts-*.svg.
+        var CHART_SVG = {
+          "charts/example-charts-sales.svg":
+            "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NDAgMzYwIiByb2xlPSJpbWciPjxtZXRhZGF0YT48dmlzaW1hcmsgc2hlZXQ9InNhbGVzIiBjaGFydD0icGVyZm9ybWFuY2UiLz48L21ldGFkYXRhPjxsaW5lIHgxPSI3MC4wMCIgeTE9IjMzNC4wMCIgeDI9IjYyNC4wMCIgeTI9IjMzNC4wMCIgc3Ryb2tlPSIjODA4MDgwIiBzdHJva2Utd2lkdGg9IjEiLz48dGV4dCB4PSI2NC4wMCIgeT0iMzM4LjAwIiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBTRk1vbm8tUmVndWxhciwgTWVubG8sIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTEiIHRleHQtYW5jaG9yPSJlbmQiIGZpbGw9IiM4MDgwODAiIHRleHRMZW5ndGg9IjYuNjAiIGxlbmd0aEFkanVzdD0ic3BhY2luZ0FuZEdseXBocyI+MDwvdGV4dD48bGluZSB4MT0iNzAuMDAiIHkxPSIyMzUuMzMiIHgyPSI2MjQuMDAiIHkyPSIyMzUuMzMiIHN0cm9rZT0iIzgwODA4MCIgc3Ryb2tlLXdpZHRoPSIwLjUiLz48dGV4dCB4PSI2NC4wMCIgeT0iMjM5LjMzIiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBTRk1vbm8tUmVndWxhciwgTWVubG8sIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTEiIHRleHQtYW5jaG9yPSJlbmQiIGZpbGw9IiM4MDgwODAiIHRleHRMZW5ndGg9IjMzLjAwIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmdBbmRHbHlwaHMiPjIwMDAwPC90ZXh0PjxsaW5lIHgxPSI3MC4wMCIgeTE9IjEzNi42NyIgeDI9IjYyNC4wMCIgeTI9IjEzNi42NyIgc3Ryb2tlPSIjODA4MDgwIiBzdHJva2Utd2lkdGg9IjAuNSIvPjx0ZXh0IHg9IjY0LjAwIiB5PSIxNDAuNjciIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIFNGTW9uby1SZWd1bGFyLCBNZW5sbywgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMSIgdGV4dC1hbmNob3I9ImVuZCIgZmlsbD0iIzgwODA4MCIgdGV4dExlbmd0aD0iMzMuMDAiIGxlbmd0aEFkanVzdD0ic3BhY2luZ0FuZEdseXBocyI+NDAwMDA8L3RleHQ+PGxpbmUgeDE9IjcwLjAwIiB5MT0iMzguMDAiIHgyPSI2MjQuMDAiIHkyPSIzOC4wMCIgc3Ryb2tlPSIjODA4MDgwIiBzdHJva2Utd2lkdGg9IjAuNSIvPjx0ZXh0IHg9IjY0LjAwIiB5PSI0Mi4wMCIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgU0ZNb25vLVJlZ3VsYXIsIE1lbmxvLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjExIiB0ZXh0LWFuY2hvcj0iZW5kIiBmaWxsPSIjODA4MDgwIiB0ZXh0TGVuZ3RoPSIzMy4wMCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nQW5kR2x5cGhzIj42MDAwMDwvdGV4dD48cmVjdCB4PSI4Ni42MiIgeT0iOTYuMjEiIHdpZHRoPSIyNS44NSIgaGVpZ2h0PSIyMzcuNzkiIGZpbGw9IiMzMzMzMzMiIHN0cm9rZT0iIzgwODA4MCIgc3Ryb2tlLXdpZHRoPSIxIi8+PHJlY3QgeD0iMTEyLjQ3IiB5PSIxODAuNTciIHdpZHRoPSIyNS44NSIgaGVpZ2h0PSIxNTMuNDMiIGZpbGw9IiM4MDgwODAiIHN0cm9rZT0iIzgwODA4MCIgc3Ryb2tlLXdpZHRoPSIxIi8+PHJlY3QgeD0iMTM4LjMzIiB5PSIyNDkuNjQiIHdpZHRoPSIyNS44NSIgaGVpZ2h0PSI4NC4zNiIgZmlsbD0iI2NjY2NjYyIgc3Ryb2tlPSIjODA4MDgwIiBzdHJva2Utd2lkdGg9IjEiLz48dGV4dCB4PSIxMjUuNDAiIHk9IjM1MC4wMCIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgU0ZNb25vLVJlZ3VsYXIsIE1lbmxvLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjExIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjODA4MDgwIiB0ZXh0TGVuZ3RoPSIxOS44MCIgbGVuZ3RoQWRqdXN0PSJzcGFjaW5nQW5kR2x5cGhzIj5KYW48L3RleHQ+PHJlY3QgeD0iMTk3LjQyIiB5PSI4MC40MyIgd2lkdGg9IjI1Ljg1IiBoZWlnaHQ9IjI1My41NyIgZmlsbD0iIzMzMzMzMyIgc3Ryb2tlPSIjODA4MDgwIiBzdHJva2Utd2lkdGg9IjEiLz48cmVjdCB4PSIyMjMuMjciIHk9IjE2OS45NyIgd2lkdGg9IjI1Ljg1IiBoZWlnaHQ9IjE2NC4wMyIgZmlsbD0iIzgwODA4MCIgc3Ryb2tlPSIjODA4MDgwIiBzdHJva2Utd2lkdGg9IjEiLz48cmVjdCB4PSIyNDkuMTMiIHk9IjI0NC40NiIgd2lkdGg9IjI1Ljg1IiBoZWlnaHQ9Ijg5LjU0IiBmaWxsPSIjY2NjY2NjIiBzdHJva2U9IiM4MDgwODAiIHN0cm9rZS13aWR0aD0iMSIvPjx0ZXh0IHg9IjIzNi4yMCIgeT0iMzUwLjAwIiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBTRk1vbm8tUmVndWxhciwgTWVubG8sIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTEiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM4MDgwODAiIHRleHRMZW5ndGg9IjE5LjgwIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmdBbmRHbHlwaHMiPkZlYjwvdGV4dD48cmVjdCB4PSIzMDguMjIiIHk9IjEwMi42MyIgd2lkdGg9IjI1Ljg1IiBoZWlnaHQ9IjIzMS4zNyIgZmlsbD0iIzMzMzMzMyIgc3Ryb2tlPSIjODA4MDgwIiBzdHJva2Utd2lkdGg9IjEiLz48cmVjdCB4PSIzMzQuMDciIHk9IjE3Mi4xOSIgd2lkdGg9IjI1Ljg1IiBoZWlnaHQ9IjE2MS44MSIgZmlsbD0iIzgwODA4MCIgc3Ryb2tlPSIjODA4MDgwIiBzdHJva2Utd2lkdGg9IjEiLz48cmVjdCB4PSIzNTkuOTMiIHk9IjI2NC40NCIgd2lkdGg9IjI1Ljg1IiBoZWlnaHQ9IjY5LjU2IiBmaWxsPSIjY2NjY2NjIiBzdHJva2U9IiM4MDgwODAiIHN0cm9rZS13aWR0aD0iMSIvPjx0ZXh0IHg9IjM0Ny4wMCIgeT0iMzUwLjAwIiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBTRk1vbm8tUmVndWxhciwgTWVubG8sIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTEiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM4MDgwODAiIHRleHRMZW5ndGg9IjE5LjgwIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmdBbmRHbHlwaHMiPk1hcjwvdGV4dD48cmVjdCB4PSI0MTkuMDIiIHk9IjYxLjE5IiB3aWR0aD0iMjUuODUiIGhlaWdodD0iMjcyLjgxIiBmaWxsPSIjMzMzMzMzIiBzdHJva2U9IiM4MDgwODAiIHN0cm9rZS13aWR0aD0iMSIvPjxyZWN0IHg9IjQ0NC44NyIgeT0iMTY1Ljc3IiB3aWR0aD0iMjUuODUiIGhlaWdodD0iMTY4LjIzIiBmaWxsPSIjODA4MDgwIiBzdHJva2U9IiM4MDgwODAiIHN0cm9rZS13aWR0aD0iMSIvPjxyZWN0IHg9IjQ3MC43MyIgeT0iMjI5LjQxIiB3aWR0aD0iMjUuODUiIGhlaWdodD0iMTA0LjU5IiBmaWxsPSIjY2NjY2NjIiBzdHJva2U9IiM4MDgwODAiIHN0cm9rZS13aWR0aD0iMSIvPjx0ZXh0IHg9IjQ1Ny44MCIgeT0iMzUwLjAwIiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBTRk1vbm8tUmVndWxhciwgTWVubG8sIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTEiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM4MDgwODAiIHRleHRMZW5ndGg9IjE5LjgwIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmdBbmRHbHlwaHMiPkFwcjwvdGV4dD48cmVjdCB4PSI1MjkuODIiIHk9IjQ0LjE3IiB3aWR0aD0iMjUuODUiIGhlaWdodD0iMjg5LjgzIiBmaWxsPSIjMzMzMzMzIiBzdHJva2U9IiM4MDgwODAiIHN0cm9rZS13aWR0aD0iMSIvPjxyZWN0IHg9IjU1NS42NyIgeT0iMTU0LjQzIiB3aWR0aD0iMjUuODUiIGhlaWdodD0iMTc5LjU3IiBmaWxsPSIjODA4MDgwIiBzdHJva2U9IiM4MDgwODAiIHN0cm9rZS13aWR0aD0iMSIvPjxyZWN0IHg9IjU4MS41MyIgeT0iMjIzLjc0IiB3aWR0aD0iMjUuODUiIGhlaWdodD0iMTEwLjI2IiBmaWxsPSIjY2NjY2NjIiBzdHJva2U9IiM4MDgwODAiIHN0cm9rZS13aWR0aD0iMSIvPjx0ZXh0IHg9IjU2OC42MCIgeT0iMzUwLjAwIiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBTRk1vbm8tUmVndWxhciwgTWVubG8sIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTEiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM4MDgwODAiIHRleHRMZW5ndGg9IjE5LjgwIiBsZW5ndGhBZGp1c3Q9InNwYWNpbmdBbmRHbHlwaHMiPk1heTwvdGV4dD48cmVjdCB4PSI3MC4wMCIgeT0iMTAuMDAiIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCIgZmlsbD0iIzMzMzMzMyIgc3Ryb2tlPSIjODA4MDgwIiBzdHJva2Utd2lkdGg9IjEiLz48dGV4dCB4PSI4NC4wMCIgeT0iMTkuMDAiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIFNGTW9uby1SZWd1bGFyLCBNZW5sbywgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMSIgdGV4dC1hbmNob3I9InN0YXJ0IiBmaWxsPSIjODA4MDgwIj5SZXZlbnVlPC90ZXh0PjxyZWN0IHg9IjE0Ni4yMCIgeT0iMTAuMDAiIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCIgZmlsbD0iIzgwODA4MCIgc3Ryb2tlPSIjODA4MDgwIiBzdHJva2Utd2lkdGg9IjEiLz48dGV4dCB4PSIxNjAuMjAiIHk9IjE5LjAwIiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBTRk1vbm8tUmVndWxhciwgTWVubG8sIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTEiIHRleHQtYW5jaG9yPSJzdGFydCIgZmlsbD0iIzgwODA4MCI+Q29zdDwvdGV4dD48cmVjdCB4PSIyMDIuNjAiIHk9IjEwLjAwIiB3aWR0aD0iMTAiIGhlaWdodD0iMTAiIGZpbGw9IiNjY2NjY2MiIHN0cm9rZT0iIzgwODA4MCIgc3Ryb2tlLXdpZHRoPSIxIi8+PHRleHQgeD0iMjE2LjYwIiB5PSIxOS4wMCIgZm9udC1mYW1pbHk9InVpLW1vbm9zcGFjZSwgU0ZNb25vLVJlZ3VsYXIsIE1lbmxvLCBDb25zb2xhcywgbW9ub3NwYWNlIiBmb250LXNpemU9IjExIiB0ZXh0LWFuY2hvcj0ic3RhcnQiIGZpbGw9IiM4MDgwODAiPlByb2ZpdDwvdGV4dD48L3N2Zz4K",
+          "charts/example-charts-audience.svg":
+            "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NDAgNDAwIiByb2xlPSJpbWciPjxtZXRhZGF0YT48dmlzaW1hcmsgc2hlZXQ9ImF1ZGllbmNlIiBjaGFydD0ibWl4Ii8+PC9tZXRhZGF0YT48cGF0aCBkPSJNIDMyMC4wMCAyMDAuMDAgTCAzMjAuMDAgNjQuMDAgQSAxMzYuMDAgMTM2LjAwIDAgMCAxIDQyNy45MiAxMTcuMjQgWiIgZmlsbD0iIzMzMzMzMyIgc3Ryb2tlPSIjODA4MDgwIiBzdHJva2Utd2lkdGg9IjEiLz48dGV4dCB4PSIzOTcuMDIiIHk9IjQzLjg4IiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBTRk1vbm8tUmVndWxhciwgTWVubG8sIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM4MDgwODAiPlVuZGVyIDI1IDE0LjYlPC90ZXh0Pjx0ZXh0IHg9IjM5Ny4wMiIgeT0iNTcuODgiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIFNGTW9uby1SZWd1bGFyLCBNZW5sbywgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzgwODA4MCI+MTI0MDwvdGV4dD48cGF0aCBkPSJNIDMyMC4wMCAyMDAuMDAgTCA0MjcuOTIgMTE3LjI0IEEgMTM2LjAwIDEzNi4wMCAwIDAgMSAzMDIuOTUgMzM0LjkzIFoiIGZpbGw9IiM2NjY2NjYiIHN0cm9rZT0iIzgwODA4MCIgc3Ryb2tlLXdpZHRoPSIxIi8+PHRleHQgeD0iNDcwLjk3IiB5PSIyODYuNjciIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIFNGTW9uby1SZWd1bGFyLCBNZW5sbywgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzgwODA4MCI+MjUgdG8gMzkgMzcuNCU8L3RleHQ+PHRleHQgeD0iNDcwLjk3IiB5PSIzMDAuNjciIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIFNGTW9uby1SZWd1bGFyLCBNZW5sbywgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzgwODA4MCI+MzE4MDwvdGV4dD48cGF0aCBkPSJNIDMyMC4wMCAyMDAuMDAgTCAzMDIuOTUgMzM0LjkzIEEgMTM2LjAwIDEzNi4wMCAwIDAgMSAxOTMuNzQgMTQ5LjQ3IFoiIGZpbGw9IiM5OTk5OTkiIHN0cm9rZT0iIzgwODA4MCIgc3Ryb2tlLXdpZHRoPSIxIi8+PHRleHQgeD0iMTcwLjAwIiB5PSIyODguMzQiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIFNGTW9uby1SZWd1bGFyLCBNZW5sbywgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzgwODA4MCI+NDAgdG8gNTQgMjkuMSU8L3RleHQ+PHRleHQgeD0iMTcwLjAwIiB5PSIzMDIuMzQiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIFNGTW9uby1SZWd1bGFyLCBNZW5sbywgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzgwODA4MCI+MjQ3MDwvdGV4dD48cGF0aCBkPSJNIDMyMC4wMCAyMDAuMDAgTCAxOTMuNzQgMTQ5LjQ3IEEgMTM2LjAwIDEzNi4wMCAwIDAgMSAzMjAuMDAgNjQuMDAgWiIgZmlsbD0iI2NjY2NjYyIgc3Ryb2tlPSIjODA4MDgwIiBzdHJva2Utd2lkdGg9IjEiLz48dGV4dCB4PSIyMjIuNDIiIHk9IjU1Ljg0IiBmb250LWZhbWlseT0idWktbW9ub3NwYWNlLCBTRk1vbm8tUmVndWxhciwgTWVubG8sIENvbnNvbGFzLCBtb25vc3BhY2UiIGZvbnQtc2l6ZT0iMTIiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM4MDgwODAiPjU1IGFuZCBvdmVyIDE4LjklPC90ZXh0Pjx0ZXh0IHg9IjIyMi40MiIgeT0iNjkuODQiIGZvbnQtZmFtaWx5PSJ1aS1tb25vc3BhY2UsIFNGTW9uby1SZWd1bGFyLCBNZW5sbywgQ29uc29sYXMsIG1vbm9zcGFjZSIgZm9udC1zaXplPSIxMSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzgwODA4MCI+MTYxMDwvdGV4dD48L3N2Zz4K",
+        };
+
+        renderDemo("chart-source", "chart-preview", "chart-source-md", CHART_SVG);
+        renderDemo("eval-source", "eval-preview", "eval-source-md", null);
+      })();
+    </script>
     <script>
       // The previews ship with the "order" dataset hardcoded (so crawlers and
       // no-JS visitors see real content). On load we pick one of four example
