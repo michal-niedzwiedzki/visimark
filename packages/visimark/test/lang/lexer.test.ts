@@ -129,3 +129,30 @@ test("`:` lexes as a colon token for aspect ratios", () => {
 test("a word merely starting with `chart` is an ident", () => {
   expect(lex("charts")[0]!.kind).toBe("ident");
 });
+
+// --- Σ / ∑ alias for SUM (#43) ----------------------------------------------
+
+test("Σ and ∑ lex as the identifier SUM", () => {
+  expect(pairs("Σ(Net)")).toEqual(pairs("SUM(Net)"));
+  expect(pairs("∑(Net)")).toEqual(pairs("SUM(Net)"));
+});
+
+test("Σ carries its own one-character source span", () => {
+  const toks = lex("Σ(Net)");
+  expect(toks.map((t) => [t.kind, t.value, t.start, t.end])).toEqual([
+    ["ident", "SUM", 0, 1],
+    ["lparen", "(", 1, 2],
+    ["ident", "Net", 2, 5],
+    ["rparen", ")", 5, 6],
+    ["eof", "", 6, 6],
+  ]);
+});
+
+test("a bare Σ (no call) lexes exactly like a bare SUM", () => {
+  expect(pairs("Σ")).toEqual(pairs("SUM"));
+});
+
+test("lowercase sigma is not aliased", () => {
+  expect(() => lex("σ(Net)")).toThrow('unexpected character "σ"');
+  expect(() => lex("ς(Net)")).toThrow('unexpected character "ς"');
+});

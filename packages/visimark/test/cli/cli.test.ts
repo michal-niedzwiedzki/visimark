@@ -75,6 +75,22 @@ test("explain prints a sheet's rules and evaluation order", async () => {
   expect(c.out()).toMatch(/order:\s+Amount → covered/);
 });
 
+test("explain echoes Σ/∑ as written, not the resolved SUM", async () => {
+  for (const glyph of ["Σ", "∑"]) {
+    const dir = mkdtempSync(join(tmpdir(), "visimark-"));
+    const p = join(dir, "sigma.md");
+    writeFileSync(
+      p,
+      `| Item | Price | Qty |  Net |\n|------|------:|----:|-----:|\n| pen  |  5.00 |   2 | 10.00 |\n\n\`\`\`vmark #order\nNet = Price * Qty\ntotal = ${glyph}(Net)\n\`\`\`\n`,
+    );
+    const c = capture();
+    const code = await runCli(["explain", p], c.io);
+    expect(code).toBe(0);
+    expect(c.out()).toContain(`total = ${glyph}(Net)`);
+    expect(c.out()).not.toContain("total = SUM(Net)");
+  }
+});
+
 const plainDoc = (name: string): string => {
   const dir = mkdtempSync(join(tmpdir(), "visimark-"));
   const p = join(dir, name);

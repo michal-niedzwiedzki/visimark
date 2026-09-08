@@ -150,6 +150,86 @@ Share = Net / SUM(Net)
   expect(run(src).findings).toEqual([]);
 });
 
+// ---- Σ / ∑ alias for SUM (#43) ------------------------------------------
+
+test("Σ(Net) and ∑(Net) evaluate identically to SUM(Net)", () => {
+  const src = `
+| Leg |    Net |
+|-----|-------:|
+| a   |  50.00 |
+| b   | 150.00 |
+
+\`\`\`vmark #legs
+total = SUM(Net)
+\`\`\`
+`;
+  const withAlias = (glyph: string) => src.replace("SUM(Net)", `${glyph}(Net)`);
+  // Spans differ by construction — Σ/∑ is one character, `SUM` is three — so
+  // compare everything except span/sourceOffset, which the semantics table
+  // (spec §3) says point at exactly what the author wrote, not at `SUM`.
+  const withoutSpan = (fs: Finding[]) => fs.map(({ span, sourceOffset, ...rest }) => rest);
+  expect(withoutSpan(run(withAlias("Σ")).findings)).toEqual(withoutSpan(run(src).findings));
+  expect(withoutSpan(run(withAlias("∑")).findings)).toEqual(withoutSpan(run(src).findings));
+});
+
+test("Σ(Price * Qty) is refused exactly like SUM(Price * Qty)", () => {
+  const r = run(withScalar("Σ(Price * Qty)"));
+  const ts = typeFindings(r.findings);
+  expect(ts).toHaveLength(1);
+  expect(ts[0]!.message).toBe("SUM() takes a column reference, not an expression");
+});
+
+test("Σ() and Σ(a, b) fail arity exactly like SUM", () => {
+  const noArgs = typeFindings(run(withScalar("Σ()")).findings);
+  expect(noArgs[0]!.message).toBe("SUM() takes 1 argument, got 0");
+  const twoArgs = typeFindings(run(withScalar("Σ(Price, Qty)")).findings);
+  expect(twoArgs[0]!.message).toBe("SUM() takes 1 argument, got 2");
+});
+
+test("share = Net / Σ(Net) composes exactly like SUM", () => {
+  const src = `
+| Leg |    Net | Share |
+|-----|-------:|------:|
+| a   |  50.00 |  0.25 |
+| b   | 150.00 |  0.75 |
+
+\`\`\`vmark #legs
+Share = Net / Σ(Net)
+\`\`\`
+`;
+  expect(run(src).findings).toEqual([]);
+});
+
+test("Σ(schedule.Amount) is legal, exactly like SUM(schedule.Amount)", () => {
+  const src = `
+| Leg |    Net |
+|-----|-------:|
+| a   |  50.00 |
+
+\`\`\`vmark #lines
+total = Σ(schedule.Amount)
+\`\`\`
+
+| Item |  Amount |
+|------|--------:|
+| x    |   50.00 |
+
+\`\`\`vmark #schedule
+\`\`\`
+`;
+  const ts = typeFindings(run(src).findings);
+  expect(ts).toEqual([]);
+});
+
+test("an unresolvable name near SUM never suggests Σ or ∑", () => {
+  const r = run(withColumnRule("SUMM(Qty)"));
+  const ts = typeFindings(r.findings);
+  expect(ts).toHaveLength(1);
+  expect(ts[0]!.suggestion).toBe("SUM");
+  expect([...FUNCTIONS.keys()]).not.toContain("Σ");
+  expect([...FUNCTIONS.keys()]).not.toContain("∑");
+});
+
 test("nested calls are checked too", () => {
   const r = run(withColumnRule("ABS(ROUND(Qty))"));
   const ts = typeFindings(r.findings);

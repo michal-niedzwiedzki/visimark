@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Writing `Σ`/`∑` no longer shows as a parse-error diagnostic; it's treated
+  as `SUM`.
 - A sheet id that is not a valid identifier now shows as a `SHEET` diagnostic
   on its block, and an anchor comment beginning `vmark=` that fails to parse
   now shows as an `ANCHOR` diagnostic on the comment, instead of both being
