@@ -303,7 +303,11 @@
 
       /* SCENARIO — 18% */
       .knowledge {
-        flex: 0 0 20%;
+        /* 12% (files) + 35% (editor) + 35% (preview) + 18% must total 100%
+           of .working-area's width — it was drifted to 20% at some point
+           without the other three shrinking to match, so this column (and
+           its content) ran 2% past the viewport's right edge. */
+        flex: 0 0 18%;
         background: #2a2a2a;
       }
       .knowledge .panel-body {
@@ -347,6 +351,13 @@
         gap: 9px;
         padding: 5px 0;
       }
+      /* Clickable exactly when clicking would do something: a done step
+         (click to reset it) or an undone manual step (click to complete it —
+         its only path, nothing auto-detects it). */
+      .quest-step.manual,
+      .quest-step.done {
+        cursor: pointer;
+      }
       .quest-check {
         flex: none;
         width: 17px;
@@ -366,6 +377,14 @@
           color 0.2s ease;
       }
       .quest-text {
+        /* Flex items default to min-width: auto, which floors their width at
+           their unwrapped content size — exactly the wrong thing for a text
+           child sharing a row with a fixed-width checkbox, since it lets a
+           long step's text push past the panel's edge instead of wrapping.
+           flex: 1 lets it fill the remaining row width; min-width: 0 lifts
+           that floor so it actually wraps there instead of overflowing. */
+        flex: 1;
+        min-width: 0;
         font-size: 1rem;
         line-height: 1.5;
         color: #d7e4ee;
@@ -740,14 +759,34 @@ recognises in the prose.</pre>
       // Fetched fresh from this page's own directory on every load — docs/
       // and the playground are now the same tree, so there's nothing to bake
       // or keep in sync by hand (contrast the logo above, which still is).
-      var FILE_SOURCES = {
-        "demo.md": "playground/demo.md",
+      // The numbered chapters are docs/SCENARIOS.md's tutorial track, one
+      // concept per file — their SCENARIO-panel body/quest comes from
+      // ../SCENARIOS.json, merged into scenarios.json below.
+      var TUTORIAL_CHAPTERS = [
+        "01-tables.md",
+        "02-inference.md",
+        "03-sheets.md",
+        "04-anchors.md",
+        "05-mappers.md",
+        "06-aggregates.md",
+        "07-reasoning.md",
+        "08-knowledge.md",
+        "09-units.md",
+        "10-assertions.md",
+        "11-build-automation.md",
+        "12-charts.md",
+      ];
+      var FILE_SOURCES = { "demo.md": "playground/demo.md" };
+      TUTORIAL_CHAPTERS.forEach(function (name) {
+        FILE_SOURCES[name] = "playground/tutorial/" + name;
+      });
+      Object.assign(FILE_SOURCES, {
         "example-invoice.md": "example-invoice.md",
         "example-invoice-drift.md": "example-invoice-drift.md",
         "example-quote-plain.md": "example-quote-plain.md",
         "example-charts.md": "example-charts.md",
         "example-executable-documentation.md": "example-executable-documentation.md",
-      };
+      });
       async function loadFiles() {
         var names = Object.keys(FILE_SOURCES);
         var texts = await Promise.all(
@@ -767,6 +806,32 @@ recognises in the prose.</pre>
       var order = Object.keys(FILES);
       var contents = Object.assign({}, FILES);
       var current = "demo.md";
+
+      // ---- scenario data -----------------------------------------------------
+      // Declarative — see normalizeStep() below for the schema and check-name
+      // vocabulary. Two sources merged into one map, keyed by filename:
+      // playground/scenarios.json (the showcase examples) and SCENARIOS.json
+      // (the numbered tutorial chapters, derived from SCENARIOS.md).
+      async function fetchJson(path) {
+        var res = await fetch(path);
+        if (!res.ok) throw new Error(path + ": HTTP " + res.status);
+        return res.json();
+      }
+      async function loadScenarios() {
+        var sources = await Promise.all([
+          fetchJson("playground/scenarios.json"),
+          fetchJson("SCENARIOS.json"),
+        ]);
+        var merged = {};
+        sources.forEach(function (data) {
+          Object.keys(data).forEach(function (name) {
+            if (name !== "//") merged[name] = data[name];
+          });
+        });
+        return merged;
+      }
+      var SCENARIOS = await loadScenarios();
+      var SCENARIO_FALLBACK = SCENARIOS.__fallback__;
 
       // ---- CodeMirror editor ------------------------------------------------
       var cm = CodeMirror.fromTextArea(document.getElementById("editor-ta"), {
@@ -871,22 +936,35 @@ recognises in the prose.</pre>
       // reports), not just marked done on a timer.
       var scenarioBodyEl = document.getElementById("scenario-body");
 
-      // ---- quest step library --------------------------------------------
-      // Two kinds of step: "action" ones fire from a UI event tag (tab
-      // clicks, Infer/Build runs — see questSignal's call sites below);
-      // "eval" ones are re-checked every time refreshDerived() computes a
-      // fresh pgEval() result, against the snapshot captured when the file
-      // was loaded (questState.baselineEvalJson).
-      function stepTab(group, tab, text) {
-        return { id: "tab:" + group + ":" + tab, text: text, action: "tab:" + group + ":" + tab };
-      }
-      function stepAction(action, text) {
-        return { id: action, text: text, action: action };
-      }
-      function stepEval(id, text, evalCheck) {
-        return { id: id, text: text, evalCheck: evalCheck };
-      }
-      // Every predicate below takes the same ctx: { evalResult, baselineJson,
+      // ---- quest step schema --------------------------------------------
+      // Scenario data (playground/scenarios.json, fetched above) is plain
+      // JSON: no functions, so no scenario can carry code. A quest is a list
+      // of step descriptors with a "kind":
+      //   "tab"    { group, tab }        — done when that diag tab is opened
+      //   "action" { action }            — done when questSignal(action) fires
+      //                                     (an Infer/Build run — see the
+      //                                     questSignal call sites below)
+      //   "eval"   { check }             — re-checked every time
+      //                                     refreshDerived() computes a fresh
+      //                                     pgEval() result, against the
+      //                                     snapshot taken when the file was
+      //                                     loaded (questState.baselineEvalJson).
+      //                                     `check` names a predicate in
+      //                                     CHECKS below — the fixed,
+      //                                     reviewed vocabulary scenario data
+      //                                     is allowed to reach for.
+      //   "manual" {}                    — nothing to detect; the visitor
+      //                                     ticks it themselves by clicking it.
+      // Every kind may set an explicit "id" (stable across re-renders); it
+      // defaults to a value derived from the step's position and kind.
+      //
+      // A step is never completed by clicking it — only "manual" steps can
+      // be, since nothing else can complete them — but any completed step
+      // can be clicked to reset it, so a visitor can repeat the action and
+      // watch it get detected again rather than being stuck with it checked
+      // off forever. See startQuest()'s click handler.
+      //
+      // Every CHECKS predicate takes the same ctx: { evalResult, baselineJson,
       // hasStale, baselineHasStale } — see questCheckEval.
       function evalChanged(ctx) {
         return JSON.stringify(ctx.evalResult) !== ctx.baselineJson;
@@ -906,123 +984,51 @@ recognises in the prose.</pre>
       function staleFixed(ctx) {
         return ctx.baselineHasStale && !ctx.hasStale;
       }
+      function assertionsFailing(ctx) {
+        return (ctx.evalResult.assertions || []).some(function (a) {
+          return a.holds === false;
+        });
+      }
+      function assertionsPassing(ctx) {
+        var list = ctx.evalResult.assertions || [];
+        return (
+          list.length > 0 &&
+          list.every(function (a) {
+            return a.holds === true;
+          })
+        );
+      }
+      var CHECKS = {
+        "value-changed": evalChanged,
+        "charts-regenerated": chartsRegenerated,
+        "stale-fixed": staleFixed,
+        "assertion-failing": assertionsFailing,
+        "assertion-passing": assertionsPassing,
+      };
 
-      var SCENARIOS = {
-        "demo.md": {
-          body:
-            "Start here. This is the smallest possible VisiMark document — " +
-            "one vmark block computing a total from a table.",
-          quest: [
-            stepEval(
-              "edit",
-              "Change a Qty or Price cell and watch Knowledge update",
-              evalChanged,
-            ),
-            stepTab("diag", "knowledge", "Switch to the Knowledge tab and find the new total"),
-            stepAction(
-              "action:infer-run",
-              "Click Infer anyway, just to see what it says about a document that's already annotated",
-            ),
-          ],
-        },
-        "example-invoice.md": {
-          body:
-            "A fully-worked, fully-verified invoice: line items, VAT, an " +
-            "early-payment schedule, and a currency conversion, all " +
-            "cross-checked against each other. Every bold number in " +
-            "Preview is backed by a formula, not typed by hand.",
-          quest: [
-            stepTab("diag", "knowledge", "Open Knowledge and find `lines.vat_total`"),
-            stepEval(
-              "edit",
-              "Change a Qty or Rate cell and watch every total recompute",
-              evalChanged,
-            ),
-            stepTab("diag", "reasoning", "Open Reasoning to see the dependency order"),
-          ],
-        },
-        "example-invoice-drift.md": {
-          body:
-            "The same invoice as above, except someone hand-edited a " +
-            "number after the fact, a date got typed in the wrong format, " +
-            "and a formula call itself in a circle — a small catalogue of " +
-            "everything `check` is built to catch.",
-          quest: [
-            stepAction(
-              "action:build-run",
-              "Open Build and run it — watch it come back red, cell by cell",
-            ),
-            stepEval(
-              "fix",
-              "Edit anything to trigger fmt — the stale numbers snap back in line, " +
-                "though the date and the circular formula still need a human",
-              staleFixed,
-            ),
-          ],
-        },
-        "example-quote-plain.md": {
-          body:
-            "A quote with real numbers in real tables — but no VisiMark " +
-            "formulas at all. This is the adoption story: most documents " +
-            "start out exactly like this.",
-          quest: [
-            stepTab("diag", "infer", "Open the Inference tab"),
-            stepAction(
-              "action:infer-run",
-              "Click Infer — VisiMark proposes the rules it thinks produced these numbers",
-            ),
-            stepEval(
-              "proposed",
-              "Watch Knowledge fill in with real computed values",
-              evalChanged,
-            ),
-          ],
-        },
-        "example-charts.md": {
-          body:
-            "Two charts — a bar chart and a pie chart — rendered as SVG " +
-            "directly from the tables above them, not pasted in from " +
-            "another tool.",
-          quest: [
-            stepEval(
-              "regen",
-              "Edit a Revenue or Cost cell and watch the bar chart regenerate",
-              chartsRegenerated,
-            ),
-            stepTab("diag", "reasoning", "Open Reasoning and find the `chart` declaration"),
-          ],
-        },
-        "example-executable-documentation.md": {
-          body:
-            "A Kubernetes capacity budget where the headline number — the " +
-            "maximum worker-node count — is derived from cost, node " +
-            "price, and a reserved-capacity percentage, not typed in by " +
-            "whoever last edited the doc.",
-          quest: [
-            stepTab("diag", "knowledge", "Open Knowledge to see eval's structured output"),
-            stepEval(
-              "cost",
-              "Change the worker node's monthly cost and watch `MaxNodes` recompute",
-              evalChanged,
-            ),
-            stepTab("diag", "reasoning", "See how `MaxNodes` depends on `WorkerBudget`"),
-          ],
-        },
-      };
-      var SCENARIO_FALLBACK = {
-        body: "A blank file — nothing to demonstrate yet.",
-        quest: [
-          stepEval(
-            "write",
-            "Write a table with a `vmark` block under it and watch Knowledge fill in",
-            evalChanged,
-          ),
-          stepAction(
-            "action:infer-run",
-            "Or paste in a plain table with no formulas and click Infer",
-          ),
-        ],
-      };
+      /** Turns one JSON step descriptor into the internal step shape the
+       *  quest engine below runs on. */
+      function normalizeStep(raw, index) {
+        if (raw.kind === "tab") {
+          var tabAction = "tab:" + raw.group + ":" + raw.tab;
+          return { id: raw.id || tabAction, text: raw.text, action: tabAction };
+        }
+        if (raw.kind === "action") {
+          return { id: raw.id || raw.action, text: raw.text, action: raw.action };
+        }
+        if (raw.kind === "eval") {
+          var check = CHECKS[raw.check];
+          if (!check) throw new Error("scenarios.json: unknown check \"" + raw.check + "\"");
+          return { id: raw.id || "eval:" + index, text: raw.text, evalCheck: check };
+        }
+        if (raw.kind === "manual") {
+          return { id: raw.id || "manual:" + index, text: raw.text, manual: true };
+        }
+        throw new Error("scenarios.json: unknown step kind \"" + raw.kind + "\"");
+      }
+      function normalizeQuest(quest) {
+        return (quest || []).map(normalizeStep);
+      }
 
       // ---- quest engine ----------------------------------------------------
       var questState = { name: null, steps: [], done: {}, baselineEvalJson: null };
@@ -1035,13 +1041,13 @@ recognises in the prose.</pre>
         var body = document.createElement("p");
         body.textContent = s.body;
         scenarioBodyEl.appendChild(body);
-        startQuest(name, s.quest);
+        startQuest(name, normalizeQuest(s.quest));
       }
 
-      function startQuest(name, quest) {
+      function startQuest(name, steps) {
         questState = {
           name: name,
-          steps: quest || [],
+          steps: steps || [],
           done: {},
           baselineEvalJson: null,
           baselineHasStale: false,
@@ -1060,6 +1066,18 @@ recognises in the prose.</pre>
           text.textContent = step.text;
           li.appendChild(check);
           li.appendChild(text);
+          if (step.manual) li.classList.add("manual");
+          // A step is never completed by clicking it — only by actually
+          // doing the thing it describes (a tab click, an Infer/Build run,
+          // a real change `eval` picks up). Clicking only ever *un*-completes
+          // a step already done, so a visitor can reset one and repeat the
+          // action to watch it get detected again. "manual" steps are the
+          // one exception: nothing else can ever complete them, since
+          // there's nothing about them for VisiMark to detect.
+          li.addEventListener("click", function () {
+            if (questState.done[step.id]) questUnmarkDone(step.id);
+            else if (step.manual) questMarkDone(step.id);
+          });
           questListEl.appendChild(li);
         });
       }
@@ -1080,6 +1098,14 @@ recognises in the prose.</pre>
         if (allDone && questState.steps.length > 0) {
           questCompleteEl.hidden = false;
         }
+      }
+
+      function questUnmarkDone(id) {
+        if (!questState.done[id]) return;
+        questState.done[id] = false;
+        var li = questListEl.querySelector('[data-id="' + id + '"]');
+        if (li) li.classList.remove("done");
+        questCompleteEl.hidden = true;
       }
 
       /** UI-event steps: tab clicks, Infer/Build runs. */

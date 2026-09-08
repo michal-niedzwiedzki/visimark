@@ -1,0 +1,63 @@
+{
+  "//": "Declarative data for the SCENARIO panel + quest checklist in playground.html. Each entry is keyed by a FILES filename; \"__fallback__\" covers any file with no entry (e.g. a new blank file the visitor created). Loaded at runtime by loadScenarios() — see the check-name vocabulary documented there.",
+
+  "demo.md": {
+    "body": "Start here. This is the smallest possible VisiMark document — one vmark block computing a total from a table.",
+    "quest": [
+      { "kind": "eval", "check": "value-changed", "id": "edit", "text": "Change a Qty or Price cell and watch Knowledge update" },
+      { "kind": "tab", "group": "diag", "tab": "knowledge", "text": "Switch to the Knowledge tab and find the new total" },
+      { "kind": "action", "action": "action:infer-run", "text": "Click Infer anyway, just to see what it says about a document that's already annotated" }
+    ]
+  },
+
+  "example-invoice.md": {
+    "body": "A fully-worked, fully-verified invoice: line items, VAT, an early-payment schedule, and a currency conversion, all cross-checked against each other. Every bold number in Preview is backed by a formula, not typed by hand.",
+    "quest": [
+      { "kind": "tab", "group": "diag", "tab": "knowledge", "text": "Open Knowledge and find `lines.vat_total`" },
+      { "kind": "eval", "check": "value-changed", "id": "edit", "text": "Change a Qty or Rate cell and watch every total recompute" },
+      { "kind": "tab", "group": "diag", "tab": "reasoning", "text": "Open Reasoning to see the dependency order" }
+    ]
+  },
+
+  "example-invoice-drift.md": {
+    "body": "The same invoice as above, except someone hand-edited a number after the fact, a date got typed in the wrong format, and a formula call itself in a circle — a small catalogue of everything `check` is built to catch.",
+    "quest": [
+      { "kind": "action", "action": "action:build-run", "text": "Open Build and run it — watch it come back red, cell by cell" },
+      { "kind": "eval", "check": "stale-fixed", "id": "fix", "text": "Edit anything to trigger fmt — the stale numbers snap back in line, though the date and the circular formula still need a human" }
+    ]
+  },
+
+  "example-quote-plain.md": {
+    "body": "A quote with real numbers in real tables — but no VisiMark formulas at all. This is the adoption story: most documents start out exactly like this.",
+    "quest": [
+      { "kind": "tab", "group": "diag", "tab": "infer", "text": "Open the Inference tab" },
+      { "kind": "action", "action": "action:infer-run", "text": "Click Infer — VisiMark proposes the rules it thinks produced these numbers" },
+      { "kind": "eval", "check": "value-changed", "id": "proposed", "text": "Watch Knowledge fill in with real computed values" }
+    ]
+  },
+
+  "example-charts.md": {
+    "body": "Two charts — a bar chart and a pie chart — rendered as SVG directly from the tables above them, not pasted in from another tool.",
+    "quest": [
+      { "kind": "eval", "check": "charts-regenerated", "id": "regen", "text": "Edit a Revenue or Cost cell and watch the bar chart regenerate" },
+      { "kind": "tab", "group": "diag", "tab": "reasoning", "text": "Open Reasoning and find the `chart` declaration" }
+    ]
+  },
+
+  "example-executable-documentation.md": {
+    "body": "A Kubernetes capacity budget where the headline number — the maximum worker-node count — is derived from cost, node price, and a reserved-capacity percentage, not typed in by whoever last edited the doc.",
+    "quest": [
+      { "kind": "tab", "group": "diag", "tab": "knowledge", "text": "Open Knowledge to see eval's structured output" },
+      { "kind": "eval", "check": "value-changed", "id": "cost", "text": "Change the worker node's monthly cost and watch `MaxNodes` recompute" },
+      { "kind": "tab", "group": "diag", "tab": "reasoning", "text": "See how `MaxNodes` depends on `WorkerBudget`" }
+    ]
+  },
+
+  "__fallback__": {
+    "body": "A blank file — nothing to demonstrate yet.",
+    "quest": [
+      { "kind": "eval", "check": "value-changed", "id": "write", "text": "Write a table with a `vmark` block under it and watch Knowledge fill in" },
+      { "kind": "action", "action": "action:infer-run", "text": "Or paste in a plain table with no formulas and click Infer" }
+    ]
+  }
+}
