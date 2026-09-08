@@ -38,9 +38,9 @@
 - Produces: `build(locate(src)).findings` contains one `SHEET` finding per offending block, with the exact message; `build(locate(src)).sheets.get("cost-centre")` still exists and evaluates normally elsewhere in the pipeline.
 - Consumes: existing `block.sheetId`, `findings.push`, `ensureSheet`.
 
-- [ ] **Step 1: tests (RED).** In `build.test.ts`: `#cost-centre` → one `SHEET` finding, message names `` `-` ``; `#a/b..c` → one `SHEET` finding naming `/` and `.` once each (not twice); `#1abc` → one `SHEET` finding naming `1`; `#lines` (existing plain-id fixtures) → no new `SHEET` finding; a bad id repeated across two merged `` ```vmark #bad-id `` blocks → two `SHEET` findings; the sheet's columns/scalars still populate despite the bad id (e.g. `sheets.get("cost-centre").scalars` still has `total`).
-- [ ] **Step 2:** implement the regex check and offending-character extraction; wire into `build.ts`.
-- [ ] **Step 3:** `bun test`, `typecheck`, `build`; both example docs still check clean.
+- [x] **Step 1: tests (RED).** In `build.test.ts`: `#cost-centre` → one `SHEET` finding, message names `` `-` ``; `#a/b..c` → one `SHEET` finding naming `/` and `.` once each (not twice); `#1abc` → one `SHEET` finding naming `1`; `#lines` (existing plain-id fixtures) → no new `SHEET` finding; a bad id repeated across two merged `` ```vmark #bad-id `` blocks → two `SHEET` findings; the sheet's columns/scalars still populate despite the bad id (e.g. `sheets.get("cost-centre").scalars` still has `total`).
+- [x] **Step 2:** implement the regex check and offending-character extraction; wire into `build.ts`.
+- [x] **Step 3:** `bun test`, `typecheck`, `build`; both example docs still check clean.
 
 ---
 
@@ -55,11 +55,11 @@
 - Produces: `locate(src).malformedAnchors` contains a span for `<!--vmark=cost-centre.total-->`, `<!--vmark=lines.tot al-->` (stray space), `<!--vmark=lines.-->` (empty name); is empty for `<!--vmark=lines.total-->` (valid), `<!--vmark:no-formulas-->` (marker), `<!-- TODO -->` (unrelated), `<!--vmarkFoo=bar.baz-->` (not the loose prefix). `build(locate(src)).findings` carries one `ANCHOR` finding per malformed-anchor span, with the exact message and no `sheetId`/`name`.
 - Consumes: existing `ANCHOR_RE`, `collectAnchors`, `off`.
 
-- [ ] **Step 1: parse tests (RED).** In `document.test.ts`: each malformed case above lands in `malformedAnchors` with the right span; each non-match case leaves both `anchors` and `malformedAnchors` as today (empty or unaffected); `<!--vmark:no-formulas-->` still sets `noFormulas` and is absent from both anchor arrays.
-- [ ] **Step 2:** implement `ANCHOR_LOOSE_RE` and the `malformedAnchors` collection in `collectAnchors`/`locate`.
-- [ ] **Step 3: model tests (RED).** In `build.test.ts`: a document with one malformed `vmark=` comment → one `ANCHOR` finding with the verbatim message, `sheetId`/`name` both `undefined`.
-- [ ] **Step 4:** wire `doc.malformedAnchors` into `build.ts`'s `findings`.
-- [ ] **Step 5:** `bun test`, `typecheck`, `build`; both example docs still check clean.
+- [x] **Step 1: parse tests (RED).** In `document.test.ts`: each malformed case above lands in `malformedAnchors` with the right span; each non-match case leaves both `anchors` and `malformedAnchors` as today (empty or unaffected); `<!--vmark:no-formulas-->` still sets `noFormulas` and is absent from both anchor arrays.
+- [x] **Step 2:** implement `ANCHOR_LOOSE_RE` and the `malformedAnchors` collection in `collectAnchors`/`locate`.
+- [x] **Step 3: model tests (RED).** In `build.test.ts`: a document with one malformed `vmark=` comment → one `ANCHOR` finding with the verbatim message, `sheetId`/`name` both `undefined`.
+- [x] **Step 4:** wire `doc.malformedAnchors` into `build.ts`'s `findings`.
+- [x] **Step 5:** `bun test`, `typecheck`, `build`; both example docs still check clean.
 
 ---
 
@@ -73,9 +73,9 @@
 **Interfaces:**
 - Produces: `visimark check` on the spec §6 fixture produces the two new findings plus the pre-existing `WARN`, exits 1; the report lines are captured verbatim in a test so any future formatting drift fails the build.
 
-- [ ] **Step 1: tests (RED)** for the combined-document `check()` result and the rendered report lines.
-- [ ] **Step 2:** fix any formatting gap surfaced by Step 1 (expected to be none — both codes already have `renderGroup` cases; this step exists to confirm, not to add new format.ts code).
-- [ ] **Step 3:** `bun test`, `typecheck`, `build`; both example docs still check clean.
+- [x] **Step 1: tests (RED)** for the combined-document `check()` result and the rendered report lines.
+- [x] **Step 2:** fix any formatting gap surfaced by Step 1 (expected to be none — both codes already have `renderGroup` cases; this step exists to confirm, not to add new format.ts code).
+- [x] **Step 3:** `bun test`, `typecheck`, `build`; both example docs still check clean.
 
 ---
 
@@ -92,12 +92,12 @@
 **Interfaces:**
 - Produces: `bun test` green including all new coverage; design doc, cli-reference, both catalogue placement, and CHANGELOG all reflect the shipped behavior.
 
-- [ ] **Step 1:** design-doc §3 edits (grammar + anchor-hardening sentences).
-- [ ] **Step 2:** `docs/cli-reference.md` Findings table edits.
-- [ ] **Step 3:** `CHANGELOG.md` entry.
-- [ ] **Step 4:** `docs/vocabulary-catalogue.md` row moved to Shipped register as `UNRELEASED`.
-- [ ] **Step 5:** editor-plugins doc + LSP check.
-- [ ] **Step 6:** full green sweep — `bun test`, `bun run typecheck`, `bun run build`, and `check` on all three example docs. Loop until green.
+- [x] **Step 1:** design-doc §3 edits (grammar + anchor-hardening sentences).
+- [x] **Step 2:** `docs/cli-reference.md` Findings table edits.
+- [x] **Step 3:** `CHANGELOG.md` entry.
+- [x] **Step 4:** `docs/vocabulary-catalogue.md` row moved to Shipped register as `UNRELEASED`.
+- [x] **Step 5:** editor-plugins doc + LSP check.
+- [x] **Step 6:** full green sweep — `bun test`, `bun run typecheck`, `bun run build`, and `check` on all three example docs. Loop until green.
 
 ---
 

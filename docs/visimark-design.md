@@ -81,6 +81,16 @@ total = SUM(Net)
 block with no identity contributes to **document scope**, whose names are
 visible to every sheet. Multiple document-scope blocks are permitted and merge.
 
+**A sheet id must be a valid identifier**, `[A-Za-z_][A-Za-z0-9_]*` — the same
+grammar an anchor comment and a qualified expression reference (`sheet.name`)
+already require. Anything else is a `SHEET` error naming the offending
+characters. This is enforced rather than merely conventional because the fence
+info string used to accept any run of non-whitespace: a sheet id such as
+`#cost-centre` looked legal but was silently unanchorable and
+unreferenceable — every scalar in it invisible to `check`. The sheet still
+builds and evaluates under a bad id; the `SHEET` finding is reported in
+addition, not instead.
+
 **Table association.** If the block's immediately preceding node, ignoring
 blank lines, is a GFM table, the sheet owns that table. Otherwise the sheet is
 table-less — legitimate, and used by `#terms` and `#recon` in both examples. A
@@ -98,6 +108,14 @@ The anchor rewrites the text content of the inline node immediately preceding
 it. That node must be `strong`, `emphasis`, `inlineCode`, or a text node whose
 trailing token is a number; anything else is an `ANCHOR` error. HTML comments
 are invisible in every target renderer, so the sentence reads normally.
+
+**A comment that announces itself as an anchor but does not parse is also an
+`ANCHOR` error.** Any HTML comment matching the loose prefix `<!--vmark=` is
+checked against the full anchor grammar; a mismatch — a hyphenated sheet id, a
+stray space, an empty name — is reported rather than silently treated as an
+ordinary comment. A comment that does not match the loose prefix at all is
+unaffected, including the distinct `<!--vmark:no-formulas-->` marker, which
+uses `:` rather than `=`.
 
 ## 4. Syntax
 

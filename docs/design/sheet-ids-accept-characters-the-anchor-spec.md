@@ -107,14 +107,13 @@ valid-anchor path, unchanged); on no match, try the loose prefix
 finding; no match on either is unchanged — an ordinary, silently-ignored HTML
 comment.
 
-The finding's span is the comment's own span (`commentSpan` in today's
-`RawAnchor`, extended to comments that never became a `RawAnchor`). It carries
-no `sheetId`/`name` — unlike every other `ANCHOR` finding today, the comment
-never parsed far enough to have one — so the report line omits the `id`
-field's leading `<sheetId>.<name>` and shows the message only:
+The finding's span is the comment's own span. It carries no `sheetId`/`name`
+— unlike every other `ANCHOR` finding today, the comment never parsed far
+enough to have one — so the existing `id(f)` helper renders the empty id
+field as a bare `.` (as implemented; confirmed against the real formatter):
 
 ```
-  ANCHOR                    malformed anchor comment — expected `<!--vmark=sheet.name-->`
+  ANCHOR  .                 malformed anchor comment — expected `<!--vmark=sheet.name-->`
 ```
 
 ## 4. Type rules and errors
@@ -200,19 +199,24 @@ total = SUM(Net)
 Total: **999.00**<!--vmark=cost-centre.total-->
 ````
 
-Required `visimark check` output (exit 1):
+Required `visimark check` output (exit 1), confirmed against the implemented
+formatter:
 
 ```
-  SHEET   #cost-centre       sheet id `cost-centre` is not a valid identifier — invalid character `-`
-  ANCHOR                     malformed anchor comment — expected `<!--vmark=sheet.name-->`
+  SHEET   cost-centre.      sheet id `cost-centre` is not a valid identifier — invalid character `-`
+
+  ANCHOR  .                 malformed anchor comment — expected `<!--vmark=sheet.name-->`
+
   WARN    cost-centre.total  defined and never read — did you mean `Net`?
 
   2 problems (0 stale, 2 errors)
 ```
 
-(Exact column alignment per `report/format.ts`; the transcript above is
-illustrative of content and ordering, not byte-exact formatting — the golden
-test asserts the real formatter's output.)
+`SHEET` and `ANCHOR` render through the existing `id(f)` helper
+(`${sheetId ?? ""}.${name ?? ""}`), which is why the id field reads
+`cost-centre.` (name absent) and `.` (both absent) rather than a `#`-prefixed
+form — this matches the pre-existing detached-table `SHEET` rendering, not a
+new format.
 
 The three existing acceptance-suite documents
 ([§13](../visimark-design.md#13-testing)) — `example-invoice.md`,
