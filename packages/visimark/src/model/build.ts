@@ -12,6 +12,31 @@ import {
   type Sheet,
 } from "./types.js";
 
+/** the identifier grammar `ANCHOR_RE` and the expression lexer already use —
+ *  a sheet id must be spellable by both, or it is unanchorable and
+ *  unreferenceable no matter how it looks in the fence info string. */
+const SHEET_ID_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+/** the characters in `id` that `SHEET_ID_RE` would reject, unique and in
+ *  order of first appearance — `a/b..c` names `/` and `.` once each. A
+ *  leading digit is itself invalid (identifiers may not start with one),
+ *  even though the same digit is fine elsewhere in the id. */
+function invalidSheetIdChars(id: string): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  const note = (ch: string): void => {
+    if (seen.has(ch)) return;
+    seen.add(ch);
+    out.push(ch);
+  };
+  if (/[0-9]/.test(id[0] ?? "")) note(id[0]!);
+  for (const ch of id) {
+    if (/[A-Za-z0-9_]/.test(ch)) continue;
+    note(ch);
+  }
+  return out;
+}
+
 export function build(doc: LocatedDoc): DocModel {
   const sheets = new Map<string, Sheet>();
   const docScope = new Map<string, Binding>();
@@ -61,6 +86,19 @@ export function build(doc: LocatedDoc): DocModel {
     blockOfSheet.set(sheetId, block);
     const table = doc.tableBeforeBlock.get(block) ?? null;
     const sheet = ensureSheet(sheets, sheetId, table);
+
+    if (!SHEET_ID_RE.test(sheetId)) {
+      const bad = invalidSheetIdChars(sheetId);
+      const label = bad.length === 1 ? "invalid character" : "invalid characters";
+      const chars = bad.map((c) => "`" + c + "`").join(", ");
+      findings.push({
+        code: "SHEET",
+        sheetId,
+        message: `sheet id \`${sheetId}\` is not a valid identifier — ${label} ${chars}`,
+        sourceOffset: block.span.start,
+        span: block.span,
+      });
+    }
 
     if (doc.detachedTableBlocks.has(block)) {
       findings.push({
@@ -140,6 +178,15 @@ export function build(doc: LocatedDoc): DocModel {
         sheet.columnIndex.set(name, idx);
       }
     }
+  }
+
+  for (const span of doc.malformedAnchors) {
+    findings.push({
+      code: "ANCHOR",
+      message: "malformed anchor comment — expected `<!--vmark=sheet.name-->`",
+      sourceOffset: span.start,
+      span,
+    });
   }
 
   return {

@@ -84,6 +84,14 @@ export interface LocatedDoc {
   blocks: RawBlock[];
   tables: RawTable[];
   anchors: RawAnchor[];
+  /**
+   * Spans of HTML comments that announce themselves as a value anchor
+   * (`<!--vmark=…-->`) but do not fully match `ANCHOR_RE` — a bad sheet id,
+   * a stray space, an empty name. These never became a `RawAnchor`; `build`
+   * turns each into an `ANCHOR` finding instead of letting it pass as an
+   * ordinary, silently-ignored HTML comment.
+   */
+  malformedAnchors: Span[];
   /** numeric literals in prose, in document order */
   figures: ProseFigure[];
   /**
@@ -101,6 +109,11 @@ export interface LocatedDoc {
 }
 
 const ANCHOR_RE = /^<!--\s*vmark\s*=\s*([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)\s*-->$/;
+/** loose enough to catch "this was meant to be a value anchor" without
+ *  matching the `vmark:no-formulas` marker (`:`, not `=`) or an unrelated
+ *  comment. Anything that matches this but not the full `ANCHOR_RE` above
+ *  is a malformed anchor, not an ordinary HTML comment. */
+const ANCHOR_LOOSE_RE = /^<!--\s*vmark\s*=/;
 export const NO_FORMULAS_MARKER = "<!--vmark:no-formulas-->";
 const NO_FORMULAS_RE = /^<!--\s*vmark\s*:\s*no-formulas\s*-->$/;
 const TRAILING_NUMBER_RE = /(-?\d+(?:\.\d+)?)\s*$/;
@@ -120,6 +133,7 @@ export function locate(source: string): LocatedDoc {
   const blocks: RawBlock[] = [];
   const tables: RawTable[] = [];
   const anchors: RawAnchor[] = [];
+  const malformedAnchors: Span[] = [];
   const tableBeforeBlock = new Map<RawBlock, RawTable | null>();
   const detachedTableBlocks = new Set<RawBlock>();
 
@@ -175,7 +189,7 @@ export function locate(source: string): LocatedDoc {
     }
   }
 
-  collectAnchors(tree, source, anchors);
+  collectAnchors(tree, source, anchors, malformedAnchors);
 
   const figures: ProseFigure[] = [];
   collectFigures(tree, source, figures);
@@ -191,6 +205,7 @@ export function locate(source: string): LocatedDoc {
     blocks,
     tables,
     anchors,
+    malformedAnchors,
     figures,
     noFormulas,
     tableBeforeBlock,
@@ -262,15 +277,26 @@ function innerValueSpan(node: MdNode): (Span & { kind: AnchorTargetKind }) | nul
   return null;
 }
 
-function collectAnchors(root: MdNode, source: string, out: RawAnchor[]): void {
+function collectAnchors(
+  root: MdNode,
+  source: string,
+  out: RawAnchor[],
+  malformedOut: Span[],
+): void {
   walk(root, (node) => {
     const kids = node.children;
     if (!kids) return;
     for (let i = 0; i < kids.length; i++) {
       const child = kids[i]!;
       if (child.type !== "html") continue;
-      const m = ANCHOR_RE.exec((child.value ?? "").trim());
-      if (!m) continue;
+      const trimmed = (child.value ?? "").trim();
+      const m = ANCHOR_RE.exec(trimmed);
+      if (!m) {
+        if (ANCHOR_LOOSE_RE.test(trimmed)) {
+          malformedOut.push({ start: off(child, "start"), end: off(child, "end") });
+        }
+        continue;
+      }
       const commentSpan: Span = {
         start: off(child, "start"),
         end: off(child, "end"),

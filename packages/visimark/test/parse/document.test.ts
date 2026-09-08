@@ -127,3 +127,54 @@ test("a marker shown inside a fenced example is documentation, not a marker", ()
   const d = locate("````markdown\n<!--vmark:no-formulas-->\n````\n");
   expect(d.noFormulas).toBeNull();
 });
+
+test("a hyphenated sheet id in an anchor comment is a malformed anchor, not a RawAnchor", () => {
+  const src = "Total: **999.00**<!--vmark=cost-centre.total-->\n";
+  const d = locate(src);
+  expect(d.anchors).toEqual([]);
+  expect(d.malformedAnchors.length).toBe(1);
+  expect(src.slice(d.malformedAnchors[0]!.start, d.malformedAnchors[0]!.end)).toBe(
+    "<!--vmark=cost-centre.total-->",
+  );
+});
+
+test("a stray space in an anchor name is a malformed anchor", () => {
+  const src = "Total: **1.00**<!--vmark=lines.tot al-->\n";
+  const d = locate(src);
+  expect(d.anchors).toEqual([]);
+  expect(d.malformedAnchors.length).toBe(1);
+});
+
+test("an empty anchor name is a malformed anchor", () => {
+  const src = "Total: **1.00**<!--vmark=lines.-->\n";
+  const d = locate(src);
+  expect(d.anchors).toEqual([]);
+  expect(d.malformedAnchors.length).toBe(1);
+});
+
+test("a well-formed anchor is not also a malformed anchor", () => {
+  const d = locate(clean);
+  expect(d.anchors.length).toBeGreaterThan(0);
+  expect(d.malformedAnchors).toEqual([]);
+});
+
+test("the no-formulas marker is not a malformed anchor", () => {
+  const src = "| a |\n|---|\n| 1 |\n\n<!--vmark:no-formulas-->\n";
+  const d = locate(src);
+  expect(d.noFormulas).not.toBeNull();
+  expect(d.malformedAnchors).toEqual([]);
+});
+
+test("an unrelated HTML comment is not a malformed anchor", () => {
+  const src = "prose <!-- TODO: fix this --> more prose\n";
+  const d = locate(src);
+  expect(d.anchors).toEqual([]);
+  expect(d.malformedAnchors).toEqual([]);
+});
+
+test("a comment where vmark is not followed by = is not a malformed anchor", () => {
+  const src = "prose <!--vmarkFoo=bar.baz--> more prose\n";
+  const d = locate(src);
+  expect(d.anchors).toEqual([]);
+  expect(d.malformedAnchors).toEqual([]);
+});

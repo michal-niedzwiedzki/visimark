@@ -190,6 +190,38 @@ test("an advisory finding is reported without failing the run", () => {
   expect(r.exitCode).toBe(0);
 });
 
+// ---- sheet-id / anchor-comment grammar hardening (issue #38) --------
+
+const HYPHENATED_SHEET_ID = `
+| Item | Price | Qty | Net |
+|------|-----:|----:|----:|
+| pen  | 2.00 |  10 | 20.00 |
+
+\`\`\`vmark #cost-centre
+Net = Price * Qty
+total = SUM(Net)
+\`\`\`
+
+Total: **999.00**<!--vmark=cost-centre.total-->
+`;
+
+test("a hyphenated sheet id with a wrong anchored value fails loudly instead of passing clean", () => {
+  const r = run(HYPHENATED_SHEET_ID);
+  expect(r.findings.map((f) => f.code)).toEqual(["SHEET", "ANCHOR", "WARN"]);
+  expect(r.exitCode).toBe(1);
+  // the anchor never became a RawAnchor, so there is nothing to compare
+  // against the computed total — it cannot be reported STALE
+  expect(r.findings.some((f) => f.code === "STALE")).toBe(false);
+  const sheet = r.findings.find((f) => f.code === "SHEET")!;
+  expect(sheet.message).toBe(
+    "sheet id `cost-centre` is not a valid identifier — invalid character `-`",
+  );
+  const anchor = r.findings.find((f) => f.code === "ANCHOR")!;
+  expect(anchor.message).toBe("malformed anchor comment — expected `<!--vmark=sheet.name-->`");
+  // the sheet still built and evaluated despite the bad id
+  expect(r.findings.find((f) => f.code === "WARN")!.name).toBe("total");
+});
+
 // ---- EOMONTH (issue #6) ---------------------------------------------
 
 test("EOMONTH: a clean net-EOM payment term", () => {
