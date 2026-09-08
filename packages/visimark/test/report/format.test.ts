@@ -54,6 +54,29 @@ test("padding for labels shorter than the field is untouched", () => {
   expect(out).toContain(`Delivery of backend   "15.10.2026"`);
 });
 
+test("SHEET renders a bad sheet id's message", () => {
+  const f: Finding = {
+    code: "SHEET",
+    sheetId: "cost-centre",
+    message: "sheet id `cost-centre` is not a valid identifier — invalid character `-`",
+  };
+  const lines = formatCheck("x.md", [f]).split("\n");
+  expect(lines[2]).toBe(
+    "  SHEET   cost-centre.      sheet id `cost-centre` is not a valid identifier — invalid character `-`",
+  );
+});
+
+test("ANCHOR renders a malformed anchor comment with no id prefix", () => {
+  const f: Finding = {
+    code: "ANCHOR",
+    message: "malformed anchor comment — expected `<!--vmark=sheet.name-->`",
+  };
+  const lines = formatCheck("x.md", [f]).split("\n");
+  expect(lines[2]).toBe(
+    "  ANCHOR  .                 malformed anchor comment — expected `<!--vmark=sheet.name-->`",
+  );
+});
+
 test("ASSERT renders the source on the head and the substituted form below", () => {
   const f: Finding = {
     code: "ASSERT",

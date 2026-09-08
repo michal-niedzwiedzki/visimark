@@ -4,6 +4,21 @@
 
 ### Added
 
+- **Sheet-id / anchor-comment grammar hardening** (issue #38) — a sheet id
+  (` ```vmark #id `) must now be a valid identifier, `[A-Za-z_][A-Za-z0-9_]*`,
+  the same grammar an anchor comment and a qualified reference already
+  required; anything else is a new `SHEET` finding naming the offending
+  characters. Previously a sheet id such as `#cost-centre` was accepted in the
+  fence but silently unanchorable and unreferenceable, so a wrong anchored
+  value could pass `check` clean. Separately, any HTML comment beginning
+  `<!--vmark=` that does not fully parse (a bad sheet id, a stray space, an
+  empty name) is now an `ANCHOR` finding instead of being treated as an
+  ordinary, silently-ignored comment; `<!--vmark:no-formulas-->` and unrelated
+  comments are unaffected. Both findings reuse the existing `SHEET`/`ANCHOR`
+  codes — no new finding code. This is a breaking change for a document using
+  a non-identifier sheet id, but such a document was already silently broken
+  in both ways above.
+
 - **Generated artifacts (`chart` statements)** — a `vmark` block may declare
   `chart <name> as pie|bar of <cols> labelled <col> [aspect w:h]` (issue #36).
   The author states where the artifact lives, in an ordinary Markdown image

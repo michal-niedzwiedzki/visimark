@@ -306,8 +306,8 @@ LSP libraries — no `vscode`.
 | `VECTOR` | Error | ``` `Net` is a column, not a value ``` | wrap in `SUM(...)` |
 | `CYCLE` | Error | `circular dependency: a → b → a` | none |
 | `TYPE` | Error | the evaluator message | none |
-| `SHEET` | Error | the structural message | none |
-| `ANCHOR` | Warning | `no value to rewrite in front of this anchor` | none (v1) |
+| `SHEET` | Error | the structural message (a broken table relationship, or a sheet id that is not a valid identifier) | none |
+| `ANCHOR` | Warning | `no value to rewrite in front of this anchor`, an image/chart mismatch message, or `malformed anchor comment` for a `vmark=` comment that does not parse | none (v1) |
 | `WARN` | Hint | `defined and never read` (+ suggestion) | none (v1) |
 
 Ordering and the CLI's section grouping are a `report/format.ts` concern and
