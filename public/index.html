@@ -1306,7 +1306,10 @@ Due on delivery: **3837.60**<span class="c">&lt;!--vmark=schedule.Amount--&gt;</
 <span class="c">```</span><span class="k">vmark #schedule</span>
 Amount = SUM(lines.Gross)
 <span class="c">```</span></pre>
-              <pre id="dep-after" hidden>| Item            | Qty |   Rate |     Net |     VAT |   Gross |
+              <pre
+                id="dep-after"
+                hidden
+              >| Item            | Qty |   Rate |     Net |     VAT |   Gross |
 |-----------------|----:|-------:|--------:|--------:|--------:|
 | On-call support |  <span class="warn">20</span> | 260.00 | <span class="add">5200.00</span> | <span class="add">1196.00</span> | <span class="add">6396.00</span> |
 
@@ -1456,7 +1459,6 @@ Process completed with exit code 1</pre>
         </article>
 
         <article class="feature feature--sm" id="feature-renderers">
-
           <div class="feature-head">
             <h3>Works wherever Markdown works</h3>
             <p class="feature-statement">GitHub, VS Code, pandoc</p>
@@ -1712,9 +1714,7 @@ graph LR
               <div class="chart-preview" id="eval-preview" tabindex="0"></div>
             </div>
           </div>
-          <p class="chart-caption">
-            The same document, read by the CLI instead of a browser:
-          </p>
+          <p class="chart-caption">The same document, read by the CLI instead of a browser:</p>
           <pre>
 $ visimark eval infrastructure-budget.md --json
 {
@@ -2233,7 +2233,9 @@ variance  = lines.gross_total - scheduled
             depBefore.hidden = depChanged;
             depAfter.hidden = !depChanged;
             paintDepGraph(depChanged);
-            depBtn.textContent = depChanged ? "Change Qty back: 20 \u2192 12" : "Change Qty: 12 \u2192 20";
+            depBtn.textContent = depChanged
+              ? "Change Qty back: 20 \u2192 12"
+              : "Change Qty: 12 \u2192 20";
             depBtn.setAttribute("aria-pressed", String(depChanged));
           });
         }
