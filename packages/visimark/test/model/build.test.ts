@@ -106,16 +106,9 @@ test("a malformed vmark= anchor comment is an ANCHOR finding with no sheetId/nam
 });
 
 test("a bad sheet id repeated across two merged blocks fires once per block", () => {
-  const src = [
-    "```vmark #bad-id",
-    "x = 1",
-    "```",
-    "",
-    "```vmark #bad-id",
-    "y = 2",
-    "```",
-    "",
-  ].join("\n");
+  const src = ["```vmark #bad-id", "x = 1", "```", "", "```vmark #bad-id", "y = 2", "```", ""].join(
+    "\n",
+  );
   const m = build(locate(src));
   expect(m.findings.filter((f) => f.code === "SHEET").length).toBe(2);
 });
