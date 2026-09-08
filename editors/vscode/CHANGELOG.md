@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- A sheet id that is not a valid identifier now shows as a `SHEET` diagnostic
+  on its block, and an anchor comment beginning `vmark=` that fails to parse
+  now shows as an `ANCHOR` diagnostic on the comment, instead of both being
+  silently ignored.
 - `assert` statements are now supported: a false `assert` shows as an `ASSERT`
   diagnostic on that line, like any other `visimark check` finding.
 - `chart` declarations are now supported: a chart that cannot be built or

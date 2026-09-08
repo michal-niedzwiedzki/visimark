@@ -69,8 +69,8 @@ nothing.
 | `VECTOR` | problem | A column was used where a single value is required. The report names the aggregate that would fix it. | by hand |
 | `CYCLE` | problem | Values depend on each other in a circle. The report prints the whole path round it. | by hand |
 | `TYPE` | problem | An expression produced something that cannot go where it was asked to go — storing a boolean in a cell, or calling a function wrongly. | by hand |
-| `SHEET` | problem | A `vmark` block's relationship to its table is broken: no table above it, or a table that belongs to something else. | by hand |
-| `ANCHOR` | problem | An anchor comment has no number in front of it to rewrite, or an image anchor and a chart declaration do not match up. | by hand |
+| `SHEET` | problem | A `vmark` block's relationship to its table is broken: no table above it, or a table that belongs to something else — or the sheet id itself is not a valid identifier. | by hand |
+| `ANCHOR` | problem | An anchor comment has no number in front of it to rewrite, an image anchor and a chart declaration do not match up, or the comment announces itself as an anchor (`<!--vmark=…-->`) but does not parse. | by hand |
 | `ASSERT` | problem | An `assert` statement evaluated false. The report shows the expression and, below it, the same expression with each named value filled in. | by hand |
 | `ARTIFACT` | problem | A declared artifact cannot be built or written — a pie of negative values or summing to zero, a blank or non-numeric series, an unknown chart type, a path outside the document's directory, or a target file VisiMark did not generate. | by hand |
 | `COVERAGE` | problem | Either a table has no `vmark` rules anywhere in its document, so nothing in it is checked — or the document carries a `no-formulas` marker that its rules now contradict. | `visimark infer`, the marker, or deleting a marker that is no longer true |

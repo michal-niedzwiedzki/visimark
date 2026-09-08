@@ -50,7 +50,10 @@ export function messageOf(f: Finding): string {
     case "CYCLE":
       return `circular dependency: ${(f.cyclePath ?? []).join(" → ")}`;
     case "ANCHOR":
-      return "no value to rewrite in front of this anchor";
+      // `f.message` carries the specific reason — an image/chart mismatch,
+      // or (issue #38) a `vmark=` comment that never parsed. The generic
+      // text is only the fallback for the plain targetless case.
+      return f.message ?? "no value to rewrite in front of this anchor";
     case "WARN":
       return f.suggestion
         ? `\`${f.name}\` is defined and never read — did you mean \`${f.suggestion}\`?`

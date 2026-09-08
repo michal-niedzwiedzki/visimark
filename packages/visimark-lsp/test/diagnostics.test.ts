@@ -64,6 +64,35 @@ x = 2
   expect(dup.range.start.line).toBe(2); // the second binding
 });
 
+test("a hyphenated sheet id surfaces a SHEET diagnostic naming the character", async () => {
+  const doc = `\`\`\`vmark #cost-centre
+x = 1
+\`\`\`
+`;
+  await h.open("file:///sheet-id.md", doc);
+  const diags = await h.nextDiagnostics("file:///sheet-id.md");
+  const sheet = diags.find((d) => d.code === "SHEET")!;
+  expect(sheet.severity).toBe(1); // Error
+  expect(sheet.message).toBe(
+    "sheet id `cost-centre` is not a valid identifier — invalid character `-`",
+  );
+});
+
+test("a malformed vmark= anchor comment surfaces its own ANCHOR message", async () => {
+  // a document with no `vmark` block at all is inapplicable and VisiMark
+  // stays silent (`analysis.ts`); a block makes the malformed comment visible.
+  const doc = `\`\`\`vmark #s
+x = 1
+\`\`\`
+
+Total: **1.00**<!--vmark=cost-centre.total-->
+`;
+  await h.open("file:///malformed-anchor.md", doc);
+  const diags = await h.nextDiagnostics("file:///malformed-anchor.md");
+  const anchor = diags.find((d) => d.code === "ANCHOR")!;
+  expect(anchor.message).toBe("malformed anchor comment — expected `<!--vmark=sheet.name-->`");
+});
+
 test("editing to a correct document clears the diagnostics", async () => {
   const bad = `| Item | Price | Qty |  Net |
 |------|------:|----:|-----:|
