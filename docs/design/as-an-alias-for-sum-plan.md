@@ -32,9 +32,9 @@
 - Produces: `lex("Σ(Net)")` and `lex("∑(Net)")` each equal `lex("SUM(Net)")` token-for-token except the first token's `start`/`end` is `[0, 1]` instead of `[0, 3]`, and every later token's offset is shifted left by 2 relative to the `SUM(Net)` version (own source positions, unaffected in kind/value).
 - Consumes: nothing new — pure addition to the existing lexer scan loop.
 
-- [ ] **Step 1: tests (RED).** In `lexer.test.ts`: `pairs("Σ(Net)")` and `pairs("∑(Net)")` each equal `pairs("SUM(Net)")`; the offset test (`toks.map(t => [t.kind, t.value, t.start, t.end])`) for `"Σ(Net)"` equals `[["ident","SUM",0,1],["lparen","(",1,2],["ident","Net",2,5],["rparen",")",5,6],["eof","",6,6]]`; `lex("σ(Net)")` and `lex("ς(Net)")` (lowercase) still throw `LangError` with message `unexpected character "σ"` / `"ς"` (unchanged from today); `lex("Σ")` alone (no call) is `[["ident","SUM",0,1],["eof","",1,1]]`, matching `lex("SUM")`.
-- [ ] **Step 2:** implement the lexer branch as described above.
-- [ ] **Step 3:** `bun test`, `typecheck`, `build`; both example docs still check clean.
+- [x] **Step 1: tests (RED).** In `lexer.test.ts`: `pairs("Σ(Net)")` and `pairs("∑(Net)")` each equal `pairs("SUM(Net)")`; the offset test (`toks.map(t => [t.kind, t.value, t.start, t.end])`) for `"Σ(Net)"` equals `[["ident","SUM",0,1],["lparen","(",1,2],["ident","Net",2,5],["rparen",")",5,6],["eof","",6,6]]`; `lex("σ(Net)")` and `lex("ς(Net)")` (lowercase) still throw `LangError` with message `unexpected character "σ"` / `"ς"` (unchanged from today); `lex("Σ")` alone (no call) is `[["ident","SUM",0,1],["eof","",1,1]]`, matching `lex("SUM")`.
+- [x] **Step 2:** implement the lexer branch as described above.
+- [x] **Step 3:** `bun test`, `typecheck`, `build`; both example docs still check clean.
 
 ---
 
@@ -50,9 +50,9 @@
 **Interfaces:**
 - Produces: `check()`, `eval`, `fmt`, and `infer` all treat `Σ(Net)`/`∑(Net)` as indistinguishable from `SUM(Net)` in every respect except which source bytes a rule expression contains.
 
-- [ ] **Step 1: tests (RED)** for all cases above.
-- [ ] **Step 2:** confirm green with no production-code change beyond Task 1 (expected — Task 1 is the entire implementation; this task exists to prove the "resolves before anything else sees it" design claim, not to add new logic). If any case fails, the failure identifies a place that inspects a call's source text rather than its resolved name — fix that call site, minimally, to use the resolved name (do not special-case the alias anywhere).
-- [ ] **Step 3:** `bun test`, `typecheck`, `build`; both example docs still check clean.
+- [x] **Step 1: tests (RED)** for all cases above.
+- [x] **Step 2:** confirm green with no production-code change beyond Task 1 (expected — Task 1 is the entire implementation; this task exists to prove the "resolves before anything else sees it" design claim, not to add new logic). If any case fails, the failure identifies a place that inspects a call's source text rather than its resolved name — fix that call site, minimally, to use the resolved name (do not special-case the alias anywhere).
+- [x] **Step 3:** `bun test`, `typecheck`, `build`; both example docs still check clean.
 
 ---
 
@@ -65,9 +65,9 @@
 **Interfaces:**
 - Produces: `visimark explain` output for a document using the alias is byte-faithful to what the author wrote.
 
-- [ ] **Step 1: tests (RED)** for the `explain` cases above.
-- [ ] **Step 2:** confirm green with no production-code change (expected).
-- [ ] **Step 3:** `bun test`, `typecheck`, `build`; both example docs still check clean.
+- [x] **Step 1: tests (RED)** for the `explain` cases above.
+- [x] **Step 2:** confirm green with no production-code change (expected).
+- [x] **Step 3:** `bun test`, `typecheck`, `build`; both example docs still check clean.
 
 ---
 
@@ -83,12 +83,12 @@
 **Interfaces:**
 - Produces: `bun test` green including all new coverage; design doc §4, both CHANGELOGs, and the catalogue (row now `UNRELEASED` in the Shipped register) all reflect the shipped behavior.
 
-- [ ] **Step 1:** design-doc §4 footnote.
-- [ ] **Step 2:** `CHANGELOG.md` entry.
-- [ ] **Step 3:** `editors/vscode/CHANGELOG.md` entry.
-- [ ] **Step 4:** `docs/vocabulary-catalogue.md` row moved to Shipped register as `UNRELEASED`.
-- [ ] **Step 5:** `docs/cli-reference.md` check (edit only if warranted).
-- [ ] **Step 6:** full green sweep — `bun test`, `bun run typecheck`, `bun run build`, and `check` on all three example docs. Loop until green.
+- [x] **Step 1:** design-doc §4 footnote.
+- [x] **Step 2:** `CHANGELOG.md` entry.
+- [x] **Step 3:** `editors/vscode/CHANGELOG.md` entry.
+- [x] **Step 4:** `docs/vocabulary-catalogue.md` row moved to Shipped register as `UNRELEASED`.
+- [x] **Step 5:** `docs/cli-reference.md` check (edit only if warranted).
+- [x] **Step 6:** full green sweep — `bun test`, `bun run typecheck`, `bun run build`, and `check` on all three example docs. Loop until green.
 
 ---
 

@@ -55,6 +55,35 @@ test("a one-cell corruption produces a one-line diff", () => {
   expect(changedLines).toBe(1);
 });
 
+test("fmt rewrites a stale cell but never rewrites Σ/∑ to SUM, or back", () => {
+  const table = `| Item | Price | Qty |  Net |
+|------|------:|----:|-----:|
+| pen  |  5.00 |   2 | 10.00 |
+`;
+  for (const glyph of ["Σ", "∑"]) {
+    const src = `${table}
+\`\`\`vmark #order
+Net = Price * Qty
+total = ${glyph}(Net)
+\`\`\`
+
+Total: **1.00**<!--vmark=order.total-->
+`;
+    const once = fmt(src, {});
+    expect(once.changed).toBe(true);
+    // the rule text keeps the author's own spelling, untouched
+    expect(once.output).toContain(`total = ${glyph}(Net)`);
+    expect(once.output).not.toContain("total = SUM(Net)");
+    // the anchored value is rewritten to the current total
+    expect(once.output).toContain("Total: **10.00**<!--vmark=order.total-->");
+    const after = check(build(locate(once.output)));
+    expect(after.findings.filter((f) => f.code === "STALE")).toEqual([]);
+    // idempotent
+    const twice = fmt(once.output, {});
+    expect(twice.output).toBe(once.output);
+  }
+});
+
 function diffLines(a: string, b: string): number {
   const la = a.split("\n");
   const lb = b.split("\n");

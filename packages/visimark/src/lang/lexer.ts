@@ -110,6 +110,17 @@ export function lex(src: string): Token[] {
       continue;
     }
 
+    // Σ (U+03A3) and ∑ (U+2211) lex as the identifier `SUM` — a closed,
+    // two-codepoint substitution, not a general symbol-alias mechanism. See
+    // the design doc, section 4, and docs/design/as-an-alias-for-sum-spec.md.
+    // Everything downstream (parser, arity/shape check, evaluator, `infer`,
+    // did-you-mean) sees plain `SUM` and has no awareness an alias exists.
+    if (c === "Σ" || c === "∑") {
+      push("ident", "SUM", i, i + 1);
+      i++;
+      continue;
+    }
+
     if (isIdentStart(c)) {
       const start = i;
       while (i < src.length && isIdentPart(src[i]!)) i++;
