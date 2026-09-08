@@ -1,4 +1,4 @@
-// Browser bundle entry for the web playground (public/playground.html).
+// Browser bundle entry for the web playground (docs/playground.html).
 // Exposes VisiMark's pure parse/model/eval/write pipeline — no node:fs, no CLI
 // argv/file plumbing. `pgEval` and `pgExplain` are the browser-safe
 // equivalents of `cmdEval`/`cmdExplain` in ../cli/commands.ts, operating on an

@@ -542,18 +542,6 @@
         white-space: pre-wrap;
       }
 
-      /* ---- Bottom bar (5%) ---- */
-      .bottombar {
-        flex: 5 1 0;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 0 20px;
-        background: linear-gradient(180deg, #252422 0%, #403d39 100%);
-        border-top: 1px solid rgba(255, 255, 255, 0.08);
-        font-size: 0.78rem;
-        min-height: 0;
-      }
       .flag {
         width: 11px;
         height: 11px;
@@ -569,14 +557,15 @@
         background: #ff453a;
         box-shadow: 0 0 8px rgba(255, 69, 58, 0.7);
       }
+      .flag.pending {
+        background: #6b6b6b;
+        box-shadow: none;
+      }
       #build-label {
         font-weight: 700;
         letter-spacing: 0.03em;
       }
-      .bottombar .spacer {
-        flex: 1;
-      }
-      .bottombar .meta {
+      .meta {
         color: #b9b9b9;
         font-size: 0.72rem;
       }
@@ -677,19 +666,15 @@ recognises in the prose.</pre>
               </div>
             </div>
             <div class="action-bar">
+              <span class="flag pending" id="build-flag"></span>
+              <span id="build-label">BUILD NOT RUN</span>
+              <span class="meta" id="build-meta"></span>
               <span class="action-status" id="build-status"></span>
               <button class="action-btn" id="build-btn" type="button">Run Build</button>
             </div>
           </div>
         </section>
       </div>
-
-      <footer class="bottombar">
-        <span class="flag" id="build-flag"></span>
-        <span id="build-label">BUILD PASSING</span>
-        <div class="spacer"></div>
-        <span class="meta" id="build-meta"></span>
-      </footer>
     </div>
 
     <script
@@ -729,15 +714,20 @@ recognises in the prose.</pre>
       referrerpolicy="no-referrer"
     ></script>
 
-    <!-- Classic scripts, not modules: the playground is meant to be opened
-         straight from disk (file://), which blocks ES module imports via
-         CORS. Both vendor files assign plain globals instead of `export`ing —
-         see the comments at the top of each. -->
+    <!-- Classic scripts, not modules: playground-data.js and
+         visimark-browser.js assign plain globals instead of `export`ing, so
+         they work as plain <script src> tags with no bundler. The starter
+         files themselves are no longer baked into a vendor file — they're
+         siblings of this page (see FILE_SOURCES below) and are fetched at
+         runtime, which means playground.html must be served over http(s)
+         (e.g. `bun scripts/serve.mjs` or GitHub Pages) rather than opened
+         directly via file://, since `fetch()` of local files is blocked by
+         CORS there. -->
     <script src="./vendor/playground-data.js"></script>
     <script src="./vendor/visimark-browser.js"></script>
     <script>
+    (async function () {
       var LOGO_DATA_URI = window.LOGO_DATA_URI;
-      var FILES = window.FILES;
       var VM = window.VisiMark;
 
       document.getElementById("logo").src = LOGO_DATA_URI;
@@ -747,6 +737,33 @@ recognises in the prose.</pre>
       document.head.appendChild(favicon);
 
       // ---- in-memory file store -------------------------------------------------
+      // Fetched fresh from this page's own directory on every load — docs/
+      // and the playground are now the same tree, so there's nothing to bake
+      // or keep in sync by hand (contrast the logo above, which still is).
+      var FILE_SOURCES = {
+        "demo.md": "playground/demo.md",
+        "example-invoice.md": "example-invoice.md",
+        "example-invoice-drift.md": "example-invoice-drift.md",
+        "example-quote-plain.md": "example-quote-plain.md",
+        "example-charts.md": "example-charts.md",
+        "example-executable-documentation.md": "example-executable-documentation.md",
+      };
+      async function loadFiles() {
+        var names = Object.keys(FILE_SOURCES);
+        var texts = await Promise.all(
+          names.map(async function (name) {
+            var res = await fetch(FILE_SOURCES[name]);
+            if (!res.ok) throw new Error(FILE_SOURCES[name] + ": HTTP " + res.status);
+            return res.text();
+          }),
+        );
+        var files = {};
+        names.forEach(function (name, i) {
+          files[name] = texts[i];
+        });
+        return files;
+      }
+      var FILES = await loadFiles();
       var order = Object.keys(FILES);
       var contents = Object.assign({}, FILES);
       var current = "demo.md";
@@ -1432,6 +1449,7 @@ recognises in the prose.</pre>
       renderScenario(current);
       runFmt();
       refreshDerived();
+    })();
     </script>
   </body>
 </html>
