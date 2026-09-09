@@ -4,80 +4,73 @@
 **Environment:** Production  
 **Currency:** USD
 
-The infrastructure operating budget for production is **$24,000/month**.
+The infrastructure operating budget for production is **$24000.00**<!--vmark=budget.total_budget--> /month.
 
-The Kubernetes cluster must run continuously and is expected to maintain enough spare capacity for normal workload fluctuations. We reserve **20% of compute capacity** as headroom.
+The Kubernetes cluster must run continuously and is expected to maintain enough spare capacity for normal workload fluctuations. We reserve **20.00%**<!--vmark=budget.reserved_capacity--> of compute capacity as headroom.
 
 ## Monthly operating budget
 
-| Cost | Monthly USD |
-|---|---:|
-| Total infrastructure budget | 24000 |
-| Managed Kubernetes control plane | 300 |
-| Load balancers | 400 |
-| Persistent storage | 1800 |
-| Database | 4200 |
-| Network egress | 2200 |
-| Monitoring and logging | 1600 |
-| Backups | 800 |
-| Other infrastructure | 700 |
+| Cost                              | USD |
+|------------------------------------|----:|
+| Managed Kubernetes control plane   | 300 |
+| Load balancers                     | 400 |
+| Persistent storage                 | 1800 |
+| Database                           | 4200 |
+| Network egress                     | 2200 |
+| Monitoring and logging             | 1600 |
+| Backups                            | 800 |
+| Other infrastructure               | 700 |
+
+```vmark #budget
+total_budget = 24000
+reserved_capacity = 20%
+
+other_costs = SUM(USD)
+WorkerBudget = total_budget - other_costs
+WorkerBudgetPercentage = WorkerBudget / total_budget
+```
 
 The remaining budget is available for Kubernetes worker nodes.
 
-```vmark #budget
-WorkerBudget = TotalInfrastructureBudget
-             - ManagedKubernetesControlPlane
-             - LoadBalancers
-             - PersistentStorage
-             - Database
-             - NetworkEgress
-             - MonitoringAndLogging
-             - Backups
-             - OtherInfrastructure
+**Worker-node budget:** **$12000.00**<!--vmark=budget.WorkerBudget--> /month
 
-WorkerBudgetPercentage = WorkerBudget / TotalInfrastructureBudget * 100
-```
-
-**Worker-node budget:** **$12,000/month**<!--vmark=budget.WorkerBudget-->
-
-**Available for worker nodes:** **50.00%** of the infrastructure budget<!--vmark=budget.WorkerBudgetPercentage-->
+**Available for worker nodes:** **50.00%**<!--vmark=budget.WorkerBudgetPercentage--> of the infrastructure budget
 
 ## Kubernetes worker nodes
 
-The standard production worker is an `m6i.2xlarge` instance.
-
-| Parameter | Value |
-|---|---:|
-| Worker node monthly cost | 250 |
-| CPU per worker (vCPU) | 8 |
-| Memory per worker (GB) | 32 |
-| Reserved capacity | 20% |
+The standard production worker is an `m6i.2xlarge` instance, costing
+**$250.00**<!--vmark=kubernetes.worker_node_cost--> per month, with
+**8**<!--vmark=kubernetes.cpu_per_worker--> vCPU and
+**32**<!--vmark=kubernetes.memory_per_worker--> GB of memory.
 
 The cluster may spend at most the worker-node budget, while 20% of the resulting capacity must remain available as operational headroom.
 
 ```vmark #kubernetes
-MaxNodes = FLOOR(WorkerBudget / WorkerNodeMonthlyCost, 1)
+worker_node_cost = 250
+cpu_per_worker = 8
+memory_per_worker = 32
 
-UsableNodes = FLOOR(MaxNodes * (1 - ReservedCapacity), 1)
+MaxNodes = ROUND(budget.WorkerBudget / worker_node_cost - 0.5, 0)
+UsableNodes = ROUND(MaxNodes * (1 - budget.reserved_capacity) - 0.5, 0)
 
-TotalCPU = MaxNodes * CPUPerWorker
-UsableCPU = FLOOR(TotalCPU * (1 - ReservedCapacity), 1)
+TotalCPU = MaxNodes * cpu_per_worker
+UsableCPU = ROUND(TotalCPU * (1 - budget.reserved_capacity) - 0.5, 0)
 
-TotalMemory = MaxNodes * MemoryPerWorker
-UsableMemory = FLOOR(TotalMemory * (1 - ReservedCapacity), 1)
+TotalMemory = MaxNodes * memory_per_worker
+UsableMemory = ROUND(TotalMemory * (1 - budget.reserved_capacity) - 0.5, 0)
 ```
 
 Therefore the maximum affordable Kubernetes cluster is:
 
-**Maximum worker nodes:** **48**<!--vmark=kubernetes.MaxNodes-->
+**Maximum worker nodes:** **48**<!--vmark=kubernetes.MaxNodes--> (**38**<!--vmark=kubernetes.UsableNodes--> after the 20% headroom reserve)
 
 This provides:
 
 **Total CPU:** **384 vCPU**<!--vmark=kubernetes.TotalCPU-->  
 **Usable CPU after 20% headroom:** **307 vCPU**<!--vmark=kubernetes.UsableCPU-->
 
-**Total memory:** **1,536 GB**<!--vmark=kubernetes.TotalMemory-->  
-**Usable memory after 20% headroom:** **1,228 GB**<!--vmark=kubernetes.UsableMemory-->
+**Total memory:** **1536 GB**<!--vmark=kubernetes.TotalMemory-->  
+**Usable memory after 20% headroom:** **1228 GB**<!--vmark=kubernetes.UsableMemory-->
 
 ## Capacity decision
 
@@ -104,17 +97,22 @@ For example:
 
 ```json
 {
-  "budget": {
-    "WorkerBudget": 12000,
-    "WorkerBudgetPercentage": 50
-  },
-  "kubernetes": {
-    "MaxNodes": 48,
-    "TotalCPU": 384,
-    "UsableCPU": 307,
-    "TotalMemory": 1536,
-    "UsableMemory": 1228
-  }
+  "budget.total_budget": "24000",
+  "budget.reserved_capacity": "0.2",
+  "budget.other_costs": "12000",
+  "budget.WorkerBudget": "12000",
+  "budget.WorkerBudgetPercentage": "0.5",
+  "kubernetes.worker_node_cost": "250",
+  "kubernetes.cpu_per_worker": "8",
+  "kubernetes.memory_per_worker": "32",
+  "kubernetes.MaxNodes": "48",
+  "kubernetes.UsableNodes": "38",
+  "kubernetes.TotalCPU": "384",
+  "kubernetes.UsableCPU": "307",
+  "kubernetes.TotalMemory": "1536",
+  "kubernetes.UsableMemory": "1228",
+  "assertions": [],
+  "charts": []
 }
 ```
 

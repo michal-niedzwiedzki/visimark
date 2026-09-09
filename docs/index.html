@@ -1,0 +1,1796 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>VisiMark</title>
+    <link rel="icon" type="image/webp" href="visimark.webp" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&display=swap"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/Swiper/14.2.0/swiper-bundle.min.css"
+      integrity="sha512-o7Knr4VAyVWuQ+zWMXH8bbv8zhp2EAQQKSMTiM7S6KjoK5MXagmNbVhUdmojS94zr3cCIERxQyEOoqSdSk2bLA=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="masthead">
+        <img src="visimark.webp" alt="VisiMark logo" />
+        <h1>VisiMark</h1>
+        <p class="subtitle">the numbers in your Markdown, checked on every commit</p>
+      </header>
+
+      <p class="pitch">
+        <span>&hellip;and catches AI arithmetic hallucinations, too!</span>
+        <span>&hellip;and gives you spreadsheet mechanics, too!</span>
+        <span>&hellip;fat fingers no more!</span>
+        <span>&hellip;so stale values are impossible!</span>
+      </p>
+
+      <main class="cards">
+        <article class="card">
+          <h2>Author</h2>
+          <p>
+            Write <code>Net = Price * Qty</code> instead of <code>50.00</code>. The document
+            computes itself and still renders on GitHub, in previews, through pandoc &mdash; no
+            plugin.
+          </p>
+          <div class="preview">
+            <div class="preview-dots"></div>
+            <div class="swiper">
+              <div class="swiper-wrapper">
+                <div class="swiper-slide">
+                  <pre data-ex="author-base">| Item  | Price | Qty |   Net |
+|-------|------:|----:|------:|
+| pen   |  2.00 |  10 | 20.00 |
+| paper |  0.15 | 100 | 15.00 |
+<span class="k">```vmark #order</span>
+Net   = Price * Qty
+total = SUM(Net)
+<span class="k">```</span>
+Total: **35.00**<span class="c">&lt;!--vmark=order.total--&gt;</span>
+<span class="p">$</span></pre>
+                  <p class="slide-note">Use formulas to recompute easily.</p>
+                </div>
+                <div class="swiper-slide">
+                  <pre data-ex="author-edit">| Item  | Price | Qty |   Net |
+|-------|------:|----:|------:|
+| pen   |  <em>2.20</em> |  10 | 20.00 |
+| paper |  0.15 | <em>150</em> | 15.00 |
+<span class="k">```vmark #order</span>
+Net   = Price * Qty
+total = SUM(Net)
+<span class="k">```</span>
+Total: **35.00**<span class="c">&lt;!--vmark=order.total--&gt;</span>
+<span class="p">$</span> <em>visimark fmt figures.md</em></pre>
+                  <p class="slide-note">Edit inputs and run <code>fmt</code>.</p>
+                </div>
+                <div class="swiper-slide">
+                  <pre data-ex="author-fixed">| Item  | Price | Qty |   Net |
+|-------|------:|----:|------:|
+| pen   |  2.20 |  10 | <em>22.00</em> |
+| paper |  0.15 | 150 | <em>22.50</em> |
+<span class="k">```vmark #order</span>
+Net   = Price * Qty
+total = SUM(Net)
+<span class="k">```</span>
+Total: **<em>44.50</em>**<span class="c">&lt;!--vmark=order.total--&gt;</span>
+<span class="p">$</span></pre>
+                  <p class="slide-note">VisiMark only recomputes what it owns.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="card">
+          <h2>Adopt</h2>
+          <p>
+            Already have a table full of numbers? <code>visimark infer</code> derives the rules that
+            reproduce them, so you don't retype anything.
+          </p>
+          <div class="preview">
+            <div class="preview-dots"></div>
+            <div class="swiper">
+              <div class="swiper-wrapper">
+                <div class="swiper-slide">
+                  <pre data-ex="adopt-base">| Item  | Price | Qty |   Net |
+|-------|------:|----:|------:|
+| pen   |  2.00 |  10 | 20.00 |
+| paper |  0.15 | 100 | 15.00 |
+Total: **35.00**
+
+
+
+
+<span class="p">$</span> <em>visimark infer figures.md</em></pre>
+                  <p class="slide-note">An ordinary table you already have. No formulas.</p>
+                </div>
+                <div class="swiper-slide">
+                  <pre data-ex="adopt-out">| Item  | Price | Qty |   Net |
+|-------|------:|----:|------:|
+| pen   |  2.00 |  10 | 20.00 |
+| paper |  0.15 | 100 | 15.00 |
+Total: **35.00**
+<span class="p">$</span> visimark infer figures.md
+  column rules
+    Net = Price * Qty    <span class="c">2/2 ok</span>
+
+  1 rule, 1 scalar written.</pre>
+                  <p class="slide-note"><code>infer</code> finds the meaning in the data.</p>
+                </div>
+                <div class="swiper-slide">
+                  <pre data-ex="adopt-fixed">| Item  | Price | Qty |   Net |
+|-------|------:|----:|------:|
+| pen   |  2.00 |  10 | 20.00 |
+| paper |  0.15 | 100 | 15.00 |
+<span class="k">```vmark #order</span>
+Net   = Price * Qty
+total = SUM(Net)
+<span class="k">```</span>
+Total: **35.00**<span class="c">&lt;!--vmark=order.total--&gt;</span>
+<span class="p">$</span></pre>
+                  <p class="slide-note">Now self-computing and ready for <code>check</code>.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="card">
+          <h2>Enforce</h2>
+          <p>
+            <code>visimark check</code> fails CI the moment a number and its formula disagree.
+            <strong>This is the one that matters</strong> &mdash; Author and Adopt exist to get you
+            here. VisiMark catches:
+          </p>
+          <ul>
+            <li>human errors</li>
+            <li>stale values</li>
+            <li>AI arithmetic hallucinations</li>
+          </ul>
+          <div class="preview">
+            <div class="preview-dots"></div>
+            <div class="swiper">
+              <div class="swiper-wrapper">
+                <div class="swiper-slide">
+                  <pre data-ex="enforce-out"><span class="p">$</span> visimark check figures.md
+<span class="ok">&#10003;</span> figures.md &mdash; 4 values agree
+<span class="p">$</span> echo $?
+0</pre>
+                  <p class="slide-note">Non-zero exit on the first disagreement. Build failed.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </main>
+
+      <p class="install-cta">
+        <a class="pill-link" href="#installation-header">Install VisiMark &rarr;</a>
+      </p>
+
+      <header class="section-head">
+        <h2>Try it out</h2>
+        <p class="subtitle">No install required &mdash; play with VisiMark right now.</p>
+      </header>
+
+      <section class="tryout-grid">
+        <article class="tryout-item">
+          <div class="tryout-top">
+            <div class="tryout-image" role="img" aria-label="Playground preview placeholder"></div>
+            <div class="tryout-body">
+              <h3>Playground</h3>
+              <ul>
+                <li>Edit formulas with live preivew</li>
+                <li>Learn with tutorial scenarios</li>
+                <li>
+                  Watch inference, reasoning and knowledge extraction live for your AI workflow
+                </li>
+              </ul>
+            </div>
+          </div>
+          <a class="tryout-btn" href="playground.html">Open the Playground &rarr;</a>
+        </article>
+
+        <article class="tryout-item">
+          <div class="tryout-top">
+            <div
+              class="tryout-image"
+              role="img"
+              aria-label="VS Code extension preview placeholder"
+            ></div>
+            <div class="tryout-body">
+              <h3>VS Code extension</h3>
+              <ul>
+                <li>Defeat stale values and ambiguous dates</li>
+                <li>Conquer formulas with Inlay hints, CodeLens and quick fixes</li>
+                <li>Format on save that repairs only computed cells and anchors</li>
+              </ul>
+            </div>
+          </div>
+          <a
+            class="tryout-btn"
+            href="https://github.com/michal-niedzwiedzki/visimark/tree/master/editors/vscode"
+            >Install VisiMark &rarr;</a
+          >
+        </article>
+      </section>
+
+      <header class="section-head">
+        <h2>Explore</h2>
+        <p class="subtitle">See VisiMark in action, from the first formula to a red build.</p>
+      </header>
+
+      <section class="features" id="explore">
+        <p class="lede">
+          <strong
+            >VisiMark turns numbers in Markdown from claims into auditable derivations.</strong
+          >
+          Ten ways that shows up, from the first formula to a red build.
+        </p>
+
+        <nav class="toc" aria-label="Feature sections">
+          <a href="#feature-computes">Computes itself</a>
+          <a href="#feature-wrong">Looks right, is wrong</a>
+          <a href="#feature-infer">Discover rules</a>
+          <a href="#feature-dependency">Follow the consequence</a>
+          <a href="#feature-diff">Review like code</a>
+          <a href="#feature-verified">Green means verified</a>
+          <a href="#feature-ci">Verification in CI</a>
+          <a href="#feature-renderers">Works everywhere</a>
+          <a href="#feature-graph">Under the hood</a>
+          <a href="#feature-tools">Power tools</a>
+        </nav>
+
+        <article class="feature feature--lg" id="feature-computes">
+          <div class="feature-head">
+            <h3>Markdown that computes itself</h3>
+            <p class="feature-statement">Keep the document. Add the mechanics.</p>
+          </div>
+          <p>
+            VisiMark brings formulas, derived values, totals and verification to Markdown &mdash;
+            without turning your document into a proprietary spreadsheet. The table below is
+            ordinary GFM. The <code>vmark</code> block next to it is the only new thing: one rule
+            per column, one aggregate, one anchor. Source on the left, what a reader actually sees
+            on the right.
+          </p>
+          <div class="chart-demo chart-demo--compact">
+            <div class="chart-pane">
+              <h4>figures.md</h4>
+              <pre class="chart-source" id="computes-source" tabindex="0"></pre>
+            </div>
+            <div class="chart-pane">
+              <h4>Rendered preview</h4>
+              <div class="chart-preview" id="computes-preview" tabindex="0"></div>
+            </div>
+          </div>
+          <script type="text/plain" id="computes-source-md">
+            | Item  | Price | Qty |   Net |
+            |-------|------:|----:|------:|
+            | pen   |  2.00 |  10 | 20.00 |
+            | paper |  0.15 | 100 | 15.00 |
+
+            ```vmark #order
+            Net   = Price * Qty
+            total = SUM(Net)
+            ```
+
+            Total: **35.00**<!--vmark=order.total-->
+          </script>
+          <p class="feature-statement" style="margin-top: 14px">Still Markdown. Now verifiable.</p>
+        </article>
+
+        <article class="feature feature--lg" id="feature-wrong">
+          <div class="feature-head">
+            <h3>A document can look right and still be wrong</h3>
+            <p class="feature-statement">
+              Someone changes an input. The document still renders normally. The numbers still look
+              plausible. But the calculation is now wrong. VisiMark can tell you.
+            </p>
+          </div>
+          <p>
+            Below is a real invoice, live: someone raised on-call hours from 12 to 20 and nothing
+            else changed. Read it the way a reviewer would.
+          </p>
+          <div class="chart-demo chart-demo--compact">
+            <div class="chart-pane">
+              <h4>invoice.md</h4>
+              <pre class="chart-source" id="drift-source" tabindex="0"></pre>
+            </div>
+            <div class="chart-pane">
+              <h4>Rendered preview</h4>
+              <div class="chart-preview" id="drift-preview" tabindex="0"></div>
+            </div>
+          </div>
+          <script type="text/plain" id="drift-source-md">
+            ```vmark
+            vat = 23%
+            ```
+
+            ## Services rendered
+
+            | Item                       | Unit  | Qty |    Rate |      Net |     VAT |    Gross |
+            |----------------------------|-------|----:|--------:|---------:|--------:|---------:|
+            | Discovery workshop         | day   |   2 | 1800.00 |  3600.00 |  828.00 |  4428.00 |
+            | **Backend implementation** | hour  |  64 |  220.00 | 14080.00 | 3238.40 | 17318.40 |
+            | Code review retainer       | month |   1 | 2500.00 |  2500.00 |  575.00 |  3075.00 |
+            | On-call support            | hour  |  20 |  260.00 |  3120.00 |  717.60 |  3837.60 |
+
+            ```vmark #lines
+            Net   = Qty * Rate
+            VAT   = Net * vat
+            Gross = Net + VAT
+
+            net_total   = SUM(Net)
+            vat_total   = SUM(VAT)
+            gross_total = SUM(Gross)
+            ```
+
+            Net of tax the engagement comes to **23300.00**<!--vmark=lines.net_total--> PLN. VAT at
+            23% adds **5359.00**<!--vmark=lines.vat_total--> PLN, giving a total due of
+            **28659.00**<!--vmark=lines.gross_total--> PLN.
+          </script>
+          <p>
+            Nothing looks wrong. That's the point &mdash; on-call hours went from 12 to 20, and
+            every figure derived from it stayed behind.
+          </p>
+          <button
+            type="button"
+            class="feature-btn"
+            id="drift-check-btn"
+            aria-pressed="false"
+            aria-expanded="false"
+            aria-controls="drift-check-out"
+          >
+            Run <code style="background: none; color: inherit; padding: 0">visimark check</code>
+          </button>
+          <pre id="drift-check-out" hidden><span class="p">$</span> visimark check invoice.md
+invoice.md
+
+  <span class="del">STALE   lines.Net       &middot; On-call support         3120.00 &ne; 5200.00    Qty * Rate</span>
+  <span class="del">STALE   lines.VAT       &middot; On-call support          717.60 &ne; 1196.00    Net * vat</span>
+  <span class="del">STALE   lines.Gross     &middot; On-call support         3837.60 &ne; 6396.00    Net + VAT</span>
+  <span class="del">STALE   lines.net_total                          23300.00 &ne; 25380.00   SUM(Net)</span>
+  <span class="del">STALE   lines.vat_total                           5359.00 &ne; 5837.40   SUM(VAT)</span>
+  <span class="del">STALE   lines.gross_total                        28659.00 &ne; 31217.40   SUM(Gross)</span>
+  <span class="c">&hellip; 15 more, from an unparseable date and a broken cross-sheet reference elsewhere in the file</span>
+
+  26 problems (21 stale, 5 errors)
+<span class="p">$</span> echo $?
+1</pre>
+          <p class="chart-caption">
+            Trimmed &mdash; the full run is
+            <a
+              href="https://github.com/michal-niedzwiedzki/visimark/blob/master/docs/example-invoice-drift.md"
+              target="_blank"
+              rel="noopener"
+              >docs/example-invoice-drift.md</a
+            >.
+          </p>
+          <p class="feature-statement" style="margin-top: 14px">
+            It rendered clean. It was not correct.
+          </p>
+        </article>
+
+        <article class="feature feature--md" id="feature-infer">
+          <div class="feature-head">
+            <h3>Discover rules in existing tables</h3>
+            <p class="feature-statement">
+              Don't rewrite an existing table by hand. VisiMark can inspect the values and infer
+              rules that explain how they were calculated.
+            </p>
+          </div>
+          <p>
+            <code>quote.md</code> below is ordinary Markdown &mdash; someone typed every cell by
+            hand, and the numbers agree only because they were careful. Run <code>infer</code> and
+            watch the rule appear.
+          </p>
+          <div class="chart-demo chart-demo--compact">
+            <div class="chart-pane">
+              <h4 id="infer-pane-title">quote.md &mdash; before</h4>
+              <pre class="chart-source" id="infer-source" tabindex="0"></pre>
+            </div>
+            <div class="chart-pane">
+              <h4>Rendered preview</h4>
+              <div class="chart-preview" id="infer-preview" tabindex="0"></div>
+            </div>
+          </div>
+          <script type="text/plain" id="infer-before-md">
+            | Module            | Format   | Seats |    Fee |  Revenue |
+            |-------------------|----------|------:|-------:|---------:|
+            | Foundations       | workshop |    24 | 450.00 | 10800.00 |
+            | Advanced patterns | workshop |    12 | 650.00 |  7800.00 |
+            | Coaching          | 1:1      |     6 | 900.00 |  5400.00 |
+            | Assessment        | async    |    30 | 120.00 |  3600.00 |
+
+            Teaching revenue comes to **27600.00** PLN. No formula anywhere in this file.
+          </script>
+          <script type="text/plain" id="infer-after-md">
+            | Module            | Format   | Seats |    Fee |  Revenue |
+            |-------------------|----------|------:|-------:|---------:|
+            | Foundations       | workshop |    24 | 450.00 | 10800.00 |
+            | Advanced patterns | workshop |    12 | 650.00 |  7800.00 |
+            | Coaching          | 1:1      |     6 | 900.00 |  5400.00 |
+            | Assessment        | async    |    30 | 120.00 |  3600.00 |
+
+            ```vmark #programme
+            Revenue       = Seats * Fee
+            revenue_total = SUM(Revenue)
+            ```
+
+            Teaching revenue comes to **27600.00**<!--vmark=programme.revenue_total--> PLN.
+          </script>
+          <button type="button" class="feature-btn" id="infer-btn" aria-pressed="false">
+            Run <code style="background: none; color: inherit; padding: 0">visimark infer</code>
+          </button>
+          <pre id="infer-out" hidden><span class="p">$</span> visimark infer quote.md
+  column rules
+    Revenue = Seats * Fee              <span class="ok">4/4 rows</span>
+
+  scalars matching figures in prose
+    27600.00  = SUM(Revenue)           revenue_total
+
+  1 rule, 1 scalar found &mdash; <em>write them?</em> [Y/n]</pre>
+          <p class="chart-caption">
+            The full report also lists near-misses and detected constants:
+            <a
+              href="https://github.com/michal-niedzwiedzki/visimark/blob/master/docs/example-quote-plain.md"
+              target="_blank"
+              rel="noopener"
+              >docs/example-quote-plain.md</a
+            >.
+          </p>
+          <p>
+            When the numbers admit more than one explanation, <code>infer</code> says so instead of
+            guessing: a rule that fits every row but one is reported as a near-miss and never
+            written, even with <code>--write</code>.
+          </p>
+        </article>
+
+        <article class="feature feature--md" id="feature-dependency">
+          <div class="feature-head">
+            <h3>Change one input, follow every consequence</h3>
+            <p class="feature-statement">
+              Change an input once. VisiMark follows its dependencies and recalculates the values
+              that depend on it.
+            </p>
+          </div>
+          <div class="chart-demo">
+            <div class="chart-pane">
+              <h4>invoice.md</h4>
+              <pre id="dep-before">| Item            | Qty |   Rate |     Net |     VAT |   Gross |
+|-----------------|----:|-------:|--------:|--------:|--------:|
+| On-call support |  12 | 260.00 | 3120.00 |  717.60 | 3837.60 |
+
+<span class="c">```</span><span class="k">vmark #lines</span>
+Net   = Qty * Rate
+VAT   = Net * vat
+Gross = Net + VAT
+<span class="c">```</span>
+
+Due on delivery: **3837.60**<span class="c">&lt;!--vmark=schedule.Amount--&gt;</span> PLN.
+
+<span class="c">```</span><span class="k">vmark #schedule</span>
+Amount = SUM(lines.Gross)
+<span class="c">```</span></pre>
+              <pre
+                id="dep-after"
+                hidden
+              >| Item            | Qty |   Rate |     Net |     VAT |   Gross |
+|-----------------|----:|-------:|--------:|--------:|--------:|
+| On-call support |  <span class="warn">20</span> | 260.00 | <span class="add">5200.00</span> | <span class="add">1196.00</span> | <span class="add">6396.00</span> |
+
+<span class="c">```</span><span class="k">vmark #lines</span>
+Net   = Qty * Rate
+VAT   = Net * vat
+Gross = Net + VAT
+<span class="c">```</span>
+
+Due on delivery: **<span class="add">6396.00</span>**<span class="c">&lt;!--vmark=schedule.Amount--&gt;</span> PLN.
+
+<span class="c">```</span><span class="k">vmark #schedule</span>
+Amount = SUM(lines.Gross)
+<span class="c">```</span></pre>
+            </div>
+            <div class="chart-pane">
+              <h4>What it recalculates</h4>
+              <pre class="mermaid" id="dep-diagram">
+graph TD
+    Qty["On-call support · Qty"] --> Net
+    Net --> VAT
+    Net --> Gross
+    Gross --> Amount["schedule.Amount"]
+              </pre>
+            </div>
+          </div>
+          <button type="button" class="feature-btn" id="dep-btn" aria-pressed="false">
+            Change Qty: 12 &rarr; 20
+          </button>
+          <p class="feature-statement" style="margin-top: 14px">
+            One source of truth. Predictable downstream changes.
+          </p>
+        </article>
+
+        <article class="feature feature--md" id="feature-diff">
+          <div class="feature-head">
+            <h3>Review calculations like code</h3>
+            <p class="feature-statement">
+              Calculated values live in your Markdown. Changes remain normal text changes. Review
+              them in Git, in a pull request, or in a code review.
+            </p>
+          </div>
+          <p>
+            <code>fmt</code> locates each value it owns by byte position and splices the original
+            text &mdash; it never round-trips through a Markdown printer, which would reformat every
+            paragraph and list in the file. Hypothetically, if it did:
+          </p>
+          <pre><span class="c">--- a/invoice.md
++++ b/invoice.md
+@@ -1,136 +1,136 @@
+-Invoice 2026/09/014
++Invoice 2026/09/014
+&hellip; four hundred more lines of re-wrapped paragraphs, renormalised emphasis
+   markers and realigned table columns, for one changed cell.</span></pre>
+          <p>What <code>fmt</code> actually produces for the same change:</p>
+          <pre><span class="del">- Gross total: 28,659.00</span>
+<span class="add">+ Gross total: 31,217.40</span></pre>
+          <p class="feature-statement" style="margin-top: 14px">
+            The document stays a first-class version-controlled artifact.
+          </p>
+        </article>
+
+        <article class="feature feature--md" id="feature-verified">
+          <div class="feature-head">
+            <h3>Green means verified</h3>
+            <p class="feature-statement">
+              A clean document is not necessarily a verified document. VisiMark also checks whether
+              your tables are actually covered by rules.
+            </p>
+          </div>
+          <p>
+            A checker that only compares numbers to rules would call a table with no rules
+            <em>clean</em> &mdash; the most misleading answer it could give. <code>check</code>
+            reports it as a problem in its own right:
+          </p>
+          <pre><span class="p">$</span> visimark check quote.md
+quote.md
+
+  <span class="del">COVERAGE a table with no `vmark` rules &mdash; nothing in this document is checked</span>
+           run `visimark infer` to derive them, or mark it &lt;!--vmark:no-formulas--&gt;
+
+  1 problem (0 stale, 1 error)</pre>
+          <pre class="mermaid">
+graph LR
+    U[UNVERIFIED] --> I["infer automatically"] --> V["VERIFIED ✓"]
+    U --> H["write rules by hand"] --> V
+    class V verified
+    classDef verified fill:#eafaf0,stroke:#1a7f37,color:#1a7f37,font-weight:bold;
+          </pre>
+          <pre><span class="p">$</span> visimark check quote.md
+<span class="ok">&#10003;</span> quote.md &mdash; every value agrees
+<span class="p">$</span> echo $?
+0</pre>
+          <p class="feature-statement" style="margin-top: 14px">
+            The checkmark is a claim: these numbers were actually checked.
+          </p>
+        </article>
+
+        <article class="feature feature--lg" id="feature-ci">
+          <div class="feature-head">
+            <h3>Put verification in CI</h3>
+            <p class="feature-statement">
+              Don't just check the document. Check every change. Every pull request can verify that
+              calculated values still agree with their rules before the change merges.
+            </p>
+          </div>
+          <pre class="mermaid">
+graph TD
+    PR["Pull request #184 — raise on-call hours"] --> Check["visimark check"]
+    Check --> Pass[PASS]
+    Check --> Fail[FAIL]
+    Pass --> Merge
+    Fail --> Fix["fmt, then re-run"]
+    class Pass pass
+    class Fail fail
+    classDef pass fill:#eafaf0,stroke:#1a7f37,color:#1a7f37,font-weight:bold;
+    classDef fail fill:#fdecea,stroke:#c0392b,color:#c0392b,font-weight:bold;
+          </pre>
+          <pre>
+- uses: michal-niedzwiedzki/visimark@v0.1.0
+  with:
+    files: "docs/**/*.md"</pre>
+          <div class="outcome-row">
+            <div class="outcome-card outcome-card--pass">
+              <h4>Pass</h4>
+              <pre><span class="ok">&#10003;</span> visimark check
+  0 problems
+Process completed with exit code 0</pre>
+              <p>Every calculated value still agrees with its rule. The change merges.</p>
+            </div>
+            <div class="outcome-card outcome-card--fail">
+              <h4>Fail</h4>
+              <pre><span class="del">&#10007;</span> visimark check
+  26 problems (21 stale, 5 errors)
+Process completed with exit code 1</pre>
+              <p>
+                The on-call-hours edit left 21 values behind. Run <code>fmt</code>, push, re-run.
+              </p>
+            </div>
+          </div>
+          <p>
+            Any document under the glob with a table and no rules is a failure too &mdash; there is
+            no strictness dial to find. The one way out is
+            <code>&lt;!--vmark:no-formulas--&gt;</code>, written in the file, so the decision is
+            about the document and not the CI run.
+          </p>
+        </article>
+
+        <article class="feature feature--sm" id="feature-renderers">
+          <div class="feature-head">
+            <h3>Works wherever Markdown works</h3>
+            <p class="feature-statement">GitHub, VS Code, pandoc</p>
+          </div>
+          <p>
+            VisiMark adds computational semantics without taking Markdown away from the tools that
+            already understand it. Readers don't need VisiMark to read the document &mdash; verified
+            against GitHub, VS Code, pandoc and four other renderers.
+          </p>
+          <div class="renderer-row">
+            <div class="renderer-card">
+              <h4>GitHub</h4>
+              <p><span class="verdict">&#10003; pass</span> &mdash; anchors stripped from output</p>
+            </div>
+            <div class="renderer-card">
+              <h4>VS Code preview</h4>
+              <p>
+                <span class="verdict">&#10003; pass</span> &mdash; anchors pass through as a comment
+              </p>
+            </div>
+            <div class="renderer-card">
+              <h4>pandoc &rarr; html5</h4>
+              <p>
+                <span class="verdict">&#10003; pass</span> &mdash; anchors pass through as a comment
+              </p>
+            </div>
+          </div>
+        </article>
+
+        <article class="feature feature--sm" id="feature-graph">
+          <div class="feature-head">
+            <h3>Under the hood</h3>
+            <p class="feature-statement">Dependency graph, evaluated in order</p>
+          </div>
+          <p>
+            VisiMark turns formulas into a dependency graph, evaluates it in order, and reports
+            invalid relationships instead of silently producing a result.
+          </p>
+          <div class="chart-demo">
+            <div class="chart-pane">
+              <h4>invoice.md</h4>
+              <pre><span class="c">```</span><span class="k">vmark</span>
+vat = 23%
+<span class="c">```</span>
+
+| Item    | <span class="add">Qty</span> |   <span class="add">Rate</span> |     <span class="k">Net</span> |     <span class="k">VAT</span> |   <span class="k">Gross</span> |
+|---------|----:|-------:|--------:|--------:|--------:|
+| On-call |  20 | 260.00 | 5200.00 | 1196.00 | 6396.00 |
+
+<span class="c">```</span><span class="k">vmark #lines</span>
+<span class="k">Net</span>   = <span class="add">Qty</span> * <span class="add">Rate</span>
+<span class="k">VAT</span>   = <span class="k">Net</span> * <span class="add">vat</span>
+<span class="k">Gross</span> = <span class="k">Net</span> + <span class="k">VAT</span>
+<span class="c">```</span></pre>
+            </div>
+            <div class="chart-pane">
+              <h4>Evaluation order</h4>
+              <pre class="mermaid">
+graph LR
+    Rate --> Net
+    Qty --> Net
+    Net --> VAT --> Gross
+              </pre>
+            </div>
+          </div>
+          <pre><span class="del">CYCLE   late_fees.base &rarr; late_fees.fee &rarr; late_fees.total &rarr; late_fees.base</span></pre>
+          <p class="chart-caption">
+            A real cycle, from
+            <a
+              href="https://github.com/michal-niedzwiedzki/visimark/blob/master/docs/example-invoice-drift.md"
+              target="_blank"
+              rel="noopener"
+              >docs/example-invoice-drift.md</a
+            >
+            &mdash; reported with the full path, not a bare &ldquo;circular reference&rdquo;.
+          </p>
+        </article>
+
+        <article class="feature feature--sm" id="feature-tools">
+          <div class="feature-head">
+            <h3>Power tools</h3>
+            <p class="feature-statement">Eight ways in, one engine</p>
+          </div>
+          <p>
+            More to explore &mdash; each is one command, documented in full in the
+            <a
+              href="https://github.com/michal-niedzwiedzki/visimark/blob/master/docs/cli-reference.md"
+              target="_blank"
+              rel="noopener"
+              >CLI reference</a
+            >.
+          </p>
+          <div class="power-grid">
+            <div class="power-card">
+              <h4><code>check</code></h4>
+              <p>Verify calculations and fail on the first disagreement.</p>
+            </div>
+            <div class="power-card">
+              <h4><code>fmt</code></h4>
+              <p>Update stale calculated values while preserving the rest of the document.</p>
+            </div>
+            <div class="power-card">
+              <h4><code>infer</code></h4>
+              <p>Discover formulas from existing tables.</p>
+            </div>
+            <div class="power-card">
+              <h4><code>eval</code></h4>
+              <p>Inspect calculated values programmatically, including as JSON.</p>
+            </div>
+            <div class="power-card">
+              <h4><code>explain</code></h4>
+              <p>Understand a sheet's inputs, rules and evaluation order.</p>
+            </div>
+            <div class="power-card">
+              <h4><code>chart</code></h4>
+              <p>Generate a verified SVG from a sheet's own columns.</p>
+            </div>
+            <div class="power-card">
+              <h4>Assertions</h4>
+              <p><code>assert</code> states an invariant a stray formula could still satisfy.</p>
+            </div>
+            <div class="power-card">
+              <h4>VS Code extension</h4>
+              <p>The same engine, as live diagnostics, quick fixes and hover.</p>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <header class="section-head" id="demonstration-header">
+        <h2>Demonstration</h2>
+        <p class="subtitle">
+          Two documents from the repository, beside what they render to &mdash; scrolling in
+          lockstep, not screenshots.
+        </p>
+      </header>
+
+      <section class="features" id="demonstration">
+        <article class="feature">
+          <div class="feature-head">
+            <h3>Guarantee of artifact integrity</h3>
+            <p class="feature-statement">A picture derived from the data, and proven to match it</p>
+          </div>
+          <p>
+            A <code>chart</code> statement names columns the sheet already has.
+            <code>fmt</code> draws the SVG and <code>check</code> proves the bytes on disk are still
+            what the current table renders to &mdash; so the picture cannot quietly drift away from
+            the numbers underneath it.
+          </p>
+          <div class="chart-demo">
+            <div class="chart-pane">
+              <h4>docs/example-charts.md</h4>
+              <pre class="chart-source" id="chart-source" tabindex="0"></pre>
+            </div>
+            <div class="chart-pane">
+              <h4>Rendered preview</h4>
+              <div class="chart-preview" id="chart-preview" tabindex="0"></div>
+            </div>
+          </div>
+          <p class="chart-caption">
+            <code>docs/example-charts.md</code> as committed, rendered client-side with
+            <a href="https://marked.js.org/" target="_blank" rel="noopener">marked</a>.
+          </p>
+          <script type="text/plain" id="chart-source-md">
+            # Quarterly review — a worked example with charts
+
+            This document is part of the acceptance suite. It exists to exercise
+            **generated artifacts**: the two charts below are derived from the tables on
+            this page, written by `visimark fmt`, and verified by `visimark check`.
+
+            Nothing here is an invoice. Charts belong on data that is worth looking at as a
+            shape — a trend over months, a split across segments — and the worked invoice
+            is deliberately left alone.
+
+            ## Sales
+
+            Revenue and cost are human input; profit is computed.
+
+            | Month | Revenue  | Cost     | Profit   |
+            |-------|---------:|---------:|---------:|
+            | Jan   | 48200.00 | 31100.00 | 17100.00 |
+            | Feb   | 51400.00 | 33250.00 | 18150.00 |
+            | Mar   | 46900.00 | 32800.00 | 14100.00 |
+            | Apr   | 55300.00 | 34100.00 | 21200.00 |
+            | May   | 58750.00 | 36400.00 | 22350.00 |
+
+            ```vmark #sales
+            Profit = Revenue - Cost
+            total_revenue = SUM(Revenue)
+            total_profit = SUM(Profit)
+            assert total_profit > 0
+            chart performance as bar of Revenue, Cost, Profit labelled Month aspect 16:9
+            ```
+
+            Revenue across the five months totals **260550.00**<!--vmark=sales.total_revenue-->,
+            against a profit of **92900.00**<!--vmark=sales.total_profit-->.
+
+            ![revenue, cost and profit by month](charts/example-charts-sales.svg)<!--vmark=sales.performance-->
+
+            The chart takes three series from one sheet, so they share a row count by
+            construction. It carries an explicit `aspect 16:9`; the pie below takes the
+            default `16:10`.
+
+            ## Audience
+
+            | Segment     | Headcount |
+            |-------------|----------:|
+            | Under 25    |      1240 |
+            | 25 to 39    |      3180 |
+            | 40 to 54    |      2470 |
+            | 55 and over |      1610 |
+
+            ```vmark #audience
+            total = SUM(Headcount)
+            chart mix as pie of Headcount labelled Segment
+            ```
+
+            The sample covers **8500**<!--vmark=audience.total--> people.
+
+            ![audience by segment](charts/example-charts-audience.svg)<!--vmark=audience.mix-->
+
+            `Headcount` is a human-written input column with no decimals, so its total
+            writes bare — the same precision inference every other value gets.
+
+            ## What `check` guarantees here
+
+            `visimark check` proves that both SVGs on disk are exactly what the current
+            data renders to. Change a `Revenue` cell and the bar chart is `STALE` until
+            `fmt` regenerates it; delete either file and it is `STALE` as missing. What
+            `check` does **not** prove is that the picture is a faithful depiction of the
+            numbers — an artifact's provenance is verifiable, its draughtsmanship is not.
+          </script>
+        </article>
+
+        <article class="feature">
+          <div class="feature-head">
+            <h3>Executable documentation</h3>
+            <p class="feature-statement">The document is the source; tooling reads it directly</p>
+          </div>
+          <p>
+            An operating budget where the worker-node count is derived rather than typed. The prose
+            is the specification, the tables are its inputs, and <code>eval</code> hands the results
+            to whatever needs them next &mdash; documentation to computation to machine-readable
+            output, not code to generated documentation.
+          </p>
+          <div class="chart-demo">
+            <div class="chart-pane">
+              <h4>docs/example-executable-documentation.md</h4>
+              <pre class="chart-source" id="eval-source" tabindex="0"></pre>
+            </div>
+            <div class="chart-pane">
+              <h4>Rendered preview</h4>
+              <div class="chart-preview" id="eval-preview" tabindex="0"></div>
+            </div>
+          </div>
+          <p class="chart-caption">The same document, read by the CLI instead of a browser:</p>
+          <pre>
+$ visimark eval infrastructure-budget.md --json
+{
+  "budget": {
+    "WorkerBudget": 12000,
+    "WorkerBudgetPercentage": 50
+  },
+  "kubernetes": {
+    "MaxNodes": 48,
+    "TotalCPU": 384,
+    "UsableCPU": 307,
+    "TotalMemory": 1536,
+    "UsableMemory": 1228
+  }
+}</pre>
+          <script type="text/plain" id="eval-source-md">
+            # IT Infrastructure Operating Budget
+
+            **Planning period:** 2026
+            **Environment:** Production
+            **Currency:** USD
+
+            The infrastructure operating budget for production is **$24,000/month**.
+
+            The Kubernetes cluster must run continuously and is expected to maintain enough spare capacity for normal workload fluctuations. We reserve **20% of compute capacity** as headroom.
+
+            ## Monthly operating budget
+
+            | Cost | Monthly USD |
+            |---|---:|
+            | Total infrastructure budget | 24000 |
+            | Managed Kubernetes control plane | 300 |
+            | Load balancers | 400 |
+            | Persistent storage | 1800 |
+            | Database | 4200 |
+            | Network egress | 2200 |
+            | Monitoring and logging | 1600 |
+            | Backups | 800 |
+            | Other infrastructure | 700 |
+
+            The remaining budget is available for Kubernetes worker nodes.
+
+            ```vmark #budget
+            WorkerBudget = TotalInfrastructureBudget
+                         - ManagedKubernetesControlPlane
+                         - LoadBalancers
+                         - PersistentStorage
+                         - Database
+                         - NetworkEgress
+                         - MonitoringAndLogging
+                         - Backups
+                         - OtherInfrastructure
+
+            WorkerBudgetPercentage = WorkerBudget / TotalInfrastructureBudget * 100
+            ```
+
+            **Worker-node budget:** **$12,000/month**<!--vmark=budget.WorkerBudget-->
+
+            **Available for worker nodes:** **50.00%** of the infrastructure budget<!--vmark=budget.WorkerBudgetPercentage-->
+
+            ## Kubernetes worker nodes
+
+            The standard production worker is an `m6i.2xlarge` instance.
+
+            | Parameter | Value |
+            |---|---:|
+            | Worker node monthly cost | 250 |
+            | CPU per worker (vCPU) | 8 |
+            | Memory per worker (GB) | 32 |
+            | Reserved capacity | 20% |
+
+            The cluster may spend at most the worker-node budget, while 20% of the resulting capacity must remain available as operational headroom.
+
+            ```vmark #kubernetes
+            MaxNodes = FLOOR(WorkerBudget / WorkerNodeMonthlyCost)
+
+            UsableNodes = FLOOR(MaxNodes * (1 - ReservedCapacity))
+
+            TotalCPU = MaxNodes * CPUPerWorker
+            UsableCPU = FLOOR(TotalCPU * (1 - ReservedCapacity))
+
+            TotalMemory = MaxNodes * MemoryPerWorker
+            UsableMemory = FLOOR(TotalMemory * (1 - ReservedCapacity))
+            ```
+
+            Therefore the maximum affordable Kubernetes cluster is:
+
+            **Maximum worker nodes:** **48**<!--vmark=kubernetes.MaxNodes-->
+
+            This provides:
+
+            **Total CPU:** **384 vCPU**<!--vmark=kubernetes.TotalCPU-->
+            **Usable CPU after 20% headroom:** **307 vCPU**<!--vmark=kubernetes.UsableCPU-->
+
+            **Total memory:** **1,536 GB**<!--vmark=kubernetes.TotalMemory-->
+            **Usable memory after 20% headroom:** **1,228 GB**<!--vmark=kubernetes.UsableMemory-->
+
+            ## Capacity decision
+
+            The production Kubernetes cluster is therefore budgeted for a maximum of **48 worker nodes**.
+
+            The number **48 is not an independently maintained configuration value**. It is derived from:
+
+            1. the total infrastructure budget,
+            2. all non-Kubernetes operating costs,
+            3. the worker-node price,
+            4. and the required capacity reserve.
+
+            If any of those assumptions change, the documented cluster capacity changes with them.
+
+            ## Machine-readable output
+
+            The same document can be queried by tooling:
+
+            ```text
+            visimark eval infrastructure-budget.md --json
+            ```
+
+            For example:
+
+            ```json
+            {
+              "budget": {
+                "WorkerBudget": 12000,
+                "WorkerBudgetPercentage": 50
+              },
+              "kubernetes": {
+                "MaxNodes": 48,
+                "TotalCPU": 384,
+                "UsableCPU": 307,
+                "TotalMemory": 1536,
+                "UsableMemory": 1228
+              }
+            }
+            ```
+
+            A deployment tool could consume `kubernetes.MaxNodes` directly rather than maintaining a second configuration file.
+
+            ## Why this is executable documentation
+
+            This document is not **code explaining a budget**.
+
+            It is **budget documentation that executes**.
+
+            The tables are the inputs.
+            The VisiMark formulas are the rules.
+            The anchored numbers are materialized results.
+            `eval` exposes those results to other tools.
+
+            For example, changing the worker price from `$250` to `$300` automatically changes the derived maximum cluster size:
+
+            ```text
+            $12,000 / $300 = 40 workers
+            ```
+
+            The document therefore remains the single place where both the **decision** and the **reasoning behind the decision** live.
+
+            The important direction is:
+
+            **documentation → computation → machine-readable output**
+
+            rather than:
+
+            **code → generated documentation**
+          </script>
+        </article>
+      </section>
+
+      <header class="section-head" id="installation-header">
+        <h2>Installation</h2>
+        <p class="subtitle">Two ways to bring VisiMark into a project.</p>
+      </header>
+
+      <section class="features" id="installation">
+        <article class="feature">
+          <div class="feature-head">
+            <h3>As an npm package</h3>
+          </div>
+          <p>
+            Install the <code>visimark</code> command globally, or run it without installing at all
+            &mdash; either way it runs under whichever of Bun or Node is on your <code>PATH</code>.
+          </p>
+          <pre>
+$ npm i -g visimark
+<span class="c"># or</span>
+$ bun add -g visimark
+<span class="c"># or, with no install at all</span>
+$ npx visimark check invoice.md</pre>
+        </article>
+
+        <article class="feature">
+          <div class="feature-head">
+            <h3>As an agent skill</h3>
+          </div>
+          <p>
+            VisiMark ships an agent skill &mdash; copy it in, and an agent picks up authoring and
+            verification discipline automatically, no prompting required.
+          </p>
+          <pre>$ cp -r skills/visimark ~/.claude/skills/visimark</pre>
+          <p style="margin-top: 14px">
+            Its central warning is worth stating here too: a green check is evidence of agreement,
+            not of derivation. Change an input and confirm the checker starts complaining before
+            trusting a document is wired up.
+          </p>
+          <p class="chart-caption">
+            See
+            <a
+              href="https://github.com/michal-niedzwiedzki/visimark/blob/master/skills/visimark/SKILL.md"
+              target="_blank"
+              rel="noopener"
+              >skills/visimark/SKILL.md</a
+            >
+            for the full skill.
+          </p>
+        </article>
+      </section>
+
+      <header class="section-head" id="featured-head">
+        <h2>Featured</h2>
+        <p class="subtitle">Four more places VisiMark's mechanics show up.</p>
+      </header>
+
+      <section class="features" id="featured">
+        <div class="featured-grid">
+          <article class="featured-item">
+            <div class="feature-head">
+              <h3>Charts</h3>
+            </div>
+            <p>
+              A <code>chart</code> statement turns a sheet's own columns into an SVG.
+              <code>fmt</code> draws it; <code>check</code> proves the bytes on disk still match the
+              data &mdash; the same guarantee as any other computed value, just shaped like a
+              picture.
+            </p>
+            <img
+              src="charts/example-charts-sales.svg"
+              alt="revenue, cost and profit by month, as a bar chart"
+            />
+          </article>
+
+          <article class="featured-item">
+            <div class="feature-head">
+              <h3>Anchors</h3>
+            </div>
+            <p>
+              A comment anchor binds a printed number to a name, so a sentence stays plain prose
+              while the value stays machine-checkable:
+            </p>
+            <pre>Invoice total: **28659.00**<span class="c">&lt;!--vmark=lines.gross_total--&gt;</span></pre>
+            <p style="margin-top: 14px">
+              The HTML comment is invisible in every renderer that permits raw HTML &mdash; GitHub,
+              VS Code, pandoc &mdash; so a reader just sees the bold number.
+            </p>
+          </article>
+
+          <article class="featured-item">
+            <div class="feature-head">
+              <h3>Assertions</h3>
+            </div>
+            <p>
+              Every number agreeing with its own formula is not the same as the document being
+              right. An <code>assert</code> states the invariant the numbers together must satisfy
+              &mdash; it binds nothing and <code>fmt</code> never touches it:
+            </p>
+            <pre><span class="c">```</span><span class="k">vmark #recon</span>
+scheduled = SUM(schedule.Amount)
+variance  = lines.gross_total - scheduled
+<span class="k">assert</span> variance == 0
+<span class="c">```</span></pre>
+            <p style="margin-top: 14px">
+              Without it, a payment schedule that stopped summing to the invoice total would leave a
+              non-zero <code>variance</code> and still pass. With it, <code>check</code> shows the
+              expression and the values that broke it:
+            </p>
+            <pre>  <span class="del">ASSERT  #recon          variance == 0</span>
+            <span class="del">-318.00 == 0   is false</span></pre>
+          </article>
+
+          <article class="featured-item">
+            <div class="feature-head">
+              <h3>VS Code extension</h3>
+            </div>
+            <p>
+              One language server wraps the same engine, so the editor disagrees with you as you
+              type rather than at commit time &mdash; live diagnostics, quick fixes, inlay hints,
+              CodeLens and hover, with <code>fmt</code> behind the editor's own format-on-save.
+            </p>
+            <pre><span class="del">STALE</span>   lines.Net &middot; On-call support
+        3120.00 &ne; 5200.00     Qty * Rate
+        <span class="c">Quick fix: update the value to 5200.00</span></pre>
+            <p style="margin-top: 14px">
+              Not on a marketplace yet &mdash; build and install it from a clone with
+              <code>bun run vscode-install</code>, then reload the window.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <div class="closing-statement">
+        <p class="statement">Numbers should be derived, not trusted.</p>
+        <p class="sub">
+          VisiMark makes calculations explicit, changes reviewable, and numerical correctness
+          enforceable &mdash; while keeping the document as plain Markdown.
+        </p>
+      </div>
+
+      <footer class="footer">
+        <a href="https://github.com/michal-niedzwiedzki/visimark"
+          >Try VisiMark documentation &rarr;</a
+        >
+      </footer>
+    </div>
+
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/Swiper/14.2.0/swiper-bundle.min.js"
+      integrity="sha512-nM1ZmLe8KJ0bEkxcoG3D09bO8YvrITjvqMRPqEj14rYoNH/Hdg+ZR3hC+ez1S08A5NxEkRDgyBWVTZZgLQLhaQ=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/marked/18.0.11/lib/marked.umd.min.js"
+      integrity="sha512-spWXz/aNScpDSOz0auQxbzVBx6LmlxjgH7zilyCenKLGEyBje0iSJiLGsdPlrfNqFitWXRDdAXo1Bi7bonkZ6A=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.15.0/mermaid.min.js"
+      integrity="sha512-HH52omhHpZF6RfVnGiQwYgYm4H/ya2xsZYLl5xJ4+tLfX+rN4+8zF7V/H/KLeicPrKZYi1g6iBmVkk2AhXTGlg=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+    <script>
+      // Explore's small structural diagrams (dependency flow, CI pass/fail,
+      // the verified state transition), rendered from text instead of
+      // hand-drawn ASCII art. Theme matches the card: light, monospace,
+      // the same red accent used elsewhere on the page.
+      if (typeof mermaid !== "undefined") {
+        mermaid.initialize({
+          startOnLoad: false,
+          theme: "base",
+          themeVariables: {
+            fontFamily:
+              '"SF Mono", "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace',
+            fontSize: "14px",
+            primaryColor: "#f0f0f0",
+            primaryTextColor: "#1b1b1b",
+            primaryBorderColor: "#1b1b1b",
+            lineColor: "#1b1b1b",
+            secondaryColor: "#f0f0f0",
+            tertiaryColor: "#ffffff",
+          },
+          flowchart: { curve: "linear" },
+        });
+        mermaid.run({ querySelector: ".mermaid" });
+      }
+    </script>
+    <script>
+      // Source/preview demo panes: render an inline Markdown snippet with
+      // marked, optionally swap image sources for embedded assets, and keep
+      // the two panes' scroll positions in lockstep. The snippets are
+      // curated excerpts/variants for this page's narrative (e.g. the infer
+      // before/after pair), not verbatim copies of docs/*.md, so they stay
+      // inline even though this page now lives alongside docs/ and could
+      // fetch real files directly — see the chart images below, which do.
+      // The formatter indents everything inside <script> by the tag's nesting
+      // depth, so the embedded Markdown never starts at column 0. Markdown
+      // treats 4+ leading spaces as an indented code block, so without
+      // dedenting first, every one of these demos renders as one giant code
+      // block instead of parsed Markdown. Strip the common leading
+      // whitespace (ignoring blank lines) before handing it to marked.
+      function dedent(text) {
+        var lines = text.split("\n");
+        var indent = Infinity;
+        lines.forEach(function (line) {
+          if (!line.trim()) return;
+          indent = Math.min(indent, line.match(/^[ \t]*/)[0].length);
+        });
+        if (!isFinite(indent)) indent = 0;
+        return lines
+          .map(function (line) {
+            return line.slice(indent);
+          })
+          .join("\n");
+      }
+
+      function renderDemo(sourceId, previewId, mdId, images) {
+        var sourceEl = document.getElementById(sourceId);
+        var previewEl = document.getElementById(previewId);
+        var mdEl = document.getElementById(mdId);
+        if (!sourceEl || !previewEl || !mdEl || typeof marked === "undefined") return;
+
+        var raw = dedent(mdEl.textContent.replace(/^\n/, "")).replace(/\s+$/, "");
+        sourceEl.textContent = raw;
+        previewEl.innerHTML = marked.parse(raw);
+        if (images) {
+          previewEl.querySelectorAll("img[src]").forEach(function (img) {
+            var uri = images[img.getAttribute("src")];
+            if (uri) img.src = uri;
+          });
+        }
+
+        // Lockstep scroll: moving either pane scrolls the other by the same
+        // fraction of its own scrollable range.
+        var syncingFrom = null;
+        function link(from, to) {
+          from.addEventListener("scroll", function () {
+            if (syncingFrom && syncingFrom !== from) return;
+            syncingFrom = from;
+            var range = from.scrollHeight - from.clientHeight;
+            var ratio = range > 0 ? from.scrollTop / range : 0;
+            to.scrollTop = ratio * (to.scrollHeight - to.clientHeight);
+            requestAnimationFrame(function () {
+              syncingFrom = null;
+            });
+          });
+        }
+        link(sourceEl, previewEl);
+        link(previewEl, sourceEl);
+      }
+
+      (function () {
+        // Chart images (charts/example-charts-*.svg) resolve on their own now
+        // that index.html and docs/charts/ are siblings — the relative <img>
+        // src the markdown already carries just works, no embedding needed.
+        renderDemo("chart-source", "chart-preview", "chart-source-md", null);
+        renderDemo("eval-source", "eval-preview", "eval-source-md", null);
+        renderDemo("computes-source", "computes-preview", "computes-source-md", null);
+        renderDemo("drift-source", "drift-preview", "drift-source-md", null);
+      })();
+    </script>
+    <script>
+      // Explore section: small interactive bits. Each one renders real,
+      // already-committed example content — nothing here simulates the CLI,
+      // it only shows or hides text that's already on the page.
+      (function () {
+        // "Discover rules in existing tables" — toggles the source/preview
+        // pair between the un-annotated table and the same table with infer's
+        // proposed rule written in, and reveals the infer transcript.
+        var inferBtn = document.getElementById("infer-btn");
+        var inferOut = document.getElementById("infer-out");
+        var inferTitle = document.getElementById("infer-pane-title");
+        var inferShown = false;
+        if (inferBtn) {
+          inferBtn.addEventListener("click", function () {
+            inferShown = !inferShown;
+            renderDemo(
+              "infer-source",
+              "infer-preview",
+              inferShown ? "infer-after-md" : "infer-before-md",
+              null,
+            );
+            if (inferOut) inferOut.hidden = !inferShown;
+            if (inferTitle)
+              inferTitle.textContent = "quote.md — " + (inferShown ? "after" : "before");
+            inferBtn.setAttribute("aria-pressed", String(inferShown));
+            inferBtn.innerHTML = inferShown
+              ? "Show the table before"
+              : 'Run <code style="background:none;color:inherit;padding:0">visimark infer</code>';
+          });
+        }
+        // Render the "before" state on load, same as the static markup would.
+        renderDemo("infer-source", "infer-preview", "infer-before-md", null);
+
+        // "A document can look right and still be wrong" — reveals the check
+        // transcript for the invoice above.
+        var driftBtn = document.getElementById("drift-check-btn");
+        var driftOut = document.getElementById("drift-check-out");
+        if (driftBtn && driftOut) {
+          driftBtn.addEventListener("click", function () {
+            var shown = driftOut.hidden;
+            driftOut.hidden = !shown;
+            driftBtn.setAttribute("aria-pressed", String(shown));
+            driftBtn.setAttribute("aria-expanded", String(shown));
+          });
+        }
+
+        // "Change one input, follow every consequence" — swaps the Net/VAT/
+        // Gross figures between the stale (Qty 12) and current (Qty 20)
+        // values, same numbers as the check transcript above.
+        // Yellow is the input the reader changed; green is everything VisiMark
+        // recalculated because of it. The source pane and the graph use the same
+        // pairing, so the eye can carry one to the other.
+        var DEP_TONES = {
+          input: { fill: "#fff8e1", stroke: "#b7791f", text: "#8a6100" },
+          derived: { fill: "#eafaf0", stroke: "#1a7f37", text: "#1a7f37" },
+        };
+        function paintDepGraph(on) {
+          var box = document.getElementById("dep-diagram");
+          if (!box) return;
+          box.querySelectorAll("g.node").forEach(function (node) {
+            // mermaid names each node group "…-flowchart-<id>-<n>"
+            var parts = (node.id || "").split("-");
+            var name = parts[parts.length - 2];
+            var tone = !on ? null : name === "Qty" ? DEP_TONES.input : DEP_TONES.derived;
+            node.querySelectorAll("rect, polygon, path").forEach(function (shape) {
+              shape.style.fill = tone ? tone.fill : "";
+              shape.style.stroke = tone ? tone.stroke : "";
+            });
+            node.querySelectorAll(".nodeLabel, text, tspan").forEach(function (label) {
+              label.style.color = tone ? tone.text : "";
+              label.style.fill = tone ? tone.text : "";
+              label.style.fontWeight = tone ? "700" : "";
+            });
+          });
+        }
+
+        var depBtn = document.getElementById("dep-btn");
+        var depBefore = document.getElementById("dep-before");
+        var depAfter = document.getElementById("dep-after");
+        var depChanged = false;
+        if (depBtn && depBefore && depAfter) {
+          depBtn.addEventListener("click", function () {
+            depChanged = !depChanged;
+            depBefore.hidden = depChanged;
+            depAfter.hidden = !depChanged;
+            paintDepGraph(depChanged);
+            depBtn.textContent = depChanged
+              ? "Change Qty back: 20 \u2192 12"
+              : "Change Qty: 12 \u2192 20";
+            depBtn.setAttribute("aria-pressed", String(depChanged));
+          });
+        }
+      })();
+
+      // Sticky TOC: highlight whichever feature article is currently in the
+      // middle band of the viewport as the user scrolls past it.
+      (function () {
+        var toc = document.querySelector("#explore .toc");
+        if (!toc || !("IntersectionObserver" in window)) return;
+        var links = Array.from(toc.querySelectorAll("a"));
+        var byId = {};
+        links.forEach(function (a) {
+          byId[a.getAttribute("href").slice(1)] = a;
+        });
+        var observer = new IntersectionObserver(
+          function (entries) {
+            entries.forEach(function (entry) {
+              var link = byId[entry.target.id];
+              if (!link || !entry.isIntersecting) return;
+              links.forEach(function (l) {
+                l.classList.remove("active");
+              });
+              link.classList.add("active");
+            });
+          },
+          { rootMargin: "-45% 0px -50% 0px", threshold: 0 },
+        );
+        document.querySelectorAll("#explore .feature[id]").forEach(function (article) {
+          observer.observe(article);
+        });
+      })();
+    </script>
+    <script>
+      // The previews ship with the "order" dataset hardcoded (so crawlers and
+      // no-JS visitors see real content). On load we pick one of four example
+      // datasets at random and re-render every preview from it. Each dataset is
+      // two rows, one column rule + one aggregate, one prose anchor.
+      (function () {
+        var DATASETS = {
+          order: {
+            slug: "order",
+            file: "figures.md",
+            cols: ["Item", "Price", "Qty", "Net"],
+            dp: [null, 2, 0, 2],
+            rows: [
+              ["pen", 2.0, 10],
+              ["paper", 0.15, 100],
+            ],
+            agg: "total",
+            label: "Total",
+            unit: "",
+            edits: [
+              [0, 1, 2.2],
+              [1, 2, 150],
+            ],
+          },
+          power: {
+            slug: "power",
+            file: "figures.md",
+            cols: ["Load", "mA", "Qty", "Draw"],
+            dp: [null, 0, 0, 0],
+            rows: [
+              ["radio", 120, 1],
+              ["LED", 15, 4],
+            ],
+            agg: "total",
+            label: "Peak draw",
+            unit: " mA",
+            edits: [
+              [0, 1, 140],
+              [1, 2, 8],
+            ],
+          },
+          mass: {
+            slug: "mass",
+            file: "figures.md",
+            cols: ["Part", "Unit", "Qty", "Mass"],
+            dp: [null, 0, 0, 0],
+            rows: [
+              ["bar", 45, 4],
+              ["clip", 6, 16],
+            ],
+            agg: "total",
+            label: "Total mass",
+            unit: " g",
+            edits: [
+              [0, 2, 6],
+              [1, 1, 8],
+            ],
+          },
+          latency: {
+            slug: "latency",
+            file: "figures.md",
+            cols: ["Hop", "ms", "n", "Total"],
+            dp: [null, 1, 0, 1],
+            rows: [
+              ["edge", 4.0, 2],
+              ["api", 12.0, 3],
+            ],
+            agg: "budget",
+            label: "Budget",
+            unit: " ms",
+            edits: [
+              [0, 1, 6.0],
+              [1, 2, 4],
+            ],
+          },
+        };
+
+        function rep(ch, n) {
+          return n > 0 ? new Array(n + 1).join(ch) : "";
+        }
+        function padL(s, w) {
+          return rep(" ", w - s.length) + s;
+        }
+        function padR(s, w) {
+          return s + rep(" ", w - s.length);
+        }
+        function esc(s) {
+          return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+        function fmt(v, dp) {
+          return dp == null ? String(v) : v.toFixed(dp);
+        }
+        function editedRows(d) {
+          var rows = d.rows.map(function (r) {
+            return r.slice();
+          });
+          d.edits.forEach(function (e) {
+            rows[e[0]][e[1]] = e[2];
+          });
+          return rows;
+        }
+        function derived(rows) {
+          return rows.map(function (r) {
+            return r[1] * r[2];
+          });
+        }
+        function sum(a) {
+          return a.reduce(function (x, y) {
+            return x + y;
+          }, 0);
+        }
+
+        function table(d, rows, derivedVals, em) {
+          var cols = d.cols;
+          var col = [
+            [cols[0]].concat(
+              rows.map(function (r) {
+                return String(r[0]);
+              }),
+            ),
+            [cols[1]].concat(
+              rows.map(function (r) {
+                return fmt(r[1], d.dp[1]);
+              }),
+            ),
+            [cols[2]].concat(
+              rows.map(function (r) {
+                return fmt(r[2], d.dp[2]);
+              }),
+            ),
+            [cols[3]].concat(
+              derivedVals.map(function (v) {
+                return fmt(v, d.dp[3]);
+              }),
+            ),
+          ];
+          var w = col.map(function (c) {
+            return Math.max.apply(
+              null,
+              c.map(function (s) {
+                return s.length;
+              }),
+            );
+          });
+          function cell(txt, width, right, mark) {
+            var pad = rep(" ", width - txt.length);
+            var body = mark ? "<em>" + esc(txt) + "</em>" : esc(txt);
+            return right ? pad + body : body + pad;
+          }
+          var out = [
+            "| " +
+              padR(cols[0], w[0]) +
+              " | " +
+              padL(cols[1], w[1]) +
+              " | " +
+              padL(cols[2], w[2]) +
+              " | " +
+              padL(cols[3], w[3]) +
+              " |",
+            "|" +
+              rep("-", w[0] + 2) +
+              "|" +
+              rep("-", w[1] + 1) +
+              ":|" +
+              rep("-", w[2] + 1) +
+              ":|" +
+              rep("-", w[3] + 1) +
+              ":|",
+          ];
+          for (var i = 0; i < rows.length; i++) {
+            out.push(
+              "| " +
+                cell(col[0][i + 1], w[0], false, false) +
+                " | " +
+                cell(col[1][i + 1], w[1], true, em.indexOf(i + ",1") >= 0) +
+                " | " +
+                cell(col[2][i + 1], w[2], true, em.indexOf(i + ",2") >= 0) +
+                " | " +
+                cell(col[3][i + 1], w[3], true, em.indexOf(i + ",3") >= 0) +
+                " |",
+            );
+          }
+          return out.join("\n");
+        }
+
+        function fence(d) {
+          var lhs = Math.max(d.cols[3].length, d.agg.length);
+          return (
+            '<span class="k">```vmark #' +
+            d.slug +
+            "</span>\n" +
+            padR(d.cols[3], lhs) +
+            " = " +
+            d.cols[1] +
+            " * " +
+            d.cols[2] +
+            "\n" +
+            padR(d.agg, lhs) +
+            " = SUM(" +
+            d.cols[3] +
+            ")\n" +
+            '<span class="k">```</span>'
+          );
+        }
+        function anchor(d, value, mark) {
+          var v = fmt(value, d.dp[3]) + d.unit;
+          return (
+            d.label +
+            ": **" +
+            (mark ? "<em>" + esc(v) + "</em>" : esc(v)) +
+            '**<span class="c">&lt;!--vmark=' +
+            d.slug +
+            "." +
+            d.agg +
+            "--&gt;</span>"
+          );
+        }
+        // Pad every slide in a card to the same row count by inserting blank
+        // lines *above the last line* — so the closing prompt stays pinned to
+        // the bottom and a trailing "\n" never adds a phantom row.
+        function padCard(arr) {
+          var rows = arr.map(function (s) {
+            return s.split("\n");
+          });
+          var max = Math.max.apply(
+            null,
+            rows.map(function (r) {
+              return r.length;
+            }),
+          );
+          return rows.map(function (r) {
+            while (r.length < max) r.splice(r.length - 1, 0, "");
+            return r.join("\n");
+          });
+        }
+
+        function buildSlots(d) {
+          var baseR = d.rows,
+            baseD = derived(baseR),
+            baseT = sum(baseD);
+          var edR = editedRows(d),
+            newD = derived(edR),
+            newT = sum(newD);
+          var inEm = d.edits.map(function (e) {
+            return e[0] + "," + e[1];
+          });
+          var outEm = [];
+          baseD.forEach(function (v, i) {
+            if (newD[i] !== v) outEm.push(i + ",3");
+          });
+          var f = fence(d);
+
+          // Every Author slide ends with a real (non-empty) prompt line so all
+          // three render the same number of rows and the box never jumps.
+          var authorBase =
+            table(d, baseR, baseD, []) +
+            "\n" +
+            f +
+            "\n" +
+            anchor(d, baseT, false) +
+            '\n<span class="p">$</span>';
+          var authorEdit =
+            table(d, edR, baseD, inEm) +
+            "\n" +
+            f +
+            "\n" +
+            anchor(d, baseT, false) +
+            '\n<span class="p">$</span> <em>visimark fmt ' +
+            d.file +
+            "</em>";
+          var authorFixed =
+            table(d, edR, newD, outEm) +
+            "\n" +
+            f +
+            "\n" +
+            anchor(d, newT, true) +
+            '\n<span class="p">$</span>';
+
+          var plain = table(d, baseR, baseD, []) + "\nTotal: **" + fmt(baseT, d.dp[3]) + "**";
+          var adoptBase =
+            plain + '\n<span class="p">$</span> <em>visimark infer ' + d.file + "</em>";
+          var adoptOut =
+            plain +
+            '\n<span class="p">$</span> visimark infer ' +
+            d.file +
+            "\n  column rules\n    " +
+            d.cols[3] +
+            " = " +
+            d.cols[1] +
+            " * " +
+            d.cols[2] +
+            '    <span class="c">2/2 ok</span>\n  1 rule, 1 scalar written.';
+          var adoptFixed = authorBase;
+
+          var n = d.rows.length + 2;
+          var enforceOut =
+            '<span class="p">$</span> visimark check ' +
+            d.file +
+            '\n<span class="ok">&#10003;</span> ' +
+            d.file +
+            " &mdash; " +
+            n +
+            ' values agree\n<span class="p">$</span> echo $?\n0';
+
+          var c1 = padCard([authorBase, authorEdit, authorFixed]);
+          var c2 = padCard([adoptBase, adoptOut, adoptFixed]);
+          return {
+            "author-base": c1[0],
+            "author-edit": c1[1],
+            "author-fixed": c1[2],
+            "adopt-base": c2[0],
+            "adopt-out": c2[1],
+            "adopt-fixed": c2[2],
+            "enforce-out": enforceOut,
+          };
+        }
+
+        var keys = Object.keys(DATASETS);
+        var slots = buildSlots(DATASETS[keys[Math.floor(Math.random() * keys.length)]]);
+        document.querySelectorAll("pre[data-ex]").forEach(function (pre) {
+          var html = slots[pre.getAttribute("data-ex")];
+          if (html != null) pre.innerHTML = html;
+        });
+      })();
+
+      document.querySelectorAll(".preview").forEach(function (preview) {
+        var swiperEl = preview.querySelector(".swiper");
+        var swiper = new Swiper(swiperEl, {
+          effect: "fade",
+          fadeEffect: { crossFade: true },
+          speed: 400,
+          pagination: {
+            el: preview.querySelector(".preview-dots"),
+            clickable: true,
+            renderBullet: function (index, className) {
+              return '<span class="' + className + '"><i>' + (index + 1) + "</i></span>";
+            },
+          },
+        });
+
+        // Fade stacks the slides, so lock the box to the tallest one; without
+        // it the card resizes as the reader steps through.
+        var tallest = 0;
+        swiper.slides.forEach(function (slide) {
+          tallest = Math.max(tallest, slide.scrollHeight);
+        });
+        swiperEl.style.height = tallest + "px";
+      });
+    </script>
+  </body>
+</html>

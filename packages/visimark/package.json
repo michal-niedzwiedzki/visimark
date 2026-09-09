@@ -45,6 +45,7 @@
     "test": "bun test",
     "typecheck": "tsc --noEmit",
     "build": "bun build src/cli/main.ts src/index.ts --target node --outdir dist && tsc -p tsconfig.build.json",
+    "build:playground": "bun build src/playground/browser-entry.ts --target browser --format iife --minify --outfile ../../docs/vendor/visimark-browser.js",
     "prepublishOnly": "cp ../../README.md README.md && bun run typecheck && bun test && bun run build"
   },
   "dependencies": {

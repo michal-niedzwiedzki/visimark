@@ -1,0 +1,6 @@
+# Generated build artifacts committed to docs/ for GitHub Pages — produced by
+# `bun run build:playground` (minified) and scripts/gen-playground-data.mjs.
+# Formatting these defeats the point of minification and bloats diffs; they
+# are never hand-edited.
+docs/vendor/visimark-browser.js
+docs/vendor/playground-data.js

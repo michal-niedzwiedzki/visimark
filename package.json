@@ -34,6 +34,7 @@
     "lint:fix": "oxlint --fix",
     "format": "oxfmt",
     "format:check": "oxfmt --check",
+    "serve": "bun scripts/serve.mjs",
     "vscode-install": "cd editors/vscode && bun run install-local",
     "vscode-uninstall": "cd editors/vscode && bun run uninstall-local",
     "postinstall": "bun run --filter visimark build"

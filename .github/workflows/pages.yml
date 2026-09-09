@@ -3,7 +3,7 @@ name: pages
 on:
   push:
     branches: [master]
-    paths: ["public/**", ".github/workflows/pages.yml"]
+    paths: ["docs/**", ".github/workflows/pages.yml"]
   workflow_dispatch: {}
 
 permissions:
@@ -26,6 +26,6 @@ jobs:
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: public
+          path: docs
       - id: deploy
         uses: actions/deploy-pages@v4

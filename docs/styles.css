@@ -1,0 +1,950 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+html {
+  color-scheme: dark;
+}
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.018) 0px,
+      rgba(255, 255, 255, 0.018) 1px,
+      transparent 1px,
+      transparent 5px
+    ),
+    linear-gradient(180deg, #252422 0%, #403d39 100%);
+  background-attachment: fixed;
+  color: #f4f4f4;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 72px 24px 56px;
+}
+
+/* Masthead */
+.masthead {
+  display: flex;
+  align-items: center;
+  gap: 26px;
+}
+.masthead img {
+  width: 92px;
+  height: 92px;
+  flex: none;
+  filter: drop-shadow(0 6px 20px rgba(0, 0, 0, 0.5));
+}
+.masthead h1 {
+  margin: 0;
+  font-size: clamp(2.6rem, 6vw, 3.6rem);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+.subtitle {
+  margin: 18px 0 0;
+  font-size: clamp(1.1rem, 2.6vw, 1.4rem);
+  font-weight: 400;
+  color: #b9b9b9;
+}
+.pitch {
+  position: relative;
+  font-family: "Caveat", "Bradley Hand", "Comic Sans MS", cursive;
+  display: block;
+  margin: -20px 0 0;
+  text-align: right;
+  font-size: clamp(1.35rem, 4vw, 2.05rem);
+  font-weight: 700;
+  color: #ff453a;
+  transform: rotate(-4deg);
+  transform-origin: right center;
+  text-shadow: 0 3px 18px rgba(255, 69, 58, 0.35);
+}
+/* Minecraft-splash-style bonus line: the spans take turns, exactly one on
+   screen at a time, ~5s each. The first span stays in normal flow as a
+   one-line sizer that holds the box height; the rest stack on top of it.
+   To add a line: add a <span> and an nth-child delay, and bump the
+   animation duration + keyframe split to 100/count %. */
+.pitch span {
+  position: absolute;
+  right: 0;
+  top: 0;
+  display: block;
+  white-space: nowrap;
+  opacity: 0;
+  animation: pitch-cycle 20s ease-in-out infinite;
+}
+.pitch span:first-child {
+  position: static;
+}
+.pitch span:nth-child(1) {
+  animation-delay: 0s;
+}
+.pitch span:nth-child(2) {
+  animation-delay: 5s;
+}
+.pitch span:nth-child(3) {
+  animation-delay: 10s;
+}
+.pitch span:nth-child(4) {
+  animation-delay: 15s;
+}
+@keyframes pitch-cycle {
+  0% {
+    opacity: 0;
+  }
+  2%,
+  23% {
+    opacity: 1;
+  }
+  25%,
+  100% {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pitch span {
+    animation: none;
+  }
+  .pitch span:first-child {
+    opacity: 1;
+  }
+}
+
+/* Cards */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-top: 80px;
+}
+.card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: #ffffff;
+  color: #1b1b1b;
+  border-radius: 16px;
+  padding: 30px 28px;
+  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.45);
+}
+.card h2 {
+  margin: 0 0 10px;
+  font-size: 1.32rem;
+  font-weight: 750;
+}
+.card p {
+  margin: 0 0 20px;
+  font-size: 0.96rem;
+  color: #363636;
+}
+.card p code {
+  background: #f0f0f0;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 0.88em;
+}
+.card p:has(+ ul) {
+  margin-bottom: 8px;
+}
+.card ul {
+  margin: 0 0 20px;
+  padding-left: 1.2rem;
+  font-size: 0.96rem;
+  color: #363636;
+  list-style: square;
+}
+.card li {
+  margin: 3px 0;
+}
+.card li::marker {
+  color: #ff453a;
+}
+.card pre {
+  margin: 0;
+  background: #1c1c1c;
+  color: #e6e6e6;
+  border-radius: 10px;
+  padding: 14px 15px;
+  font-family: "SF Mono", "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 0.72rem;
+  line-height: 1.6;
+  overflow-x: auto;
+}
+.card pre .c {
+  color: #7d7d7d;
+}
+.card pre .p {
+  color: #7ee787;
+}
+.card pre .k {
+  color: #79c0ff;
+}
+.card pre em {
+  font-style: normal;
+  background: #ffffff;
+  color: #1b1b1b;
+  border-radius: 5px;
+  padding: 0 3px;
+  margin: 0 -3px;
+}
+.card pre .ok {
+  color: #56d364;
+  font-weight: 700;
+}
+
+/* Preview carousel */
+.preview {
+  margin: auto 0 0;
+}
+.preview .swiper {
+  width: 100%;
+}
+.preview .preview-dots {
+  position: static;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin: 0 0 10px 2px;
+  min-height: 26px;
+}
+.preview .preview-dots .swiper-pagination-bullet {
+  width: 26px;
+  height: 26px;
+  margin: 0;
+  border-radius: 999px;
+  background: rgba(27, 27, 27, 0.1);
+  opacity: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #1b1b1b;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+.preview .preview-dots .swiper-pagination-bullet i {
+  font-style: normal;
+}
+.preview .preview-dots .swiper-pagination-bullet-active {
+  background: #1b1b1b;
+  color: #ffffff;
+}
+.preview .slide-note {
+  margin: 12px 2px 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: #5f5f5f;
+  min-height: 3em;
+}
+
+/* Footer */
+.footer {
+  margin-top: 68px;
+  text-align: center;
+}
+.footer a,
+.pill-link {
+  display: inline-block;
+  padding: 13px 32px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 999px;
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 1.05rem;
+  font-weight: 550;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease;
+}
+.footer a:hover,
+.pill-link:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.65);
+}
+
+/* Jump to Installation, sitting on the dark ground between Adopt and
+   Explore — the footer's pill, one size down. */
+.install-cta {
+  margin: 40px 0 0;
+  text-align: center;
+}
+.install-cta .pill-link {
+  padding: 11px 28px;
+  font-size: 0.98rem;
+}
+
+/* A big page-section title outside any card, matching the masthead's
+   h1 + .subtitle treatment but a size down — used above Explore,
+   Installation and Featured. */
+.section-head {
+  margin: 64px 0 24px;
+}
+.section-head:first-of-type {
+  margin-top: 20px;
+}
+.section-head h2 {
+  margin: 0;
+  font-size: clamp(2rem, 5vw, 2.8rem);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+
+/* Features (full-width, same width as the .cards row above it) */
+.features {
+  margin-top: 20px;
+  background: #ffffff;
+  color: #1b1b1b;
+  border-radius: 16px;
+  padding: 34px 32px 40px;
+  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.45);
+}
+.features > .lede {
+  margin: 0 0 26px;
+  font-size: 0.98rem;
+  color: #363636;
+}
+.features code {
+  background: #f0f0f0;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 0.88em;
+}
+.toc {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  list-style: none;
+  margin: 0 0 32px;
+  padding: 10px 0;
+  background: #ffffff;
+}
+.toc a {
+  display: inline-block;
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: #f0f0f0;
+  color: #1b1b1b;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 650;
+  transition:
+    background 0.18s ease,
+    color 0.18s ease;
+}
+.toc a:hover,
+.toc a.active {
+  background: #1b1b1b;
+  color: #ffffff;
+}
+.feature {
+  padding-top: 30px;
+  margin-top: 30px;
+  border-top: 1px solid #ececec;
+}
+.feature:first-of-type {
+  padding-top: 0;
+  margin-top: 0;
+  border-top: none;
+}
+/* The orange bar lives on this wrapper, not on h3 directly, so a
+   feature's opening statement visually sits inside the same bar as
+   its heading. Reused (without the numbering below) by Installation
+   and Featured. */
+.feature-head {
+  border-left: 1rem solid #ff453a;
+  padding-left: 1rem;
+}
+.feature h3,
+.feature-head h3 {
+  margin: 0 0 8px;
+  font-size: 1.5rem;
+  font-weight: 750;
+  scroll-margin-top: 20px;
+}
+.feature-head .feature-statement {
+  padding-left: 0;
+}
+/* "Ten ways that shows up" — number Explore's own features only. */
+#explore {
+  counter-reset: feature-num;
+}
+#explore .feature {
+  counter-increment: feature-num;
+}
+#explore .feature-head h3::before {
+  content: counter(feature-num) ". ";
+  color: #ff453a;
+}
+.feature > p {
+  margin: 0 0 6px;
+  font-size: 0.96rem;
+  color: #363636;
+}
+.feature ul {
+  margin: 10px 0 0;
+  padding-left: 1.2rem;
+  font-size: 0.96rem;
+  color: #363636;
+  list-style: square;
+}
+.feature li {
+  margin: 3px 0;
+}
+.feature li::marker {
+  color: #ff453a;
+}
+.feature-tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: #fff4e5;
+  color: #9a5b00;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+.feature > pre {
+  margin: 14px 0 0;
+  background: #1c1c1c;
+  color: #e6e6e6;
+  border-radius: 10px;
+  padding: 14px 15px;
+  font-family: "SF Mono", "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 0.78rem;
+  line-height: 1.6;
+  overflow-x: auto;
+}
+
+/* Charts demo: source and rendered preview, side by side */
+.chart-demo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  margin-top: 18px;
+}
+.chart-pane {
+  min-width: 0;
+}
+.chart-pane h4 {
+  margin: 0 0 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #7a7a7a;
+}
+.chart-source {
+  margin: 0;
+  height: 460px;
+  overflow: auto;
+  background: #1c1c1c;
+  color: #e6e6e6;
+  border-radius: 10px;
+  padding: 16px 17px;
+  font-family: "SF Mono", "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 0.74rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+.chart-preview {
+  height: 460px;
+  overflow: auto;
+  background: #fafafa;
+  border: 1px solid #e6e6e6;
+  border-radius: 10px;
+  padding: 16px 20px;
+  font-size: 0.85rem;
+}
+.chart-preview h1,
+.chart-preview h2 {
+  font-size: 1.1rem;
+  margin: 0 0 10px;
+}
+.chart-preview h2 {
+  font-size: 1rem;
+  margin-top: 20px;
+}
+.chart-preview p {
+  margin: 0 0 10px;
+}
+.chart-preview table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0 0 12px;
+  font-size: 0.82rem;
+}
+.chart-preview th,
+.chart-preview td {
+  border: 1px solid #ddd;
+  padding: 4px 8px;
+}
+.chart-preview code {
+  background: #eee;
+  border-radius: 3px;
+  padding: 0 4px;
+  font-size: 0.88em;
+}
+.chart-preview pre {
+  background: #1c1c1c;
+  color: #e6e6e6;
+  border-radius: 8px;
+  padding: 10px 12px;
+  overflow-x: auto;
+  font-size: 0.72rem;
+}
+.chart-preview pre code {
+  background: none;
+  padding: 0;
+}
+.chart-preview img {
+  max-width: 100%;
+  margin: 6px 0 12px;
+  background: #ffffff;
+}
+.chart-caption {
+  margin: 10px 0 0;
+  font-size: 0.8rem;
+  color: #7a7a7a;
+}
+.chart-caption a {
+  color: #7a7a7a;
+}
+
+/* Explore: visual hierarchy across three levels (issue #44) */
+.feature--lg h3 {
+  font-size: 1.4rem;
+}
+.feature--lg .feature-statement {
+  font-size: 1.1rem;
+}
+.feature--sm {
+  padding-top: 22px;
+  margin-top: 22px;
+}
+.feature--sm > p {
+  font-size: 0.9rem;
+}
+.feature-statement {
+  margin: 0 0 14px;
+  padding: 2px 0 2px 2rem;
+  font-size: 1rem;
+  font-weight: 650;
+  color: #1b1b1b;
+}
+.feature-statement em {
+  font-style: normal;
+}
+
+/* Shared terminal/diagram block, used throughout Explore */
+.feature pre {
+  margin: 14px 0 0;
+  background: #1c1c1c;
+  color: #e6e6e6;
+  border-radius: 10px;
+  padding: 14px 15px;
+  font-family: "SF Mono", "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 0.78rem;
+  line-height: 1.6;
+  overflow-x: auto;
+}
+.feature pre.mermaid {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #fafafa;
+  border: 1px solid #e6e6e6;
+  color: inherit;
+  padding: 20px;
+}
+.feature pre.mermaid svg {
+  max-width: 100%;
+  height: auto;
+}
+.feature pre .c {
+  color: #7d7d7d;
+}
+.feature pre .p {
+  color: #7ee787;
+}
+.feature pre .k {
+  color: #79c0ff;
+}
+.feature pre .ok {
+  color: #56d364;
+  font-weight: 700;
+}
+.feature pre .add {
+  color: #7ee787;
+}
+.feature pre .del {
+  color: #ff7b72;
+}
+.feature pre .warn {
+  color: #e3b341;
+}
+.feature pre em {
+  font-style: normal;
+  background: #ffffff;
+  color: #1b1b1b;
+  border-radius: 5px;
+  padding: 0 3px;
+  margin: 0 -3px;
+}
+
+/* Buttons that reveal or toggle a demo's next state */
+.feature-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 14px 4px 0 0;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 999px;
+  background: #1b1b1b;
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 650;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.18s ease;
+}
+.feature-btn:hover {
+  background: #3a3a3a;
+}
+.feature-btn[aria-pressed="true"] {
+  background: #ff453a;
+}
+
+/* Compact source/preview pair, for short snippets (vs. the 460px chart-demo).
+   Tall enough that the short documents (computes, infer before/after)
+   fit without scrolling; the invoice excerpt still scrolls, and that's fine. */
+.chart-demo--compact .chart-source,
+.chart-demo--compact .chart-preview {
+  height: 320px;
+}
+
+/* CI outcome pair (section 7): the two ends of the PASS/FAIL branch,
+   carrying the same colours the diagram gives them. */
+.outcome-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 14px;
+}
+.outcome-card {
+  min-width: 0;
+  border: 1px solid;
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.outcome-card h4 {
+  margin: 0 0 10px;
+  font-size: 0.78rem;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.outcome-card p {
+  margin: 10px 0 0;
+  font-size: 0.8rem;
+  color: #5f5f5f;
+}
+.feature .outcome-card pre {
+  margin: 0;
+  background: #ffffff;
+  color: #1b1b1b;
+  padding: 11px 13px;
+}
+.outcome-card--pass {
+  background: #eafaf0;
+  border-color: #1a7f37;
+}
+.outcome-card--pass h4,
+.feature .outcome-card--pass pre .ok {
+  color: #1a7f37;
+}
+.outcome-card--fail {
+  background: #fdecea;
+  border-color: #c0392b;
+}
+.outcome-card--fail h4,
+.feature .outcome-card--fail pre .del {
+  color: #c0392b;
+}
+
+/* "Under the hood" (section 9): the graph box rises to the height of the
+   document beside it, so the pair reads as one before/after. */
+#feature-dependency .chart-pane,
+#feature-graph .chart-pane {
+  display: flex;
+  flex-direction: column;
+}
+#feature-dependency .chart-pane pre,
+#feature-graph .chart-pane pre {
+  flex: 1;
+}
+
+/* Renderer interop row (section 8) */
+.renderer-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-top: 16px;
+}
+.renderer-card {
+  background: #fafafa;
+  border: 1px solid #e6e6e6;
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.renderer-card h4 {
+  margin: 0 0 6px;
+  font-size: 0.86rem;
+  font-weight: 750;
+}
+.renderer-card p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #5f5f5f;
+}
+.renderer-card .verdict {
+  color: #1a7f37;
+  font-weight: 700;
+}
+
+/* Power tools card grid (section 10) */
+.power-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-top: 16px;
+}
+.power-card {
+  background: #fafafa;
+  border: 1px solid #e6e6e6;
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.power-card h4 {
+  margin: 0 0 6px;
+  font-size: 0.88rem;
+  font-weight: 750;
+}
+.power-card h4 code {
+  background: #eee;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 0.92em;
+}
+.power-card p {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #5f5f5f;
+}
+
+/* Closing statement — outside any white box, on the page background */
+.closing-statement {
+  margin: 56px 0 0;
+  text-align: center;
+}
+.closing-statement p.statement {
+  font-size: 1.3rem;
+  font-weight: 750;
+  margin: 0 0 10px;
+  color: #ffffff;
+}
+.closing-statement p.sub {
+  margin: 0 auto;
+  font-size: 0.98rem;
+  color: #b9b9b9;
+  max-width: 640px;
+}
+
+/* Try it out: two white cards (Playground, VS Code extension), each a
+   placeholder image beside a bullet list, with an install/open pill below. */
+.tryout-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin-top: 20px;
+}
+.tryout-item {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: #ffffff;
+  color: #1b1b1b;
+  border-radius: 16px;
+  padding: 30px 28px;
+  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.45);
+}
+.tryout-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+}
+.tryout-image {
+  flex: 0 0 33.333%;
+  aspect-ratio: 1 / 1;
+  border-radius: 10px;
+  background: #f0f0f0;
+}
+.tryout-body {
+  flex: 1;
+  min-width: 0;
+}
+.tryout-body h3 {
+  margin: 0 0 10px;
+  font-size: 1.32rem;
+  font-weight: 750;
+  border: none;
+}
+.tryout-top ul {
+  margin: 0;
+  padding-left: 1.2rem;
+  font-size: 0.96rem;
+  color: #363636;
+  list-style: square;
+}
+.tryout-top li {
+  margin: 3px 0;
+}
+.tryout-top li::marker {
+  color: #ff453a;
+}
+.tryout-top code {
+  background: #f0f0f0;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 0.88em;
+}
+.tryout-btn {
+  display: inline-block;
+  align-self: flex-start;
+  margin-top: 24px;
+  padding: 11px 28px;
+  border-radius: 999px;
+  background: #7ee787;
+  color: #1b1b1b;
+  text-decoration: none;
+  font-size: 0.98rem;
+  font-weight: 650;
+  transition: background 0.18s ease;
+}
+.tryout-btn:hover {
+  background: #6cd977;
+}
+
+/* Featured: a two-column showcase, reusing the .feature-head bar look
+   without the vertical stacking (border-top/margin-top) .feature carries */
+.featured-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+}
+.featured-item > p {
+  margin: 0 0 10px;
+  font-size: 0.96rem;
+  color: #363636;
+}
+/* Featured's snippets sit on white, so the terminal accents need
+   light-ground values rather than the dark card's. */
+.featured-item pre .c {
+  color: #8a8a8a;
+}
+.featured-item pre .k {
+  color: #0b5fa5;
+}
+.featured-item pre .del {
+  color: #c0392b;
+}
+.featured-item img {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  border-radius: 10px;
+  border: 1px solid #e6e6e6;
+  background: #fafafa;
+}
+
+@media (max-width: 880px) {
+  .cards {
+    grid-template-columns: 1fr;
+  }
+  .chart-demo {
+    grid-template-columns: 1fr;
+  }
+  .chart-source,
+  .chart-preview {
+    height: 360px;
+  }
+  .outcome-row {
+    grid-template-columns: 1fr;
+  }
+  .renderer-row {
+    grid-template-columns: 1fr;
+  }
+  .power-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .featured-grid {
+    grid-template-columns: 1fr;
+  }
+  .tryout-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 640px) {
+  .tryout-top {
+    flex-direction: column;
+  }
+  .tryout-image {
+    flex-basis: auto;
+    width: 33.333%;
+  }
+}
+@media (max-width: 560px) {
+  .masthead {
+    flex-direction: column;
+    text-align: center;
+    gap: 18px;
+  }
+  .pitch {
+    transform-origin: center;
+    text-align: center;
+  }
+  .pitch span:not(:first-child) {
+    right: 50%;
+    transform: translateX(50%);
+  }
+}
+@media (max-width: 400px) {
+  .pitch {
+    max-width: 100%;
+  }
+  .pitch span {
+    white-space: normal;
+  }
+  .pitch span:not(:first-child) {
+    right: 0;
+    width: 100%;
+    transform: none;
+  }
+}
