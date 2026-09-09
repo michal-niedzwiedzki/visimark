@@ -94,7 +94,7 @@ second one.
 [catalogue preface](vocabulary-catalogue.md#requesting-an-addition) and the
 constraints in `visimark-design.md` [§2](visimark-design.md#2-constraints-that-shaped-the-design), [§4](visimark-design.md#4-syntax), [§7](visimark-design.md#7-numeric-semantics) and [§14](visimark-design.md#14-deferred) —
 shape system, document-local value, no ambiguity, a real document that needs
-it — plus overlap with the eleven builtins, the operator set, and every row
+it — plus overlap with the twelve builtins, the operator set, and every row
 already catalogued.
 
 **General issues** are judged against [§1](visimark-design.md#1-purpose) scope

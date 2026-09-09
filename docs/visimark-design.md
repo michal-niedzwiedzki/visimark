@@ -210,9 +210,10 @@ unrelated restrictions all follow from this one:
 
 ### Builtin functions
 
-Eleven, chosen to cover the examples and the two catalogued additions a real
-document needed (`EOMONTH`, issue #6; `SQRT`, issue #18). Each is declared with
-its shape and its exact argument count, in one table in `eval/functions.ts` —
+Twelve, chosen to cover the examples and the catalogued additions a real
+document needed (`EOMONTH`, issue #6; `SQRT`, issue #18; `FLOOR`, issue #53).
+Each is declared with its shape and its exact argument count, in one table in
+`eval/functions.ts` —
 the single home for a classification the dependency walk, the evaluator and the
 reporter each need. The parser stays function-agnostic: it builds a call node
 for any name, and the name is judged afterwards.
@@ -230,6 +231,7 @@ for any name, and the name is judged afterwards.
 | `IF(cond, a, b)` | map | 3 | `cond` must be a boolean; returns `a` or `b` |
 | `EOMONTH(d, months)` | map | 2 | last day of the month `months` calendar months from `d`; `d`'s day is discarded; `months` is a whole number; a result outside years 1–9999 is a `DATE` error |
 | `SQRT(x)` | map | 1 | non-negative square root of a non-negative number; a negative operand is a `TYPE` error |
+| `FLOOR(x, s)` | map | 2 | greatest multiple of positive `s` that does not exceed `x`, toward −∞; a non-positive `s` is a `TYPE` error |
 
 **Arity is exact and checked statically**, once per binding, before anything is
 evaluated. `ROUND(Qty)` is a `TYPE` error blaming the span of the call, not a
@@ -520,7 +522,7 @@ under a second `fmt`.
 ## 14. Deferred
 
 Month and partial-date types. Joining sheets by key. Per-column precision and
-output formats. Per-row exceptions. A function library beyond the eleven —
+output formats. Per-row exceptions. A function library beyond the twelve —
 proposals and the decision on each are tracked in
 [`vocabulary-catalogue.md`](vocabulary-catalogue.md). Incremental reparse.
 

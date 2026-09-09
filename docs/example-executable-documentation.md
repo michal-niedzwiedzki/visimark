@@ -56,15 +56,15 @@ The standard production worker is an `m6i.2xlarge` instance.
 The cluster may spend at most the worker-node budget, while 20% of the resulting capacity must remain available as operational headroom.
 
 ```vmark #kubernetes
-MaxNodes = FLOOR(WorkerBudget / WorkerNodeMonthlyCost)
+MaxNodes = FLOOR(WorkerBudget / WorkerNodeMonthlyCost, 1)
 
-UsableNodes = FLOOR(MaxNodes * (1 - ReservedCapacity))
+UsableNodes = FLOOR(MaxNodes * (1 - ReservedCapacity), 1)
 
 TotalCPU = MaxNodes * CPUPerWorker
-UsableCPU = FLOOR(TotalCPU * (1 - ReservedCapacity))
+UsableCPU = FLOOR(TotalCPU * (1 - ReservedCapacity), 1)
 
 TotalMemory = MaxNodes * MemoryPerWorker
-UsableMemory = FLOOR(TotalMemory * (1 - ReservedCapacity))
+UsableMemory = FLOOR(TotalMemory * (1 - ReservedCapacity), 1)
 ```
 
 Therefore the maximum affordable Kubernetes cluster is:

@@ -4,6 +4,14 @@
 
 ### Added
 
+- **`FLOOR(number, significance)`** — the twelfth builtin (issue #53). A map,
+  `number → number`, rounding `number` down to the nearest multiple of a
+  positive `significance` toward negative infinity: `FLOOR(17, 5) → 15`,
+  `FLOOR(-12, 5) → -15`. `significance` is mandatory — `FLOOR(x)` is a `TYPE`
+  arity error, the same as `ROUND(x)` — so integer floor is spelled
+  `FLOOR(x, 1)`. Zero and negative `significance` are `TYPE`. Function
+  overloading is not decided. `CEILING` is a separate request (#54).
+
 - **`Σ` / `∑` alias for `SUM`** (issue #43) — `Σ` (U+03A3) and `∑` (U+2211) now
   lex as the identifier `SUM`; `total = Σ(Net)` is exactly `total = SUM(Net)`.
   No new semantics, no new finding code — every existing `SUM` rule (zero over

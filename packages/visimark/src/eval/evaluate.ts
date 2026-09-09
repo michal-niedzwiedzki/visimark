@@ -132,6 +132,15 @@ function evalCall(expr: Extract<Expr, { type: "call" }>, env: EvalEnv): Value {
       if (x.isNegative() && !x.isZero()) throw new EvalError("SQRT of a negative number");
       return num(x.sqrt());
     }
+    case "FLOOR": {
+      const x = asNum(vals[0]!, "FLOOR");
+      const s = asNum(vals[1]!, "FLOOR");
+      if (!s.gt(0)) {
+        throw new EvalError("FLOOR significance must be a positive number");
+      }
+      const r = x.div(s).floor().times(s);
+      return num(r.isZero() ? new Decimal(0) : r);
+    }
     case "IF": {
       const c = vals[0]!;
       if (c.t !== "bool") throw new EvalError("IF() needs a boolean condition");
