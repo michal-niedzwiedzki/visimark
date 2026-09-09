@@ -348,6 +348,57 @@ x = SQRT(-1)
   expect(fs[0]!).toMatchObject({ name: "x", message: "SQRT of a negative number" });
 });
 
+test("FLOOR: a clean scalar verifies", () => {
+  const src = `
+n is **15**<!--vmark=s.n-->.
+
+\`\`\`vmark #s
+n = FLOOR(17, 5)
+\`\`\`
+`;
+  expect(run(src).findings).toEqual([]);
+});
+
+test("FLOOR: one zero-significance row is a single TYPE finding, no NOTE", () => {
+  const src = `
+| Item | Amount | Step | Bucket |
+|------|-------:|-----:|-------:|
+| a    |     17 |    5 |     15 |
+| b    |     17 |    0 |      0 |
+| c    |     12 |    5 |     10 |
+
+\`\`\`vmark #t
+Bucket = FLOOR(Amount, Step)
+\`\`\`
+`;
+  const r = run(src);
+  expect(r.findings.map((f) => f.code).sort()).toEqual(["TYPE"]);
+  expect(r.findings.find((f) => f.code === "TYPE")).toMatchObject({
+    name: "Bucket",
+    rowLabel: "b",
+    message: "FLOOR significance must be a positive number",
+  });
+});
+
+test("FLOOR: a 1-arg call in a column rule is one static TYPE, not one per row", () => {
+  const src = `
+| Leg | Qty |   Km |
+|-----|----:|-----:|
+| a   |  10 | 0.00 |
+| b   |   4 | 0.00 |
+
+\`\`\`vmark #legs
+Km = FLOOR(Qty)
+\`\`\`
+`;
+  const r = run(src);
+  const ts = r.findings.filter((f) => f.code === "TYPE");
+  expect(ts).toHaveLength(1);
+  expect(ts[0]!.message).toBe("FLOOR() takes 2 arguments, got 1");
+  expect(ts[0]!.rowLabel).toBeUndefined();
+});
+
+
 // ---- assert statements -----------------------------------------------
 
 const planDoc = (assertLine: string, shares = ["30%", "40%", "20%"]) =>
