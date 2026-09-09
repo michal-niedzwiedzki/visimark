@@ -3,7 +3,7 @@ import { createRequire } from "node:module";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { cleanPath, driftPath } from "../examples.js";
+import { assertFailPath, cleanPath, driftPath } from "../examples.js";
 import { runCli } from "../../src/cli/main.js";
 
 const version = (createRequire(import.meta.url)("../../package.json") as { version: string })
@@ -105,4 +105,67 @@ test("check FILE --jsonn is ignored: human text, not JSON", async () => {
   expect(await runCli(["check", cleanPath, "--jsonn"], c.io)).toBe(0);
   expect(c.out()).toContain("0 problems");
   expect(() => JSON.parse(c.out())).toThrow();
+});
+
+test("eval --json uses the envelope, not a flat map", async () => {
+  const c = capture();
+  expect(await runCli(["eval", cleanPath, "--json"], c.io)).toBe(0);
+  const j = parseOut(c);
+  expect(j.command).toBe("eval");
+  expect(j.visimark).toBe(version);
+  expect(j.status).toBe("ok");
+  expect(j.file).toBe(cleanPath);
+  expect(j.vat).toBeUndefined();
+  const values = j.values as Record<string, unknown>;
+  expect(values.vat).toBe("0.23");
+  expect(values["lines.gross_total"]).toBe("28659");
+  expect(values["lines.Net"]).toEqual(["3600", "14080", "2500", "3120"]);
+  const assertions = j.assertions as { sheet: string; holds: boolean }[];
+  expect(assertions[0]).toMatchObject({ sheet: "recon", holds: true });
+  expect(Array.isArray(j.charts)).toBe(true);
+});
+
+test("eval --get --json is the same envelope with one values key", async () => {
+  const c = capture();
+  expect(await runCli(["eval", cleanPath, "--get", "gross_total", "--json"], c.io)).toBe(0);
+  const j = parseOut(c);
+  expect(Object.keys(j.values as object)).toEqual(["gross_total"]);
+  expect((j.values as { gross_total: string }).gross_total).toBe("28659");
+  expect(Array.isArray(j.assertions)).toBe(true);
+});
+
+test("eval --json on a false assertion: problems, quiet stderr", async () => {
+  const c = capture();
+  expect(await runCli(["eval", assertFailPath, "--json"], c.io)).toBe(1);
+  expect(c.err()).not.toContain("ASSERT");
+  const j = parseOut(c);
+  expect(j.status).toBe("problems");
+  const assertions = j.assertions as { holds: boolean }[];
+  expect(assertions.some((a) => a.holds === false)).toBe(true);
+});
+
+test("eval --get nope --json: USAGE envelope, message on stderr", async () => {
+  const c = capture();
+  expect(await runCli(["eval", cleanPath, "--get", "nope", "--json"], c.io)).toBe(2);
+  expect(c.err()).toContain("no value named nope");
+  const j = parseOut(c);
+  expect(j).toMatchObject({
+    command: "eval",
+    status: "error",
+    error: { code: "USAGE" },
+  });
+});
+
+test("eval --json column with a null cell", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "visimark-json-"));
+  const p = join(dir, "hole.md");
+  writeFileSync(
+    p,
+    "| Item | Price | Qty | Net |\n|------|------:|----:|----:|\n| a    |  1.00 |   2 | 2.00 |\n| b    |       |   2 |      |\n\n```vmark #t\nNet = Price * Qty\n```\n",
+  );
+  const c = capture();
+  await runCli(["eval", p, "--json"], c.io);
+  const values = parseOut(c).values as { "t.Net": (string | null)[] };
+  expect(values["t.Net"][0]).toBe("2");
+  expect(values["t.Net"][1]).toBeNull();
 });

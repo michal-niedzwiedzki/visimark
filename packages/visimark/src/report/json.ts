@@ -1,4 +1,6 @@
 import { readVersion } from "../cli/version.js";
+import type { AssertionResult, ChartResult, CheckResult } from "../eval/check.js";
+import type { Value } from "../eval/value.js";
 import { ERROR_CODES, isProblem, type Finding } from "../model/types.js";
 
 export type JsonWriter = (line: string) => void;
@@ -76,4 +78,44 @@ export function publicFinding(file: string, f: Finding): object {
     location,
     details,
   };
+}
+
+function jsonShowValue(v: Value): string {
+  if (v.t === "num") return v.d.toString();
+  if (v.t === "date") return v.iso;
+  if (v.t === "bool") return String(v.b);
+  return v.s;
+}
+
+export type JsonValue = string | (string | null)[];
+
+export function evalValues(result: CheckResult): Record<string, JsonValue> {
+  const values: Record<string, JsonValue> = {};
+  for (const [k, v] of result.values) values[k] = jsonShowValue(v);
+  for (const [k, col] of result.cells) {
+    values[k] = col.map((v) => (v ? jsonShowValue(v) : null));
+  }
+  return values;
+}
+
+export function publicAssertions(assertions: AssertionResult[]): object[] {
+  return assertions.map((a) => ({
+    sheet: a.sheetId,
+    source: a.source,
+    holds: a.holds,
+    operands: a.operands,
+    substituted: a.substituted,
+  }));
+}
+
+export function publicCharts(charts: ChartResult[]): object[] {
+  return charts.map((c) => ({
+    sheet: c.sheetId,
+    name: c.name,
+    engine: c.engine,
+    series: c.series,
+    labels: c.labels,
+    path: c.path,
+    state: c.state,
+  }));
 }

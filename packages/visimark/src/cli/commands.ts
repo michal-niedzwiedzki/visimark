@@ -13,7 +13,10 @@ import { formatInfer } from "../report/infer.js";
 import {
   emitJson,
   errorEnvelope,
+  evalValues,
   findingSummary,
+  publicAssertions,
+  publicCharts,
   publicFinding,
   statusFromExit,
 } from "../report/json.js";
@@ -204,16 +207,21 @@ export function cmdInfer(args: string[], out: Writer, err: Writer): number {
 
 export function cmdEval(args: string[], out: Writer, err: Writer): number {
   const { files, flags, options } = parseArgs(args);
+  const json = flags.has("json");
   const path = files[0];
   if (!path) {
-    err("usage: visimark eval FILE [--get NAME] [--json]");
+    const msg = "usage: visimark eval FILE [--get NAME] [--json]";
+    err(msg);
+    if (json) emitJson(out, errorEnvelope("eval", "USAGE", msg));
     return 2;
   }
   let source: string;
   try {
     source = read(path);
   } catch {
-    err(`visimark: cannot read ${path}`);
+    const msg = `visimark: cannot read ${path}`;
+    err(msg);
+    if (json) emitJson(out, errorEnvelope("eval", "READ", msg));
     return 2;
   }
   const model = build(locate(source));
@@ -224,12 +232,13 @@ export function cmdEval(args: string[], out: Writer, err: Writer): number {
   for (const [k, col] of result.cells) {
     all.set(k, col.map((v) => (v ? showValue(v) : "?")).join(", "));
   }
+  const values = evalValues(result);
 
   // A false assertion means the document's stated invariants do not hold; `eval`
   // will not hand back values as if it were sound. It prints the failure to
   // stderr and exits 1 — after the requested value, so a pipeline still gets it.
   const failed = result.assertions.filter((a) => a.holds === false);
-  const assertExit = failed.length > 0 ? 1 : 0;
+  const assertExit: 0 | 1 = failed.length > 0 ? 1 : 0;
   const reportFailures = (): void => {
     for (const a of failed) {
       err(`  ASSERT  #${a.sheetId}   ${a.source.replace(/^assert\s+/, "")}`);
@@ -237,35 +246,41 @@ export function cmdEval(args: string[], out: Writer, err: Writer): number {
     }
   };
 
+  const emitEval = (selected: typeof values): void => {
+    emitJson(out, {
+      command: "eval",
+      visimark: readVersion(),
+      status: statusFromExit(assertExit),
+      file: path,
+      values: selected,
+      assertions: publicAssertions(result.assertions),
+      charts: publicCharts(result.charts),
+    });
+  };
+
   const get = options.get("get");
   if (get !== undefined) {
-    const v = all.get(get) ?? all.get(bareToQualified(model, get));
-    if (v === undefined) {
-      err(`visimark: no value named ${get}`);
+    const qualified = all.has(get) || values[get] !== undefined ? get : bareToQualified(model, get);
+    const text = all.get(get) ?? all.get(qualified);
+    const jsonVal = values[get] ?? values[qualified];
+    if (text === undefined && jsonVal === undefined) {
+      const msg = `visimark: no value named ${get}`;
+      err(msg);
+      if (json) emitJson(out, errorEnvelope("eval", "USAGE", msg));
       return 2;
     }
-    out(flags.has("json") ? JSON.stringify({ [get]: v }) : v);
-    reportFailures();
+    if (json) emitEval({ [get]: jsonVal! });
+    else out(text!);
+    if (!json) reportFailures();
     return assertExit;
   }
 
-  if (flags.has("json")) {
-    out(
-      JSON.stringify(
-        {
-          ...Object.fromEntries(all),
-          assertions: result.assertions,
-          charts: result.charts,
-        },
-        null,
-        2,
-      ),
-    );
-  } else {
+  if (json) emitEval(values);
+  else {
     const width = Math.max(...[...all.keys()].map((k) => k.length), 0);
     for (const [k, v] of all) out(`${k.padEnd(width)}  ${v}`);
+    reportFailures();
   }
-  reportFailures();
   return assertExit;
 }
 
