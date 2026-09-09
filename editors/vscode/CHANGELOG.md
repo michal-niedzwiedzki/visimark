@@ -18,6 +18,9 @@
   diagnostic.
 - The engine now recognises `SQRT(x)` (square root), so a formula that uses it
   no longer shows an "unknown function" diagnostic.
+- The engine now recognises `FLOOR(number, significance)` (round down to a
+  multiple), so a formula that uses it no longer shows an "unknown function"
+  diagnostic.
 - Requires VS Code 1.91.0 or newer (was 1.85.0), the floor of
   `vscode-languageclient` 10.
 
