@@ -22,7 +22,7 @@
 - Work on branch `vocab/issue-53-floor-impl` (the spec PR #56); do not open a new PR.
 - Acceptance additions are unit tests + one test-only fixture (`packages/visimark/test/fixtures/`). `docs/example-invoice.md`, `docs/example-invoice-drift.md` and `docs/example-charts.md` stay byte-for-byte identical and the [§13](../visimark-design.md#13-testing) transcript does not move.
 - `docs/example-executable-documentation.md` is rewritten only at the four `FLOOR` call sites (`FLOOR(…, 1)`); it is **not** made check-clean.
-- Every commit ends with the trailer `Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>`.
+- Every commit ends with the trailer `Co-Authored-By: Grok 4.6 <noreply@x.ai>`.
 
 ---
 
@@ -190,7 +190,7 @@ Expected: PASS.
 
 ```bash
 git add packages/visimark/src/eval/functions.ts packages/visimark/src/eval/evaluate.ts packages/visimark/test/eval/functions.test.ts
-git commit -m "$(printf 'feat: FLOOR(number, significance) builtin — map arity 2, toward -inf\n\nCo-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>')"
+git commit -m "$(printf 'feat: FLOOR(number, significance) builtin — map arity 2, toward -inf\n\nCo-Authored-By: Grok 4.6 <noreply@x.ai>')"
 ```
 
 ---
@@ -269,7 +269,7 @@ Expected: PASS.
 
 ```bash
 git add packages/visimark/test/eval/check.test.ts
-git commit -m "$(printf 'test: FLOOR check-level reporting — per-row TYPE, static arity once\n\nCo-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>')"
+git commit -m "$(printf 'test: FLOOR check-level reporting — per-row TYPE, static arity once\n\nCo-Authored-By: Grok 4.6 <noreply@x.ai>')"
 ```
 
 ---
@@ -373,7 +373,7 @@ Expected: PASS. If `check` reports `STALE` on an anchor, correct that literal in
 
 ```bash
 git add packages/visimark/test/fixtures/floor-nodes.md packages/visimark/test/cli/floor.test.ts
-git commit -m "$(printf 'test: end-to-end FLOOR fixture — kubernetes node capacity\n\nCo-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>')"
+git commit -m "$(printf 'test: end-to-end FLOOR fixture — kubernetes node capacity\n\nCo-Authored-By: Grok 4.6 <noreply@x.ai>')"
 ```
 
 ---
@@ -450,7 +450,7 @@ UsableMemory = FLOOR(TotalMemory * (1 - ReservedCapacity), 1)
 
 ```bash
 git add docs/visimark-design.md docs/vocabulary-catalogue.md docs/issue-review.md docs/example-executable-documentation.md docs/cli-reference.md CHANGELOG.md editors/vscode/CHANGELOG.md
-git commit -m "$(printf 'docs: FLOOR is the twelfth builtin — design §4, catalogue UNRELEASED, changelog\n\nCo-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>')"
+git commit -m "$(printf 'docs: FLOOR is the twelfth builtin — design §4, catalogue UNRELEASED, changelog\n\nCo-Authored-By: Grok 4.6 <noreply@x.ai>')"
 ```
 If `cli-reference.md` was unchanged, drop it from `git add`.
 

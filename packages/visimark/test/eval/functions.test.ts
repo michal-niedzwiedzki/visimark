@@ -168,7 +168,8 @@ total = SUM(Net)
   // Spans differ by construction — Σ/∑ is one character, `SUM` is three — so
   // compare everything except span/sourceOffset, which the semantics table
   // (spec §3) says point at exactly what the author wrote, not at `SUM`.
-  const withoutSpan = (fs: Finding[]) => fs.map(({ span, sourceOffset, ...rest }) => rest);
+  const withoutSpan = (fs: Finding[]) =>
+    fs.map(({ span: _span, sourceOffset: _sourceOffset, ...rest }) => rest);
   expect(withoutSpan(run(withAlias("Σ")).findings)).toEqual(withoutSpan(run(src).findings));
   expect(withoutSpan(run(withAlias("∑")).findings)).toEqual(withoutSpan(run(src).findings));
 });
