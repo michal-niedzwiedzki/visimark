@@ -1,6 +1,6 @@
 # VisiMark — design-decision catalogue
 
-The language ships **eleven functions and a fixed operator set**
+The language ships **thirteen functions and a fixed operator set**
 ([`visimark-design.md` §4](visimark-design.md#4-syntax)). This file is the register of
 every proposed change to the language or its tooling — a mapper, operator, or
 aggregate (sections A–D); a language feature (section E); a tooling or process
@@ -79,7 +79,6 @@ number, a date, or a string — never a boolean ([§4](visimark-design.md#4-synt
 |------|--------------|------|------|---------|--------|
 | `TEXT(n, places)` | Format a number as a string with exactly `places` decimals: `TEXT(5.5, 2)` → `"5.50"`. | The safe half of string concatenation — an explicit format instead of a guessed one. Cheap, map-shaped. | One more name in the did-you-mean space. Only useful alongside `&`. | — | `DEFERRED` |
 | `YEAR(d)` / `MONTH(d)` / `DAY(d)` | Integer field of a date. | Pure, config-free, unambiguous (date → integer). Pairs with `&` for reference numbers. | Thin on its own without `&`. | — | `DEFERRED` |
-| `CEILING(x, mult)` / `FLOOR(x, mult)` | Round `x` up / down to a multiple of `mult`: `CEILING(load, 50)` → next 50. | "Round up to the next standard size / price tier" is a genuine pricing and spec need. | The `mult` argument must be mandatory — a bare `CEILING(x)` invites a hidden "to 1" default. | — | `DEFERRED` |
 | `TRUNC(x, places)` | Drop decimals past `places` without rounding. | Distinct from `ROUND`; occasionally the correct operation (tax floors). | Overlaps `ROUND`; easy to reach for by mistake. | — | `DEFERRED` |
 | `DATE(y, m, d)` | Build a date from numeric parts. | — | You would otherwise write the literal `2026-09-03`; computed components are rare. | — | `DEFERRED` |
 | `COALESCE(a, b, …)` | First non-blank argument. | Real tables have optional columns (override price, ad-hoc discount) with no clean path today. | Introduces a **`blank` in-flight value** — a fourth kind beside number/date/string/boolean. `blank + 5` must be defined, and any `blank → 0` is a silent guess (constraint 3). The single change that most "becomes Excel". | — | `DEFERRED` |
@@ -239,5 +238,7 @@ the same time.
 | Generated artifacts (`chart` statements) | language feature | [#36](https://github.com/michal-niedzwiedzki/visimark/issues/36) | [#39](https://github.com/michal-niedzwiedzki/visimark/pull/39) | — | [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/36#issuecomment-5575507072) |
 | Sheet-id / anchor-comment grammar hardening | language feature | [#38](https://github.com/michal-niedzwiedzki/visimark/issues/38) | [#48](https://github.com/michal-niedzwiedzki/visimark/pull/48) | — | [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/38#issuecomment-5588230949) |
 | `Σ` / `∑` alias for `SUM` | language feature | [#43](https://github.com/michal-niedzwiedzki/visimark/issues/43) | [#49](https://github.com/michal-niedzwiedzki/visimark/pull/49) | — | [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/43#issuecomment-5588631404) |
+| `FLOOR(number, significance)` | mapper | [#53](https://github.com/michal-niedzwiedzki/visimark/issues/53) | [#56](https://github.com/michal-niedzwiedzki/visimark/pull/56) | — | [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/53#issuecomment-5598663415) |
+| `CEILING(number, significance)` | mapper | [#54](https://github.com/michal-niedzwiedzki/visimark/issues/54) | [#59](https://github.com/michal-niedzwiedzki/visimark/pull/59) | — | [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/54#issuecomment-5600795875) |
 
 <!--vmark:no-formulas-->

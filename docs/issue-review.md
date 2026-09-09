@@ -1,13 +1,14 @@
 # Reviewing an issue
 
-**Claude drafts; the maintainer decides; the issue comment is the reason.**
+**An agent drafts; the maintainer decides; the issue comment is the reason.**
 An issue — a vocabulary request on the
 [template](../.github/ISSUE_TEMPLATE/vocabulary-request.yml), or any free-form
 proposal for a language feature, a tooling change, or a documentation fix — is
 judged against the design doc's constraints, recorded as a comment that
 [`vocabulary-catalogue.md`](vocabulary-catalogue.md) then links, and catalogued
-through one pull request to `master`. Three Claude Code commands carry the
-mechanics; every judgement call is yours.
+through one pull request to `master`. Three slash commands carry the
+mechanics; every judgement call is yours. Commits the agent makes are
+attributed per [`.claude/rules/ai-attribution.md`](../.claude/rules/ai-attribution.md).
 
 ## Two tracks
 
@@ -30,7 +31,7 @@ The commands look at the issue and pick a track:
 | Command | What it does | What it writes |
 |---------|--------------|----------------|
 | `/issue-review <n> [--draft]` | Picks the track, parses or analyses the issue, checks it against the constraints, runs `visimark check` / `infer` on any motivating document, drafts a recommendation | A pre-review comment on the issue and a PR adding the row as `NEW` — or, with `--draft`, nothing. A thin or misfiled issue gets only a comment. |
-| `/issue-discuss <n>` | Condenses the review conversation you had with Claude in the session into a neutral summary, shows it to you, and posts it only if you approve | A `**Discussion summary**` comment on the issue — nothing else |
+| `/issue-discuss <n>` | Condenses the review conversation you had with the agent in the session into a neutral summary, shows it to you, and posts it only if you approve | A `**Discussion summary**` comment on the issue — nothing else |
 | `/issue-decide <n> [notes]` | Reconciles the pre-review with your steer, writes the decision, and lands it. **On `APPROVED` it first drafts the feature spec with you** — a gap hunt and a round of questions — and does nothing public until you call the spec ready; then it offers to draft the implementation plan, and then to execute it | A `Decision:` comment on the issue; the catalogue PR **merged** to `master` with the row at its verdict (the merge commit quotes the decision); the issue **closed** for `DEFERRED` / `REJECTED`, left open for `APPROVED` (and closed automatically once the change ships in a release); and, for `APPROVED`, a **draft** PR carrying the spec (`docs/vocab/<slug>-spec.md` or `docs/design/<slug>-spec.md`) and, if you asked for them, the plan and the implementation — promoted out of draft only once the build and CI are green |
 
 `/issue-discuss` is optional and repeatable — reach for it when the session
@@ -42,7 +43,7 @@ argument mattered and the issue thread should carry it before the decision.
    analysis before anything is public. Without `--draft` it posts the
    pre-review and opens the `NEW`-row PR on `vocab/issue-<n>-<slug>` (vocabulary)
    or `issue/<n>-<slug>` (general).
-2. **Talk it over.** Reply on the issue, or just keep talking to Claude in the
+2. **Talk it over.** Reply on the issue, or just keep talking to the agent in the
    session — "isn't this `MID`?", "what about the rounding edge?". No command
    needed. If that conversation produced reasoning the thread should keep, run
    **`/issue-discuss <n>`** and approve the summary it drafts.
@@ -87,13 +88,13 @@ adding a second one. If a re-decision lands on `APPROVED` and the `-impl` PR
 already exists, the revised spec is committed onto it rather than opening a
 second one.
 
-## What Claude checks
+## What the pre-review checks
 
 **Vocabulary requests** are judged against the four criteria in the
 [catalogue preface](vocabulary-catalogue.md#requesting-an-addition) and the
 constraints in `visimark-design.md` [§2](visimark-design.md#2-constraints-that-shaped-the-design), [§4](visimark-design.md#4-syntax), [§7](visimark-design.md#7-numeric-semantics) and [§14](visimark-design.md#14-deferred) —
 shape system, document-local value, no ambiguity, a real document that needs
-it — plus overlap with the eleven builtins, the operator set, and every row
+it — plus overlap with the thirteen builtins, the operator set, and every row
 already catalogued.
 
 **General issues** are judged against [§1](visimark-design.md#1-purpose) scope
@@ -104,7 +105,7 @@ existing behaviour and every catalogue row. The bar from
 [§14](visimark-design.md#14-deferred) — a real document needs it — applies to
 every class, not just vocabulary.
 
-The pre-review comment shows its working and is labelled as Claude's analysis,
+The pre-review comment shows its working and is labelled as automated analysis,
 not a decision.
 
 <!--vmark:no-formulas-->

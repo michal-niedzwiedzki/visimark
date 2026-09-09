@@ -38,8 +38,10 @@ test("every builtin declares a kind and an arity", () => {
   expect([...FUNCTIONS.keys()].sort()).toEqual([
     "ABS",
     "AVG",
+    "CEILING",
     "COUNT",
     "EOMONTH",
+    "FLOOR",
     "IF",
     "MAX",
     "MIN",
@@ -167,7 +169,8 @@ total = SUM(Net)
   // Spans differ by construction — Σ/∑ is one character, `SUM` is three — so
   // compare everything except span/sourceOffset, which the semantics table
   // (spec §3) says point at exactly what the author wrote, not at `SUM`.
-  const withoutSpan = (fs: Finding[]) => fs.map(({ span, sourceOffset, ...rest }) => rest);
+  const withoutSpan = (fs: Finding[]) =>
+    fs.map(({ span: _span, sourceOffset: _sourceOffset, ...rest }) => rest);
   expect(withoutSpan(run(withAlias("Σ")).findings)).toEqual(withoutSpan(run(src).findings));
   expect(withoutSpan(run(withAlias("∑")).findings)).toEqual(withoutSpan(run(src).findings));
 });
@@ -335,4 +338,186 @@ test("SQRT misspelled gets a did-you-mean", () => {
   expect(ts).toHaveLength(1);
   expect(ts[0]!.message).toBe("unknown function `SQR`");
   expect(ts[0]!.suggestion).toBe("SQRT");
+});
+
+// ---- FLOOR ----------------------------------------------------------
+
+test("FLOOR is a map of arity 2", () => {
+  expect(FUNCTIONS.get("FLOOR")).toEqual({ kind: "map", arity: 2 });
+  expect(isReduce("FLOOR")).toBe(false);
+  expect(callProblem("FLOOR", [{ type: "num" }, { type: "num" }])).toBeNull();
+  expect(callProblem("FLOOR", [])).toEqual({ kind: "arity", expected: 2, got: 0 });
+  expect(callProblem("FLOOR", [{ type: "num" }])).toEqual({
+    kind: "arity",
+    expected: 2,
+    got: 1,
+  });
+  expect(callProblem("FLOOR", [{ type: "num" }, { type: "num" }, { type: "num" }])).toEqual({
+    kind: "arity",
+    expected: 2,
+    got: 3,
+  });
+});
+
+test("FLOOR computes toward negative infinity (anchor-verified)", () => {
+  const src = `
+Floors: **15**<!--vmark=r.a-->, **-15**<!--vmark=r.b-->, **15**<!--vmark=r.c-->,
+**0**<!--vmark=r.d-->, **2**<!--vmark=r.e-->, **-3**<!--vmark=r.f-->,
+**1.2**<!--vmark=r.g-->, **0.3**<!--vmark=r.h-->, **48**<!--vmark=r.i-->,
+**5**<!--vmark=r.j-->, **-1**<!--vmark=r.k-->.
+
+\`\`\`vmark #r
+a = FLOOR(17, 5)
+b = FLOOR(-12, 5)
+c = FLOOR(15, 5)
+d = FLOOR(0, 5)
+e = FLOOR(2.5, 1)
+f = FLOOR(-2.5, 1)
+g = FLOOR(1.23, 0.1)
+h = FLOOR(0.3, 0.1)
+i = FLOOR(12000 / 250, 1)
+j = FLOOR(5.0001, 5)
+k = FLOOR(-0.0001, 1)
+\`\`\`
+`;
+  expect(run(src).findings).toEqual([]);
+});
+
+test("FLOOR of a non-number is a TYPE error", () => {
+  const fs = typeFindings(run(withScalar('FLOOR("x", 1)')).findings);
+  expect(fs).toHaveLength(1);
+  expect(fs[0]!.message).toBe("FLOOR expects a number");
+});
+
+test("FLOOR of a date is a TYPE error", () => {
+  const fs = typeFindings(run(withScalar("FLOOR(2026-01-01, 1)")).findings);
+  expect(fs).toHaveLength(1);
+  expect(fs[0]!.message).toBe("FLOOR expects a number");
+});
+
+test("FLOOR with a non-number significance is a TYPE error", () => {
+  const fs = typeFindings(run(withScalar('FLOOR(17, "x")')).findings);
+  expect(fs).toHaveLength(1);
+  expect(fs[0]!.message).toBe("FLOOR expects a number");
+});
+
+test("FLOOR with zero significance is a TYPE error", () => {
+  const fs = typeFindings(run(withScalar("FLOOR(17, 0)")).findings);
+  expect(fs).toHaveLength(1);
+  expect(fs[0]!.message).toBe("FLOOR significance must be a positive number");
+});
+
+test("FLOOR with negative significance is a TYPE error", () => {
+  const fs = typeFindings(run(withScalar("FLOOR(17, -5)")).findings);
+  expect(fs).toHaveLength(1);
+  expect(fs[0]!.message).toBe("FLOOR significance must be a positive number");
+});
+
+test("FLOOR with one argument is a TYPE arity error", () => {
+  const r = run(withColumnRule("FLOOR(Qty)"));
+  const ts = typeFindings(r.findings);
+  expect(ts).toHaveLength(1);
+  expect(ts[0]!.message).toBe("FLOOR() takes 2 arguments, got 1");
+  expect(ts[0]!.rowLabel).toBeUndefined();
+});
+
+test("FLOOR misspelled gets a did-you-mean", () => {
+  const r = run(withScalar("FLOR(Price, 1)"));
+  const ts = typeFindings(r.findings);
+  expect(ts).toHaveLength(1);
+  expect(ts[0]!.message).toBe("unknown function `FLOR`");
+  expect(ts[0]!.suggestion).toBe("FLOOR");
+});
+
+// ---- CEILING --------------------------------------------------------
+
+test("CEILING is a map of arity 2", () => {
+  expect(FUNCTIONS.get("CEILING")).toEqual({ kind: "map", arity: 2 });
+  expect(isReduce("CEILING")).toBe(false);
+  expect(callProblem("CEILING", [{ type: "num" }, { type: "num" }])).toBeNull();
+  expect(callProblem("CEILING", [])).toEqual({ kind: "arity", expected: 2, got: 0 });
+  expect(callProblem("CEILING", [{ type: "num" }])).toEqual({
+    kind: "arity",
+    expected: 2,
+    got: 1,
+  });
+  expect(callProblem("CEILING", [{ type: "num" }, { type: "num" }, { type: "num" }])).toEqual({
+    kind: "arity",
+    expected: 2,
+    got: 3,
+  });
+});
+
+test("CEILING computes toward positive infinity (anchor-verified)", () => {
+  const src = `
+Ceilings: **20**<!--vmark=r.a-->, **-10**<!--vmark=r.b-->, **15**<!--vmark=r.c-->,
+**0**<!--vmark=r.d-->, **3**<!--vmark=r.e-->, **-2**<!--vmark=r.f-->,
+**1.3**<!--vmark=r.g-->, **0.3**<!--vmark=r.h-->, **48**<!--vmark=r.i-->,
+**39**<!--vmark=r.j-->, **10**<!--vmark=r.k-->, **0**<!--vmark=r.l-->,
+**20**<!--vmark=r.m-->, **-10**<!--vmark=r.n-->.
+
+\`\`\`vmark #r
+a = CEILING(17, 5)
+b = CEILING(-12, 5)
+c = CEILING(15, 5)
+d = CEILING(0, 5)
+e = CEILING(2.5, 1)
+f = CEILING(-2.5, 1)
+g = CEILING(1.23, 0.1)
+h = CEILING(0.3, 0.1)
+i = CEILING(12000 / 250, 1)
+j = CEILING(307 / 8, 1)
+k = CEILING(5.0001, 5)
+l = CEILING(-0.0001, 1)
+m = -FLOOR(-17, 5)
+n = -FLOOR(12, 5)
+\`\`\`
+`;
+  expect(run(src).findings).toEqual([]);
+});
+
+test("CEILING of a non-number is a TYPE error", () => {
+  const fs = typeFindings(run(withScalar('CEILING("x", 1)')).findings);
+  expect(fs).toHaveLength(1);
+  expect(fs[0]!.message).toBe("CEILING expects a number");
+});
+
+test("CEILING of a date is a TYPE error", () => {
+  const fs = typeFindings(run(withScalar("CEILING(2026-01-01, 1)")).findings);
+  expect(fs).toHaveLength(1);
+  expect(fs[0]!.message).toBe("CEILING expects a number");
+});
+
+test("CEILING with a non-number significance is a TYPE error", () => {
+  const fs = typeFindings(run(withScalar('CEILING(17, "x")')).findings);
+  expect(fs).toHaveLength(1);
+  expect(fs[0]!.message).toBe("CEILING expects a number");
+});
+
+test("CEILING with zero significance is a TYPE error", () => {
+  const fs = typeFindings(run(withScalar("CEILING(17, 0)")).findings);
+  expect(fs).toHaveLength(1);
+  expect(fs[0]!.message).toBe("CEILING significance must be a positive number");
+});
+
+test("CEILING with negative significance is a TYPE error", () => {
+  const fs = typeFindings(run(withScalar("CEILING(17, -5)")).findings);
+  expect(fs).toHaveLength(1);
+  expect(fs[0]!.message).toBe("CEILING significance must be a positive number");
+});
+
+test("CEILING with one argument is a TYPE arity error", () => {
+  const r = run(withColumnRule("CEILING(Qty)"));
+  const ts = typeFindings(r.findings);
+  expect(ts).toHaveLength(1);
+  expect(ts[0]!.message).toBe("CEILING() takes 2 arguments, got 1");
+  expect(ts[0]!.rowLabel).toBeUndefined();
+});
+
+test("CEILING misspelled gets a did-you-mean", () => {
+  const r = run(withScalar("CELING(Price, 1)"));
+  const ts = typeFindings(r.findings);
+  expect(ts).toHaveLength(1);
+  expect(ts[0]!.message).toBe("unknown function `CELING`");
+  expect(ts[0]!.suggestion).toBe("CEILING");
 });
