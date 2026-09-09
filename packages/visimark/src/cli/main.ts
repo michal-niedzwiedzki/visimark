@@ -5,15 +5,15 @@ import { readVersion } from "./version.js";
 const USAGE = `visimark — spreadsheet mechanics for Markdown
 
 usage:
-  visimark check FILE...               read-only; exit 1 if any finding.
+  visimark check FILE... [--json]      read-only; exit 1 if any finding.
                                         A table with no \`vmark\` rules is a
                                         finding: run \`visimark infer\`, or mark
                                         the document \`<!--vmark:no-formulas-->\`
                                         if it has nothing to derive.
-  visimark fmt   FILE... [--fix-dates] rewrite computed cells and anchors
-  visimark infer FILE... [--write]     propose rules for a document with none
+  visimark fmt   FILE... [--fix-dates] [--json]
+  visimark infer FILE... [--write] [--json]
   visimark eval  FILE [--get NAME] [--json]
-  visimark explain FILE [#sheet]       print rules and dependency order
+  visimark explain FILE [#sheet] [--json]
   visimark --version | -v | version    print the version and exit
 
 exit codes: 0 clean, 1 findings, 2 usage or read failure`;

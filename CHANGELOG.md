@@ -4,6 +4,13 @@
 
 ### Added
 
+- **`--json` on all document CLI commands** (issue #60) — `check`, `fmt`,
+  `infer`, `eval`, and `explain` accept `--json` and print a deterministic
+  envelope of the command result. Default text output and exit codes are
+  unchanged. `eval --json` is now that envelope (`values`, `assertions`,
+  `charts`), not a flat map of binding names. Document quantities are decimal
+  strings.
+
 - **`CEILING(number, significance)`** — the thirteenth builtin (issue #54). A map,
   `number → number`, rounding `number` up to the nearest multiple of a
   positive `significance` toward positive infinity: `CEILING(17, 5) → 20`,
