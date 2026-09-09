@@ -521,4 +521,3 @@ test("CEILING misspelled gets a did-you-mean", () => {
   expect(ts[0]!.message).toBe("unknown function `CELING`");
   expect(ts[0]!.suggestion).toBe("CEILING");
 });
-
