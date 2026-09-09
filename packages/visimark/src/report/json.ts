@@ -1,6 +1,7 @@
 import { readVersion } from "../cli/version.js";
 import type { AssertionResult, ChartResult, CheckResult } from "../eval/check.js";
 import type { Value } from "../eval/value.js";
+import type { Proposal } from "../infer/propose.js";
 import { ERROR_CODES, isProblem, type Finding } from "../model/types.js";
 
 export type JsonWriter = (line: string) => void;
@@ -118,4 +119,38 @@ export function publicCharts(charts: ChartResult[]): object[] {
     path: c.path,
     state: c.state,
   }));
+}
+
+export function publicProposal(p: Proposal): object {
+  const out: Record<string, unknown> = {
+    kind: p.kind,
+    sheet: p.sheetId,
+    name: p.name,
+    rule: p.rule,
+    fits: p.fits,
+    rows: p.rows,
+    weak: p.weak ?? false,
+  };
+  if (p.reason) out.reason = p.reason;
+  if (p.alternatives) out.alternatives = p.alternatives;
+  if (p.disagreement) {
+    out.disagreement = {
+      rowLabel: p.disagreement.rowLabel,
+      stored: p.disagreement.stored,
+      computed: p.disagreement.computed,
+    };
+  }
+  return out;
+}
+
+export function inferSummary(proposals: Proposal[]): {
+  rules: number;
+  scalars: number;
+  anchors: number;
+} {
+  return {
+    rules: proposals.filter((p) => p.kind === "column" && !p.weak).length,
+    scalars: proposals.filter((p) => p.kind === "scalar").length,
+    anchors: proposals.filter((p) => p.kind === "scalar" && p.anchorSite).length,
+  };
 }

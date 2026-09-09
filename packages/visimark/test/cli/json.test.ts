@@ -197,3 +197,67 @@ test("fmt --json with no files: USAGE, exit 2", async () => {
   expect(await runCli(["fmt", "--json"], c.io)).toBe(2);
   expect(parseOut(c)).toMatchObject({ command: "fmt", status: "error", error: { code: "USAGE" } });
 });
+
+test("infer --json lists proposals and has no written key", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "visimark-json-"));
+  const p = join(dir, "plain.md");
+  writeFileSync(p, "| Item | Price |\n|------|------:|\n| pen  |  5.00 |\n");
+  const c = capture();
+  expect(await runCli(["infer", p, "--json"], c.io)).toBe(0);
+  const j = parseOut(c);
+  expect(j.command).toBe("infer");
+  expect(j.status).toBe("ok");
+  const file = (j.files as { proposals: unknown[]; written?: unknown }[])[0]!;
+  expect(file.written).toBeUndefined();
+  expect(Array.isArray(file.proposals)).toBe(true);
+});
+
+test("infer --write --json reports written.marker and still writes", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "visimark-json-"));
+  const p = join(dir, "plain.md");
+  writeFileSync(p, "| Item | Price |\n|------|------:|\n| pen  |  5.00 |\n");
+  const c = capture();
+  expect(await runCli(["infer", p, "--write", "--json"], c.io)).toBe(0);
+  const file = (
+    parseOut(c).files as { written: { marker: boolean; blocks: number; anchors: number } }[]
+  )[0]!;
+  expect(file.written.marker).toBe(true);
+  expect(readFileSync(p, "utf8")).toContain("<!--vmark:no-formulas-->");
+});
+
+test("explain --json lists schedule.Amount rule from source text", async () => {
+  const c = capture();
+  expect(await runCli(["explain", cleanPath, "--json"], c.io)).toBe(0);
+  const j = parseOut(c);
+  expect(j.command).toBe("explain");
+  expect(j.file).toBe(cleanPath);
+  const sheets = j.sheets as { id: string; rules: { name: string; rule: string }[] }[];
+  const schedule = sheets.find((s) => s.id === "schedule");
+  expect(schedule?.rules.some((r) => r.rule.includes("Share * lines.gross_total"))).toBe(true);
+});
+
+test("explain --json echoes Σ as written, not SUM", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "visimark-json-"));
+  const p = join(dir, "sigma.md");
+  writeFileSync(
+    p,
+    `| Item | Price | Qty |  Net |\n|------|------:|----:|-----:|\n| pen  |  5.00 |   2 | 10.00 |\n\n\`\`\`vmark #order\nNet = Price * Qty\ntotal = Σ(Net)\n\`\`\`\n`,
+  );
+  const c = capture();
+  expect(await runCli(["explain", p, "--json"], c.io)).toBe(0);
+  const sheets = parseOut(c).sheets as { scalars: { rule: string }[] }[];
+  const rules = sheets.flatMap((s) => s.scalars.map((x) => x.rule)).join("\n");
+  expect(rules).toContain("Σ(Net)");
+  expect(rules).not.toContain("SUM(Net)");
+});
+
+test("explain --json unknown sheet: USAGE, exit 2", async () => {
+  const c = capture();
+  expect(await runCli(["explain", cleanPath, "#nope", "--json"], c.io)).toBe(2);
+  expect(c.err()).toContain("no sheet #nope");
+  expect(parseOut(c)).toMatchObject({
+    command: "explain",
+    status: "error",
+    error: { code: "USAGE" },
+  });
+});

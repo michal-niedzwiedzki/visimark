@@ -15,9 +15,11 @@ import {
   errorEnvelope,
   evalValues,
   findingSummary,
+  inferSummary,
   publicAssertions,
   publicCharts,
   publicFinding,
+  publicProposal,
   statusFromExit,
 } from "../report/json.js";
 import { readVersion } from "./version.js";
@@ -221,41 +223,78 @@ export function cmdFmt(args: string[], out: Writer, err: Writer): number {
  */
 export function cmdInfer(args: string[], out: Writer, err: Writer): number {
   const { files, flags } = parseArgs(args);
+  const json = flags.has("json");
+  const write = flags.has("write");
   if (files.length === 0) {
-    err("usage: visimark infer FILE... [--write]");
+    const msg = "usage: visimark infer FILE... [--write]";
+    err(msg);
+    if (json) emitJson(out, errorEnvelope("infer", "USAGE", msg));
     return 2;
   }
-  let exit = 0;
+  const fileEntries: object[] = [];
+  let exit: 0 | 1 | 2 = 0;
+  let rules = 0;
+  let scalars = 0;
+  let anchors = 0;
   for (const path of files) {
     let source: string;
     try {
       source = read(path);
     } catch {
-      err(`visimark: cannot read ${path}`);
+      const msg = `visimark: cannot read ${path}`;
+      err(msg);
+      if (json) fileEntries.push({ path, error: { code: "READ", message: msg } });
       exit = 2;
       continue;
     }
     const proposals = infer(source);
-    out(formatInfer(path, source, proposals));
-    if (!flags.has("write")) continue;
-
-    const edits = planInfer(source, proposals);
-    if (edits.length === 0) {
-      out(`${path}: nothing to write`);
-      continue;
+    const counts = inferSummary(proposals);
+    rules += counts.rules;
+    scalars += counts.scalars;
+    anchors += counts.anchors;
+    if (!json) out(formatInfer(path, source, proposals));
+    let written: { blocks: number; anchors: number; marker: boolean } | undefined;
+    if (write) {
+      const edits = planInfer(source, proposals);
+      if (edits.length === 0) {
+        if (!json) out(`${path}: nothing to write`);
+        written = { blocks: 0, anchors: 0, marker: false };
+      } else {
+        writeFileSync(path, applyEdits(source, edits));
+        const marker = edits.some((e) => e.kind === "marker");
+        const blocks = edits.filter((e) => e.kind === "block").length;
+        const nAnchors = edits.filter((e) => e.kind === "anchor").length;
+        written = { blocks, anchors: nAnchors, marker };
+        if (!json) {
+          if (marker) {
+            out(`${path}: nothing to derive — marked \`${NO_FORMULAS_MARKER}\``);
+          } else {
+            const bits = [
+              blocks ? `${blocks} block${blocks === 1 ? "" : "s"}` : "",
+              nAnchors ? `${nAnchors} anchor${nAnchors === 1 ? "" : "s"}` : "",
+            ].filter(Boolean);
+            out(`${path}: wrote ${bits.join(", ")}`);
+          }
+        }
+      }
     }
-    writeFileSync(path, applyEdits(source, edits));
-    if (edits.some((e) => e.kind === "marker")) {
-      out(`${path}: nothing to derive — marked \`${NO_FORMULAS_MARKER}\``);
-      continue;
+    if (json) {
+      const entry: Record<string, unknown> = {
+        path,
+        proposals: proposals.map(publicProposal),
+      };
+      if (written) entry.written = written;
+      fileEntries.push(entry);
     }
-    const blocks = edits.filter((e) => e.kind === "block").length;
-    const anchors = edits.filter((e) => e.kind === "anchor").length;
-    const bits = [
-      blocks ? `${blocks} block${blocks === 1 ? "" : "s"}` : "",
-      anchors ? `${anchors} anchor${anchors === 1 ? "" : "s"}` : "",
-    ].filter(Boolean);
-    out(`${path}: wrote ${bits.join(", ")}`);
+  }
+  if (json) {
+    emitJson(out, {
+      command: "infer",
+      visimark: readVersion(),
+      status: statusFromExit(exit),
+      files: fileEntries,
+      summary: { files: files.length, rules, scalars, anchors },
+    });
   }
   return exit;
 }
@@ -349,21 +388,78 @@ function bareToQualified(model: DocModel, name: string): string {
 }
 
 export function cmdExplain(args: string[], out: Writer, err: Writer): number {
-  const { files, sheets } = parseArgs(args);
+  const { files, flags, sheets } = parseArgs(args);
+  const json = flags.has("json");
   const path = files[0];
   if (!path) {
-    err("usage: visimark explain FILE [#sheet]");
+    const msg = "usage: visimark explain FILE [#sheet]";
+    err(msg);
+    if (json) emitJson(out, errorEnvelope("explain", "USAGE", msg));
     return 2;
   }
   let source: string;
   try {
     source = read(path);
   } catch {
-    err(`visimark: cannot read ${path}`);
+    const msg = `visimark: cannot read ${path}`;
+    err(msg);
+    if (json) emitJson(out, errorEnvelope("explain", "READ", msg));
     return 2;
   }
   const model = build(locate(source));
   const { order, assertionIds, chartIds } = topoOrder(model);
+  const chartResults = check(model, { docPath: path }).charts;
+  const chartState = new Map(chartResults.map((c) => [`${c.sheetId}.${c.name}`, c]));
+
+  const wanted = sheets.length > 0 ? sheets : [...model.sheets.keys()];
+  for (const sid of wanted) {
+    if (!model.sheets.get(sid)) {
+      const msg = `visimark: no sheet #${sid}`;
+      err(msg);
+      if (json) emitJson(out, errorEnvelope("explain", "USAGE", msg));
+      return 2;
+    }
+  }
+
+  if (json) {
+    emitJson(out, {
+      command: "explain",
+      visimark: readVersion(),
+      status: "ok",
+      file: path,
+      documentScope: [...model.docScope.values()].map((b) => ({
+        name: b.name,
+        rule: slice(model, b),
+      })),
+      sheets: wanted.map((sid) => {
+        const sheet = model.sheets.get(sid)!;
+        const localOrder = order
+          .filter((b) => b.sheetId === sid && !assertionIds.has(b.id) && !chartIds.has(b.id))
+          .map((b) => b.name);
+        return {
+          id: sid,
+          hasTable: Boolean(sheet.table),
+          inputs: [...sheet.inputColumns],
+          rules: [...sheet.columns.values()].map((b) => ({ name: b.name, rule: slice(model, b) })),
+          scalars: [...sheet.scalars.values()].map((b) => ({ name: b.name, rule: slice(model, b) })),
+          order: localOrder,
+          assertions: sheet.assertions.map((a) => a.source.replace(/^assert\s+/, "")),
+          charts: sheet.charts.map((c) => {
+            const r = chartState.get(`${c.sheetId}.${c.name}`);
+            return {
+              name: c.name,
+              engine: c.engine,
+              series: c.series,
+              labels: c.labels,
+              path: r?.path ?? null,
+              state: r?.state ?? null,
+            };
+          }),
+        };
+      }),
+    });
+    return 0;
+  }
 
   if (model.docScope.size > 0) {
     out("document scope");
@@ -373,17 +469,8 @@ export function cmdExplain(args: string[], out: Writer, err: Writer): number {
     out("");
   }
 
-  const chartState = new Map(
-    check(model, { docPath: path }).charts.map((c) => [`${c.sheetId}.${c.name}`, c]),
-  );
-
-  const wanted = sheets.length > 0 ? sheets : [...model.sheets.keys()];
   for (const sid of wanted) {
-    const sheet = model.sheets.get(sid);
-    if (!sheet) {
-      err(`visimark: no sheet #${sid}`);
-      return 2;
-    }
+    const sheet = model.sheets.get(sid)!;
     out(`#${sid}${sheet.table ? "" : "  (no table)"}`);
     if (sheet.inputColumns.size > 0) {
       out(`  inputs:  ${[...sheet.inputColumns].join(", ")}`);
