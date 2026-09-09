@@ -398,7 +398,6 @@ Km = FLOOR(Qty)
   expect(ts[0]!.rowLabel).toBeUndefined();
 });
 
-
 // ---- assert statements -----------------------------------------------
 
 const planDoc = (assertLine: string, shares = ["30%", "40%", "20%"]) =>

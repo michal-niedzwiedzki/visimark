@@ -426,4 +426,3 @@ test("FLOOR misspelled gets a did-you-mean", () => {
   expect(ts[0]!.message).toBe("unknown function `FLOR`");
   expect(ts[0]!.suggestion).toBe("FLOOR");
 });
-
