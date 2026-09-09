@@ -7,6 +7,7 @@ allowed-tools: Bash(gh:*), Bash(git:*), Bash(bunx:*), Bash(mktemp:*), Bash(cat:*
 You are running the **pre-review** stage of the issue-review workflow.
 
 Read first, every run:
+- `.claude/rules/ai-attribution.md` — commit / PR trailer for **this** session (never copy a hardcoded Claude line)
 - `docs/superpowers/specs/2026-09-06-vocabulary-review-workflow-design.md` — the design
 - `docs/vocabulary-catalogue.md` — the register you will add a row to, its four vocabulary criteria, and sections E–F for everything else
 - `docs/visimark-design.md` — [§1](../../docs/visimark-design.md#1-purpose) (purpose, non-goals), [§2](../../docs/visimark-design.md#2-constraints-that-shaped-the-design) (constraints), [§4](../../docs/visimark-design.md#4-syntax) (shape system), [§7](../../docs/visimark-design.md#7-numeric-semantics) (numeric semantics), [§9](../../docs/visimark-design.md#9-write-back) (write-back), [§14](../../docs/visimark-design.md#14-deferred) (deferred)
@@ -154,7 +155,7 @@ Print: the track and (general) the class; the parsed request or the analysed pro
 ### Without --draft
 
 **Post the pre-review comment.** Write the body to a temp file and run `gh issue comment <n> --body-file <file>`. First line verbatim:
-`**Automated pre-review** — analysis by Claude for the maintainer's decision, not a decision itself.`
+`**Automated pre-review** — analysis for the maintainer's decision, not a decision itself.`
 Then: the parsed request or analysed proposal; each rubric item (verdict + cited §); the `check`/`infer` output in a fenced block if run; overlap findings; (general, language feature) the Open design questions; the recommended disposition; the proposed catalogue row rendered as a Markdown table row.
 
 **Special stops — comment only, no branch, no PR:**
@@ -168,9 +169,9 @@ Then: the parsed request or analysed proposal; each rubric item (verdict + cited
 2. `git switch -c <branch> origin/master` — `<branch>` is `vocab/issue-<n>-<slug>` (vocab track) or `issue/<n>-<slug>` (general track).
 3. Add the row to the correct section table in `docs/vocabulary-catalogue.md` (A–D vocab, E language features, F tooling / process), Status cell empty (rendered as ` ` — the row still has the right number of `|`), Request `[#<n>](<url>)`.
 4. `git add docs/vocabulary-catalogue.md`
-5. `git commit -m "$(printf 'docs: catalogue #%s (%s) as NEW\n\nCo-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>' <n> '<name>')"`
+5. `git commit -m "$(printf 'docs: catalogue #%s (%s) as NEW\n\n%s' <n> '<name>' '<attribution-trailer>')"` — `<attribution-trailer>` from `.claude/rules/ai-attribution.md` for this session.
 6. `git push -u origin HEAD`
-7. `gh pr create --base master --title "Catalogue #<n>: <name> (NEW)" --body "$(printf '<one-paragraph summary of the request>\n\nDecision to follow on #%s.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)' <n>)"`
+7. `gh pr create --base master --title "Catalogue #<n>: <name> (NEW)" --body "$(printf '<one-paragraph summary of the request>\n\nDecision to follow on #%s.' <n>)"` — no `Generated with Claude Code` footer unless this session is Claude Code (same rule).
 8. `git switch -`
 
 Print the comment URL, the PR URL, and: "Discuss on the issue or here, then run /issue-decide <n> when ready."

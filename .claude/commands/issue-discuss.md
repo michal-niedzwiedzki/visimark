@@ -6,7 +6,7 @@ allowed-tools: Bash(gh:*), Bash(mktemp:*), Bash(cat:*), Read, AskUserQuestion
 
 You are running the **discussion** stage of the issue-review workflow — it
 sits between `/issue-review` and `/issue-decide`. The design has the maintainer
-"talk it over with Claude in the session" (design [§1](../../docs/visimark-design.md#1-purpose)); that back-and-forth is
+"talk it over with the agent in the session" (design [§1](../../docs/visimark-design.md#1-purpose)); that back-and-forth is
 where the real reasoning happens and today it is lost. This command condenses it
 into a public comment so the issue thread stays the durable record.
 

@@ -7,6 +7,7 @@ allowed-tools: Bash(gh:*), Bash(git:*), Bash(bun:*), Bash(bunx:*), Bash(mktemp:*
 You are running the **decision** stage of the issue-review workflow.
 
 Read first, every run:
+- `.claude/rules/ai-attribution.md` — commit / PR trailer for **this** session (never copy a hardcoded Claude line)
 - `docs/superpowers/specs/2026-09-06-vocabulary-review-workflow-design.md` — the design
 - `docs/vocabulary-catalogue.md` — the register, its four vocabulary criteria, its status values, and sections E–F for everything else
 - `docs/visimark-design.md` — [§1](../../docs/visimark-design.md#1-purpose), [§2](../../docs/visimark-design.md#2-constraints-that-shaped-the-design), [§4](../../docs/visimark-design.md#4-syntax), [§5](../../docs/visimark-design.md#5-dates), [§7](../../docs/visimark-design.md#7-numeric-semantics), [§9](../../docs/visimark-design.md#9-write-back), [§10](../../docs/visimark-design.md#10-error-taxonomy), [§13](../../docs/visimark-design.md#13-testing), [§14](../../docs/visimark-design.md#14-deferred)
@@ -148,11 +149,12 @@ Edit the row **in its section table**: fill `Pros` / `Cons` (or `Cons` / the equ
 
 ```bash
 git add docs/vocabulary-catalogue.md
-git commit -m "$(printf 'docs: decide #%s (%s) — %s\n\nCo-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>' <n> '<name>' <VERDICT>)"
+git commit -m "$(printf 'docs: decide #%s (%s) — %s\n\n%s' <n> '<name>' <VERDICT> '<attribution-trailer>')"
 git push -u origin HEAD
 ```
+`<attribution-trailer>` is the `Co-Authored-By:` line from `.claude/rules/ai-attribution.md` for this session.
 
-- **New branch** → `gh pr create --base master --title "Catalogue #<n>: <name> (<VERDICT>)" --body "$(printf '%s\n\n%s\n\nDeciding comment: %s\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)' '<the decision>' '<the reason>' '<comment-url>')"`
+- **New branch** → `gh pr create --base master --title "Catalogue #<n>: <name> (<VERDICT>)" --body "$(printf '%s\n\n%s\n\nDeciding comment: %s' '<the decision>' '<the reason>' '<comment-url>')"` — no vendor footer unless the attribution rule says this session owns one.
 - **Existing review PR** → the push updates it; `gh pr edit <num> --title "Catalogue #<n>: <name> (<VERDICT>)"` and append the decision to its body with `gh pr edit <num> --body ...`.
 
 Do **not** put `closes #<n>` anywhere in the PR body — the issue's state is set explicitly in step 6, not by a merge keyword.
@@ -199,12 +201,12 @@ Write the finalised step-3 spec to the spec path (VOCAB: `docs/vocab/<slug>-spec
 
 ```bash
 git add <spec-path>
-git commit -m "$(printf 'docs: spec for #%s (%s)\n\nApproved on #%s. Feature spec for handoff to an implementation plan.\n\nCo-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>' <n> '<name>' <n>)"
+git commit -m "$(printf 'docs: spec for #%s (%s)\n\nApproved on #%s. Feature spec for handoff to an implementation plan.\n\n%s' <n> '<name>' <n> '<attribution-trailer>')"
 git push -u origin HEAD
 ```
 
 - **New branch** →
-  `gh pr create --draft --base master --title "Spec #<n>: <name>" --body "$(printf 'Feature spec for `%s`, approved on #%s.\n\nDeciding comment: %s\n\n**Draft** until the implementation is complete and CI is green — it holds the spec now, then the plan, then the code.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)' '<name>' <n> '<comment-url>')"`
+  `gh pr create --draft --base master --title "Spec #<n>: <name>" --body "$(printf 'Feature spec for `%s`, approved on #%s.\n\nDeciding comment: %s\n\n**Draft** until the implementation is complete and CI is green — it holds the spec now, then the plan, then the code.' '<name>' <n> '<comment-url>')"`
 - **Existing `-impl` PR** (3.1 guard) → the push updates it; no new PR. If it was promoted out of draft by an earlier run, leave it as it is.
 
 The PR is opened **as a draft** and stays a draft through steps 8 and 9 — only
@@ -228,6 +230,9 @@ Ask the maintainer via `AskUserQuestion` — "Write the implementation plan now?
   `superpowers:writing-plans` house format — `Goal`, `Architecture`,
   `Tech Stack`, a `Spec:` link to the spec file, `Global Constraints`,
   then checkbox `Task` sections each with `Files`, `Interfaces`, and `Step`s.
+  Global Constraints must require the commit trailer from
+  `.claude/rules/ai-attribution.md`; do not hardcode a vendor name into the
+  plan.
 
   **While drafting, do not silently fill a gap the spec does not settle.** Any
   decision you cannot infer with high confidence — module boundaries and which
@@ -255,7 +260,7 @@ Ask the maintainer via `AskUserQuestion` — "Write the implementation plan now?
   Then:
   ```bash
   git add <plan-path>
-  git commit -m "$(printf 'docs: implementation plan for #%s (%s)\n\nCo-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>' <n> '<name>')"
+  git commit -m "$(printf 'docs: implementation plan for #%s (%s)\n\n%s' <n> '<name>' '<attribution-trailer>')"
   git push
   ```
   The push updates the spec PR, which now carries the spec and the plan. Stay on
