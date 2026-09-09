@@ -398,6 +398,56 @@ Km = FLOOR(Qty)
   expect(ts[0]!.rowLabel).toBeUndefined();
 });
 
+test("CEILING: a clean scalar verifies", () => {
+  const src = `
+n is **20**<!--vmark=s.n-->.
+
+\`\`\`vmark #s
+n = CEILING(17, 5)
+\`\`\`
+`;
+  expect(run(src).findings).toEqual([]);
+});
+
+test("CEILING: one zero-significance row is a single TYPE finding, no NOTE", () => {
+  const src = `
+| Item | Amount | Step | Bucket |
+|------|-------:|-----:|-------:|
+| a    |     17 |    5 |     20 |
+| b    |     17 |    0 |      0 |
+| c    |     12 |    5 |     15 |
+
+\`\`\`vmark #t
+Bucket = CEILING(Amount, Step)
+\`\`\`
+`;
+  const r = run(src);
+  expect(r.findings.map((f) => f.code).sort()).toEqual(["TYPE"]);
+  expect(r.findings.find((f) => f.code === "TYPE")).toMatchObject({
+    name: "Bucket",
+    rowLabel: "b",
+    message: "CEILING significance must be a positive number",
+  });
+});
+
+test("CEILING: a 1-arg call in a column rule is one static TYPE, not one per row", () => {
+  const src = `
+| Leg | Qty |   Km |
+|-----|----:|-----:|
+| a   |  10 | 0.00 |
+| b   |   4 | 0.00 |
+
+\`\`\`vmark #legs
+Km = CEILING(Qty)
+\`\`\`
+`;
+  const r = run(src);
+  const ts = r.findings.filter((f) => f.code === "TYPE");
+  expect(ts).toHaveLength(1);
+  expect(ts[0]!.message).toBe("CEILING() takes 2 arguments, got 1");
+  expect(ts[0]!.rowLabel).toBeUndefined();
+});
+
 // ---- assert statements -----------------------------------------------
 
 const planDoc = (assertLine: string, shares = ["30%", "40%", "20%"]) =>
