@@ -441,7 +441,10 @@ export function cmdExplain(args: string[], out: Writer, err: Writer): number {
           hasTable: Boolean(sheet.table),
           inputs: [...sheet.inputColumns],
           rules: [...sheet.columns.values()].map((b) => ({ name: b.name, rule: slice(model, b) })),
-          scalars: [...sheet.scalars.values()].map((b) => ({ name: b.name, rule: slice(model, b) })),
+          scalars: [...sheet.scalars.values()].map((b) => ({
+            name: b.name,
+            rule: slice(model, b),
+          })),
           order: localOrder,
           assertions: sheet.assertions.map((a) => a.source.replace(/^assert\s+/, "")),
           charts: sheet.charts.map((c) => {
