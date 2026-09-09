@@ -1,9 +1,9 @@
 import { expect, test } from "bun:test";
 import { createRequire } from "node:module";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { assertFailPath, cleanPath, driftPath } from "../examples.js";
+import { assertFailPath, cleanPath, drift, driftPath } from "../examples.js";
 import { runCli } from "../../src/cli/main.js";
 
 const version = (createRequire(import.meta.url)("../../package.json") as { version: string })
@@ -168,4 +168,32 @@ test("eval --json column with a null cell", async () => {
   const values = parseOut(c).values as { "t.Net": (string | null)[] };
   expect(values["t.Net"][0]).toBe("2");
   expect(values["t.Net"][1]).toBeNull();
+});
+
+test("fmt --json reports post-write facts and still rewrites the file", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "visimark-json-"));
+  const p = join(dir, "drift.md");
+  writeFileSync(p, drift);
+  const c1 = capture();
+  const code1 = await runCli(["fmt", p, "--json"], c1.io);
+  expect(code1).toBe(1);
+  const j1 = parseOut(c1);
+  expect(j1.command).toBe("fmt");
+  expect(j1.status).toBe("problems");
+  const f1 = (j1.files as { changed: boolean; cellsUpdated: number; path: string }[])[0]!;
+  expect(f1.path).toBe(p);
+  expect(f1.changed).toBe(true);
+  expect(f1.cellsUpdated).toBeGreaterThan(0);
+  expect(readFileSync(p, "utf8")).not.toBe(drift);
+
+  const c2 = capture();
+  await runCli(["fmt", p, "--json"], c2.io);
+  const f2 = (parseOut(c2).files as { changed: boolean }[])[0]!;
+  expect(f2.changed).toBe(false);
+});
+
+test("fmt --json with no files: USAGE, exit 2", async () => {
+  const c = capture();
+  expect(await runCli(["fmt", "--json"], c.io)).toBe(2);
+  expect(parseOut(c)).toMatchObject({ command: "fmt", status: "error", error: { code: "USAGE" } });
 });

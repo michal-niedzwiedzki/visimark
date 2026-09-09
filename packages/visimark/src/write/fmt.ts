@@ -22,6 +22,8 @@ export interface FmtOptions {
 export interface ArtifactWrite {
   target: string;
   svg: string;
+  /** path as the document named it; JSON reports this, never `target` */
+  path: string | null;
 }
 
 export interface FmtResult {
@@ -162,7 +164,7 @@ export function fmt(source: string, opts: FmtOptions = {}): FmtResult {
   // rule a column with a UNIT conflict already follows
   const artifacts = result.charts
     .filter((c) => (c.state === "stale" || c.state === "missing") && c.target && c.svg)
-    .map((c) => ({ target: c.target!, svg: c.svg! }));
+    .map((c) => ({ target: c.target!, svg: c.svg!, path: c.path }));
 
   return {
     output,

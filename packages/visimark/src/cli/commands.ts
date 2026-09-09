@@ -116,18 +116,32 @@ export function cmdCheck(args: string[], out: Writer, err: Writer): number {
 
 export function cmdFmt(args: string[], out: Writer, err: Writer): number {
   const { files, flags } = parseArgs(args);
+  const json = flags.has("json");
   if (files.length === 0) {
-    err("usage: visimark fmt FILE... [--fix-dates]");
+    const msg = "usage: visimark fmt FILE... [--fix-dates]";
+    err(msg);
+    if (json) emitJson(out, errorEnvelope("fmt", "USAGE", msg));
     return 2;
   }
   const fixDates = flags.has("fix-dates");
-  let exit = 0;
+  const fileEntries: object[] = [];
+  let exit: 0 | 1 | 2 = 0;
+  let filesChanged = 0;
+  let cellsUpdated = 0;
+  let anchorsUpdated = 0;
+  let datesFixed = 0;
+  let artifactCount = 0;
+  let problems = 0;
+  let stale = 0;
+  let errors = 0;
   for (const path of files) {
     let source: string;
     try {
       source = read(path);
     } catch {
-      err(`visimark: cannot read ${path}`);
+      const msg = `visimark: cannot read ${path}`;
+      err(msg);
+      if (json) fileEntries.push({ path, error: { code: "READ", message: msg } });
       exit = 2;
       continue;
     }
@@ -138,23 +152,64 @@ export function cmdFmt(args: string[], out: Writer, err: Writer): number {
       writeFileSync(a.target, a.svg);
     }
     if (r.changed) writeFileSync(path, r.output);
-    if (r.changed || r.artifacts.length > 0) {
-      const bits = [
-        r.cellsUpdated ? `${r.cellsUpdated} cell${r.cellsUpdated === 1 ? "" : "s"}` : "",
-        r.anchorsUpdated ? `${r.anchorsUpdated} anchor${r.anchorsUpdated === 1 ? "" : "s"}` : "",
-        r.datesFixed ? `${r.datesFixed} date${r.datesFixed === 1 ? "" : "s"}` : "",
-        r.artifacts.length
-          ? `${r.artifacts.length} artifact${r.artifacts.length === 1 ? "" : "s"}`
-          : "",
-      ].filter(Boolean);
-      out(`${path}: updated ${bits.join(", ")}`);
+    if (!json) {
+      if (r.changed || r.artifacts.length > 0) {
+        const bits = [
+          r.cellsUpdated ? `${r.cellsUpdated} cell${r.cellsUpdated === 1 ? "" : "s"}` : "",
+          r.anchorsUpdated ? `${r.anchorsUpdated} anchor${r.anchorsUpdated === 1 ? "" : "s"}` : "",
+          r.datesFixed ? `${r.datesFixed} date${r.datesFixed === 1 ? "" : "s"}` : "",
+          r.artifacts.length
+            ? `${r.artifacts.length} artifact${r.artifacts.length === 1 ? "" : "s"}`
+            : "",
+        ].filter(Boolean);
+        out(`${path}: updated ${bits.join(", ")}`);
+      } else {
+        out(`${path}: unchanged`);
+      }
+      if (r.unfixable.length > 0) {
+        out(formatCheck(path, r.unfixable));
+        if (exit === 0) exit = 1;
+      }
     } else {
-      out(`${path}: unchanged`);
+      const summary = findingSummary(r.unfixable);
+      fileEntries.push({
+        path,
+        changed: r.changed,
+        cellsUpdated: r.cellsUpdated,
+        anchorsUpdated: r.anchorsUpdated,
+        datesFixed: r.datesFixed,
+        artifacts: r.artifacts.map((a) => ({ path: a.path })),
+        findings: r.unfixable.map((f) => publicFinding(path, f)),
+      });
+      if (r.changed) filesChanged++;
+      cellsUpdated += r.cellsUpdated;
+      anchorsUpdated += r.anchorsUpdated;
+      datesFixed += r.datesFixed;
+      artifactCount += r.artifacts.length;
+      problems += summary.problems;
+      stale += summary.stale;
+      errors += summary.errors;
+      if (r.unfixable.length > 0 && exit === 0) exit = 1;
     }
-    if (r.unfixable.length > 0) {
-      out(formatCheck(path, r.unfixable));
-      if (exit === 0) exit = 1;
-    }
+  }
+  if (json) {
+    emitJson(out, {
+      command: "fmt",
+      visimark: readVersion(),
+      status: statusFromExit(exit),
+      files: fileEntries,
+      summary: {
+        files: files.length,
+        filesChanged,
+        cellsUpdated,
+        anchorsUpdated,
+        datesFixed,
+        artifacts: artifactCount,
+        problems,
+        stale,
+        errors,
+      },
+    });
   }
   return exit;
 }
