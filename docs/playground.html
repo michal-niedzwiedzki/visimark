@@ -41,8 +41,7 @@
       pre,
       code,
       .mono {
-        font-family:
-          "SF Mono", "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
+        font-family: "SF Mono", "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
       }
 
       .playground {
@@ -208,8 +207,7 @@
         height: 100%;
         background: transparent;
         color: #e6e6e6;
-        font-family:
-          "SF Mono", "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
+        font-family: "SF Mono", "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
         font-size: 0.82rem;
         line-height: 1.55;
       }
@@ -667,7 +665,8 @@
 
           <div class="diag-view" data-group="diag" data-view="infer">
             <div class="diag-scroll">
-              <pre id="infer-body">Click Infer to see what VisiMark would propose for this
+              <pre id="infer-body">
+Click Infer to see what VisiMark would propose for this
 document — column rules, named scalars, and constants it
 recognises in the prose.</pre>
             </div>
@@ -745,737 +744,743 @@ recognises in the prose.</pre>
     <script src="./vendor/playground-data.js"></script>
     <script src="./vendor/visimark-browser.js"></script>
     <script>
-    (async function () {
-      var LOGO_DATA_URI = window.LOGO_DATA_URI;
-      var VM = window.VisiMark;
+      (async function () {
+        var LOGO_DATA_URI = window.LOGO_DATA_URI;
+        var VM = window.VisiMark;
 
-      document.getElementById("logo").src = LOGO_DATA_URI;
-      var favicon = document.createElement("link");
-      favicon.rel = "icon";
-      favicon.href = LOGO_DATA_URI;
-      document.head.appendChild(favicon);
+        document.getElementById("logo").src = LOGO_DATA_URI;
+        var favicon = document.createElement("link");
+        favicon.rel = "icon";
+        favicon.href = LOGO_DATA_URI;
+        document.head.appendChild(favicon);
 
-      // ---- in-memory file store -------------------------------------------------
-      // Fetched fresh from this page's own directory on every load — docs/
-      // and the playground are now the same tree, so there's nothing to bake
-      // or keep in sync by hand (contrast the logo above, which still is).
-      // The numbered chapters are docs/SCENARIOS.md's tutorial track, one
-      // concept per file — their SCENARIO-panel body/quest comes from
-      // ../SCENARIOS.json, merged into scenarios.json below.
-      var TUTORIAL_CHAPTERS = [
-        "01-tables.md",
-        "02-inference.md",
-        "03-sheets.md",
-        "04-anchors.md",
-        "05-mappers.md",
-        "06-aggregates.md",
-        "07-reasoning.md",
-        "08-knowledge.md",
-        "09-units.md",
-        "10-assertions.md",
-        "11-build-automation.md",
-        "12-charts.md",
-      ];
-      var FILE_SOURCES = { "demo.md": "playground/demo.md" };
-      TUTORIAL_CHAPTERS.forEach(function (name) {
-        FILE_SOURCES[name] = "playground/tutorial/" + name;
-      });
-      Object.assign(FILE_SOURCES, {
-        "example-invoice.md": "example-invoice.md",
-        "example-invoice-drift.md": "example-invoice-drift.md",
-        "example-quote-plain.md": "example-quote-plain.md",
-        "example-charts.md": "example-charts.md",
-        "example-executable-documentation.md": "example-executable-documentation.md",
-      });
-      async function loadFiles() {
-        var names = Object.keys(FILE_SOURCES);
-        var texts = await Promise.all(
-          names.map(async function (name) {
-            var res = await fetch(FILE_SOURCES[name]);
-            if (!res.ok) throw new Error(FILE_SOURCES[name] + ": HTTP " + res.status);
-            return res.text();
-          }),
-        );
-        var files = {};
-        names.forEach(function (name, i) {
-          files[name] = texts[i];
+        // ---- in-memory file store -------------------------------------------------
+        // Fetched fresh from this page's own directory on every load — docs/
+        // and the playground are now the same tree, so there's nothing to bake
+        // or keep in sync by hand (contrast the logo above, which still is).
+        // The numbered chapters are docs/SCENARIOS.md's tutorial track, one
+        // concept per file — their SCENARIO-panel body/quest comes from
+        // ../SCENARIOS.json, merged into scenarios.json below.
+        var TUTORIAL_CHAPTERS = [
+          "01-tables.md",
+          "02-inference.md",
+          "03-sheets.md",
+          "04-anchors.md",
+          "05-mappers.md",
+          "06-aggregates.md",
+          "07-reasoning.md",
+          "08-knowledge.md",
+          "09-units.md",
+          "10-assertions.md",
+          "11-build-automation.md",
+          "12-charts.md",
+        ];
+        var FILE_SOURCES = { "demo.md": "playground/demo.md" };
+        TUTORIAL_CHAPTERS.forEach(function (name) {
+          FILE_SOURCES[name] = "playground/tutorial/" + name;
         });
-        return files;
-      }
-      var FILES = await loadFiles();
-      var order = Object.keys(FILES);
-      var contents = Object.assign({}, FILES);
-      var current = "demo.md";
-
-      // ---- scenario data -----------------------------------------------------
-      // Declarative — see normalizeStep() below for the schema and check-name
-      // vocabulary. Two sources merged into one map, keyed by filename:
-      // playground/scenarios.json (the showcase examples) and SCENARIOS.json
-      // (the numbered tutorial chapters, derived from SCENARIOS.md).
-      async function fetchJson(path) {
-        var res = await fetch(path);
-        if (!res.ok) throw new Error(path + ": HTTP " + res.status);
-        return res.json();
-      }
-      async function loadScenarios() {
-        var sources = await Promise.all([
-          fetchJson("playground/scenarios.json"),
-          fetchJson("SCENARIOS.json"),
-        ]);
-        var merged = {};
-        sources.forEach(function (data) {
-          Object.keys(data).forEach(function (name) {
-            if (name !== "//") merged[name] = data[name];
+        Object.assign(FILE_SOURCES, {
+          "example-invoice.md": "example-invoice.md",
+          "example-invoice-drift.md": "example-invoice-drift.md",
+          "example-quote-plain.md": "example-quote-plain.md",
+          "example-charts.md": "example-charts.md",
+          "example-executable-documentation.md": "example-executable-documentation.md",
+        });
+        async function loadFiles() {
+          var names = Object.keys(FILE_SOURCES);
+          var texts = await Promise.all(
+            names.map(async function (name) {
+              var res = await fetch(FILE_SOURCES[name]);
+              if (!res.ok) throw new Error(FILE_SOURCES[name] + ": HTTP " + res.status);
+              return res.text();
+            }),
+          );
+          var files = {};
+          names.forEach(function (name, i) {
+            files[name] = texts[i];
           });
-        });
-        return merged;
-      }
-      var SCENARIOS = await loadScenarios();
-      var SCENARIO_FALLBACK = SCENARIOS.__fallback__;
+          return files;
+        }
+        var FILES = await loadFiles();
+        var order = Object.keys(FILES);
+        var contents = Object.assign({}, FILES);
+        var current = "demo.md";
 
-      // ---- CodeMirror editor ------------------------------------------------
-      var cm = CodeMirror.fromTextArea(document.getElementById("editor-ta"), {
-        mode: "gfm",
-        lineNumbers: true,
-        lineWrapping: true,
-        viewportMargin: Infinity,
-        theme: "default",
-      });
-      cm.setValue(contents[current]);
-
-      // ---- terminal ------------------------------------------------------------
-      var termEl = document.getElementById("terminal-body");
-      function term(line, cls) {
-        var span = document.createElement("span");
-        if (cls) span.className = cls;
-        span.textContent = line + "\n";
-        termEl.appendChild(span);
-        var body = termEl.parentElement;
-        body.scrollTop = body.scrollHeight;
-      }
-      function termCmd(text) {
-        term("$ " + text, "cmd");
-      }
-      var TERM_MAX_LINES = 400;
-      function trimTerminal() {
-        while (termEl.childNodes.length > TERM_MAX_LINES) termEl.removeChild(termEl.firstChild);
-      }
-
-      // ---- files panel -----------------------------------------------------
-      var fileListEl = document.getElementById("file-list");
-      function renderFileList() {
-        fileListEl.innerHTML = "";
-        order.forEach(function (name) {
-          var b = document.createElement("button");
-          b.className = "file-btn" + (name === current ? " active" : "");
-          b.type = "button";
-          b.textContent = name;
-          b.addEventListener("click", function () {
-            selectFile(name);
+        // ---- scenario data -----------------------------------------------------
+        // Declarative — see normalizeStep() below for the schema and check-name
+        // vocabulary. Two sources merged into one map, keyed by filename:
+        // playground/scenarios.json (the showcase examples) and SCENARIOS.json
+        // (the numbered tutorial chapters, derived from SCENARIOS.md).
+        async function fetchJson(path) {
+          var res = await fetch(path);
+          if (!res.ok) throw new Error(path + ": HTTP " + res.status);
+          return res.json();
+        }
+        async function loadScenarios() {
+          var sources = await Promise.all([
+            fetchJson("playground/scenarios.json"),
+            fetchJson("SCENARIOS.json"),
+          ]);
+          var merged = {};
+          sources.forEach(function (data) {
+            Object.keys(data).forEach(function (name) {
+              if (name !== "//") merged[name] = data[name];
+            });
           });
-          fileListEl.appendChild(b);
+          return merged;
+        }
+        var SCENARIOS = await loadScenarios();
+        var SCENARIO_FALLBACK = SCENARIOS.__fallback__;
+
+        // ---- CodeMirror editor ------------------------------------------------
+        var cm = CodeMirror.fromTextArea(document.getElementById("editor-ta"), {
+          mode: "gfm",
+          lineNumbers: true,
+          lineWrapping: true,
+          viewportMargin: Infinity,
+          theme: "default",
         });
-      }
+        cm.setValue(contents[current]);
 
-      function selectFile(name) {
-        if (name === current) return;
-        contents[current] = cm.getValue();
-        current = name;
-        cm.setValue(contents[name]);
-        document.getElementById("editor-filename").textContent = current;
-        renderFileList();
-        inferEl.textContent = INFER_PLACEHOLDER;
-        renderScenario(current);
-        selectTab("diag", "reasoning");
-        runFmt();
-        refreshDerived();
-        trimTerminal();
-      }
-
-      document.getElementById("new-file-btn").addEventListener("click", function () {
-        var name = window.prompt("New file name", "untitled.md");
-        if (!name) return;
-        name = name.trim();
-        if (!name) return;
-        if (!/\.md$/i.test(name)) name += ".md";
-        if (Object.prototype.hasOwnProperty.call(contents, name)) {
-          window.alert(name + " already exists.");
-          return;
+        // ---- terminal ------------------------------------------------------------
+        var termEl = document.getElementById("terminal-body");
+        function term(line, cls) {
+          var span = document.createElement("span");
+          if (cls) span.className = cls;
+          span.textContent = line + "\n";
+          termEl.appendChild(span);
+          var body = termEl.parentElement;
+          body.scrollTop = body.scrollHeight;
         }
-        contents[current] = cm.getValue();
-        contents[name] = "# Untitled\n\nWrite your VisiMark document here.\n";
-        order.push(name);
-        current = name;
-        cm.setValue(contents[name]);
-        document.getElementById("editor-filename").textContent = current;
-        renderFileList();
-        inferEl.textContent = INFER_PLACEHOLDER;
-        renderScenario(current);
-        selectTab("diag", "reasoning");
-        runFmt();
-        refreshDerived();
-      });
-
-      // ---- pipeline: fmt -> terminal, eval/explain -> knowledge/reasoning ----
-      var knowledgeEl = document.getElementById("knowledge-body");
-      var reasoningEl = document.getElementById("reasoning-body");
-      var inferEl = document.getElementById("infer-body");
-      var previewEl = document.getElementById("preview-body");
-      var flagEl = document.getElementById("build-flag");
-      var labelEl = document.getElementById("build-label");
-      var metaEl = document.getElementById("build-meta");
-      var INFER_PLACEHOLDER = inferEl.textContent;
-
-      // ---- Scenario: what to look at, per file --------------------------------
-      // The panel whose job is pointing at the other panels — each file here
-      // demonstrates something different, and a first-time viewer has no way
-      // to know that from raw JSON/terminal output alone. Below the framing
-      // paragraph, a short quest checklist turns that guidance into
-      // something to actually do — each step is detected for real (a tab
-      // click, an Infer/Build run, or a genuine change in what `eval`
-      // reports), not just marked done on a timer.
-      var scenarioBodyEl = document.getElementById("scenario-body");
-
-      // ---- quest step schema --------------------------------------------
-      // Scenario data (playground/scenarios.json, fetched above) is plain
-      // JSON: no functions, so no scenario can carry code. A quest is a list
-      // of step descriptors with a "kind":
-      //   "tab"    { group, tab }        — done when that diag tab is opened
-      //   "action" { action }            — done when questSignal(action) fires
-      //                                     (an Infer/Build run — see the
-      //                                     questSignal call sites below)
-      //   "eval"   { check }             — re-checked every time
-      //                                     refreshDerived() computes a fresh
-      //                                     pgEval() result, against the
-      //                                     snapshot taken when the file was
-      //                                     loaded (questState.baselineEvalJson).
-      //                                     `check` names a predicate in
-      //                                     CHECKS below — the fixed,
-      //                                     reviewed vocabulary scenario data
-      //                                     is allowed to reach for.
-      //   "manual" {}                    — nothing to detect; the visitor
-      //                                     ticks it themselves by clicking it.
-      // Every kind may set an explicit "id" (stable across re-renders); it
-      // defaults to a value derived from the step's position and kind.
-      //
-      // A step is never completed by clicking it — only "manual" steps can
-      // be, since nothing else can complete them — but any completed step
-      // can be clicked to reset it, so a visitor can repeat the action and
-      // watch it get detected again rather than being stuck with it checked
-      // off forever. See startQuest()'s click handler.
-      //
-      // Every CHECKS predicate takes the same ctx: { evalResult, baselineJson,
-      // hasStale, baselineHasStale } — see questCheckEval.
-      function evalChanged(ctx) {
-        return JSON.stringify(ctx.evalResult) !== ctx.baselineJson;
-      }
-      function chartsPresent(ctx) {
-        return (ctx.evalResult.charts || []).some(function (c) {
-          return !!c.svg;
-        });
-      }
-      function chartsRegenerated(ctx) {
-        return chartsPresent(ctx) && evalChanged(ctx);
-      }
-      // `pgEval`'s computed values are always fresh — a STALE cell is a
-      // mismatch between a formula's result and the literal text already
-      // sitting in the document, which eval never exposes. Detecting "the
-      // drift got fixed" needs check()'s findings directly, not eval's.
-      function staleFixed(ctx) {
-        return ctx.baselineHasStale && !ctx.hasStale;
-      }
-      function assertionsFailing(ctx) {
-        return (ctx.evalResult.assertions || []).some(function (a) {
-          return a.holds === false;
-        });
-      }
-      function assertionsPassing(ctx) {
-        var list = ctx.evalResult.assertions || [];
-        return (
-          list.length > 0 &&
-          list.every(function (a) {
-            return a.holds === true;
-          })
-        );
-      }
-      var CHECKS = {
-        "value-changed": evalChanged,
-        "charts-regenerated": chartsRegenerated,
-        "stale-fixed": staleFixed,
-        "assertion-failing": assertionsFailing,
-        "assertion-passing": assertionsPassing,
-      };
-
-      /** Turns one JSON step descriptor into the internal step shape the
-       *  quest engine below runs on. */
-      function normalizeStep(raw, index) {
-        if (raw.kind === "tab") {
-          var tabAction = "tab:" + raw.group + ":" + raw.tab;
-          return { id: raw.id || tabAction, text: raw.text, action: tabAction };
+        function termCmd(text) {
+          term("$ " + text, "cmd");
         }
-        if (raw.kind === "action") {
-          return { id: raw.id || raw.action, text: raw.text, action: raw.action };
+        var TERM_MAX_LINES = 400;
+        function trimTerminal() {
+          while (termEl.childNodes.length > TERM_MAX_LINES) termEl.removeChild(termEl.firstChild);
         }
-        if (raw.kind === "eval") {
-          var check = CHECKS[raw.check];
-          if (!check) throw new Error("scenarios.json: unknown check \"" + raw.check + "\"");
-          return { id: raw.id || "eval:" + index, text: raw.text, evalCheck: check };
-        }
-        if (raw.kind === "manual") {
-          return { id: raw.id || "manual:" + index, text: raw.text, manual: true };
-        }
-        throw new Error("scenarios.json: unknown step kind \"" + raw.kind + "\"");
-      }
-      function normalizeQuest(quest) {
-        return (quest || []).map(normalizeStep);
-      }
 
-      // ---- quest engine ----------------------------------------------------
-      var questState = { name: null, steps: [], done: {}, baselineEvalJson: null };
-      var questListEl = document.getElementById("quest-list");
-      var questCompleteEl = document.getElementById("quest-complete");
-
-      function renderScenario(name) {
-        var s = SCENARIOS[name] || SCENARIO_FALLBACK;
-        scenarioBodyEl.innerHTML = "";
-        var body = document.createElement("p");
-        body.textContent = s.body;
-        scenarioBodyEl.appendChild(body);
-        startQuest(name, normalizeQuest(s.quest));
-      }
-
-      function startQuest(name, steps) {
-        questState = {
-          name: name,
-          steps: steps || [],
-          done: {},
-          baselineEvalJson: null,
-          baselineHasStale: false,
-        };
-        questListEl.innerHTML = "";
-        questCompleteEl.hidden = true;
-        questState.steps.forEach(function (step) {
-          var li = document.createElement("li");
-          li.className = "quest-step";
-          li.dataset.id = step.id;
-          var check = document.createElement("span");
-          check.className = "quest-check";
-          check.textContent = "✓";
-          var text = document.createElement("span");
-          text.className = "quest-text";
-          text.textContent = step.text;
-          li.appendChild(check);
-          li.appendChild(text);
-          if (step.manual) li.classList.add("manual");
-          // A step is never completed by clicking it — only by actually
-          // doing the thing it describes (a tab click, an Infer/Build run,
-          // a real change `eval` picks up). Clicking only ever *un*-completes
-          // a step already done, so a visitor can reset one and repeat the
-          // action to watch it get detected again. "manual" steps are the
-          // one exception: nothing else can ever complete them, since
-          // there's nothing about them for VisiMark to detect.
-          li.addEventListener("click", function () {
-            if (questState.done[step.id]) questUnmarkDone(step.id);
-            else if (step.manual) questMarkDone(step.id);
+        // ---- files panel -----------------------------------------------------
+        var fileListEl = document.getElementById("file-list");
+        function renderFileList() {
+          fileListEl.innerHTML = "";
+          order.forEach(function (name) {
+            var b = document.createElement("button");
+            b.className = "file-btn" + (name === current ? " active" : "");
+            b.type = "button";
+            b.textContent = name;
+            b.addEventListener("click", function () {
+              selectFile(name);
+            });
+            fileListEl.appendChild(b);
           });
-          questListEl.appendChild(li);
-        });
-      }
-
-      function questMarkDone(id) {
-        if (questState.done[id]) return;
-        questState.done[id] = true;
-        var li = questListEl.querySelector('[data-id="' + id + '"]');
-        if (li) {
-          li.classList.add("done", "pop");
-          setTimeout(function () {
-            li.classList.remove("pop");
-          }, 400);
         }
-        var allDone = questState.steps.every(function (step) {
-          return questState.done[step.id];
-        });
-        if (allDone && questState.steps.length > 0) {
-          questCompleteEl.hidden = false;
-        }
-      }
 
-      function questUnmarkDone(id) {
-        if (!questState.done[id]) return;
-        questState.done[id] = false;
-        var li = questListEl.querySelector('[data-id="' + id + '"]');
-        if (li) li.classList.remove("done");
-        questCompleteEl.hidden = true;
-      }
-
-      /** UI-event steps: tab clicks, Infer/Build runs. */
-      function questSignal(action) {
-        questState.steps.forEach(function (step) {
-          if (step.action === action) questMarkDone(step.id);
-        });
-      }
-
-      /** Mirrors `visimark check FILE`'s STALE findings — cheap enough to
-       *  run a second time per keystroke-settle for a hand-typed document. */
-      function hasStaleFindings(source) {
-        try {
-          var findings = VM.check(VM.build(VM.locate(source))).findings;
-          return findings.some(function (f) {
-            return f.code === "STALE";
-          });
-        } catch (e) {
-          return false;
-        }
-      }
-
-      /** Eval-driven steps: re-checked against the file's baseline snapshot
-       *  on every fresh pgEval() result — the first call after a file loads
-       *  only captures that baseline, it can't complete a step against
-       *  itself. */
-      function questCheckEval(evalResult, source) {
-        var hasStale = hasStaleFindings(source);
-        if (questState.baselineEvalJson === null) {
-          questState.baselineEvalJson = JSON.stringify(evalResult);
-          questState.baselineHasStale = hasStale;
-          return;
-        }
-        var ctx = {
-          evalResult: evalResult,
-          baselineJson: questState.baselineEvalJson,
-          hasStale: hasStale,
-          baselineHasStale: questState.baselineHasStale,
-        };
-        questState.steps.forEach(function (step) {
-          if (step.evalCheck && step.evalCheck(ctx)) {
-            questMarkDone(step.id);
-          }
-        });
-      }
-
-      // ---- tab strip: Reasoning/Knowledge/Inference/Build (Terminal is its
-      // own always-visible panel now, not part of this group) ------------
-      var diagTabs = document.querySelectorAll(".diag-tab");
-      diagTabs.forEach(function (tab) {
-        tab.addEventListener("click", function () {
-          selectTab(tab.dataset.group, tab.dataset.tab);
-          questSignal("tab:" + tab.dataset.group + ":" + tab.dataset.tab);
-        });
-      });
-      function selectTab(group, name) {
-        document.querySelectorAll('.diag-tab[data-group="' + group + '"]').forEach(function (tab) {
-          tab.classList.toggle("active", tab.dataset.tab === name);
-        });
-        document
-          .querySelectorAll('.diag-view[data-group="' + group + '"]')
-          .forEach(function (view) {
-            view.classList.toggle("active", view.dataset.view === name);
-          });
-      }
-
-      function setStatus(ok, note) {
-        flagEl.className = "flag" + (ok ? "" : " fail");
-        labelEl.textContent = ok ? "BUILD PASSING" : "BUILD FAILING";
-        metaEl.textContent = note || "";
-      }
-
-      // Lockstep scroll: PREVIEW tracks EDITOR (and vice versa) by scroll
-      // fraction, the same trick index.html's renderDemo() uses for its
-      // source/preview panes — CodeMirror just has its own scroll API instead
-      // of a plain scrollable element.
-      var syncingScroll = null;
-      function syncFromEditor() {
-        if (syncingScroll && syncingScroll !== "editor") return;
-        syncingScroll = "editor";
-        var info = cm.getScrollInfo();
-        var range = info.height - info.clientHeight;
-        var ratio = range > 0 ? info.top / range : 0;
-        previewEl.scrollTop = ratio * (previewEl.scrollHeight - previewEl.clientHeight);
-        requestAnimationFrame(function () {
-          syncingScroll = null;
-        });
-      }
-      function syncFromPreview() {
-        if (syncingScroll && syncingScroll !== "preview") return;
-        syncingScroll = "preview";
-        var range = previewEl.scrollHeight - previewEl.clientHeight;
-        var ratio = range > 0 ? previewEl.scrollTop / range : 0;
-        var info = cm.getScrollInfo();
-        cm.scrollTo(null, ratio * (info.height - info.clientHeight));
-        requestAnimationFrame(function () {
-          syncingScroll = null;
-        });
-      }
-      cm.on("scroll", syncFromEditor);
-      previewEl.addEventListener("scroll", syncFromPreview);
-
-      function pluralize(n, w) {
-        return n + " " + w + (n === 1 ? "" : "s");
-      }
-
-      function clearTerminal() {
-        termEl.textContent = "";
-      }
-
-      /** Mirrors `visimark fmt FILE` — prints outcome to TERMINAL. Does not
-       *  touch the editor buffer itself; callers that want the corrected
-       *  text apply `result.output` back to the editor. */
-      function runFmt() {
-        var source = cm.getValue();
-        termCmd("visimark fmt " + current);
-        var result;
-        try {
-          result = VM.fmt(source, {});
-        } catch (e) {
-          term("visimark: " + e.message, "err");
-          setStatus(false, "fmt crashed");
+        function selectFile(name) {
+          if (name === current) return;
+          contents[current] = cm.getValue();
+          current = name;
+          cm.setValue(contents[name]);
+          document.getElementById("editor-filename").textContent = current;
+          renderFileList();
+          inferEl.textContent = INFER_PLACEHOLDER;
+          renderScenario(current);
+          selectTab("diag", "reasoning");
+          runFmt();
+          refreshDerived();
           trimTerminal();
-          return null;
         }
-        if (result.changed || result.artifacts.length > 0) {
-          var bits = [];
-          if (result.cellsUpdated) bits.push(pluralize(result.cellsUpdated, "cell"));
-          if (result.anchorsUpdated) bits.push(pluralize(result.anchorsUpdated, "anchor"));
-          if (result.datesFixed) bits.push(pluralize(result.datesFixed, "date"));
-          if (result.artifacts.length) bits.push(pluralize(result.artifacts.length, "artifact"));
-          term(current + ": updated " + bits.join(", "));
-        } else {
-          term(current + ": unchanged");
-        }
-        if (result.unfixable && result.unfixable.length > 0) {
-          term(VM.formatCheck(current, result.unfixable), "err");
-        }
-        setStatus(result.unfixable.length === 0);
-        trimTerminal();
-        return result;
-      }
 
-      /** Mirrors `visimark eval FILE --json`, `visimark explain FILE`, and the
-       *  Markdown preview — all read from the *current* editor buffer.
-       *
-       *  There is no filesystem to render chart artifacts onto (`fmt --write`
-       *  never runs, see runFmt()'s doc comment), so a chart's SVG never
-       *  lands at the `![...](path)` its anchor names. `pgEval`'s `charts[]`
-       *  carries the rendered SVG in memory regardless — check() always
-       *  builds it, it just can't compare it to a file without a docPath —
-       *  so PREVIEW substitutes it into the matching <img> by hand. */
-      function refreshDerived() {
-        var source = cm.getValue();
-        var evalResult = null;
+        document.getElementById("new-file-btn").addEventListener("click", function () {
+          var name = window.prompt("New file name", "untitled.md");
+          if (!name) return;
+          name = name.trim();
+          if (!name) return;
+          if (!/\.md$/i.test(name)) name += ".md";
+          if (Object.prototype.hasOwnProperty.call(contents, name)) {
+            window.alert(name + " already exists.");
+            return;
+          }
+          contents[current] = cm.getValue();
+          contents[name] = "# Untitled\n\nWrite your VisiMark document here.\n";
+          order.push(name);
+          current = name;
+          cm.setValue(contents[name]);
+          document.getElementById("editor-filename").textContent = current;
+          renderFileList();
+          inferEl.textContent = INFER_PLACEHOLDER;
+          renderScenario(current);
+          selectTab("diag", "reasoning");
+          runFmt();
+          refreshDerived();
+        });
 
-        try {
-          evalResult = VM.pgEval(source);
-          knowledgeEl.textContent = JSON.stringify(evalResult, redactSvg, 2);
-          var failed = (evalResult.assertions || []).filter(function (a) {
+        // ---- pipeline: fmt -> terminal, eval/explain -> knowledge/reasoning ----
+        var knowledgeEl = document.getElementById("knowledge-body");
+        var reasoningEl = document.getElementById("reasoning-body");
+        var inferEl = document.getElementById("infer-body");
+        var previewEl = document.getElementById("preview-body");
+        var flagEl = document.getElementById("build-flag");
+        var labelEl = document.getElementById("build-label");
+        var metaEl = document.getElementById("build-meta");
+        var INFER_PLACEHOLDER = inferEl.textContent;
+
+        // ---- Scenario: what to look at, per file --------------------------------
+        // The panel whose job is pointing at the other panels — each file here
+        // demonstrates something different, and a first-time viewer has no way
+        // to know that from raw JSON/terminal output alone. Below the framing
+        // paragraph, a short quest checklist turns that guidance into
+        // something to actually do — each step is detected for real (a tab
+        // click, an Infer/Build run, or a genuine change in what `eval`
+        // reports), not just marked done on a timer.
+        var scenarioBodyEl = document.getElementById("scenario-body");
+
+        // ---- quest step schema --------------------------------------------
+        // Scenario data (playground/scenarios.json, fetched above) is plain
+        // JSON: no functions, so no scenario can carry code. A quest is a list
+        // of step descriptors with a "kind":
+        //   "tab"    { group, tab }        — done when that diag tab is opened
+        //   "action" { action }            — done when questSignal(action) fires
+        //                                     (an Infer/Build run — see the
+        //                                     questSignal call sites below)
+        //   "eval"   { check }             — re-checked every time
+        //                                     refreshDerived() computes a fresh
+        //                                     pgEval() result, against the
+        //                                     snapshot taken when the file was
+        //                                     loaded (questState.baselineEvalJson).
+        //                                     `check` names a predicate in
+        //                                     CHECKS below — the fixed,
+        //                                     reviewed vocabulary scenario data
+        //                                     is allowed to reach for.
+        //   "manual" {}                    — nothing to detect; the visitor
+        //                                     ticks it themselves by clicking it.
+        // Every kind may set an explicit "id" (stable across re-renders); it
+        // defaults to a value derived from the step's position and kind.
+        //
+        // A step is never completed by clicking it — only "manual" steps can
+        // be, since nothing else can complete them — but any completed step
+        // can be clicked to reset it, so a visitor can repeat the action and
+        // watch it get detected again rather than being stuck with it checked
+        // off forever. See startQuest()'s click handler.
+        //
+        // Every CHECKS predicate takes the same ctx: { evalResult, baselineJson,
+        // hasStale, baselineHasStale } — see questCheckEval.
+        function evalChanged(ctx) {
+          return JSON.stringify(ctx.evalResult) !== ctx.baselineJson;
+        }
+        function chartsPresent(ctx) {
+          return (ctx.evalResult.charts || []).some(function (c) {
+            return !!c.svg;
+          });
+        }
+        function chartsRegenerated(ctx) {
+          return chartsPresent(ctx) && evalChanged(ctx);
+        }
+        // `pgEval`'s computed values are always fresh — a STALE cell is a
+        // mismatch between a formula's result and the literal text already
+        // sitting in the document, which eval never exposes. Detecting "the
+        // drift got fixed" needs check()'s findings directly, not eval's.
+        function staleFixed(ctx) {
+          return ctx.baselineHasStale && !ctx.hasStale;
+        }
+        function assertionsFailing(ctx) {
+          return (ctx.evalResult.assertions || []).some(function (a) {
             return a.holds === false;
           });
-          if (failed.length > 0) {
-            setStatus(false, pluralize(failed.length, "assertion") + " failing");
+        }
+        function assertionsPassing(ctx) {
+          var list = ctx.evalResult.assertions || [];
+          return (
+            list.length > 0 &&
+            list.every(function (a) {
+              return a.holds === true;
+            })
+          );
+        }
+        var CHECKS = {
+          "value-changed": evalChanged,
+          "charts-regenerated": chartsRegenerated,
+          "stale-fixed": staleFixed,
+          "assertion-failing": assertionsFailing,
+          "assertion-passing": assertionsPassing,
+        };
+
+        /** Turns one JSON step descriptor into the internal step shape the
+         *  quest engine below runs on. */
+        function normalizeStep(raw, index) {
+          if (raw.kind === "tab") {
+            var tabAction = "tab:" + raw.group + ":" + raw.tab;
+            return { id: raw.id || tabAction, text: raw.text, action: tabAction };
           }
-          questCheckEval(evalResult, source);
-        } catch (e) {
-          knowledgeEl.textContent = "error: " + e.message;
+          if (raw.kind === "action") {
+            return { id: raw.id || raw.action, text: raw.text, action: raw.action };
+          }
+          if (raw.kind === "eval") {
+            var check = CHECKS[raw.check];
+            if (!check) throw new Error('scenarios.json: unknown check "' + raw.check + '"');
+            return { id: raw.id || "eval:" + index, text: raw.text, evalCheck: check };
+          }
+          if (raw.kind === "manual") {
+            return { id: raw.id || "manual:" + index, text: raw.text, manual: true };
+          }
+          throw new Error('scenarios.json: unknown step kind "' + raw.kind + '"');
+        }
+        function normalizeQuest(quest) {
+          return (quest || []).map(normalizeStep);
         }
 
-        try {
-          reasoningEl.textContent = VM.pgExplain(source).join("\n");
-        } catch (e) {
-          reasoningEl.textContent = "error: " + e.message;
+        // ---- quest engine ----------------------------------------------------
+        var questState = { name: null, steps: [], done: {}, baselineEvalJson: null };
+        var questListEl = document.getElementById("quest-list");
+        var questCompleteEl = document.getElementById("quest-complete");
+
+        function renderScenario(name) {
+          var s = SCENARIOS[name] || SCENARIO_FALLBACK;
+          scenarioBodyEl.innerHTML = "";
+          var body = document.createElement("p");
+          body.textContent = s.body;
+          scenarioBodyEl.appendChild(body);
+          startQuest(name, normalizeQuest(s.quest));
         }
 
-        try {
-          previewEl.innerHTML = marked.parse(source);
-          embedCharts(evalResult && evalResult.charts);
-        } catch (e) {
-          previewEl.textContent = "error: " + e.message;
+        function startQuest(name, steps) {
+          questState = {
+            name: name,
+            steps: steps || [],
+            done: {},
+            baselineEvalJson: null,
+            baselineHasStale: false,
+          };
+          questListEl.innerHTML = "";
+          questCompleteEl.hidden = true;
+          questState.steps.forEach(function (step) {
+            var li = document.createElement("li");
+            li.className = "quest-step";
+            li.dataset.id = step.id;
+            var check = document.createElement("span");
+            check.className = "quest-check";
+            check.textContent = "✓";
+            var text = document.createElement("span");
+            text.className = "quest-text";
+            text.textContent = step.text;
+            li.appendChild(check);
+            li.appendChild(text);
+            if (step.manual) li.classList.add("manual");
+            // A step is never completed by clicking it — only by actually
+            // doing the thing it describes (a tab click, an Infer/Build run,
+            // a real change `eval` picks up). Clicking only ever *un*-completes
+            // a step already done, so a visitor can reset one and repeat the
+            // action to watch it get detected again. "manual" steps are the
+            // one exception: nothing else can ever complete them, since
+            // there's nothing about them for VisiMark to detect.
+            li.addEventListener("click", function () {
+              if (questState.done[step.id]) questUnmarkDone(step.id);
+              else if (step.manual) questMarkDone(step.id);
+            });
+            questListEl.appendChild(li);
+          });
         }
-      }
 
-      // KNOWLEDGE is `eval --json` verbatim, but a chart's `svg` field is
-      // itself the full rendered SVG document — shown for real in PREVIEW, it
-      // would just be noise duplicated as an escaped JSON string here.
-      function redactSvg(key, value) {
-        if (key === "svg" && typeof value === "string") {
-          return "<" + value.length + " bytes, rendered in Preview>";
+        function questMarkDone(id) {
+          if (questState.done[id]) return;
+          questState.done[id] = true;
+          var li = questListEl.querySelector('[data-id="' + id + '"]');
+          if (li) {
+            li.classList.add("done", "pop");
+            setTimeout(function () {
+              li.classList.remove("pop");
+            }, 400);
+          }
+          var allDone = questState.steps.every(function (step) {
+            return questState.done[step.id];
+          });
+          if (allDone && questState.steps.length > 0) {
+            questCompleteEl.hidden = false;
+          }
         }
-        return value;
-      }
 
-      function embedCharts(charts) {
-        if (!charts || charts.length === 0) return;
-        var svgByPath = {};
-        charts.forEach(function (c) {
-          if (c.path && c.svg) svgByPath[c.path] = c.svg;
+        function questUnmarkDone(id) {
+          if (!questState.done[id]) return;
+          questState.done[id] = false;
+          var li = questListEl.querySelector('[data-id="' + id + '"]');
+          if (li) li.classList.remove("done");
+          questCompleteEl.hidden = true;
+        }
+
+        /** UI-event steps: tab clicks, Infer/Build runs. */
+        function questSignal(action) {
+          questState.steps.forEach(function (step) {
+            if (step.action === action) questMarkDone(step.id);
+          });
+        }
+
+        /** Mirrors `visimark check FILE`'s STALE findings — cheap enough to
+         *  run a second time per keystroke-settle for a hand-typed document. */
+        function hasStaleFindings(source) {
+          try {
+            var findings = VM.check(VM.build(VM.locate(source))).findings;
+            return findings.some(function (f) {
+              return f.code === "STALE";
+            });
+          } catch (e) {
+            return false;
+          }
+        }
+
+        /** Eval-driven steps: re-checked against the file's baseline snapshot
+         *  on every fresh pgEval() result — the first call after a file loads
+         *  only captures that baseline, it can't complete a step against
+         *  itself. */
+        function questCheckEval(evalResult, source) {
+          var hasStale = hasStaleFindings(source);
+          if (questState.baselineEvalJson === null) {
+            questState.baselineEvalJson = JSON.stringify(evalResult);
+            questState.baselineHasStale = hasStale;
+            return;
+          }
+          var ctx = {
+            evalResult: evalResult,
+            baselineJson: questState.baselineEvalJson,
+            hasStale: hasStale,
+            baselineHasStale: questState.baselineHasStale,
+          };
+          questState.steps.forEach(function (step) {
+            if (step.evalCheck && step.evalCheck(ctx)) {
+              questMarkDone(step.id);
+            }
+          });
+        }
+
+        // ---- tab strip: Reasoning/Knowledge/Inference/Build (Terminal is its
+        // own always-visible panel now, not part of this group) ------------
+        var diagTabs = document.querySelectorAll(".diag-tab");
+        diagTabs.forEach(function (tab) {
+          tab.addEventListener("click", function () {
+            selectTab(tab.dataset.group, tab.dataset.tab);
+            questSignal("tab:" + tab.dataset.group + ":" + tab.dataset.tab);
+          });
         });
-        previewEl.querySelectorAll("img[src]").forEach(function (img) {
-          var svg = svgByPath[img.getAttribute("src")];
-          if (!svg) return;
-          img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg)));
-        });
-      }
-
-      // ---- debounced pipeline on typing --------------------------------------
-      // On 0.5s of inactivity: clear TERMINAL, re-run `fmt`, fold its output
-      // back into the editor, and refresh PREVIEW (plus KNOWLEDGE/REASONING,
-      // which read from the same buffer) from the corrected text.
-      var editTimer = null;
-      var EDIT_DEBOUNCE = 500;
-
-      cm.on("change", function (instance, changeObj) {
-        if (changeObj.origin === "setValue") return;
-        contents[current] = cm.getValue();
-        clearTimeout(editTimer);
-        editTimer = setTimeout(onInactivity, EDIT_DEBOUNCE);
-      });
-
-      function onInactivity() {
-        clearTerminal();
-        var result = runFmt();
-        if (result && result.changed) {
-          var cursor = cm.getCursor();
-          cm.setValue(result.output);
-          cm.setCursor(cursor);
-          contents[current] = result.output;
+        function selectTab(group, name) {
+          document
+            .querySelectorAll('.diag-tab[data-group="' + group + '"]')
+            .forEach(function (tab) {
+              tab.classList.toggle("active", tab.dataset.tab === name);
+            });
+          document
+            .querySelectorAll('.diag-view[data-group="' + group + '"]')
+            .forEach(function (view) {
+              view.classList.toggle("active", view.dataset.view === name);
+            });
         }
-        refreshDerived();
-      }
 
-      // ---- Infer -------------------------------------------------------------
-      // What `infer` sees, in its own tab — the adoption story: drop in a
-      // plain, unannotated .md and see the rules/scalars VisiMark would add
-      // before committing to anything. TERMINAL only gets the action's
-      // one-line outcome, same as every other command.
-      document.getElementById("infer-btn").addEventListener("click", function () {
-        var source = cm.getValue();
-        questSignal("action:infer-run");
-        termCmd("visimark infer " + current + " --write");
-        var proposals;
-        try {
-          proposals = VM.infer(source);
-        } catch (e) {
-          inferEl.textContent = "error: " + e.message;
-          term("visimark: " + e.message, "err");
+        function setStatus(ok, note) {
+          flagEl.className = "flag" + (ok ? "" : " fail");
+          labelEl.textContent = ok ? "BUILD PASSING" : "BUILD FAILING";
+          metaEl.textContent = note || "";
+        }
+
+        // Lockstep scroll: PREVIEW tracks EDITOR (and vice versa) by scroll
+        // fraction, the same trick index.html's renderDemo() uses for its
+        // source/preview panes — CodeMirror just has its own scroll API instead
+        // of a plain scrollable element.
+        var syncingScroll = null;
+        function syncFromEditor() {
+          if (syncingScroll && syncingScroll !== "editor") return;
+          syncingScroll = "editor";
+          var info = cm.getScrollInfo();
+          var range = info.height - info.clientHeight;
+          var ratio = range > 0 ? info.top / range : 0;
+          previewEl.scrollTop = ratio * (previewEl.scrollHeight - previewEl.clientHeight);
+          requestAnimationFrame(function () {
+            syncingScroll = null;
+          });
+        }
+        function syncFromPreview() {
+          if (syncingScroll && syncingScroll !== "preview") return;
+          syncingScroll = "preview";
+          var range = previewEl.scrollHeight - previewEl.clientHeight;
+          var ratio = range > 0 ? previewEl.scrollTop / range : 0;
+          var info = cm.getScrollInfo();
+          cm.scrollTo(null, ratio * (info.height - info.clientHeight));
+          requestAnimationFrame(function () {
+            syncingScroll = null;
+          });
+        }
+        cm.on("scroll", syncFromEditor);
+        previewEl.addEventListener("scroll", syncFromPreview);
+
+        function pluralize(n, w) {
+          return n + " " + w + (n === 1 ? "" : "s");
+        }
+
+        function clearTerminal() {
+          termEl.textContent = "";
+        }
+
+        /** Mirrors `visimark fmt FILE` — prints outcome to TERMINAL. Does not
+         *  touch the editor buffer itself; callers that want the corrected
+         *  text apply `result.output` back to the editor. */
+        function runFmt() {
+          var source = cm.getValue();
+          termCmd("visimark fmt " + current);
+          var result;
+          try {
+            result = VM.fmt(source, {});
+          } catch (e) {
+            term("visimark: " + e.message, "err");
+            setStatus(false, "fmt crashed");
+            trimTerminal();
+            return null;
+          }
+          if (result.changed || result.artifacts.length > 0) {
+            var bits = [];
+            if (result.cellsUpdated) bits.push(pluralize(result.cellsUpdated, "cell"));
+            if (result.anchorsUpdated) bits.push(pluralize(result.anchorsUpdated, "anchor"));
+            if (result.datesFixed) bits.push(pluralize(result.datesFixed, "date"));
+            if (result.artifacts.length) bits.push(pluralize(result.artifacts.length, "artifact"));
+            term(current + ": updated " + bits.join(", "));
+          } else {
+            term(current + ": unchanged");
+          }
+          if (result.unfixable && result.unfixable.length > 0) {
+            term(VM.formatCheck(current, result.unfixable), "err");
+          }
+          setStatus(result.unfixable.length === 0);
           trimTerminal();
-          return;
+          return result;
         }
-        inferEl.textContent = VM.formatInfer(current, source, proposals);
-        var edits = VM.planInfer(source, proposals);
-        if (edits.length === 0) {
-          term(current + ": nothing to write");
-        } else {
-          var updated = VM.applyEdits(source, edits);
-          var cursor = cm.getCursor();
-          cm.setValue(updated);
-          cm.setCursor(cursor);
-          contents[current] = updated;
-          var blocks = edits.filter(function (e) {
-            return e.kind === "block";
-          }).length;
-          var anchors = edits.filter(function (e) {
-            return e.kind === "anchor";
-          }).length;
-          var bits = [];
-          if (blocks) bits.push(pluralize(blocks, "block"));
-          if (anchors) bits.push(pluralize(anchors, "anchor"));
-          term(current + ": wrote " + bits.join(", "));
+
+        /** Mirrors `visimark eval FILE --json`, `visimark explain FILE`, and the
+         *  Markdown preview — all read from the *current* editor buffer.
+         *
+         *  There is no filesystem to render chart artifacts onto (`fmt --write`
+         *  never runs, see runFmt()'s doc comment), so a chart's SVG never
+         *  lands at the `![...](path)` its anchor names. `pgEval`'s `charts[]`
+         *  carries the rendered SVG in memory regardless — check() always
+         *  builds it, it just can't compare it to a file without a docPath —
+         *  so PREVIEW substitutes it into the matching <img> by hand. */
+        function refreshDerived() {
+          var source = cm.getValue();
+          var evalResult = null;
+
+          try {
+            evalResult = VM.pgEval(source);
+            knowledgeEl.textContent = JSON.stringify(evalResult, redactSvg, 2);
+            var failed = (evalResult.assertions || []).filter(function (a) {
+              return a.holds === false;
+            });
+            if (failed.length > 0) {
+              setStatus(false, pluralize(failed.length, "assertion") + " failing");
+            }
+            questCheckEval(evalResult, source);
+          } catch (e) {
+            knowledgeEl.textContent = "error: " + e.message;
+          }
+
+          try {
+            reasoningEl.textContent = VM.pgExplain(source).join("\n");
+          } catch (e) {
+            reasoningEl.textContent = "error: " + e.message;
+          }
+
+          try {
+            previewEl.innerHTML = marked.parse(source);
+            embedCharts(evalResult && evalResult.charts);
+          } catch (e) {
+            previewEl.textContent = "error: " + e.message;
+          }
         }
-        trimTerminal();
-        clearTimeout(editTimer);
+
+        // KNOWLEDGE is `eval --json` verbatim, but a chart's `svg` field is
+        // itself the full rendered SVG document — shown for real in PREVIEW, it
+        // would just be noise duplicated as an escaped JSON string here.
+        function redactSvg(key, value) {
+          if (key === "svg" && typeof value === "string") {
+            return "<" + value.length + " bytes, rendered in Preview>";
+          }
+          return value;
+        }
+
+        function embedCharts(charts) {
+          if (!charts || charts.length === 0) return;
+          var svgByPath = {};
+          charts.forEach(function (c) {
+            if (c.path && c.svg) svgByPath[c.path] = c.svg;
+          });
+          previewEl.querySelectorAll("img[src]").forEach(function (img) {
+            var svg = svgByPath[img.getAttribute("src")];
+            if (!svg) return;
+            img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg)));
+          });
+        }
+
+        // ---- debounced pipeline on typing --------------------------------------
+        // On 0.5s of inactivity: clear TERMINAL, re-run `fmt`, fold its output
+        // back into the editor, and refresh PREVIEW (plus KNOWLEDGE/REASONING,
+        // which read from the same buffer) from the corrected text.
+        var editTimer = null;
+        var EDIT_DEBOUNCE = 500;
+
+        cm.on("change", function (instance, changeObj) {
+          if (changeObj.origin === "setValue") return;
+          contents[current] = cm.getValue();
+          clearTimeout(editTimer);
+          editTimer = setTimeout(onInactivity, EDIT_DEBOUNCE);
+        });
+
+        function onInactivity() {
+          clearTerminal();
+          var result = runFmt();
+          if (result && result.changed) {
+            var cursor = cm.getCursor();
+            cm.setValue(result.output);
+            cm.setCursor(cursor);
+            contents[current] = result.output;
+          }
+          refreshDerived();
+        }
+
+        // ---- Infer -------------------------------------------------------------
+        // What `infer` sees, in its own tab — the adoption story: drop in a
+        // plain, unannotated .md and see the rules/scalars VisiMark would add
+        // before committing to anything. TERMINAL only gets the action's
+        // one-line outcome, same as every other command.
+        document.getElementById("infer-btn").addEventListener("click", function () {
+          var source = cm.getValue();
+          questSignal("action:infer-run");
+          termCmd("visimark infer " + current + " --write");
+          var proposals;
+          try {
+            proposals = VM.infer(source);
+          } catch (e) {
+            inferEl.textContent = "error: " + e.message;
+            term("visimark: " + e.message, "err");
+            trimTerminal();
+            return;
+          }
+          inferEl.textContent = VM.formatInfer(current, source, proposals);
+          var edits = VM.planInfer(source, proposals);
+          if (edits.length === 0) {
+            term(current + ": nothing to write");
+          } else {
+            var updated = VM.applyEdits(source, edits);
+            var cursor = cm.getCursor();
+            cm.setValue(updated);
+            cm.setCursor(cursor);
+            contents[current] = updated;
+            var blocks = edits.filter(function (e) {
+              return e.kind === "block";
+            }).length;
+            var anchors = edits.filter(function (e) {
+              return e.kind === "anchor";
+            }).length;
+            var bits = [];
+            if (blocks) bits.push(pluralize(blocks, "block"));
+            if (anchors) bits.push(pluralize(anchors, "anchor"));
+            term(current + ": wrote " + bits.join(", "));
+          }
+          trimTerminal();
+          clearTimeout(editTimer);
+          runFmt();
+          refreshDerived();
+        });
+
+        // ---- Build ---------------------------------------------------------------
+        // `visimark check` run across every file in FILES, the way a CI job
+        // would check a whole repository — button-activated (see runBuild)
+        // rather than on every keystroke, since it's every open document, not
+        // just the current one.
+        var buildBtn = document.getElementById("build-btn");
+        var buildStatusEl = document.getElementById("build-status");
+        var buildBodyEl = document.getElementById("build-body");
+
+        buildBtn.addEventListener("click", runBuild);
+
+        function runBuild() {
+          contents[current] = cm.getValue();
+          buildBtn.disabled = true;
+          buildStatusEl.textContent = "running…";
+          buildBodyEl.innerHTML = "";
+          termCmd("visimark check " + order.join(" "));
+
+          var passed = 0;
+          order.forEach(function (name) {
+            var outcome = checkOne(name, contents[name]);
+            if (outcome.ok) passed++;
+            buildBodyEl.appendChild(buildRow(name, outcome));
+          });
+
+          var summary = passed + "/" + order.length + " files passing";
+          buildStatusEl.textContent = summary;
+          term("visimark check: " + summary);
+          trimTerminal();
+          setStatus(passed === order.length, passed === order.length ? "" : summary);
+          buildBtn.disabled = false;
+          questSignal("action:build-run");
+          if (checkOne(current, contents[current]).ok) {
+            questSignal("action:build-pass:" + current);
+          }
+        }
+
+        /** Mirrors `visimark check FILE` — findings plus, since `check` alone
+         *  doesn't fail the exit code on a false assertion (see cmdEval's
+         *  separate reportFailures), a failed assertion also counts here. */
+        function checkOne(name, source) {
+          try {
+            var result = VM.check(VM.build(VM.locate(source)));
+            var failedAssertions = result.assertions.filter(function (a) {
+              return a.holds === false;
+            });
+            if (result.exitCode === 0 && failedAssertions.length === 0) {
+              return { ok: true, note: "clean" };
+            }
+            var bits = [];
+            if (result.findings.length) bits.push(pluralize(result.findings.length, "finding"));
+            if (failedAssertions.length) {
+              bits.push(pluralize(failedAssertions.length, "failed assertion"));
+            }
+            return {
+              ok: false,
+              note: bits.join(", "),
+              detail: VM.formatCheck(name, result.findings),
+            };
+          } catch (e) {
+            return { ok: false, note: "crashed", detail: e.message };
+          }
+        }
+
+        function buildRow(name, outcome) {
+          var wrap = document.createDocumentFragment();
+          var row = document.createElement("div");
+          row.className = "build-row";
+          var dot = document.createElement("span");
+          dot.className = "flag" + (outcome.ok ? "" : " fail");
+          var fileEl = document.createElement("span");
+          fileEl.className = "build-file";
+          fileEl.textContent = name;
+          var noteEl = document.createElement("span");
+          noteEl.className = "build-note";
+          noteEl.textContent = "— " + outcome.note;
+          row.appendChild(dot);
+          row.appendChild(fileEl);
+          row.appendChild(noteEl);
+          wrap.appendChild(row);
+          if (!outcome.ok && outcome.detail) {
+            var detail = document.createElement("pre");
+            detail.className = "build-detail";
+            detail.textContent = outcome.detail;
+            wrap.appendChild(detail);
+          }
+          return wrap;
+        }
+
+        // ---- boot ------------------------------------------------------------
+        document.getElementById("editor-filename").textContent = current;
+        renderFileList();
+        renderScenario(current);
         runFmt();
         refreshDerived();
-      });
-
-      // ---- Build ---------------------------------------------------------------
-      // `visimark check` run across every file in FILES, the way a CI job
-      // would check a whole repository — button-activated (see runBuild)
-      // rather than on every keystroke, since it's every open document, not
-      // just the current one.
-      var buildBtn = document.getElementById("build-btn");
-      var buildStatusEl = document.getElementById("build-status");
-      var buildBodyEl = document.getElementById("build-body");
-
-      buildBtn.addEventListener("click", runBuild);
-
-      function runBuild() {
-        contents[current] = cm.getValue();
-        buildBtn.disabled = true;
-        buildStatusEl.textContent = "running…";
-        buildBodyEl.innerHTML = "";
-        termCmd("visimark check " + order.join(" "));
-
-        var passed = 0;
-        order.forEach(function (name) {
-          var outcome = checkOne(name, contents[name]);
-          if (outcome.ok) passed++;
-          buildBodyEl.appendChild(buildRow(name, outcome));
-        });
-
-        var summary = passed + "/" + order.length + " files passing";
-        buildStatusEl.textContent = summary;
-        term("visimark check: " + summary);
-        trimTerminal();
-        setStatus(passed === order.length, passed === order.length ? "" : summary);
-        buildBtn.disabled = false;
-        questSignal("action:build-run");
-        if (checkOne(current, contents[current]).ok) {
-          questSignal("action:build-pass:" + current);
-        }
-      }
-
-      /** Mirrors `visimark check FILE` — findings plus, since `check` alone
-       *  doesn't fail the exit code on a false assertion (see cmdEval's
-       *  separate reportFailures), a failed assertion also counts here. */
-      function checkOne(name, source) {
-        try {
-          var result = VM.check(VM.build(VM.locate(source)));
-          var failedAssertions = result.assertions.filter(function (a) {
-            return a.holds === false;
-          });
-          if (result.exitCode === 0 && failedAssertions.length === 0) {
-            return { ok: true, note: "clean" };
-          }
-          var bits = [];
-          if (result.findings.length) bits.push(pluralize(result.findings.length, "finding"));
-          if (failedAssertions.length) {
-            bits.push(pluralize(failedAssertions.length, "failed assertion"));
-          }
-          return { ok: false, note: bits.join(", "), detail: VM.formatCheck(name, result.findings) };
-        } catch (e) {
-          return { ok: false, note: "crashed", detail: e.message };
-        }
-      }
-
-      function buildRow(name, outcome) {
-        var wrap = document.createDocumentFragment();
-        var row = document.createElement("div");
-        row.className = "build-row";
-        var dot = document.createElement("span");
-        dot.className = "flag" + (outcome.ok ? "" : " fail");
-        var fileEl = document.createElement("span");
-        fileEl.className = "build-file";
-        fileEl.textContent = name;
-        var noteEl = document.createElement("span");
-        noteEl.className = "build-note";
-        noteEl.textContent = "— " + outcome.note;
-        row.appendChild(dot);
-        row.appendChild(fileEl);
-        row.appendChild(noteEl);
-        wrap.appendChild(row);
-        if (!outcome.ok && outcome.detail) {
-          var detail = document.createElement("pre");
-          detail.className = "build-detail";
-          detail.textContent = outcome.detail;
-          wrap.appendChild(detail);
-        }
-        return wrap;
-      }
-
-      // ---- boot ------------------------------------------------------------
-      document.getElementById("editor-filename").textContent = current;
-      renderFileList();
-      renderScenario(current);
-      runFmt();
-      refreshDerived();
-    })();
+      })();
     </script>
   </body>
 </html>

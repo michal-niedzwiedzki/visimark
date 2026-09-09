@@ -11,9 +11,7 @@ import { fileURLToPath } from "node:url";
 const ROOT = join(dirname(dirname(fileURLToPath(import.meta.url))), "docs");
 
 const portArg = process.argv.indexOf("--port");
-const PORT = Number(
-  portArg !== -1 ? process.argv[portArg + 1] : (process.env.PORT ?? 8080),
-);
+const PORT = Number(portArg !== -1 ? process.argv[portArg + 1] : (process.env.PORT ?? 8080));
 
 const server = Bun.serve({
   port: PORT,

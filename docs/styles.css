@@ -20,8 +20,7 @@ body {
     linear-gradient(180deg, #252422 0%, #403d39 100%);
   background-attachment: fixed;
   color: #f4f4f4;
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
 }
