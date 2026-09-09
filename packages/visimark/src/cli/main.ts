@@ -1,20 +1,6 @@
-import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
 import { cmdCheck, cmdEval, cmdExplain, cmdFmt, cmdInfer, type Writer } from "./commands.js";
-
-// The package's own version, from the single source of truth. Deliberately not a
-// top-level `import ... with { type: "json" }`: that makes tsc treat the repo
-// root as the source root and scatter the declaration output, and it inlines a
-// stale literal into the VS Code extension bundle. Instead read it lazily, only
-// when `version` is actually the command — the extension bundles `runCli` but
-// never asks for the version, so this line never runs there (esbuild's empty
-// `import.meta` warning for the CJS bundle is expected and harmless for that
-// reason). `../../package.json` resolves from `src/cli/` in dev and from the
-// bundled `dist/cli/` once installed.
-function readVersion(): string {
-  const pkg = createRequire(import.meta.url)("../../package.json") as { version: string };
-  return pkg.version;
-}
+import { readVersion } from "./version.js";
 
 const USAGE = `visimark — spreadsheet mechanics for Markdown
 

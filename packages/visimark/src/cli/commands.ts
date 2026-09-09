@@ -10,6 +10,14 @@ import { infer } from "../infer/propose.js";
 import { planInfer } from "../infer/write.js";
 import { formatCheck } from "../report/format.js";
 import { formatInfer } from "../report/infer.js";
+import {
+  emitJson,
+  errorEnvelope,
+  findingSummary,
+  publicFinding,
+  statusFromExit,
+} from "../report/json.js";
+import { readVersion } from "./version.js";
 import { fmt } from "../write/fmt.js";
 import { applyEdits } from "../write/splice.js";
 
@@ -52,24 +60,53 @@ function showValue(v: Value): string {
 }
 
 export function cmdCheck(args: string[], out: Writer, err: Writer): number {
-  const { files } = parseArgs(args);
+  const { files, flags } = parseArgs(args);
+  const json = flags.has("json");
   if (files.length === 0) {
-    err("usage: visimark check FILE...");
+    const msg = "usage: visimark check FILE...";
+    err(msg);
+    if (json) emitJson(out, errorEnvelope("check", "USAGE", msg));
     return 2;
   }
-  let exit = 0;
+  const fileEntries: object[] = [];
+  let exit: 0 | 1 | 2 = 0;
+  let problems = 0;
+  let stale = 0;
+  let errors = 0;
   for (const path of files) {
     let source: string;
     try {
       source = read(path);
     } catch {
-      err(`visimark: cannot read ${path}`);
+      const msg = `visimark: cannot read ${path}`;
+      err(msg);
+      if (json) fileEntries.push({ path, error: { code: "READ", message: msg } });
       exit = 2;
       continue;
     }
     const result = check(build(locate(source)), { docPath: path });
-    out(formatCheck(path, result.findings));
+    if (!json) out(formatCheck(path, result.findings));
+    else {
+      const summary = findingSummary(result.findings);
+      fileEntries.push({
+        path,
+        findings: result.findings.map((f) => publicFinding(path, f)),
+        summary,
+      });
+      problems += summary.problems;
+      stale += summary.stale;
+      errors += summary.errors;
+    }
     if (result.exitCode === 1 && exit === 0) exit = 1;
+  }
+  if (json) {
+    emitJson(out, {
+      command: "check",
+      visimark: readVersion(),
+      status: statusFromExit(exit),
+      files: fileEntries,
+      summary: { files: files.length, problems, stale, errors },
+    });
   }
   return exit;
 }
