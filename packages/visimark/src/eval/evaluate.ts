@@ -141,6 +141,15 @@ function evalCall(expr: Extract<Expr, { type: "call" }>, env: EvalEnv): Value {
       const r = x.div(s).floor().times(s);
       return num(r.isZero() ? new Decimal(0) : r);
     }
+    case "CEILING": {
+      const x = asNum(vals[0]!, "CEILING");
+      const s = asNum(vals[1]!, "CEILING");
+      if (!s.gt(0)) {
+        throw new EvalError("CEILING significance must be a positive number");
+      }
+      const r = x.div(s).ceil().times(s);
+      return num(r.isZero() ? new Decimal(0) : r);
+    }
     case "IF": {
       const c = vals[0]!;
       if (c.t !== "bool") throw new EvalError("IF() needs a boolean condition");

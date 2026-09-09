@@ -38,6 +38,7 @@ export const FUNCTIONS: ReadonlyMap<string, FnSpec> = new Map<string, FnSpec>([
   ["MOD", { kind: "map", arity: 2 }],
   ["SQRT", { kind: "map", arity: 1 }],
   ["FLOOR", { kind: "map", arity: 2 }],
+  ["CEILING", { kind: "map", arity: 2 }],
   ["IF", { kind: "map", arity: 3 }],
   ["EOMONTH", { kind: "map", arity: 2 }],
 ]);
