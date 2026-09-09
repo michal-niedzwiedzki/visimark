@@ -1,33 +1,19 @@
-import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
 import { cmdCheck, cmdEval, cmdExplain, cmdFmt, cmdInfer, type Writer } from "./commands.js";
-
-// The package's own version, from the single source of truth. Deliberately not a
-// top-level `import ... with { type: "json" }`: that makes tsc treat the repo
-// root as the source root and scatter the declaration output, and it inlines a
-// stale literal into the VS Code extension bundle. Instead read it lazily, only
-// when `version` is actually the command — the extension bundles `runCli` but
-// never asks for the version, so this line never runs there (esbuild's empty
-// `import.meta` warning for the CJS bundle is expected and harmless for that
-// reason). `../../package.json` resolves from `src/cli/` in dev and from the
-// bundled `dist/cli/` once installed.
-function readVersion(): string {
-  const pkg = createRequire(import.meta.url)("../../package.json") as { version: string };
-  return pkg.version;
-}
+import { readVersion } from "./version.js";
 
 const USAGE = `visimark — spreadsheet mechanics for Markdown
 
 usage:
-  visimark check FILE...               read-only; exit 1 if any finding.
+  visimark check FILE... [--json]      read-only; exit 1 if any finding.
                                         A table with no \`vmark\` rules is a
                                         finding: run \`visimark infer\`, or mark
                                         the document \`<!--vmark:no-formulas-->\`
                                         if it has nothing to derive.
-  visimark fmt   FILE... [--fix-dates] rewrite computed cells and anchors
-  visimark infer FILE... [--write]     propose rules for a document with none
+  visimark fmt   FILE... [--fix-dates] [--json]
+  visimark infer FILE... [--write] [--json]
   visimark eval  FILE [--get NAME] [--json]
-  visimark explain FILE [#sheet]       print rules and dependency order
+  visimark explain FILE [#sheet] [--json]
   visimark --version | -v | version    print the version and exit
 
 exit codes: 0 clean, 1 findings, 2 usage or read failure`;
