@@ -216,8 +216,7 @@
         }
 
         sourceLabelEl.textContent = "docs/" + file;
-        var githubUrl =
-          "https://github.com/michal-niedzwiedzki/visimark/blob/master/docs/" + file;
+        var githubUrl = "https://github.com/michal-niedzwiedzki/visimark/blob/master/docs/" + file;
         sourceLinkEl.innerHTML =
           'View on GitHub: <a href="' +
           githubUrl +
@@ -233,8 +232,7 @@
           .then(function (raw) {
             document.title = "VisiMark — " + file;
             sourceEl.textContent = raw;
-            previewEl.innerHTML =
-              typeof marked !== "undefined" ? marked.parse(raw) : raw;
+            previewEl.innerHTML = typeof marked !== "undefined" ? marked.parse(raw) : raw;
             demoEl.hidden = false;
           })
           .catch(function (err) {
