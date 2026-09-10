@@ -53,14 +53,18 @@ export function resolveImportPath(docPath: string, url: string): PathResult {
   if (existsSync(target)) {
     const real = realpathSyncSafe(target);
     if (real !== target && !contains(base, real)) {
-      return { err: "imported file path resolves through a symlink out of the document's directory" };
+      return {
+        err: "imported file path resolves through a symlink out of the document's directory",
+      };
     }
   }
   const parent = dirname(target);
   if (existsSync(parent)) {
     const realParent = realpathSyncSafe(parent);
     if (realParent !== parent && !contains(base, realParent)) {
-      return { err: "imported file path resolves through a symlink out of the document's directory" };
+      return {
+        err: "imported file path resolves through a symlink out of the document's directory",
+      };
     }
   }
 

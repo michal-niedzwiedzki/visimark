@@ -7,7 +7,7 @@
  * 8 note) except item 8, which needs a real, disposable directory to prove
  * `fmt` never touches the CSV and is idempotent.
  */
-import { afterEach, beforeEach, expect, test } from "bun:test";
+import { expect, test } from "bun:test";
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -18,7 +18,6 @@ import { fmt } from "../src/write/fmt.js";
 
 const FIXTURE_DIR = join(import.meta.dir, "fixtures", "import");
 const MD_PATH = join(FIXTURE_DIR, "benchmark.md");
-const CSV_PATH = join(FIXTURE_DIR, "benchmark.csv");
 const DIGEST = "c4e418b2a0f4bdc584b99007dcfd39e200b51ff3555e66ae5d42694e0bbd19ee";
 
 function checkSource(md: string, docPath: string = MD_PATH) {
@@ -84,7 +83,10 @@ test("4. missing file: one IMPORT finding, exit 1", () => {
 });
 
 test("5. labelled mismatch: one IMPORT finding naming both lists, exit 1", () => {
-  const source = readFileSync(MD_PATH, "utf8").replace("labelled Id, Time", "labelled Id, Time, Extra");
+  const source = readFileSync(MD_PATH, "utf8").replace(
+    "labelled Id, Time",
+    "labelled Id, Time, Extra",
+  );
   const result = checkSource(source);
   const importFindings = result.findings.filter((f) => f.code === "IMPORT");
   expect(importFindings).toHaveLength(1);
@@ -93,10 +95,7 @@ test("5. labelled mismatch: one IMPORT finding naming both lists, exit 1", () =>
 });
 
 test("6. column rule attempted: one IMPORT finding, exit 1", () => {
-  const source = readFileSync(MD_PATH, "utf8").replace(
-    "Mean = AVG(benchmark.Time)",
-    "Time = 0",
-  );
+  const source = readFileSync(MD_PATH, "utf8").replace("Mean = AVG(benchmark.Time)", "Time = 0");
   const result = checkSource(source);
   const importFindings = result.findings.filter((f) => f.code === "IMPORT");
   expect(importFindings.some((f) => f.message?.includes("column rule on an imported sheet"))).toBe(

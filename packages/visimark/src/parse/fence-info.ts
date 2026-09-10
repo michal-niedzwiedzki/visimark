@@ -164,7 +164,11 @@ export function parseFenceInfo(meta: string | null): FenceInfoResult {
       continue;
     }
 
-    return err("unrecognised token `" + word.text + "` in import declaration", word.start, word.end);
+    return err(
+      "unrecognised token `" + word.text + "` in import declaration",
+      word.start,
+      word.end,
+    );
   }
 
   const declSpan: RelSpan = { start: declStart, end: pos };

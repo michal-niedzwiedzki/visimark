@@ -65,7 +65,9 @@ export function resolveImports(
     if (decl.stampSpan) {
       if (decl.stampPrefix !== "sha256") {
         fail(
-          "unrecognised stamp prefix `" + (decl.stampPrefix ?? "") + "` — only `sha256:` is supported",
+          "unrecognised stamp prefix `" +
+            (decl.stampPrefix ?? "") +
+            "` — only `sha256:` is supported",
           decl.stampSpan,
         );
         continue;

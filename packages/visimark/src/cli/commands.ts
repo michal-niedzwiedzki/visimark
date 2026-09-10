@@ -491,7 +491,8 @@ export function cmdExplain(args: string[], out: Writer, err: Writer): number {
     out(`#${sid}${sheet.table ? "" : "  (no table)"}`);
     if (sheet.imported) {
       const st = importState.get(sid);
-      const delim = sheet.imported.delimiter !== "," ? ` delimited ${sheet.imported.delimiter}` : "";
+      const delim =
+        sheet.imported.delimiter !== "," ? ` delimited ${sheet.imported.delimiter}` : "";
       const labels = sheet.imported.labels ? ` labelled ${sheet.imported.labels.join(", ")}` : "";
       out(`  import:  ${sheet.imported.path}${delim}${labels}  [${st?.state ?? "unknown"}]`);
     }

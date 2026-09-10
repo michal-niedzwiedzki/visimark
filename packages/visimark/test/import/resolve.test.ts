@@ -65,7 +65,9 @@ test("matching stamp: no findings", () => {
 test("mismatching stamp: STALE finding, table still populated", () => {
   csv("benchmark.csv", "Id,Time\n1,12.3\n2,10.1\n3,15.0\n");
   const wrongDigest = "0".repeat(64);
-  const m = modelFor(`\`\`\`vmark #benchmark from benchmark.csv at sha256:${wrongDigest}\n\`\`\`\n`);
+  const m = modelFor(
+    `\`\`\`vmark #benchmark from benchmark.csv at sha256:${wrongDigest}\n\`\`\`\n`,
+  );
   const { findings, statuses } = resolveImports(m, docPath);
   expect(findings).toHaveLength(1);
   expect(findings[0]!.code).toBe("STALE");

@@ -5,8 +5,7 @@ function block(src: string) {
   return locate(src).blocks[0]!;
 }
 
-const FENCE = (meta: string, body = "") =>
-  ["```vmark " + meta, body, "```", ""].join("\n");
+const FENCE = (meta: string, body = "") => ["```vmark " + meta, body, "```", ""].join("\n");
 
 test("an ordinary sheet id has no import declaration", () => {
   const b = block(FENCE("#lines"));
@@ -37,14 +36,20 @@ test("`from ... at sha256:<digest>`", () => {
 });
 
 test("`delimited` and `labelled`, combined with `at`", () => {
-  const b = block(FENCE("#benchmark from benchmark.csv delimited : labelled Id, Time at sha256:" + "b".repeat(64)));
+  const b = block(
+    FENCE(
+      "#benchmark from benchmark.csv delimited : labelled Id, Time at sha256:" + "b".repeat(64),
+    ),
+  );
   expect(b.importDecl?.delimiter).toBe(":");
   expect(b.importDecl?.labels).toEqual(["Id", "Time"]);
   expect(b.importDecl?.stampDigest).toBe("b".repeat(64));
 });
 
 test("clauses out of order is a grammar error", () => {
-  const b = block(FENCE("#benchmark from benchmark.csv at sha256:" + "c".repeat(64) + " delimited :"));
+  const b = block(
+    FENCE("#benchmark from benchmark.csv at sha256:" + "c".repeat(64) + " delimited :"),
+  );
   expect(b.importDecl).toBeNull();
   expect(b.grammarError?.message).toContain("delimited");
 });
