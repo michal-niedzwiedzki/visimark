@@ -1,6 +1,6 @@
 import { countBindings } from "../eval/check.js";
 import { build } from "../model/build.js";
-import { locate, type LocatedDoc, NO_FORMULAS_MARKER } from "../parse/document.js";
+import { locate, type LocatedDoc, NO_FORMULAS_MARKER, type Span } from "../parse/document.js";
 import type { Edit } from "../write/splice.js";
 import { buildContext, type InferSheet } from "./context.js";
 import { infer, type Proposal } from "./propose.js";
@@ -24,9 +24,17 @@ export type PlannedInsert = Edit &
   );
 
 /**
- * `--write` only ever inserts. It never rewrites an existing byte, so input
- * columns, prose, headings and existing blocks are untouched by construction —
- * a stronger guarantee than `fmt` makes, and worth keeping.
+ * `--write` only ever inserts — with one exception. It never rewrites an
+ * existing byte, so input columns, prose, headings and existing blocks are
+ * untouched by construction — a stronger guarantee than `fmt` makes, and
+ * worth keeping.
+ *
+ * The exception: a document already carrying `<!--vmark:no-formulas-->` that
+ * this same run gives its first rules is no longer telling the truth, and
+ * `--write` is precisely what falsified it. Leaving the marker behind would
+ * hand back a document `check` immediately flags with `COVERAGE` — trading a
+ * missing-edit bug for a wrongly-kept one — so the marker is deleted in the
+ * same pass that makes it stale.
  */
 export function planInfer(source: string, only?: Proposal[]): PlannedInsert[] {
   const proposals = only ?? infer(source);
@@ -76,7 +84,26 @@ export function planInfer(source: string, only?: Proposal[]): PlannedInsert[] {
     });
   }
 
+  if (out.length > 0 && doc.noFormulas !== null) {
+    out.push({ ...removeMarker(source, doc.noFormulas), kind: "marker" });
+  }
+
   return out;
+}
+
+/**
+ * Undoes exactly what `planMarker` does, for the document that outgrew the
+ * claim. The marker's own trailing newline goes with it, and so does the
+ * blank line that set it apart from the content above — the same blank line
+ * `planMarker`'s `lead` would have inserted, so a mint-then-outgrow round
+ * trip leaves no trace.
+ */
+function removeMarker(source: string, span: Span): Edit {
+  let start = span.start;
+  let end = span.end;
+  if (source[end] === "\n") end += 1;
+  if (source[start - 1] === "\n" && source[start - 2] === "\n") start -= 1;
+  return { start, end, text: "" };
 }
 
 /**
