@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Declared local data imports (`from <path>`) are now supported: a problem
+  resolving one — an unstamped or stale import, a missing file, a bad path,
+  malformed CSV, or a column rule attempted on a read-only imported sheet —
+  shows as an `IMPORT` diagnostic on the sheet's block (a stamp mismatch shows
+  as `STALE`, like any other stale value).
+
 ## 0.1.2 - 2026-09-10
 
 - Writing `Σ`/`∑` no longer shows as a parse-error diagnostic; it's treated

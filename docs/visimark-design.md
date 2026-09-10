@@ -36,11 +36,17 @@ committed beside the Markdown and verified like any other derived value
 3. **Ambiguity is an error, never a guess.** Where a value could mean two
    things, VisiMark refuses rather than picks. This rule produced the ISO-only
    date decision and the rejection of thousands separators.
-4. **The meaning of a document depends only on its own text and the version of
-   `visimark` that reads it.** Nothing ambient may change what a number
-   evaluates to: no extension modules, no config file, no environment
-   variables, no network, no clock. Two people checking out the same commit get
-   the same answer, and a reviewer reading the diff sees every input to it.
+4. **The meaning of a document depends only on its own text, the version of
+   `visimark`, and the contents of explicitly declared local input files.**
+   An imported input is named by an explicit local path in the document —
+   never a URL, an environment variable, a configuration file, a plugin, the
+   clock, or the locale. A `from` clause may carry a `sha256:` content
+   digest; a locked import is valid only when the local file's bytes match
+   that digest exactly. An unlocked import is legal while authoring, but
+   causes `check` to fail. An imported file is input only: VisiMark never
+   writes it. Two people checking out the same commit get the same answer,
+   and a reviewer reading the diff sees every input to it — including a
+   declared local one ([§19](#19-declared-local-data-imports)).
 
 **The consequence is that VisiMark will not have a plugin architecture**, and
 this is a deliberate refusal rather than an unbuilt feature. A registry of
@@ -396,6 +402,16 @@ input columns, prose, headings, table alignment, the blocks themselves — is
 human territory and is never touched. The sole exception is `fmt --fix-dates`,
 which is opt-in precisely because it writes to input.
 
+A fourth category sits beside the three the tool writes: a **declared
+input** ([§19](#19-declared-local-data-imports)) — a file the document names
+in a `from` clause, that the tool reads and never writes, and whose exact
+contents the document pins with a stamp. The stamp itself (the
+`at sha256:<digest>` clause) is the one part of a `from` declaration the tool
+owns and rewrites, exactly like a computed cell; the file it names is never
+touched, under any flag. This keeps "everything else is human territory" true
+without exception: a declared input is not a silent fourth thing that falls
+through that sentence, it is named.
+
 A generated artifact is a *category*, not a second exception. `--fix-dates` is
 gated because it overwrites human input in place; an artifact is a file nobody
 hand-edits, which makes it more exclusively tool-owned than a computed cell
@@ -437,12 +453,19 @@ justifies the project.
 | `ANCHOR` | anchor with no rewritable target | no |
 | `ASSERT` | an `assert` statement evaluated false ([§17](#17-assertions)) | no |
 | `ARTIFACT` | a declared artifact cannot be built or written ([§18](#18-generated-artifacts)) | no |
+| `IMPORT` | a declared local import cannot be resolved: unstamped, missing file, malformed stamp, bad path, malformed CSV, or a column rule attempted on a read-only imported sheet ([§19](#19-declared-local-data-imports)) | no (except the stamp itself — see below) |
 | `WARN` | scalar defined and never read | no |
 | `NOTE` | finding suppressed by an upstream error | n/a |
 
 `fmt` repairs every `STALE` finding without asking, because those cells are
 outputs and the formula is the authority. It repairs none of the others,
-because each is a question only a human can answer.
+because each is a question only a human can answer. `STALE` is widened again
+here, as it was for artifacts ([§18](#18-generated-artifacts)): a mismatched
+import stamp is `STALE`, and `fmt` rewrites the digest — the one part of an
+`IMPORT`-class problem it ever touches. An unstamped import is `IMPORT`, not
+`STALE`, but `fmt` still repairs it, by adding the stamp — the sole `IMPORT`
+finding `fmt` fixes without asking, since it is legal authoring syntax rather
+than a question for a human ([§19](#19-declared-local-data-imports)).
 
 ## 11. CLI
 
@@ -470,7 +493,12 @@ computed value is still printed first, so a pipeline reading it is not starved,
 but the non-zero code means the document's stated invariants do not hold.
 
 `explain` exists to recover what the format gives up by scattering rules across
-blocks: a single readable view of a sheet's logic and evaluation order.
+blocks: a single readable view of a sheet's logic and evaluation order. For an
+imported sheet it also prints the declaration's path, delimiter, `labelled`
+assertion, and stamp state — matching, stale, unstamped, or error — in the
+same position it already gives a chart's target and current state
+([§19](#19-declared-local-data-imports)); `explain --json` carries the same
+fields under a per-sheet `import` object.
 
 ## 12. Architecture
 
@@ -486,6 +514,7 @@ in the editor-plugins design.
 | `parse/` | remark + remark-gfm; locate tables, blocks, anchors with positions | remark |
 | `model/` | sheets, columns, bindings, scopes | `lang`, `parse` |
 | `eval/` | dependency graph, topological order, decimal evaluation | `model` |
+| `import/` | CSV parsing, the declared-input path gate, stamp resolution | `model` |
 | `write/` | offset splicer over the original source text | `model` |
 | `report/` | finding formatting, did-you-mean | `model` |
 | `cli/` | command surface | all |
@@ -520,6 +549,13 @@ an inlined artifact would rewrite a line of the document on every data change.
 Beyond those: unit tests per module; golden-file tests for the splicer proving
 that a one-cell change touches one line; and a property test that `fmt` is
 idempotent.
+
+Declared local data imports ([§19](#19-declared-local-data-imports)) have
+their own acceptance fixture, `test/fixtures/import/benchmark.{md,csv}`, and
+their own transcript test, `test/import-acceptance.test.ts` — but the fixture
+is **not** promoted to normative status alongside the three examples above: it
+is not held to `fmt` byte-stability across arbitrary edits, only to the
+specific transcript its test asserts.
 
 `DUP` and `UNIT` must not fire on either example — both keep their numbers bare
 and their currency in prose — so adding those two codes leaves the acceptance
@@ -821,5 +857,72 @@ a chartable column is not evidence of an intended chart.
 the document — add a visible column instead), cross-sheet series, further
 engines (`line`, `area`, `scatter`, `stacked-bar`), orphan cleanup, and any
 output format other than SVG.
+
+## 19. Declared local data imports
+
+A sheet may take its table from a declared local file instead of an inline GFM
+table — a **declared input** ([§9](#9-write-back)), read-only and pinned to an
+exact identity, for a table too large to embed in Markdown. Full specification:
+[`declared-local-data-imports-spec.md`](design/declared-local-data-imports-spec.md).
+Approved on [#66](https://github.com/michal-niedzwiedzki/visimark/issues/66).
+
+**Syntax**, in the fence info string, after the sheet id:
+
+```
+vmark #benchmark from benchmark.csv [delimited <char>] [labelled <col>,...] [at sha256:<digest>]
+```
+
+`from <path>` marks the sheet as imported; `<path>` resolves relative to the
+document and is gated exactly as a chart's output path is
+([§18](#18-generated-artifacts)): relative only, contained, no symlink escape,
+no control characters, no device names — checked here for a lowercase `.csv`
+extension instead of `.svg`. `delimited <char>` names a non-default CSV
+delimiter (comma otherwise); the character may not be a letter, digit, quote,
+`.`, `-`, or whitespace, since a delimiter drawn from a field's own alphabet
+silently corrupts every field containing it. `labelled <col>,...` asserts the
+CSV header, in order. `at sha256:<digest>` is a full, lowercase, 64-character
+SHA-256 digest of the file's raw bytes — the only stamp algorithm v1
+recognises; a Git commit reference is deliberately not supported (it cannot
+name uncommitted contents, and needs a `.git` directory, a reachable object,
+and in practice a `git` binary — ambient dependencies a bare digest does not
+have).
+
+**An imported sheet owns no GFM table and has no column rules.** Its columns
+come from the CSV header, read-only, exactly like an ordinary input column but
+with no cell to write back to. A binding whose name matches an imported column
+is an `IMPORT` finding, not a column rule — including a column held only in
+memory and never written: the generator owns the CSV, and the same
+`name = expression` syntax cannot mean "write a cell" in one sheet and
+"compute nothing, anywhere" in another. Scalars, `assert`, and `chart` read an
+imported column exactly as they read a foreign sheet's column — a bare
+reference outside a reduce/chart operand is still `VECTOR`.
+
+**Resolution order**, stopping at the first failure so one root cause yields
+one finding: path gate → file exists → stamp clause well-formed → stamp
+matches (if present) → CSV parses → no duplicate headers → headers are valid
+identifiers → `labelled` matches. A stamp mismatch is `STALE`, fixed by `fmt`
+rewriting the digest; every other failure is `IMPORT`, fixed by nothing except
+an unstamped import, which `fmt` stamps. The CSV file itself is never written,
+under any flag.
+
+**CSV parsing** is RFC 4180: quoting, `""` escaping, comma default delimiter,
+both `\n` and `\r\n` accepted (not mixed in one file), a UTF-8 BOM stripped
+before parsing but not before hashing. Every field is read with the same
+literal grammar a table cell already uses — an ISO date, a decimal number
+(optionally unit-decorated, [§7](#7-numeric-semantics)), or a string —
+introducing no CSV-specific type-conversion rule. An imported column's write
+precision never applies, since it has no computed cells; a scalar derived from
+one still takes its precision from its own anchor, unchanged.
+
+**Elsewhere.** `explain` and `explain --json` surface the import's path,
+delimiter, labels, and stamp state ([§11](#11-cli)). `infer` never proposes a
+`from` clause, a stamp, or a `delimited`/`labelled` clause — a CSV sitting next
+to a document is not evidence it should be imported, the same restraint
+`infer` already shows toward `chart` and `assert`.
+
+**Deferred.** Git commit-reference stamps; any imported format other than CSV;
+computed columns on an imported sheet in any form; a performance budget or
+caching strategy for a very large import — `check` re-reads and re-hashes the
+file on every run in v1.
 
 <!--vmark:no-formulas-->
