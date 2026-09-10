@@ -116,6 +116,7 @@ export function provisional(ctx: InferContext, extra: Binding[]): DocModel {
         inputColumns: new Set(s.index.keys()),
         assertions: [],
         charts: [],
+        imported: null,
       });
     }
   }
@@ -154,6 +155,7 @@ function cloneSheet(s: Sheet): Sheet {
     inputColumns: new Set(s.inputColumns),
     assertions: [...s.assertions],
     charts: [...s.charts],
+    imported: s.imported,
   };
 }
 

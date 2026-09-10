@@ -16,6 +16,7 @@ const SEVERITY: Record<string, DiagnosticSeverity> = {
   ANCHOR: DiagnosticSeverity.Warning,
   ASSERT: DiagnosticSeverity.Error,
   ARTIFACT: DiagnosticSeverity.Error,
+  IMPORT: DiagnosticSeverity.Error,
   WARN: DiagnosticSeverity.Hint,
 };
 

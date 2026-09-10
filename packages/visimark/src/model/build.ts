@@ -85,7 +85,27 @@ export function build(doc: LocatedDoc): DocModel {
     const sheetId = block.sheetId;
     blockOfSheet.set(sheetId, block);
     const table = doc.tableBeforeBlock.get(block) ?? null;
-    const sheet = ensureSheet(sheets, sheetId, table);
+    const sheet = ensureSheet(sheets, sheetId, table, block.importDecl);
+
+    if (block.grammarError) {
+      findings.push({
+        code: "TYPE",
+        sheetId,
+        message: block.grammarError.message,
+        sourceOffset: block.grammarError.span.start,
+        span: block.grammarError.span,
+      });
+    }
+
+    if (block.importDecl && table !== null) {
+      findings.push({
+        code: "SHEET",
+        sheetId,
+        message: "an imported sheet may not also own an inline table",
+        sourceOffset: block.importDecl.declSpan.start,
+        span: block.importDecl.declSpan,
+      });
+    }
 
     if (!SHEET_ID_RE.test(sheetId)) {
       const bad = invalidSheetIdChars(sheetId);
@@ -200,7 +220,12 @@ export function build(doc: LocatedDoc): DocModel {
   };
 }
 
-function ensureSheet(sheets: Map<string, Sheet>, id: string, table: Sheet["table"]): Sheet {
+function ensureSheet(
+  sheets: Map<string, Sheet>,
+  id: string,
+  table: Sheet["table"],
+  imported: Sheet["imported"] = null,
+): Sheet {
   let s = sheets.get(id);
   if (!s) {
     s = {
@@ -212,10 +237,12 @@ function ensureSheet(sheets: Map<string, Sheet>, id: string, table: Sheet["table
       inputColumns: new Set(),
       assertions: [],
       charts: [],
+      imported,
     };
     sheets.set(id, s);
-  } else if (s.table === null && table !== null) {
-    s.table = table;
+  } else {
+    if (s.table === null && table !== null) s.table = table;
+    if (s.imported === null && imported !== null) s.imported = imported;
   }
   return s;
 }
