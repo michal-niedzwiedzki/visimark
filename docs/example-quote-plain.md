@@ -10,7 +10,7 @@
 | Module            | Format   | Seats |    Fee |  Revenue | Materials | Delivered |
 |-------------------|----------|------:|-------:|---------:|----------:|----------:|
 | Foundations       | workshop |    24 | 450.00 | 10800.00 |    864.00 |  11664.00 |
-| Advanced patterns | workshop |    12 | 650.00 |  7800.00 |    624.00 |   8424.00 |
+| Advanced patterns | workshop |    2 | 2.00 |  7800.00 |      624.00 |   8424.00 |
 | Coaching          | 1:1      |     6 | 900.00 |  5400.00 |    432.00 |   5832.00 |
 | Assessment        | async    |    30 | 120.00 |  3600.00 |    288.00 |   3888.00 |
 
