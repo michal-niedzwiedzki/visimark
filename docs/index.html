@@ -179,7 +179,111 @@ Total: **35.00**<span class="c">&lt;!--vmark=order.total--&gt;</span>
       </p>
 
       <header class="section-head">
-        <h2>Try it out</h2>
+        <h2>Five documents, five differentiators</h2>
+        <p class="subtitle">
+          Not just a spreadsheet for Markdown &mdash; a build tool, an agent harness, a human error
+          verifier, executable documentation and a safety net for stale artifacts.
+        </p>
+      </header>
+
+      <section class="usecase-grid" id="usecases">
+        <article class="usecase-item">
+          <h3><span class="usecase-num">1.</span> Build tool &mdash; test-suite sharding</h3>
+          <p>
+            CI needs to split a test suite across parallel runners so no single shard drags. Most
+            teams keep that split in a hand-maintained matrix that quietly drifts from the suite's
+            real shape. Here the sharding policy is the document, and <code>visimark eval</code> is
+            the thing CI itself reads to build the matrix.
+          </p>
+          <p>
+            <strong
+              >Find out:
+              <a href="example.html?file=example-ci-sharding.md"
+                ><em>why a build tool reads a Markdown file</em></a
+              ></strong
+            >
+          </p>
+        </article>
+
+        <article class="usecase-item">
+          <h3><span class="usecase-num">2.</span> AI agent harness &mdash; a spending ledger</h3>
+          <p>
+            An autonomous coding agent needs a spending cap it can't talk itself out of. Here the
+            cap and the running spend live in a document a harness checks before the next tool call
+            is allowed to fire &mdash; the enforcement point sits outside the agent entirely.
+          </p>
+          <p>
+            <strong
+              >Find out:
+              <a href="example.html?file=example-agent-budget.md"
+                ><em>why this is a harness artifact, not a spreadsheet</em></a
+              ></strong
+            >
+          </p>
+        </article>
+
+        <article class="usecase-item">
+          <h3>
+            <span class="usecase-num">3.</span> Human error verifier &mdash; a deck joist calc
+          </h3>
+          <p>
+            A structural calc gets retyped by hand between engineer, permit office and contractor,
+            and every retyping risks a transposed digit &mdash; a failure mode with no compile
+            error. This calculation sheet is built to catch exactly that before anyone builds the
+            deck.
+          </p>
+          <p>
+            <strong
+              >Find out:
+              <a href="example.html?file=example-structural-check.md"
+                ><em>why this is a verifier, not a calculator</em></a
+              ></strong
+            >
+          </p>
+        </article>
+
+        <article class="usecase-item">
+          <h3>
+            <span class="usecase-num">4.</span> Executable documentation &mdash; a pricing policy
+          </h3>
+          <p>
+            Pricing pages, sales decks and billing configs usually restate the same numbers
+            independently until one of them lags behind a tier change. Here the pricing policy's
+            prose and the exact values the billing engine reads at deploy time are the same file.
+          </p>
+          <p>
+            <strong
+              >Find out:
+              <a href="example.html?file=example-pricing-policy.md"
+                ><em>why this is knowledge extraction, not documentation-as-code</em></a
+              ></strong
+            >
+          </p>
+        </article>
+
+        <article class="usecase-item">
+          <h3>
+            <span class="usecase-num">5.</span> Safety net for stale artifacts &mdash; an onboarding
+            dashboard
+          </h3>
+          <p>
+            A funnel chart pasted into a quarterly slide looks current forever, even after the
+            numbers behind it move. Here the chart is a generated artifact of the document, and
+            <code>check</code> refuses to let it disagree with the table beside it.
+          </p>
+          <p>
+            <strong
+              >Find out:
+              <a href="example.html?file=example-onboarding-dashboard.md"
+                ><em>why this is the safety net, not the feature</em></a
+              ></strong
+            >
+          </p>
+        </article>
+      </section>
+
+      <header class="section-head">
+        <h2>Try it out, learn on the go</h2>
         <p class="subtitle">No install required &mdash; play with VisiMark right now.</p>
       </header>
 

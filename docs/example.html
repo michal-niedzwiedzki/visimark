@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>VisiMark — example</title>
+    <link rel="icon" type="image/webp" href="visimark.webp" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&display=swap"
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+      /* This page only: a full-length, side-by-side reading view for one
+         example document, picked by the ?file= query param instead of
+         building a static page per example. */
+      .example-bar {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin: 8px 0 0;
+      }
+      .example-back {
+        color: #b9b9b9;
+        text-decoration: none;
+        font-size: 0.92rem;
+      }
+      .example-back:hover {
+        color: #f4f4f4;
+      }
+      .example-source-link {
+        color: #b9b9b9;
+        font-size: 0.9rem;
+      }
+      .example-source-link a {
+        color: #f4f4f4;
+      }
+      .doc-demo {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        align-items: start;
+        gap: 18px;
+        margin-top: 20px;
+      }
+      .doc-pane {
+        min-width: 0;
+      }
+      .doc-pane h4 {
+        margin: 0 0 8px;
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #b9b9b9;
+      }
+      .doc-source {
+        margin: 0;
+        background: #1c1c1c;
+        color: #e6e6e6;
+        border-radius: 10px;
+        padding: 18px 20px;
+        font-family: "SF Mono", "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
+        font-size: 0.78rem;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+      .doc-preview {
+        background: #ffffff;
+        color: #1b1b1b;
+        border-radius: 10px;
+        padding: 26px 32px;
+        box-shadow: 0 16px 50px rgba(0, 0, 0, 0.45);
+      }
+      .doc-preview h1 {
+        font-size: 1.5rem;
+        margin: 0 0 14px;
+      }
+      .doc-preview h2 {
+        font-size: 1.18rem;
+        margin: 26px 0 10px;
+      }
+      .doc-preview h3 {
+        font-size: 1.02rem;
+        margin: 20px 0 8px;
+      }
+      .doc-preview p,
+      .doc-preview li {
+        font-size: 0.94rem;
+        line-height: 1.6;
+      }
+      .doc-preview p {
+        margin: 0 0 12px;
+      }
+      .doc-preview ul,
+      .doc-preview ol {
+        margin: 0 0 12px;
+        padding-left: 1.3rem;
+      }
+      .doc-preview table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 0 0 14px;
+        font-size: 0.86rem;
+      }
+      .doc-preview th,
+      .doc-preview td {
+        border: 1px solid #ddd;
+        padding: 5px 9px;
+      }
+      .doc-preview code {
+        background: #f0f0f0;
+        border-radius: 4px;
+        padding: 1px 5px;
+        font-size: 0.88em;
+      }
+      .doc-preview pre {
+        background: #1c1c1c;
+        color: #e6e6e6;
+        border-radius: 8px;
+        padding: 12px 14px;
+        overflow-x: auto;
+        font-size: 0.78rem;
+      }
+      .doc-preview pre code {
+        background: none;
+        padding: 0;
+      }
+      .doc-preview img {
+        max-width: 100%;
+        margin: 6px 0 14px;
+        background: #ffffff;
+      }
+      .doc-preview hr {
+        border: none;
+        border-top: 1px solid #e6e6e6;
+        margin: 24px 0;
+      }
+      .doc-preview blockquote {
+        margin: 0 0 12px;
+        padding-left: 14px;
+        border-left: 3px solid #e6e6e6;
+        color: #555;
+      }
+      .doc-error {
+        color: #ff453a;
+        font-size: 0.92rem;
+        margin-top: 20px;
+      }
+      @media (max-width: 880px) {
+        .doc-demo {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="masthead">
+        <a href="index.html"><img src="visimark.webp" alt="VisiMark logo" /></a>
+        <div>
+          <h1><a href="index.html" style="color: inherit; text-decoration: none">VisiMark</a></h1>
+          <p class="subtitle">the numbers in your Markdown, checked on every commit</p>
+        </div>
+      </header>
+
+      <p class="example-bar">
+        <a class="example-back" href="index.html#usecases">&larr; Back to VisiMark</a>
+        <span class="example-source-link" id="source-link"></span>
+      </p>
+
+      <div id="doc-demo" class="doc-demo" hidden>
+        <div class="doc-pane">
+          <h4 id="source-label">Source</h4>
+          <pre class="doc-source" id="doc-source" tabindex="0"></pre>
+        </div>
+        <div class="doc-pane">
+          <h4>Rendered preview</h4>
+          <div class="doc-preview" id="doc-preview" tabindex="0"></div>
+        </div>
+      </div>
+
+      <p class="doc-error" id="doc-error" hidden></p>
+    </div>
+
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/marked/18.0.11/lib/marked.umd.min.js"
+      integrity="sha512-spWXz/aNScpDSOz0auQxbzVBx6LmlxjgH7zilyCenKLGEyBje0iSJiLGsdPlrfNqFitWXRDdAXo1Bi7bonkZ6A=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+    <script>
+      (function () {
+        var params = new URLSearchParams(window.location.search);
+        var file = params.get("file") || "example-ci-sharding.md";
+
+        // Guard against an arbitrary path escaping the docs/ folder or
+        // pointing off-site — only a bare filename in this directory is
+        // ever fetched.
+        var safe = /^[A-Za-z0-9_-]+\.md$/.test(file);
+
+        var sourceLabelEl = document.getElementById("source-label");
+        var sourceLinkEl = document.getElementById("source-link");
+        var sourceEl = document.getElementById("doc-source");
+        var previewEl = document.getElementById("doc-preview");
+        var demoEl = document.getElementById("doc-demo");
+        var errorEl = document.getElementById("doc-error");
+
+        function showError(message) {
+          errorEl.textContent = message;
+          errorEl.hidden = false;
+        }
+
+        if (!safe) {
+          showError("Unrecognised ?file= value: " + file);
+          return;
+        }
+
+        sourceLabelEl.textContent = "docs/" + file;
+        var githubUrl = "https://github.com/michal-niedzwiedzki/visimark/blob/master/docs/" + file;
+        sourceLinkEl.innerHTML =
+          'View on GitHub: <a href="' +
+          githubUrl +
+          '" target="_blank" rel="noopener">docs/' +
+          file +
+          "</a>";
+
+        fetch(file)
+          .then(function (res) {
+            if (!res.ok) throw new Error(res.status + " " + res.statusText);
+            return res.text();
+          })
+          .then(function (raw) {
+            document.title = "VisiMark — " + file;
+            sourceEl.textContent = raw;
+            previewEl.innerHTML = typeof marked !== "undefined" ? marked.parse(raw) : raw;
+            demoEl.hidden = false;
+          })
+          .catch(function (err) {
+            showError("Could not load docs/" + file + " (" + err.message + ").");
+          });
+      })();
+    </script>
+  </body>
+</html>
