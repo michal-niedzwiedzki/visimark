@@ -1,12 +1,23 @@
 # VisiMark
 
-VisiMark is a spreadsheet-mechanics tool for Markdown. The name is a nod to
-VisiCalc — the first spreadsheet software, originally developed for the Apple II
-by VisiCorp and later ported to the IBM PC.
+**The numbers in your Markdown, checked on every commit.**
 
-Agents are unreliable at arithmetic and reliable at writing formulas. VisiMark
-is what that fact implies for Markdown: write `Net = Price * Qty` instead of
-`50.00`, and a machine can prove the two still agree.
+Markdown is a fine way to write a document and a terrible way to keep its
+arithmetic honest. Change a `12` to a `20` in an invoice, forget the totals
+that depend on it, and the document still renders perfectly. GitHub does not
+complain. Your Markdown preview does not complain. A reviewer may not notice.
+
+VisiMark makes those numbers verifiable. It turns the calculations in a
+document into explicit formulas, recomputes them, reports exactly what no
+longer agrees, and fails CI when a document contradicts its own arithmetic.
+
+This matters most when the Markdown is written or edited by an AI agent.
+Agents are reliable at writing formulas and unreliable at the arithmetic those
+formulas describe: `Net = Price * Qty` is something an agent gets right,
+`50.00` is something it guesses. Write the formula instead of the number and
+the number stops being a claim and becomes a derivation — reviewable in a
+diff, re-runnable, enforceable in CI. The agent writes, VisiMark verifies, Git
+records the result.
 
 A VisiMark document is an ordinary Markdown file. It renders correctly on
 GitHub, in VS Code preview, and through pandoc to both HTML and Word, today,
@@ -71,15 +82,20 @@ Twenty-six problems: a payment date ambiguous by twenty-nine days, a cell
 someone nudged by hand to make a column look right, a circular reference — all
 invisible on the rendered page, all caught before a human had to notice.
 
-## Why
+## Why this matters now
 
-The working stack for collaborating with an AI agent is a text editor over
-lightly formatted artifacts. Markdown covers prose. Nothing covers calculation.
+More and more of the documents that carry numbers are written as text and kept
+in Git: reports and research notes, estimates and budgets, quotes and
+invoices, project plans, financial summaries. Text is excellent for
+collaboration, review and version control. But ordinary Markdown has no way to
+say *this number came from these inputs, and it must still agree with them* —
+so the moment an input changes, every figure downstream of it is a guess until
+a human re-checks it by hand.
 
-When an agent emits a formula instead of a number, the number stops being a
-claim and becomes a derivation: reviewable in a diff, re-runnable, and
-enforceable in CI. That is the point of the project. The arithmetic is not the
-value; the audit trail is.
+VisiMark adds that missing layer. The working stack for collaborating with an
+agent is a text editor over lightly formatted artifacts; Markdown already
+covers the prose, and this covers the calculation. The arithmetic is not the
+value — the audit trail is.
 
 ## What it looks like
 
@@ -414,12 +430,19 @@ check FILE`.
 
 The project began as a CSV-based idea and moved to Markdown so that several
 small sheets can live inside one master document, and so that the file renders
-as a document rather than as data.
+as a document rather than as data. The name is a nod to VisiCalc — the first
+spreadsheet software, originally developed for the Apple II by VisiCorp and
+later ported to the IBM PC.
 
 ## Out of scope
 
-No grid, no presentation layer, no cell styling, no locale, no Excel file
-compatibility, and no attempt at Excel's function library. Use other tools for
-neat presentation.
+VisiMark is deliberately not a spreadsheet replacement. No grid, no
+presentation layer, no cell styling, no locale, no Excel file compatibility,
+and no attempt at Excel's function library. Use other tools for neat
+presentation — and a spreadsheet when what you want is a spreadsheet.
+
+Use VisiMark when what you want is a document: plain text, readable without
+the tool, reviewable in an ordinary pull request, writable by a human or an
+agent — with numbers that can be checked on every commit.
 
 <!--vmark:no-formulas-->

@@ -161,4 +161,21 @@ describe("--write marks a document infer can make nothing of", () => {
   test("a second --write does not stack markers", () => {
     expect(planInfer(written(PLAIN))).toEqual([]);
   });
+
+  test("a marked document that gains rules has the marker removed", () => {
+    const marked = written(PLAIN);
+    expect(marked).toContain("<!--vmark:no-formulas-->");
+
+    const grown = `${marked}
+| Item | A | B  |
+|------|--:|---:|
+| a    | 2 |  4 |
+| b    | 3 |  6 |
+| c    | 5 | 10 |
+`;
+
+    const out = written(grown);
+    expect(out).not.toContain("<!--vmark:no-formulas-->");
+    expect(check(build(locate(out))).findings).toEqual([]);
+  });
 });

@@ -107,6 +107,13 @@
         min-width: 0;
         min-height: 0;
       }
+      /* [hidden] and .panel are equal-specificity class/attribute selectors,
+         so without this the `display: flex` above would win the cascade and
+         defeat `el.hidden = true` (see SCENARIO, hidden when the current
+         file has no scenario data — renderScenario() below). */
+      .panel[hidden] {
+        display: none;
+      }
       .panel > .panel-head {
         flex: none;
         display: flex;
@@ -131,7 +138,25 @@
         overflow: auto;
       }
 
-      /* ---- Working area (55%) ---- */
+      /* ---- Content row: everything below the topbar ----
+         SCENARIO (82:18 split with .content-main, see .knowledge below) sits
+         here rather than inside .working-area, so it spans the full height
+         of both .working-area and .diagnostic-area instead of being boxed
+         into just the top row alongside FILES/EDITOR/PREVIEW. */
+      .content-row {
+        flex: 95 1 0;
+        display: flex;
+        min-height: 0;
+      }
+      .content-main {
+        flex: 82 1 0;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        min-height: 0;
+      }
+
+      /* ---- Working area (55% of content-main's height) ---- */
       .working-area {
         flex: 55 1 0;
         display: flex;
@@ -144,9 +169,9 @@
         border-right: none;
       }
 
-      /* FILES — 10% */
+      /* FILES — 12% of .content-main's width (12:35:35 with EDITOR/PREVIEW) */
       .files {
-        flex: 0 0 12%;
+        flex: 12 1 0;
         background: #2a2a2a;
       }
       .files .panel-body {
@@ -196,7 +221,7 @@
 
       /* EDITOR — 35%, black @ 90% opacity */
       .editor {
-        flex: 0 0 35%;
+        flex: 35 1 0;
         background: rgba(0, 0, 0, 0.9);
       }
       .editor .panel-body {
@@ -239,7 +264,7 @@
 
       /* PREVIEW — 35%, #FAF9F6 */
       .preview {
-        flex: 0 0 35%;
+        flex: 35 1 0;
         background: #faf9f6;
         color: #1b1b1b;
       }
@@ -299,13 +324,24 @@
         max-width: 100%;
       }
 
-      /* SCENARIO — 18% */
+      /* SCENARIO — 18% of .content-row, spanning its full height */
       .knowledge {
-        /* 12% (files) + 35% (editor) + 35% (preview) + 18% must total 100%
-           of .working-area's width — it was drifted to 20% at some point
-           without the other three shrinking to match, so this column (and
-           its content) ran 2% past the viewport's right edge. */
-        flex: 0 0 18%;
+        /* A sibling of .content-main (82 1 0) within .content-row, not a
+           column inside .working-area alongside FILES/EDITOR/PREVIEW — that
+           way it stretches the full height of the content area, growing
+           down into the space that would otherwise belong entirely to
+           .diagnostic-area (TERMINAL/REASONING/KNOWLEDGE/INFERENCE/BUILD),
+           rather than being boxed into just the top row. 82 (content-main)
+           + 18 (this) = 100, the same ratio FILES/EDITOR/PREVIEW/SCENARIO
+           used to split between themselves — it was drifted to 20% at some
+           point without the other three shrinking to match, so this column
+           (and its content) ran 2% past the viewport's right edge.
+           Grow-based rather than a fixed 0 0 18% basis so that hiding this
+           panel (no scenario data for the current file — see
+           renderScenario()) lets content-main absorb its share instead of
+           leaving a blank gap. */
+        flex: 18 1 0;
+        border-left: 1px solid rgba(255, 255, 255, 0.08);
         background: #2a2a2a;
       }
       .knowledge .panel-body {
@@ -419,6 +455,167 @@
         color: #7ee787;
         font-weight: 700;
         font-size: 0.8rem;
+      }
+
+      /* Progressive completion reveal — "Nice work", the badge, and the
+         reward each fade in on their own instead of popping into place. The
+         opacity baseline lives here rather than on [hidden] because a
+         hidden->visible flip needs a rendered frame at opacity:0 to
+         transition from (see revealFadeIn()); the .show class is what
+         actually invites the transition. */
+      .quest-complete,
+      .badge-award,
+      .reward-box {
+        opacity: 0;
+        transition: opacity 0.5s ease;
+      }
+      .quest-complete.show,
+      .badge-award.show,
+      .reward-box.show {
+        opacity: 1;
+      }
+
+      /* [hidden] and .badge-award are equal-specificity class/attribute
+         selectors, so without this the `display: flex` below would win the
+         cascade and defeat `el.hidden = true`. .reward-box stays block, so
+         it has no such conflict to resolve. */
+      .badge-award[hidden] {
+        display: none;
+      }
+
+      /* Badge award — shown below the quest list once every step in a
+         tutorial chapter's quest is checked off. Badges persist across
+         sessions (localStorage), so this also renders on revisiting a
+         chapter whose badge was earned in an earlier session. */
+      .badge-award {
+        margin-top: 10px;
+        padding: 12px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, rgba(255, 69, 58, 0.14), rgba(86, 211, 100, 0.1));
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+      }
+      .badge-award-icon {
+        flex: none;
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: #1b1b1b;
+        border: 2px solid #ffb454;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #ffb454;
+      }
+      .badge-award-icon svg {
+        width: 26px;
+        height: 26px;
+      }
+      .badge-award-info {
+        min-width: 0;
+      }
+      .badge-award-label {
+        font-size: 0.62rem;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: #7a97ab;
+      }
+      .badge-award-name {
+        font-size: 0.95rem;
+        font-weight: 800;
+        color: #ffffff;
+        margin: 2px 0 4px;
+      }
+      .badge-award-skill {
+        font-size: 0.78rem;
+        color: #d7e4ee;
+        margin-bottom: 10px;
+      }
+      .badge-share {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+      .badge-share-label {
+        font-size: 0.68rem;
+        color: #7a97ab;
+        font-weight: 700;
+        margin-right: 2px;
+      }
+      .share-btn {
+        border: none;
+        border-radius: 999px;
+        padding: 5px 12px;
+        font: inherit;
+        font-size: 0.7rem;
+        font-weight: 800;
+        letter-spacing: 0.03em;
+        cursor: pointer;
+        text-decoration: none;
+        color: #ffffff;
+        display: inline-block;
+      }
+      .share-fb {
+        background: #1877f2;
+      }
+      .share-ig {
+        background: linear-gradient(45deg, #f58529, #dd2a7b, #8134af, #515bd4);
+      }
+      .share-x {
+        background: #000000;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+      }
+      .share-li {
+        background: #0a66c2;
+      }
+      .badge-share-status {
+        margin-top: 6px;
+        font-size: 0.7rem;
+        color: #7ee787;
+      }
+
+      /* Reward — the last thing to appear in the completion sequence, once
+         every quest step and the badge have both had their moment. Its
+         `.agent-popover-host` wrapper is only load-bearing for the "agent"
+         kind, but wraps the CTA unconditionally so the popover has
+         somewhere to anchor whichever kind is showing. */
+      .reward-box {
+        margin-top: 10px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, rgba(255, 69, 58, 0.12), rgba(255, 189, 0, 0.12));
+        border: 1px solid rgba(255, 255, 255, 0.14);
+      }
+      .reward-label {
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        color: #9fb6c9;
+        margin-bottom: 8px;
+      }
+      .reward-cta {
+        border: none;
+        border-radius: 999px;
+        background: #ff453a;
+        color: #ffffff;
+        font: inherit;
+        font-weight: 700;
+        font-size: 0.8rem;
+        padding: 8px 22px;
+        cursor: pointer;
+        transition: background 0.15s ease;
+      }
+      .reward-cta:hover {
+        background: #ff6259;
+      }
+      .reward-status {
+        margin-top: 6px;
+        font-size: 0.7rem;
+        color: #9fb6c9;
       }
 
       /* ---- Diagnostic area (40%) ---- */
@@ -535,6 +732,53 @@
         background: #6b6b6b;
         cursor: default;
       }
+      /* Secondary action — same pill, quieter fill, so "Feed to AI agent"
+         doesn't compete with the primary "Copy to clipboard" for attention. */
+      .action-btn.secondary {
+        background: rgba(255, 255, 255, 0.1);
+        color: #d7e4ee;
+      }
+      .action-btn.secondary:hover {
+        background: rgba(255, 255, 255, 0.18);
+      }
+
+      /* Agent popover — anchored to "Feed to AI agent", opening upward since
+         the action bar sits at the bottom of the KNOWLEDGE tab. */
+      .agent-popover-host {
+        position: relative;
+      }
+      .agent-popover {
+        position: absolute;
+        bottom: calc(100% + 8px);
+        right: 0;
+        display: flex;
+        flex-direction: column;
+        min-width: 140px;
+        padding: 6px;
+        border-radius: 10px;
+        background: #2a2a2a;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        z-index: 10;
+      }
+      .agent-popover[hidden] {
+        display: none;
+      }
+      .agent-option {
+        border: none;
+        background: none;
+        color: #d7e4ee;
+        font: inherit;
+        font-size: 0.8rem;
+        text-align: left;
+        padding: 7px 10px;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      .agent-option:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: #ffffff;
+      }
 
       /* BUILD — per-file pass/fail report */
       .build-row {
@@ -598,29 +842,129 @@
         <span class="badge">running fully in your browser</span>
       </header>
 
-      <div class="working-area">
-        <section class="panel files">
-          <div class="panel-head"><span>Files</span></div>
-          <div class="panel-body">
-            <div id="file-list"></div>
-            <button class="new-file-btn" id="new-file-btn" type="button">+ New</button>
+      <div class="content-row">
+        <div class="content-main">
+          <div class="working-area">
+            <section class="panel files">
+              <div class="panel-head"><span>Files</span></div>
+              <div class="panel-body">
+                <div id="file-list"></div>
+                <button class="new-file-btn" id="new-file-btn" type="button">+ New</button>
+              </div>
+            </section>
+
+            <section class="panel editor">
+              <div class="panel-head">
+                <span>Editor</span>
+                <span
+                  class="mono"
+                  id="editor-filename"
+                  style="font-weight: 400; opacity: 0.7"
+                ></span>
+              </div>
+              <div class="panel-body"><textarea id="editor-ta"></textarea></div>
+            </section>
+
+            <section class="panel preview on-light">
+              <div class="panel-head"><span>Preview</span></div>
+              <div class="panel-body" id="preview-body"></div>
+            </section>
           </div>
-        </section>
 
-        <section class="panel editor">
-          <div class="panel-head">
-            <span>Editor</span>
-            <span class="mono" id="editor-filename" style="font-weight: 400; opacity: 0.7"></span>
+          <div class="diagnostic-area">
+            <section class="panel terminal-panel">
+              <div class="panel-head"><span>Terminal</span></div>
+              <div class="panel-body"><pre id="terminal-body"></pre></div>
+            </section>
+
+            <section class="panel diagnostics">
+              <div class="panel-head">
+                <button
+                  class="diag-tab active"
+                  data-group="diag"
+                  data-tab="reasoning"
+                  type="button"
+                >
+                  Reasoning
+                </button>
+                <button class="diag-tab" data-group="diag" data-tab="knowledge" type="button">
+                  Knowledge
+                </button>
+                <button class="diag-tab" data-group="diag" data-tab="infer" type="button">
+                  Inference
+                </button>
+                <button class="diag-tab" data-group="diag" data-tab="build" type="button">
+                  Build
+                </button>
+              </div>
+
+              <div class="diag-view active" data-group="diag" data-view="reasoning">
+                <div class="diag-scroll"><pre id="reasoning-body"></pre></div>
+              </div>
+
+              <div class="diag-view" data-group="diag" data-view="knowledge">
+                <div class="diag-scroll"><pre id="knowledge-body"></pre></div>
+                <div class="action-bar">
+                  <span class="action-status" id="knowledge-status"></span>
+                  <div class="agent-popover-host" id="knowledge-agent-host">
+                    <button class="action-btn secondary" id="knowledge-agent-btn" type="button">
+                      Feed to AI agent
+                    </button>
+                    <div class="agent-popover" id="agent-popover" hidden>
+                      <button class="agent-option" data-agent="chatgpt" type="button">
+                        ChatGPT
+                      </button>
+                      <button class="agent-option" data-agent="claude" type="button">Claude</button>
+                      <button class="agent-option" data-agent="gemini" type="button">Gemini</button>
+                      <button class="agent-option" data-agent="grok" type="button">Grok</button>
+                      <button class="agent-option" data-agent="perplexity" type="button">
+                        Perplexity
+                      </button>
+                    </div>
+                  </div>
+                  <button class="action-btn" id="knowledge-copy-btn" type="button">
+                    Copy to clipboard
+                  </button>
+                </div>
+              </div>
+
+              <div class="diag-view" data-group="diag" data-view="infer">
+                <div class="diag-scroll">
+                  <pre id="infer-body">
+Click Infer only to see what VisiMark would propose for this
+document — column rules, named scalars, and constants it
+recognises in the prose — without touching it. Infer and write
+applies those proposals to the document.</pre>
+                </div>
+                <div class="action-bar">
+                  <button class="action-btn" id="infer-btn" type="button">Infer only</button>
+                  <button class="action-btn" id="infer-write-btn" type="button">
+                    Infer and write
+                  </button>
+                </div>
+              </div>
+
+              <div class="diag-view" data-group="diag" data-view="build">
+                <div class="diag-scroll">
+                  <div id="build-body">
+                    Run a check across every file in FILES — the same
+                    <span class="mono">visimark check</span> a CI pipeline would run on the whole
+                    repository.
+                  </div>
+                </div>
+                <div class="action-bar">
+                  <span class="flag pending" id="build-flag"></span>
+                  <span id="build-label">BUILD NOT RUN</span>
+                  <span class="meta" id="build-meta"></span>
+                  <span class="action-status" id="build-status"></span>
+                  <button class="action-btn" id="build-btn" type="button">Run Build</button>
+                </div>
+              </div>
+            </section>
           </div>
-          <div class="panel-body"><textarea id="editor-ta"></textarea></div>
-        </section>
+        </div>
 
-        <section class="panel preview on-light">
-          <div class="panel-head"><span>Preview</span></div>
-          <div class="panel-body" id="preview-body"></div>
-        </section>
-
-        <section class="panel knowledge">
+        <section class="panel knowledge" id="scenario-panel">
           <div class="panel-head"><span>Scenario</span></div>
           <div class="panel-body">
             <div id="scenario-body"></div>
@@ -628,67 +972,37 @@
               <div class="quest-title">Try this</div>
               <ul class="quest-list" id="quest-list"></ul>
               <div class="quest-complete" id="quest-complete" hidden>
-                ✨ Nice work — every step in this scenario is checked off.
+                ✨ Nice work — all quests complete.
               </div>
-            </div>
-          </div>
-        </section>
-      </div>
-
-      <div class="diagnostic-area">
-        <section class="panel terminal-panel">
-          <div class="panel-head"><span>Terminal</span></div>
-          <div class="panel-body"><pre id="terminal-body"></pre></div>
-        </section>
-
-        <section class="panel diagnostics">
-          <div class="panel-head">
-            <button class="diag-tab active" data-group="diag" data-tab="reasoning" type="button">
-              Reasoning
-            </button>
-            <button class="diag-tab" data-group="diag" data-tab="knowledge" type="button">
-              Knowledge
-            </button>
-            <button class="diag-tab" data-group="diag" data-tab="infer" type="button">
-              Inference
-            </button>
-            <button class="diag-tab" data-group="diag" data-tab="build" type="button">Build</button>
-          </div>
-
-          <div class="diag-view active" data-group="diag" data-view="reasoning">
-            <div class="diag-scroll"><pre id="reasoning-body"></pre></div>
-          </div>
-
-          <div class="diag-view" data-group="diag" data-view="knowledge">
-            <div class="diag-scroll"><pre id="knowledge-body"></pre></div>
-          </div>
-
-          <div class="diag-view" data-group="diag" data-view="infer">
-            <div class="diag-scroll">
-              <pre id="infer-body">
-Click Infer to see what VisiMark would propose for this
-document — column rules, named scalars, and constants it
-recognises in the prose.</pre>
-            </div>
-            <div class="action-bar">
-              <button class="action-btn" id="infer-btn" type="button">Infer</button>
-            </div>
-          </div>
-
-          <div class="diag-view" data-group="diag" data-view="build">
-            <div class="diag-scroll">
-              <div id="build-body">
-                Run a check across every file in FILES — the same
-                <span class="mono">visimark check</span> a CI pipeline would run on the whole
-                repository.
+              <div class="badge-award" id="badge-award" hidden>
+                <div class="badge-award-icon" id="badge-award-icon"></div>
+                <div class="badge-award-info">
+                  <div class="badge-award-label">Badge earned</div>
+                  <div class="badge-award-name" id="badge-award-name"></div>
+                  <div class="badge-award-skill" id="badge-award-skill"></div>
+                  <div class="badge-share">
+                    <span class="badge-share-label">Share:</span>
+                    <a class="share-btn share-fb" id="share-fb" target="_blank" rel="noopener"
+                      >Facebook</a
+                    >
+                    <button class="share-btn share-ig" id="share-ig" type="button">
+                      Instagram
+                    </button>
+                    <a class="share-btn share-x" id="share-x" target="_blank" rel="noopener">X</a>
+                    <a class="share-btn share-li" id="share-li" target="_blank" rel="noopener"
+                      >LinkedIn</a
+                    >
+                  </div>
+                  <div class="badge-share-status" id="badge-share-status" hidden></div>
+                </div>
               </div>
-            </div>
-            <div class="action-bar">
-              <span class="flag pending" id="build-flag"></span>
-              <span id="build-label">BUILD NOT RUN</span>
-              <span class="meta" id="build-meta"></span>
-              <span class="action-status" id="build-status"></span>
-              <button class="action-btn" id="build-btn" type="button">Run Build</button>
+              <div class="reward-box" id="reward-box" hidden>
+                <div class="reward-label">🎁 Reward unlocked</div>
+                <div class="agent-popover-host" id="reward-cta-host">
+                  <button class="reward-cta" id="reward-cta" type="button"></button>
+                </div>
+                <div class="reward-status" id="reward-status"></div>
+              </div>
             </div>
           </div>
         </section>
@@ -731,6 +1045,12 @@ recognises in the prose.</pre>
       crossorigin="anonymous"
       referrerpolicy="no-referrer"
     ></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.4/dist/confetti.browser.min.js"
+      integrity="sha512-YOBx/ev2NFNqeGwTFKab9vwK41aoUQO86+KN81hpiOwJbojDaKX05KJPnScTpMhXiMLA9Xf1zzXwjR8TaUnYKQ=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
 
     <!-- Classic scripts, not modules: playground-data.js and
          visimark-browser.js assign plain globals instead of `export`ing, so
@@ -758,9 +1078,8 @@ recognises in the prose.</pre>
         // Fetched fresh from this page's own directory on every load — docs/
         // and the playground are now the same tree, so there's nothing to bake
         // or keep in sync by hand (contrast the logo above, which still is).
-        // The numbered chapters are docs/SCENARIOS.md's tutorial track, one
-        // concept per file — their SCENARIO-panel body/quest comes from
-        // ../SCENARIOS.json, merged into scenarios.json below.
+        // The numbered chapters are a tutorial track, one concept per file —
+        // their SCENARIO-panel body/quest comes from scenarios.json below.
         var TUTORIAL_CHAPTERS = [
           "01-tables.md",
           "02-inference.md",
@@ -808,29 +1127,20 @@ recognises in the prose.</pre>
 
         // ---- scenario data -----------------------------------------------------
         // Declarative — see normalizeStep() below for the schema and check-name
-        // vocabulary. Two sources merged into one map, keyed by filename:
-        // playground/scenarios.json (the showcase examples) and SCENARIOS.json
-        // (the numbered tutorial chapters, derived from SCENARIOS.md).
-        async function fetchJson(path) {
-          var res = await fetch(path);
-          if (!res.ok) throw new Error(path + ": HTTP " + res.status);
-          return res.json();
-        }
+        // vocabulary. One file, keyed by filename: playground/scenarios.json,
+        // covering both the numbered tutorial chapters and the showcase
+        // examples.
         async function loadScenarios() {
-          var sources = await Promise.all([
-            fetchJson("playground/scenarios.json"),
-            fetchJson("SCENARIOS.json"),
-          ]);
-          var merged = {};
-          sources.forEach(function (data) {
-            Object.keys(data).forEach(function (name) {
-              if (name !== "//") merged[name] = data[name];
-            });
+          var res = await fetch("playground/scenarios.json");
+          if (!res.ok) throw new Error("playground/scenarios.json: HTTP " + res.status);
+          var data = await res.json();
+          var scenarios = {};
+          Object.keys(data).forEach(function (name) {
+            if (name !== "//") scenarios[name] = data[name];
           });
-          return merged;
+          return scenarios;
         }
         var SCENARIOS = await loadScenarios();
-        var SCENARIO_FALLBACK = SCENARIOS.__fallback__;
 
         // ---- CodeMirror editor ------------------------------------------------
         var cm = CodeMirror.fromTextArea(document.getElementById("editor-ta"), {
@@ -934,6 +1244,7 @@ recognises in the prose.</pre>
         // click, an Infer/Build run, or a genuine change in what `eval`
         // reports), not just marked done on a timer.
         var scenarioBodyEl = document.getElementById("scenario-body");
+        var scenarioPanelEl = document.getElementById("scenario-panel");
 
         // ---- quest step schema --------------------------------------------
         // Scenario data (playground/scenarios.json, fetched above) is plain
@@ -952,6 +1263,12 @@ recognises in the prose.</pre>
         //                                     CHECKS below — the fixed,
         //                                     reviewed vocabulary scenario data
         //                                     is allowed to reach for.
+        //   "text"   { contains }          — done as soon as the current
+        //                                     document text contains this
+        //                                     exact substring (e.g. a value
+        //                                     the visitor is asked to type
+        //                                     in by hand, with no formula to
+        //                                     do it for them).
         //   "manual" {}                    — nothing to detect; the visitor
         //                                     ticks it themselves by clicking it.
         // Every kind may set an explicit "id" (stable across re-renders); it
@@ -964,9 +1281,16 @@ recognises in the prose.</pre>
         // off forever. See startQuest()'s click handler.
         //
         // Every CHECKS predicate takes the same ctx: { evalResult, baselineJson,
-        // hasStale, baselineHasStale } — see questCheckEval.
+        // hasStale, baselineHasStale, sourceChanged } — see questCheckEval.
         function evalChanged(ctx) {
           return JSON.stringify(ctx.evalResult) !== ctx.baselineJson;
+        }
+        // For a document with no vmark rules (a plain table, e.g. 01-tables.md)
+        // pgEval's result never changes no matter what you type — there's no
+        // formula for it to recompute. "value-changed" is blind to that case;
+        // this checks the raw source text directly instead.
+        function sourceChanged(ctx) {
+          return ctx.sourceChanged;
         }
         function chartsPresent(ctx) {
           return (ctx.evalResult.charts || []).some(function (c) {
@@ -999,6 +1323,7 @@ recognises in the prose.</pre>
         }
         var CHECKS = {
           "value-changed": evalChanged,
+          "source-changed": sourceChanged,
           "charts-regenerated": chartsRegenerated,
           "stale-fixed": staleFixed,
           "assertion-failing": assertionsFailing,
@@ -1020,6 +1345,9 @@ recognises in the prose.</pre>
             if (!check) throw new Error('scenarios.json: unknown check "' + raw.check + '"');
             return { id: raw.id || "eval:" + index, text: raw.text, evalCheck: check };
           }
+          if (raw.kind === "text") {
+            return { id: raw.id || "text:" + index, text: raw.text, textContains: raw.contains };
+          }
           if (raw.kind === "manual") {
             return { id: raw.id || "manual:" + index, text: raw.text, manual: true };
           }
@@ -1029,13 +1357,305 @@ recognises in the prose.</pre>
           return (quest || []).map(normalizeStep);
         }
 
+        // ---- badges ------------------------------------------------------------
+        // One badge per tutorial chapter (TUTORIAL_CHAPTERS above), awarded the
+        // moment every quest step for that chapter is checked off. Earned
+        // badges persist in localStorage, so revisiting a chapter in a later
+        // session still shows the badge it already unlocked. Icons are inline
+        // Phosphor Icons (phosphoricons.com, MIT) — "propeller hat", "pillow"
+        // and "hacksaw" have no Phosphor equivalent, so those three badges use
+        // the closest available icon (beanie / bed / wrench) instead; the
+        // badge names and skill text below are unchanged from the spec.
+        var BADGE_ICONS = {
+          beanie:
+            '<svg viewBox="0 0 256 256" fill="currentColor"><path d="M224,162.16V144a96.18,96.18,0,0,0-72.34-93,28,28,0,1,0-47.32,0A96.18,96.18,0,0,0,32,144v18.16A16,16,0,0,0,24,176v32a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V176A16,16,0,0,0,224,162.16ZM116,36a12,12,0,1,1,12,12A12,12,0,0,1,116,36Zm12,28a80.09,80.09,0,0,1,80,80v16H48V144A80.09,80.09,0,0,1,128,64Zm-8,112v32H80V176Zm16,0h40v32H136Zm-96,0H64v32H40Zm176,32H192V176h24v32Z"/></svg>',
+          plugs:
+            '<svg viewBox="0 0 256 256" fill="currentColor"><path d="M237.66,18.34a8,8,0,0,0-11.32,0l-52.4,52.41-5.37-5.38a32.05,32.05,0,0,0-45.26,0L100,88.69l-6.34-6.35A8,8,0,0,0,82.34,93.66L88.69,100,65.37,123.31a32,32,0,0,0,0,45.26l5.38,5.37-52.41,52.4a8,8,0,0,0,11.32,11.32l52.4-52.41,5.37,5.38a32,32,0,0,0,45.26,0L156,167.31l6.34,6.35a8,8,0,0,0,11.32-11.32L167.31,156l23.32-23.31a32,32,0,0,0,0-45.26l-5.38-5.37,52.41-52.4A8,8,0,0,0,237.66,18.34Zm-116.29,161a16,16,0,0,1-22.62,0L76.69,157.25a16,16,0,0,1,0-22.62L100,111.31,144.69,156Zm57.94-57.94L156,144.69,111.31,100l23.32-23.31a16,16,0,0,1,22.62,0l22.06,22A16,16,0,0,1,179.31,121.37ZM88.57,35A8,8,0,0,1,103.43,29l8,20A8,8,0,0,1,96.57,55ZM24.57,93A8,8,0,0,1,35,88.57l20,8A8,8,0,0,1,49,111.43l-20-8A8,8,0,0,1,24.57,93ZM231.43,163a8,8,0,0,1-10.4,4.46l-20-8A8,8,0,1,1,207,144.57l20,8A8,8,0,0,1,231.43,163Zm-64,58.06A8,8,0,0,1,152.57,227l-8-20A8,8,0,0,1,159.43,201Z"/></svg>',
+          bed: '<svg viewBox="0 0 256 256" fill="currentColor"><path d="M216,72H32V48a8,8,0,0,0-16,0V208a8,8,0,0,0,16,0V176H240v32a8,8,0,0,0,16,0V112A40,40,0,0,0,216,72ZM32,88h72v72H32Zm88,72V88h96a24,24,0,0,1,24,24v48Z"/></svg>',
+          anchor:
+            '<svg viewBox="0 0 256 256" fill="currentColor"><path d="M216,136a8,8,0,0,0-8,8c0,24.69-13.77,29.64-38.1,36.28-11.36,3.1-24.12,6.6-33.9,14.34V128h32a8,8,0,0,0,0-16H136V87a32,32,0,1,0-16,0v25H88a8,8,0,0,0,0,16h32v66.62c-9.78-7.74-22.54-11.24-33.9-14.34C61.77,173.64,48,168.69,48,144a8,8,0,0,0-16,0c0,38.11,27.67,45.66,49.9,51.72C106.23,202.36,120,207.31,120,232a8,8,0,0,0,16,0c0-24.69,13.77-29.64,38.1-36.28C196.33,189.66,224,182.11,224,144A8,8,0,0,0,216,136ZM112,56a16,16,0,1,1,16,16A16,16,0,0,1,112,56Z"/></svg>',
+          wrench:
+            '<svg viewBox="0 0 256 256" fill="currentColor"><path d="M226.76,69a8,8,0,0,0-12.84-2.88l-40.3,37.19-17.23-3.7-3.7-17.23,37.19-40.3A8,8,0,0,0,187,29.24,72,72,0,0,0,88,96,72.34,72.34,0,0,0,94,124.94L33.79,177c-.15.12-.29.26-.43.39a32,32,0,0,0,45.26,45.26c.13-.13.27-.28.39-.42L131.06,162A72,72,0,0,0,232,96,71.56,71.56,0,0,0,226.76,69ZM160,152a56.14,56.14,0,0,1-27.07-7,8,8,0,0,0-9.92,1.77L67.11,211.51a16,16,0,0,1-22.62-22.62L109.18,133a8,8,0,0,0,1.77-9.93,56,56,0,0,1,58.36-82.31l-31.2,33.81a8,8,0,0,0-1.94,7.1L141.83,108a8,8,0,0,0,6.14,6.14l26.35,5.66a8,8,0,0,0,7.1-1.94l33.81-31.2A56.06,56.06,0,0,1,160,152Z"/></svg>',
+          hammer:
+            '<svg viewBox="0 0 256 256" fill="currentColor"><path d="M251.34,112,183.88,44.08a96.1,96.1,0,0,0-135.77,0l-.09.09L34.25,58.4A8,8,0,0,0,45.74,69.53L59.47,55.35a79.92,79.92,0,0,1,18.71-13.9L124.68,88l-96,96a16,16,0,0,0,0,22.63l20.69,20.69a16,16,0,0,0,22.63,0l96-96,14.34,14.34h0L200,163.3a16,16,0,0,0,22.63,0l28.69-28.69A16,16,0,0,0,251.34,112ZM60.68,216,40,195.31l68-68L128.68,148ZM162.34,114.32,140,136.67,119.31,116l22.35-22.35a8,8,0,0,0,0-11.32L94.32,35a80,80,0,0,1,78.23,20.41l44.22,44.51L188,128.66l-14.34-14.34A8,8,0,0,0,162.34,114.32Zm49,37.66-12-12L228,111.25l12,12Z"/></svg>',
+          magnifier:
+            '<svg viewBox="0 0 256 256" fill="currentColor"><path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"/></svg>',
+          wand: '<svg viewBox="0 0 256 256" fill="currentColor"><path d="M48,64a8,8,0,0,1,8-8H72V40a8,8,0,0,1,16,0V56h16a8,8,0,0,1,0,16H88V88a8,8,0,0,1-16,0V72H56A8,8,0,0,1,48,64ZM184,192h-8v-8a8,8,0,0,0-16,0v8h-8a8,8,0,0,0,0,16h8v8a8,8,0,0,0,16,0v-8h8a8,8,0,0,0,0-16Zm56-48H224V128a8,8,0,0,0-16,0v16H192a8,8,0,0,0,0,16h16v16a8,8,0,0,0,16,0V160h16a8,8,0,0,0,0-16ZM219.31,80,80,219.31a16,16,0,0,1-22.62,0L36.68,198.63a16,16,0,0,1,0-22.63L176,36.69a16,16,0,0,1,22.63,0l20.68,20.68A16,16,0,0,1,219.31,80Zm-54.63,32L144,91.31l-96,96L68.68,208ZM208,68.69,187.31,48l-32,32L176,100.69Z"/></svg>',
+          gradcap:
+            '<svg viewBox="0 0 256 256" fill="currentColor"><path d="M251.76,88.94l-120-64a8,8,0,0,0-7.52,0l-120,64a8,8,0,0,0,0,14.12L32,117.87v48.42a15.91,15.91,0,0,0,4.06,10.65C49.16,191.53,78.51,216,128,216a130,130,0,0,0,48-8.76V240a8,8,0,0,0,16,0V199.51a115.63,115.63,0,0,0,27.94-22.57A15.91,15.91,0,0,0,224,166.29V117.87l27.76-14.81a8,8,0,0,0,0-14.12ZM128,200c-43.27,0-68.72-21.14-80-33.71V126.4l76.24,40.66a8,8,0,0,0,7.52,0L176,143.47v46.34C163.4,195.69,147.52,200,128,200Zm80-33.75a97.83,97.83,0,0,1-16,14.25V134.93l16-8.53ZM188,118.94l-.22-.13-56-29.87a8,8,0,0,0-7.52,14.12L171,128l-43,22.93L25,96,128,41.07,231,96Z"/></svg>',
+          bomb: '<svg viewBox="0 0 256 256" fill="currentColor"><path d="M248,32h0a8,8,0,0,0-8,8,52.66,52.66,0,0,1-3.57,17.39C232.38,67.22,225.7,72,216,72c-11.06,0-18.85-9.76-29.49-24.65C176,32.66,164.12,16,144,16c-16.39,0-29,8.89-35.43,25a66.07,66.07,0,0,0-3.9,15H88A16,16,0,0,0,72,72v9.59A88,88,0,0,0,112,248h1.59A88,88,0,0,0,152,81.59V72a16,16,0,0,0-16-16H120.88a46.76,46.76,0,0,1,2.69-9.37C127.62,36.78,134.3,32,144,32c11.06,0,18.85,9.76,29.49,24.65C184,71.34,195.88,88,216,88c16.39,0,29-8.89,35.43-25A68.69,68.69,0,0,0,256,40,8,8,0,0,0,248,32ZM140.8,94a72,72,0,1,1-57.6,0A8,8,0,0,0,88,86.66V72h48V86.66A8,8,0,0,0,140.8,94ZM111.89,209.32A8,8,0,0,1,104,216a8.52,8.52,0,0,1-1.33-.11,57.5,57.5,0,0,1-46.57-46.57,8,8,0,1,1,15.78-2.64,41.29,41.29,0,0,0,33.43,33.43A8,8,0,0,1,111.89,209.32Z"/></svg>',
+          megaphone:
+            '<svg viewBox="0 0 256 256" fill="currentColor"><path d="M248,120a48.05,48.05,0,0,0-48-48H160.2c-2.91-.17-53.62-3.74-101.91-44.24A16,16,0,0,0,32,40V200a16,16,0,0,0,26.29,12.25c37.77-31.68,77-40.76,93.71-43.3v31.72A16,16,0,0,0,159.12,214l11,7.33A16,16,0,0,0,194.5,212l11.77-44.36A48.07,48.07,0,0,0,248,120ZM48,199.93V40h0c42.81,35.91,86.63,45,104,47.24v65.48C134.65,155,90.84,164.07,48,199.93Zm131,8,0,.11-11-7.33V168h21.6ZM200,152H168V88h32a32,32,0,1,1,0,64Z"/></svg>',
+          paintbrush:
+            '<svg viewBox="0 0 256 256" fill="currentColor"><path d="M232,32a8,8,0,0,0-8-8c-44.08,0-89.31,49.71-114.43,82.63A60,60,0,0,0,32,164c0,30.88-19.54,44.73-20.47,45.37A8,8,0,0,0,16,224H92a60,60,0,0,0,57.37-77.57C182.3,121.31,232,76.08,232,32ZM92,208H34.63C41.38,198.41,48,183.92,48,164a44,44,0,1,1,44,44Zm32.42-94.45q5.14-6.66,10.09-12.55A76.23,76.23,0,0,1,155,121.49q-5.9,4.94-12.55,10.09A60.54,60.54,0,0,0,124.42,113.55Zm42.7-2.68a92.57,92.57,0,0,0-22-22c31.78-34.53,55.75-45,69.9-47.91C212.17,55.12,201.65,79.09,167.12,110.87Z"/></svg>',
+        };
+        // One entry per TUTORIAL_CHAPTERS index — see the "Badge:"/"Skill:" list
+        // this was specified from.
+        var BADGE_DEFS = [
+          {
+            name: "Rookie",
+            icon: "beanie",
+            skill:
+              "Have just started learning VisiMark, a verifiable calculations tool for Markdown.",
+          },
+          {
+            name: "Inference Practitioner",
+            icon: "plugs",
+            skill: "Knows how to infer formulas in Markdown using VisiMark.",
+          },
+          {
+            name: "Sheet Adorer",
+            icon: "bed",
+            skill: "Have just created their 1st verifiable calculation in Markdown with VisiMark.",
+          },
+          {
+            name: "Anchored Editor",
+            icon: "anchor",
+            skill: "Have just anchored verifiable computation to a text in Markdown.",
+          },
+          {
+            name: "Analytics Specialist",
+            icon: "wrench",
+            skill: "Knows how to add spreadsheet mechanics in Markdown using VisiMark.",
+          },
+          {
+            name: "Synthesis Expert",
+            icon: "hammer",
+            skill: "Mastered table data aggregation in Markdown using VisiMark.",
+          },
+          {
+            name: "Private Investigator",
+            icon: "magnifier",
+            skill: "Learned how VisiMark reasons about verifiable knowledge in Markdown.",
+          },
+          {
+            name: "Studious",
+            icon: "wand",
+            skill: "Knows how to extract computational knowledge from Markdown documents.",
+          },
+          {
+            name: "Scientist",
+            icon: "gradcap",
+            skill:
+              "Have just learned about units propagation for Markdown validation with VisiMark.",
+          },
+          {
+            name: "IED Consultant",
+            icon: "bomb",
+            skill: "Have just built their first Markdown math error detector with VisiMark.",
+          },
+          {
+            name: "Continuous Integrator",
+            icon: "megaphone",
+            skill: "Learned how to shield their git repo from computationally incorrect Markdown.",
+          },
+          {
+            name: "Maestro",
+            icon: "paintbrush",
+            skill:
+              "Is soon to be promoted to executive role thanks to their VisiMark charting skill.",
+          },
+        ];
+        var BADGES_BY_CHAPTER = {};
+        TUTORIAL_CHAPTERS.forEach(function (name, i) {
+          BADGES_BY_CHAPTER[name] = Object.assign({ id: "badge-" + (i + 1) }, BADGE_DEFS[i]);
+        });
+
+        var BADGES_STORAGE_KEY = "visimark-playground-badges";
+        function loadEarnedBadges() {
+          try {
+            return JSON.parse(window.localStorage.getItem(BADGES_STORAGE_KEY) || "{}");
+          } catch (e) {
+            return {};
+          }
+        }
+        function saveEarnedBadges() {
+          try {
+            window.localStorage.setItem(BADGES_STORAGE_KEY, JSON.stringify(earnedBadges));
+          } catch (e) {
+            // Private browsing / storage disabled — the badge still shows for
+            // the rest of this session, it just won't survive a reload.
+          }
+        }
+        var earnedBadges = loadEarnedBadges();
+
+        var SHARE_URL = "https://michal-niedzwiedzki.github.io/visimark/";
+        function badgeShareText(badge) {
+          return "I just earned the " + badge.name + " badge learning VisiMark!";
+        }
+        function buildShareLinks(badge) {
+          var encodedUrl = encodeURIComponent(SHARE_URL);
+          var encodedText = encodeURIComponent(badgeShareText(badge));
+          return {
+            fb: "https://www.facebook.com/sharer/sharer.php?u=" + encodedUrl,
+            x: "https://twitter.com/intent/tweet?text=" + encodedText + "&url=" + encodedUrl,
+            li: "https://www.linkedin.com/sharing/share-offsite/?url=" + encodedUrl,
+          };
+        }
+
+        var badgeAwardEl = document.getElementById("badge-award");
+        var badgeIconEl = document.getElementById("badge-award-icon");
+        var badgeNameEl = document.getElementById("badge-award-name");
+        var badgeSkillEl = document.getElementById("badge-award-skill");
+        var badgeStatusEl = document.getElementById("badge-share-status");
+        var shareFbEl = document.getElementById("share-fb");
+        var shareXEl = document.getElementById("share-x");
+        var shareLiEl = document.getElementById("share-li");
+        var shareIgEl = document.getElementById("share-ig");
+
+        /** Un-hides `el` with no transition — the resting state for content
+         *  that reflects persisted or already-known state (an earned badge
+         *  reopened from localStorage), where a fade would just be noise. */
+        function showInstant(el) {
+          el.hidden = false;
+          el.classList.add("show");
+        }
+        /** Hides `el` and resets it back to revealFadeIn()'s starting point,
+         *  so the next reveal fades in again instead of just appearing. */
+        function hideInstant(el) {
+          el.hidden = true;
+          el.classList.remove("show");
+        }
+        /** Fades `el` in on its own — the completion-sequence moment (see
+         *  revealCompletion() below), as opposed to showInstant()'s "this
+         *  was already true" render. Un-hiding and adding `.show` in the
+         *  same tick would collapse into one paint with no transition to
+         *  animate, since the element has no rendered opacity:0 frame to
+         *  transition *from* yet — forcing a reflow between the two commits
+         *  that frame before the class change asks the browser to animate
+         *  away from it. */
+        function revealFadeIn(el) {
+          el.hidden = false;
+          el.classList.remove("show");
+          void el.offsetWidth;
+          requestAnimationFrame(function () {
+            el.classList.add("show");
+          });
+        }
+
+        /** Renders (or hides, passing null) the badge earned for the current
+         *  scenario — called both right after a badge is newly awarded and
+         *  whenever a scenario with an already-earned badge is opened. Always
+         *  instant: the fade for a *newly* earned badge is driven separately
+         *  by revealCompletion(), which fills the badge via maybeAwardBadge()
+         *  and reveals it on its own schedule. */
+        function renderBadgeAward(badge) {
+          badgeStatusEl.hidden = true;
+          if (!badge) {
+            hideInstant(badgeAwardEl);
+            return;
+          }
+          fillBadgeAward(badge);
+          showInstant(badgeAwardEl);
+        }
+
+        function fillBadgeAward(badge) {
+          badgeIconEl.innerHTML = BADGE_ICONS[badge.icon] || "";
+          badgeNameEl.textContent = badge.name;
+          badgeSkillEl.textContent = badge.skill;
+          var links = buildShareLinks(badge);
+          shareFbEl.href = links.fb;
+          shareXEl.href = links.x;
+          shareLiEl.href = links.li;
+        }
+
+        // Instagram has no web share-intent for prefilled text/links, so the
+        // best a plain webpage can do is put the caption on the clipboard and
+        // hand the visitor off to instagram.com to paste it into a post.
+        shareIgEl.addEventListener("click", function () {
+          var badge = BADGES_BY_CHAPTER[questState.name];
+          if (!badge) return;
+          var caption = badgeShareText(badge) + " " + SHARE_URL;
+          badgeStatusEl.hidden = false;
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard
+              .writeText(caption)
+              .then(function () {
+                badgeStatusEl.textContent = "Caption copied — paste it into your Instagram post.";
+              })
+              .catch(function () {
+                badgeStatusEl.textContent = caption;
+              });
+          } else {
+            badgeStatusEl.textContent = caption;
+          }
+          window.open("https://www.instagram.com/", "_blank", "noopener");
+        });
+
+        /** The canvas-confetti "stars" preset (kirilv.com/canvas-confetti/#stars),
+         *  fired across the whole screen when a badge is newly earned. */
+        function fireBadgeConfetti() {
+          if (typeof confetti !== "function") return;
+          // confetti's canvas covers the whole viewport and its `origin` is
+          // normalized to that (0,0 top-left, 1,1 bottom-right) — the
+          // default {x:0.5, y:0.5} bursts from screen center. Aim it at the
+          // SCENARIO panel instead, where the badge that was just earned
+          // actually appears.
+          var rect = scenarioPanelEl.getBoundingClientRect();
+          var origin = {
+            x: (rect.left + rect.width / 2) / window.innerWidth,
+            y: (rect.top + rect.height / 2) / window.innerHeight,
+          };
+          var defaults = {
+            spread: 360,
+            ticks: 50,
+            gravity: 0,
+            decay: 0.94,
+            startVelocity: 30,
+            origin: origin,
+            colors: ["FFE400", "FFBD00", "E89400", "FFCA6C", "FDFFB8"],
+          };
+          function shoot() {
+            confetti(
+              Object.assign({}, defaults, { particleCount: 40, scalar: 1.2, shapes: ["star"] }),
+            );
+            confetti(
+              Object.assign({}, defaults, { particleCount: 10, scalar: 0.75, shapes: ["circle"] }),
+            );
+          }
+          shoot();
+          setTimeout(shoot, 100);
+          setTimeout(shoot, 200);
+        }
+
+        /** Awards `name`'s badge exactly once — a no-op for non-tutorial
+         *  scenarios (no BADGES_BY_CHAPTER entry) and for a badge already
+         *  earned in this or an earlier session, in which case it is already
+         *  showing (see startQuest()) and needs no reveal here. */
+        function maybeAwardBadge(name) {
+          var badge = BADGES_BY_CHAPTER[name];
+          if (!badge || earnedBadges[name]) return;
+          earnedBadges[name] = true;
+          saveEarnedBadges();
+          fillBadgeAward(badge);
+          revealFadeIn(badgeAwardEl);
+          fireBadgeConfetti();
+        }
+
         // ---- quest engine ----------------------------------------------------
-        var questState = { name: null, steps: [], done: {}, baselineEvalJson: null };
+        var questState = {
+          name: null,
+          steps: [],
+          done: {},
+          baselineEvalJson: null,
+          baselineSource: null,
+        };
         var questListEl = document.getElementById("quest-list");
         var questCompleteEl = document.getElementById("quest-complete");
 
         function renderScenario(name) {
-          var s = SCENARIOS[name] || SCENARIO_FALLBACK;
+          var s = SCENARIOS[name];
+          scenarioPanelEl.hidden = !s;
+          if (!s) {
+            // No scenario data for this file (e.g. one just created via
+            // + New) — hide the whole panel rather than showing a generic
+            // placeholder. Still reset the quest engine so a stale badge
+            // from the previously-open file can't linger, invisible, behind
+            // the hidden panel.
+            scenarioBodyEl.innerHTML = "";
+            startQuest(name, []);
+            return;
+          }
           scenarioBodyEl.innerHTML = "";
           var body = document.createElement("p");
           body.textContent = s.body;
@@ -1050,9 +1670,14 @@ recognises in the prose.</pre>
             done: {},
             baselineEvalJson: null,
             baselineHasStale: false,
+            baselineSource: null,
           };
           questListEl.innerHTML = "";
-          questCompleteEl.hidden = true;
+          clearRevealTimers();
+          hideInstant(questCompleteEl);
+          hideInstant(rewardBoxEl);
+          currentReward = null;
+          renderBadgeAward(earnedBadges[name] ? BADGES_BY_CHAPTER[name] : null);
           questState.steps.forEach(function (step) {
             var li = document.createElement("li");
             li.className = "quest-step";
@@ -1095,7 +1720,7 @@ recognises in the prose.</pre>
             return questState.done[step.id];
           });
           if (allDone && questState.steps.length > 0) {
-            questCompleteEl.hidden = false;
+            revealCompletion();
           }
         }
 
@@ -1104,7 +1729,45 @@ recognises in the prose.</pre>
           questState.done[id] = false;
           var li = questListEl.querySelector('[data-id="' + id + '"]');
           if (li) li.classList.remove("done");
-          questCompleteEl.hidden = true;
+          // Undoing a step retracts "Nice work" and the reward (and any
+          // reveal still in flight) — the badge, once shown, stays: it is
+          // permanently earned, not a reflection of the checklist's current
+          // state, the same policy startQuest() applies on revisit.
+          clearRevealTimers();
+          hideInstant(questCompleteEl);
+          hideInstant(rewardBoxEl);
+        }
+
+        var revealTimers = [];
+        function clearRevealTimers() {
+          revealTimers.forEach(clearTimeout);
+          revealTimers = [];
+        }
+        function scheduleReveal(fn, delay) {
+          revealTimers.push(setTimeout(fn, delay));
+        }
+
+        /** The completion sequence for a scenario whose quest just went from
+         *  "not all done" to "all done": "Nice work" fades in right away,
+         *  the badge follows 2s later (a fresh reveal + confetti if this is
+         *  the first time, otherwise a no-op — it's already showing), and
+         *  the reward gets 3 more seconds on top of that, so the three don't
+         *  compete with each other or with the last step's own checkmark
+         *  animation. */
+        function revealCompletion() {
+          clearRevealTimers();
+          revealFadeIn(questCompleteEl);
+          scheduleReveal(function () {
+            maybeAwardBadge(questState.name);
+            scheduleReveal(revealReward, 3000);
+          }, 2000);
+        }
+
+        function revealReward() {
+          var s = SCENARIOS[questState.name];
+          if (!s || !s.reward) return;
+          fillReward(s.reward);
+          revealFadeIn(rewardBoxEl);
         }
 
         /** UI-event steps: tab clicks, Infer/Build runs. */
@@ -1132,10 +1795,18 @@ recognises in the prose.</pre>
          *  only captures that baseline, it can't complete a step against
          *  itself. */
         function questCheckEval(evalResult, source) {
+          // "text" steps don't need a baseline — they're just a substring
+          // check against whatever's in the document right now.
+          questState.steps.forEach(function (step) {
+            if (step.textContains && source.indexOf(step.textContains) !== -1) {
+              questMarkDone(step.id);
+            }
+          });
           var hasStale = hasStaleFindings(source);
           if (questState.baselineEvalJson === null) {
             questState.baselineEvalJson = JSON.stringify(evalResult);
             questState.baselineHasStale = hasStale;
+            questState.baselineSource = source;
             return;
           }
           var ctx = {
@@ -1143,6 +1814,7 @@ recognises in the prose.</pre>
             baselineJson: questState.baselineEvalJson,
             hasStale: hasStale,
             baselineHasStale: questState.baselineHasStale,
+            sourceChanged: source !== questState.baselineSource,
           };
           questState.steps.forEach(function (step) {
             if (step.evalCheck && step.evalCheck(ctx)) {
@@ -1301,6 +1973,211 @@ recognises in the prose.</pre>
           return value;
         }
 
+        // ---- KNOWLEDGE action bar: copy, and hand off to an AI agent ----------
+        var knowledgeStatusEl = document.getElementById("knowledge-status");
+        var knowledgeCopyBtn = document.getElementById("knowledge-copy-btn");
+        var knowledgeAgentBtn = document.getElementById("knowledge-agent-btn");
+        var knowledgeAgentHostEl = document.getElementById("knowledge-agent-host");
+        var agentPopoverEl = document.getElementById("agent-popover");
+
+        /** Returns a flasher bound to `el`: call it with text to show next to
+         *  a button for a few seconds, then clear — the same transient-
+         *  feedback shape as `badgeStatusEl` above, parameterized so
+         *  KNOWLEDGE's and the reward's status lines don't share a timer. */
+        function makeStatusFlasher(el) {
+          var timer = null;
+          return function (text) {
+            el.textContent = text;
+            clearTimeout(timer);
+            timer = setTimeout(function () {
+              el.textContent = "";
+            }, 3000);
+          };
+        }
+        var flashKnowledgeStatus = makeStatusFlasher(knowledgeStatusEl);
+
+        /** `navigator.clipboard` only exists in a secure context (https, or
+         *  localhost during local dev) — this playground is often opened
+         *  straight off disk (`file://`) or from a plain http mirror, where
+         *  the API is simply undefined and every copy silently does
+         *  nothing. `execCommand("copy")` is deprecated but still broadly
+         *  supported, needs no permission prompt, and works in exactly the
+         *  contexts the modern API refuses — so it is the fallback, not an
+         *  afterthought, and the one every copy button here goes through. */
+        function copyTextFallback(text) {
+          return new Promise(function (resolve, reject) {
+            var ta = document.createElement("textarea");
+            ta.value = text;
+            // Off-screen rather than hidden: execCommand("copy") only ever
+            // copies an actual, rendered selection.
+            ta.style.position = "fixed";
+            ta.style.top = "0";
+            ta.style.left = "-9999px";
+            ta.setAttribute("readonly", "");
+            document.body.appendChild(ta);
+            ta.select();
+            ta.setSelectionRange(0, text.length);
+            var ok = false;
+            try {
+              ok = document.execCommand("copy");
+            } catch (e) {
+              ok = false;
+            }
+            document.body.removeChild(ta);
+            if (ok) resolve();
+            else reject(new Error("execCommand(copy) failed"));
+          });
+        }
+
+        function copyText(text) {
+          if (navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext) {
+            return navigator.clipboard.writeText(text).catch(function () {
+              return copyTextFallback(text);
+            });
+          }
+          return copyTextFallback(text);
+        }
+
+        knowledgeCopyBtn.addEventListener("click", function () {
+          copyText(knowledgeEl.textContent)
+            .then(function () {
+              flashKnowledgeStatus("Copied!");
+            })
+            .catch(function () {
+              flashKnowledgeStatus(
+                "Couldn't reach the clipboard — select and copy the JSON by hand.",
+              );
+            });
+        });
+
+        // Each agent's chat UI is a moving target and none of these publish a
+        // stable prefill contract, so the `q` query param is a best effort,
+        // not a promise: the click handler below copies the prompt first
+        // regardless, and the status line says so either way.
+        var AI_AGENTS = {
+          chatgpt: { label: "ChatGPT", url: "https://chatgpt.com/?q=" },
+          claude: { label: "Claude", url: "https://claude.ai/new?q=" },
+          gemini: { label: "Gemini", url: "https://gemini.google.com/app?q=" },
+          grok: { label: "Grok", url: "https://grok.com/?q=" },
+          perplexity: { label: "Perplexity", url: "https://www.perplexity.ai/search?q=" },
+        };
+
+        function knowledgePrompt() {
+          return (
+            "I used VisiMark to extract those figures from a Markdown document. " +
+            "Can you guess what it is without looking?\n" +
+            knowledgeEl.textContent
+          );
+        }
+
+        // The popover is a single DOM node shared by every "feed to an AI
+        // agent" trigger (KNOWLEDGE's own button, and an "agent"-kind
+        // reward). Opening it reparents it under whichever host triggered
+        // it and remembers that trigger's prompt/status-flasher pair, so
+        // the option list itself stays written once.
+        var activeAgentPromptFn = null;
+        var activeAgentStatusFlasher = null;
+
+        function closeAgentPopover() {
+          agentPopoverEl.hidden = true;
+          activeAgentPromptFn = null;
+          activeAgentStatusFlasher = null;
+        }
+
+        function toggleAgentPopover(hostEl, promptFn, statusFlasher) {
+          if (!agentPopoverEl.hidden && agentPopoverEl.parentElement === hostEl) {
+            closeAgentPopover();
+            return;
+          }
+          if (agentPopoverEl.parentElement !== hostEl) hostEl.appendChild(agentPopoverEl);
+          activeAgentPromptFn = promptFn;
+          activeAgentStatusFlasher = statusFlasher;
+          agentPopoverEl.hidden = false;
+        }
+
+        knowledgeAgentBtn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          toggleAgentPopover(knowledgeAgentHostEl, knowledgePrompt, flashKnowledgeStatus);
+        });
+
+        agentPopoverEl.addEventListener("click", function (e) {
+          var btn = e.target.closest(".agent-option");
+          if (!btn) return;
+          var agent = AI_AGENTS[btn.dataset.agent];
+          var promptFn = activeAgentPromptFn;
+          var flash = activeAgentStatusFlasher || flashKnowledgeStatus;
+          closeAgentPopover();
+          if (!agent || !promptFn) return;
+          var prompt = promptFn();
+          copyText(prompt).then(
+            function () {
+              flash("Prompt copied — paste it if " + agent.label + " opens empty.");
+            },
+            function () {
+              flash(
+                "Opening " +
+                  agent.label +
+                  " — paste the prompt yourself, the clipboard didn't cooperate.",
+              );
+            },
+          );
+          window.open(agent.url + encodeURIComponent(prompt), "_blank", "noopener");
+        });
+
+        document.addEventListener("click", function (e) {
+          if (!agentPopoverEl.hidden && !e.target.closest(".agent-popover-host")) {
+            closeAgentPopover();
+          }
+        });
+        document.addEventListener("keydown", function (e) {
+          if (e.key === "Escape") closeAgentPopover();
+        });
+
+        // ---- reward: the last step of a scenario's completion sequence -------
+        var rewardBoxEl = document.getElementById("reward-box");
+        var rewardCtaEl = document.getElementById("reward-cta");
+        var rewardCtaHostEl = document.getElementById("reward-cta-host");
+        var rewardStatusEl = document.getElementById("reward-status");
+        var flashRewardStatus = makeStatusFlasher(rewardStatusEl);
+        var currentReward = null;
+
+        function fillReward(reward) {
+          currentReward = reward;
+          rewardCtaEl.textContent = reward.text;
+        }
+
+        // Substitutes the current KNOWLEDGE JSON into the reward's own
+        // prompt template — same shape as knowledgePrompt(), but the wording
+        // is per-scenario data rather than a hardcoded string.
+        function rewardAgentPrompt() {
+          var template = (currentReward && currentReward.prompt) || "";
+          return template.replace("{json}", knowledgeEl.textContent);
+        }
+
+        rewardCtaEl.addEventListener("click", function (e) {
+          if (!currentReward) return;
+          if (currentReward.kind === "link") {
+            window.open(currentReward.link, "_blank", "noopener");
+          } else if (currentReward.kind === "gist") {
+            // No API token lives in this static page, so there is no way to
+            // actually create the gist — copy the document and hand the
+            // visitor off to a blank one to paste it into, the same
+            // best-effort handoff Instagram sharing uses above.
+            copyText(cm.getValue()).then(
+              function () {
+                flashRewardStatus("Document copied — paste it into your new Gist.");
+              },
+              function () {
+                flashRewardStatus("Couldn't reach the clipboard — copy the document by hand.");
+              },
+            );
+            window.open("https://gist.github.com/", "_blank", "noopener");
+          } else if (currentReward.kind === "agent") {
+            e.stopPropagation();
+            toggleAgentPopover(rewardCtaHostEl, rewardAgentPrompt, flashRewardStatus);
+          }
+        });
+
         function embedCharts(charts) {
           if (!charts || charts.length === 0) return;
           var svgByPath = {};
@@ -1336,6 +2213,15 @@ recognises in the prose.</pre>
             cm.setValue(result.output);
             cm.setCursor(cursor);
             contents[current] = result.output;
+            // A cell or anchor got rewritten — the visitor typed over a
+            // derived value and fmt just overwrote it back. By the time
+            // refreshDerived() below re-checks for STALE findings, this is
+            // already fixed (fmt just fixed it), so that's the one place to
+            // catch "you edited a derived value and got overwritten" as it
+            // happens rather than after the fact.
+            if (result.cellsUpdated || result.anchorsUpdated) {
+              questSignal("action:fmt-corrected");
+            }
           }
           refreshDerived();
         }
@@ -1343,12 +2229,22 @@ recognises in the prose.</pre>
         // ---- Infer -------------------------------------------------------------
         // What `infer` sees, in its own tab — the adoption story: drop in a
         // plain, unannotated .md and see the rules/scalars VisiMark would add
-        // before committing to anything. TERMINAL only gets the action's
+        // before committing to anything. "Infer only" mirrors plain
+        // `visimark infer FILE` (proposals shown, document untouched);
+        // "Infer and write" mirrors `visimark infer FILE --write` (proposals
+        // applied back into the editor). TERMINAL only gets the action's
         // one-line outcome, same as every other command.
         document.getElementById("infer-btn").addEventListener("click", function () {
+          runInfer(false);
+        });
+        document.getElementById("infer-write-btn").addEventListener("click", function () {
+          runInfer(true);
+        });
+
+        function runInfer(write) {
           var source = cm.getValue();
           questSignal("action:infer-run");
-          termCmd("visimark infer " + current + " --write");
+          termCmd("visimark infer " + current + (write ? " --write" : ""));
           var proposals;
           try {
             proposals = VM.infer(source);
@@ -1359,6 +2255,11 @@ recognises in the prose.</pre>
             return;
           }
           inferEl.textContent = VM.formatInfer(current, source, proposals);
+          if (!write) {
+            trimTerminal();
+            return;
+          }
+          questSignal("action:infer-write");
           var edits = VM.planInfer(source, proposals);
           if (edits.length === 0) {
             term(current + ": nothing to write");
@@ -1383,7 +2284,7 @@ recognises in the prose.</pre>
           clearTimeout(editTimer);
           runFmt();
           refreshDerived();
-        });
+        }
 
         // ---- Build ---------------------------------------------------------------
         // `visimark check` run across every file in FILES, the way a CI job
