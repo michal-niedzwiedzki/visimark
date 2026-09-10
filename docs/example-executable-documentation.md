@@ -97,20 +97,26 @@ For example:
 
 ```json
 {
-  "budget.total_budget": "24000",
-  "budget.reserved_capacity": "0.2",
-  "budget.other_costs": "12000",
-  "budget.WorkerBudget": "12000",
-  "budget.WorkerBudgetPercentage": "0.5",
-  "kubernetes.worker_node_cost": "250",
-  "kubernetes.cpu_per_worker": "8",
-  "kubernetes.memory_per_worker": "32",
-  "kubernetes.MaxNodes": "48",
-  "kubernetes.UsableNodes": "38",
-  "kubernetes.TotalCPU": "384",
-  "kubernetes.UsableCPU": "307",
-  "kubernetes.TotalMemory": "1536",
-  "kubernetes.UsableMemory": "1228",
+  "command": "eval",
+  "visimark": "0.1.1",
+  "status": "ok",
+  "file": "infrastructure-budget.md",
+  "values": {
+    "budget.total_budget": "24000",
+    "budget.reserved_capacity": "0.2",
+    "budget.other_costs": "12000",
+    "budget.WorkerBudget": "12000",
+    "budget.WorkerBudgetPercentage": "0.5",
+    "kubernetes.worker_node_cost": "250",
+    "kubernetes.cpu_per_worker": "8",
+    "kubernetes.memory_per_worker": "32",
+    "kubernetes.MaxNodes": "48",
+    "kubernetes.UsableNodes": "38",
+    "kubernetes.TotalCPU": "384",
+    "kubernetes.UsableCPU": "307",
+    "kubernetes.TotalMemory": "1536",
+    "kubernetes.UsableMemory": "1228"
+  },
   "assertions": [],
   "charts": []
 }

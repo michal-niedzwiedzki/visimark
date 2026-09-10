@@ -450,11 +450,19 @@ The CLI is the product; the VS Code extension is a later thin wrapper. An agent
 must be able to verify a document without an editor.
 
 ```
-visimark check FILE...              read-only; exit 1 if any finding
-visimark fmt   FILE... [--fix-dates] rewrite computed cells and anchors
+visimark check FILE... [--json]     read-only; exit 1 if any finding
+visimark fmt   FILE... [--fix-dates] [--json]
+visimark infer FILE... [--write] [--json]
 visimark eval  FILE [--get NAME] [--json]
-visimark explain FILE [#sheet]      print rules, dependency order, assertions
+visimark explain FILE [#sheet] [--json]
 ```
+
+`--json` emits a deterministic envelope of that command's result (`command`,
+engine version, `status` matching the exit code). It does not change
+evaluation, writes, or exit codes. The shape is
+[`structured-output-json-spec.md`](design/structured-output-json-spec.md).
+`eval --json` is that envelope (`values`, `assertions`, `charts`), not a flat
+map of binding names.
 
 Exit codes: `0` clean, `1` findings, `2` usage or parse failure. `eval` also
 exits `1` if an `assert` statement is false ([§17](#17-assertions)) — the
@@ -687,7 +695,7 @@ value behind a `STALE` and the assertion is about that value.
 
 **Elsewhere.** `explain` lists a sheet's assertions after its rules and
 evaluation order. `eval` evaluates them and exits `1` if one is false
-([§11](#11-cli)), and `eval --json` carries an `assertions` array (`sheetId`,
+([§11](#11-cli)), and `eval --json` carries an `assertions` array (`sheet`,
 `source`, `holds`, `operands`, `substituted`). `infer` never proposes an
 `assert` — a relation that happens to hold in the current numbers is not
 evidence of an intended invariant, and the false-positive cost is too high.

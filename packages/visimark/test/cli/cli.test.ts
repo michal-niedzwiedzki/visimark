@@ -47,7 +47,8 @@ test("eval --get prints one raw decimal value", async () => {
 test("eval --get accepts a bare name and --json", async () => {
   const c = capture();
   await runCli(["eval", cleanPath, "--get", "gross_total", "--json"], c.io);
-  expect(JSON.parse(c.out())).toEqual({ gross_total: "28659" });
+  const j = JSON.parse(c.out()) as { values: { gross_total: string } };
+  expect(j.values).toEqual({ gross_total: "28659" });
 });
 
 test("fmt rewrites the file in place and is stable on a second run", async () => {
@@ -199,7 +200,7 @@ test("eval --json carries an assertions array", async () => {
   const j = JSON.parse(c.out());
   expect(j.assertions).toEqual([
     {
-      sheetId: "plan",
+      sheet: "plan",
       source: "assert total == 1",
       holds: false,
       operands: { total: "0.90" },

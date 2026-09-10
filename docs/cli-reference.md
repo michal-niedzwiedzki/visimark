@@ -35,7 +35,7 @@ exits `0`. `visimark --help` (also `-h` or `help`) prints the usage summary.
 | `--fix-dates` | `fmt` | Also rewrites non-ISO dates that have only one reading. `15.10.2026` becomes `2026-10-15`; `11/12/2026` is left alone and still reported, because it is two different dates depending on who wrote it. |
 | `--write` | `infer` | Inserts what it proposed: a `vmark` block after each table, an anchor after each matched figure, or the `no-formulas` marker if there was nothing to derive. It only ever inserts — no existing byte is rewritten. |
 | `--get NAME` | `eval` | Prints one value instead of all of them. Takes `sheet.name` or a bare `name` when it is unambiguous. |
-| `--json` | `eval` | Prints JSON instead of aligned text — the computed values, plus an `assertions` array (`sheetId`, `source`, `holds`, `operands`, `substituted`). |
+| `--json` | `check`, `fmt`, `infer`, `eval`, `explain` | Prints one JSON document on stdout instead of the human report. Default text is unchanged. Document quantities are decimal strings. The envelope is specified in [`design/structured-output-json-spec.md`](design/structured-output-json-spec.md). Unrecognised flags stay ignored, so `--jsonn` is not `--json`. |
 | `#sheet` | `explain` | Limits the output to one sheet. Repeatable. |
 
 Unrecognised options are ignored rather than treated as an error, so a
