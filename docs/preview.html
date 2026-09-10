@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>VisiMark — example</title>
+    <title>VisiMark — preview</title>
     <link rel="icon" type="image/webp" href="visimark.webp" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -38,6 +38,34 @@
       }
       .example-source-link a {
         color: #f4f4f4;
+      }
+      .doc-highlight {
+        margin-top: 24px;
+        background: #ffffff;
+        color: #1b1b1b;
+        border-radius: 10px;
+        padding: 24px 32px;
+        box-shadow: 0 16px 50px rgba(0, 0, 0, 0.45);
+      }
+      .doc-highlight h2 {
+        margin: 0 0 10px;
+        font-size: 1.5rem;
+        font-weight: 750;
+      }
+      .doc-highlight p {
+        margin: 0 0 12px;
+        font-size: 0.96rem;
+        line-height: 1.6;
+        color: #363636;
+      }
+      .doc-highlight p:last-child {
+        margin-bottom: 0;
+      }
+      .doc-highlight code {
+        background: #f0f0f0;
+        border-radius: 4px;
+        padding: 1px 5px;
+        font-size: 0.88em;
       }
       .doc-demo {
         display: grid;
@@ -173,6 +201,8 @@
         <span class="example-source-link" id="source-link"></span>
       </p>
 
+      <section id="doc-highlight" class="doc-highlight" hidden></section>
+
       <div id="doc-demo" class="doc-demo" hidden>
         <div class="doc-pane">
           <h4 id="source-label">Source</h4>
@@ -197,6 +227,7 @@
       (function () {
         var params = new URLSearchParams(window.location.search);
         var file = params.get("file") || "example-ci-sharding.md";
+        var highlight = params.get("highlight") === "1";
 
         // Guard against an arbitrary path escaping the docs/ folder or
         // pointing off-site — only a bare filename in this directory is
@@ -208,7 +239,24 @@
         var sourceEl = document.getElementById("doc-source");
         var previewEl = document.getElementById("doc-preview");
         var demoEl = document.getElementById("doc-demo");
+        var highlightEl = document.getElementById("doc-highlight");
         var errorEl = document.getElementById("doc-error");
+
+        // With ?highlight=1, repeat the document's last "## " section — its
+        // closing rationale — above the source/preview panes, rendered as a
+        // heading and prose rather than shown as raw Markdown.
+        function renderHighlight(raw) {
+          var lines = raw.split("\n");
+          var start = -1;
+          for (var i = 0; i < lines.length; i++) {
+            if (/^## /.test(lines[i])) start = i;
+          }
+          if (start === -1) return;
+          var section = lines.slice(start).join("\n").trim();
+          highlightEl.innerHTML =
+            typeof marked !== "undefined" ? marked.parse(section) : section;
+          highlightEl.hidden = false;
+        }
 
         function showError(message) {
           errorEl.textContent = message;
@@ -238,6 +286,7 @@
             document.title = "VisiMark — " + file;
             sourceEl.textContent = raw;
             previewEl.innerHTML = typeof marked !== "undefined" ? marked.parse(raw) : raw;
+            if (highlight) renderHighlight(raw);
             demoEl.hidden = false;
           })
           .catch(function (err) {
