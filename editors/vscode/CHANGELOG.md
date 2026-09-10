@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.1.2 - 2026-09-10
+
 - Writing `Σ`/`∑` no longer shows as a parse-error diagnostic; it's treated
   as `SUM`.
 - A sheet id that is not a valid identifier now shows as a `SHEET` diagnostic

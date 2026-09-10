@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.1.2 - 2026-09-10
+
 ### Added
 
 - **`--json` on all document CLI commands** (issue #60) — `check`, `fmt`,
@@ -253,4 +255,5 @@ record that the publish happened, and making the history read clean after the
 fact is the kind of underived edit this project exists to catch. There is no
 0.1.0 of the VS Code extension.
 
+[0.1.2]: https://github.com/michal-niedzwiedzki/visimark/releases/tag/v0.1.2
 [0.1.1]: https://github.com/michal-niedzwiedzki/visimark/releases/tag/v0.1.1
