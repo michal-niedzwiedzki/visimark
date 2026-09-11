@@ -32,7 +32,7 @@ The commands look at the issue and pick a track:
 |---------|--------------|----------------|
 | `/issue-review <n> [--draft]` | Picks the track, parses or analyses the issue, checks it against the constraints, runs `visimark check` / `infer` on any motivating document, drafts a recommendation | A pre-review comment on the issue and a PR adding the row as `NEW` — or, with `--draft`, nothing. A thin or misfiled issue gets only a comment. |
 | `/issue-discuss <n>` | Condenses the review conversation you had with the agent in the session into a neutral summary, shows it to you, and posts it only if you approve | A `**Discussion summary**` comment on the issue — nothing else |
-| `/issue-decide <n> [notes]` | Reconciles the pre-review with your steer, writes the decision, and lands it. **On `APPROVED` it first drafts the feature spec with you** — a gap hunt and a round of questions — and does nothing public until you call the spec ready; then it offers to draft the implementation plan, and then to execute it | A `Decision:` comment on the issue; the catalogue PR **merged** to `master` with the row at its verdict (the merge commit quotes the decision); the issue **closed** for `DEFERRED` / `REJECTED`, left open for `APPROVED` (and closed automatically once the change ships in a release); and, for `APPROVED`, a **draft** PR carrying the spec (`docs/vocab/<slug>-spec.md` or `docs/design/<slug>-spec.md`) and, if you asked for them, the plan and the implementation — promoted out of draft only once the build and CI are green |
+| `/issue-decide <n> [notes]` | Reconciles the pre-review with your steer, writes the decision, and lands it. **On `APPROVED` it first drafts the feature spec with you** — a gap hunt and a round of questions — and does nothing public until you call the spec ready; then it offers to draft the implementation plan, and then to execute it | A `Decision:` comment on the issue; the catalogue PR **merged** to `master` with the row at its verdict (the landing commit quotes the decision — a merge commit, or a squash commit if the repo has merge commits disabled); the issue **closed** for `DEFERRED` / `REJECTED`, left open for `APPROVED` (and closed automatically once the change ships in a release); and, for `APPROVED`, a **draft** PR carrying the spec (`docs/vocab/<slug>-spec.md` or `docs/design/<slug>-spec.md`) and, if you asked for them, the plan and the implementation — promoted out of draft only once the build and CI are green |
 
 `/issue-discuss` is optional and repeatable — reach for it when the session
 argument mattered and the issue thread should carry it before the decision.
@@ -53,7 +53,7 @@ argument mattered and the issue thread should carry it before the decision.
 4. **`/issue-decide <n> <your verdict and reason>`** — settles the verdict.
    - On **`DEFERRED` / `REJECTED`**: posts the deciding comment in your voice,
      sets the row's `Status` to `[VERDICT](<comment link>)`, merges the
-     catalogue PR (the merge commit quotes the decision), and closes the issue.
+     catalogue PR (the landing commit quotes the decision), and closes the issue.
    - On **`APPROVED`**: *first* drafts the spec in the house design-doc style
      from the issue, hunts for gaps (unpinned types, unspecified boundaries,
      un-coded errors, acceptance still hand-wavy, and — for a language feature —
