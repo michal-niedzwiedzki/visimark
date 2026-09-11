@@ -2,6 +2,7 @@ import remarkGfm from "remark-gfm";
 import remarkParse from "remark-parse";
 import { unified } from "unified";
 import { type RawBinding, splitBindings } from "./blocks.js";
+import { parseFenceInfo } from "./fence-info.js";
 
 export type { RawBinding };
 
@@ -23,9 +24,42 @@ export interface Span {
   end: number;
 }
 
+/**
+ * A `from <path> [delimited <char>] [labelled <col>,...] [at sha256:<digest>]`
+ * clause parsed out of a `vmark` fence info string — see
+ * `docs/design/declared-local-data-imports-spec.md` §2. Non-null on
+ * `RawBlock.importDecl` marks a sheet as a **declared input**: read-only, its
+ * table sourced from a local file rather than an inline GFM table.
+ */
+export interface ImportDecl {
+  path: string;
+  pathSpan: Span;
+  /** single-character CSV field delimiter; `","` when no `delimited` clause */
+  delimiter: string;
+  /** the `labelled` header assertion, in order, or null if absent */
+  labels: string[] | null;
+  labelsSpan: Span | null;
+  /** the `at` clause's prefix token verbatim (before the `:`), or null if the
+   *  clause is absent. Anything other than `"sha256"` is unrecognised. */
+  stampPrefix: string | null;
+  /** the digest text after `sha256:`, verbatim — validity is not checked here */
+  stampDigest: string | null;
+  /** span of the whole `at ...` clause; `fmt` replaces this span to update a
+   *  stamp, or inserts at `declSpan.end` when there is no `at` clause at all */
+  stampSpan: Span | null;
+  /** span of the entire declaration tail after the sheet id — the fallback
+   *  site for a finding with nowhere more specific to point */
+  declSpan: Span;
+}
+
 export interface RawBlock {
   /** sheet id from the fence info string (`#lines` -> `"lines"`); `null` for a document-scope block */
   sheetId: string | null;
+  /** parsed `from ...` clause, or null for an ordinary sheet */
+  importDecl: ImportDecl | null;
+  /** a fence-info clause the `from` grammar rejected (bad order, repeated
+   *  clause, malformed token, unrecognised trailing token) */
+  grammarError: { message: string; span: Span } | null;
   bindings: RawBinding[];
   /** span of the whole fenced code block, including fences */
   span: Span;
@@ -163,8 +197,22 @@ export function locate(source: string): LocatedDoc {
     if (node.type === "code" && node.lang === "vmark") {
       const span: Span = { start: off(node, "start"), end: off(node, "end") };
       const bodyStart = source.indexOf("\n", span.start) + 1;
+      const meta = node.meta ?? null;
+      const metaStart = meta ? firstLine(source, span.start).indexOf(meta) : -1;
+      const rebaseAbs = metaStart === -1 ? 0 : span.start + metaStart;
+      const parsed = parseFenceInfo(meta);
       const block: RawBlock = {
-        sheetId: parseSheetId(node.meta ?? null),
+        sheetId: parsed.sheetId,
+        importDecl: parsed.importDecl ? rebaseImportDecl(parsed.importDecl, rebaseAbs) : null,
+        grammarError: parsed.grammarError
+          ? {
+              message: parsed.grammarError.message,
+              span: {
+                start: rebaseAbs + parsed.grammarError.span.start,
+                end: rebaseAbs + parsed.grammarError.span.end,
+              },
+            }
+          : null,
         bindings: splitBindings(node.value ?? "", bodyStart),
         span,
       };
@@ -213,10 +261,31 @@ export function locate(source: string): LocatedDoc {
   };
 }
 
-function parseSheetId(meta: string | null): string | null {
-  if (!meta) return null;
-  const m = /^#(\S+)/.exec(meta.trim());
-  return m ? m[1]! : null;
+/** the code fence's opening line, from `span.start` up to (not including) the newline */
+function firstLine(source: string, spanStart: number): string {
+  const nl = source.indexOf("\n", spanStart);
+  return nl === -1 ? source.slice(spanStart) : source.slice(spanStart, nl);
+}
+
+function rebaseImportDecl(
+  decl: NonNullable<ReturnType<typeof parseFenceInfo>["importDecl"]>,
+  delta: number,
+): ImportDecl {
+  const shift = (s: { start: number; end: number }): Span => ({
+    start: s.start + delta,
+    end: s.end + delta,
+  });
+  return {
+    path: decl.path,
+    pathSpan: shift(decl.pathSpan),
+    delimiter: decl.delimiter,
+    labels: decl.labels,
+    labelsSpan: decl.labelsSpan ? shift(decl.labelsSpan) : null,
+    stampPrefix: decl.stampPrefix,
+    stampDigest: decl.stampDigest,
+    stampSpan: decl.stampSpan ? shift(decl.stampSpan) : null,
+    declSpan: shift(decl.declSpan),
+  };
 }
 
 function readTable(node: MdNode, source: string): RawTable {
