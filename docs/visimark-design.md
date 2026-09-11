@@ -863,13 +863,16 @@ output format other than SVG.
 A sheet may take its table from a declared local file instead of an inline GFM
 table — a **declared input** ([§9](#9-write-back)), read-only and pinned to an
 exact identity, for a table too large to embed in Markdown. Full specification:
-[`declared-local-data-imports-spec.md`](design/declared-local-data-imports-spec.md).
-Approved on [#66](https://github.com/michal-niedzwiedzki/visimark/issues/66).
+[`declared-local-data-imports-spec.md`](design/declared-local-data-imports-spec.md),
+extended by
+[`explicit-schema-for-headerless-csv-imports-spec.md`](design/explicit-schema-for-headerless-csv-imports-spec.md).
+Approved on [#66](https://github.com/michal-niedzwiedzki/visimark/issues/66)
+and [#70](https://github.com/michal-niedzwiedzki/visimark/issues/70).
 
 **Syntax**, in the fence info string, after the sheet id:
 
 ```
-vmark #benchmark from benchmark.csv [delimited <char>] [labelled <col>,...] [at sha256:<digest>]
+vmark #benchmark from benchmark.csv [delimited <char>] [labelled <col>,... | unlabelled <col>,...] [at sha256:<digest>]
 ```
 
 `from <path>` marks the sheet as imported; `<path>` resolves relative to the
@@ -880,12 +883,18 @@ extension instead of `.svg`. `delimited <char>` names a non-default CSV
 delimiter (comma otherwise); the character may not be a letter, digit, quote,
 `.`, `-`, or whitespace, since a delimiter drawn from a field's own alphabet
 silently corrupts every field containing it. `labelled <col>,...` asserts the
-CSV header, in order. `at sha256:<digest>` is a full, lowercase, 64-character
-SHA-256 digest of the file's raw bytes — the only stamp algorithm v1
-recognises; a Git commit reference is deliberately not supported (it cannot
-name uncommitted contents, and needs a `.git` directory, a reachable object,
-and in practice a `git` binary — ambient dependencies a bare digest does not
-have).
+CSV header, in order. `unlabelled <col>,...` is the positional counterpart for
+a CSV with **no header row**: row 1 is read as data, not consumed as column
+names, and the declared names are assigned to columns in order. `labelled` and
+`unlabelled` are mutually exclusive — declaring both, or repeating either, is
+a `TYPE` error against the fence info string. Neither clause present is
+unchanged from before `unlabelled` existed: the CSV is assumed to carry a
+header, taken from row 1, unasserted. `at sha256:<digest>` is a full,
+lowercase, 64-character SHA-256 digest of the file's raw bytes — the only
+stamp algorithm v1 recognises; a Git commit reference is deliberately not
+supported (it cannot name uncommitted contents, and needs a `.git` directory,
+a reachable object, and in practice a `git` binary — ambient dependencies a
+bare digest does not have).
 
 **An imported sheet owns no GFM table and has no column rules.** Its columns
 come from the CSV header, read-only, exactly like an ordinary input column but
@@ -903,7 +912,12 @@ matches (if present) → CSV parses → no duplicate headers → headers are val
 identifiers → `labelled` matches. A stamp mismatch is `STALE`, fixed by `fmt`
 rewriting the digest; every other failure is `IMPORT`, fixed by nothing except
 an unstamped import, which `fmt` stamps. The CSV file itself is never written,
-under any flag.
+under any flag. For `unlabelled` the same order runs against the *declared*
+names instead of a parsed header (no duplicates → all valid identifiers), plus
+one step new to `unlabelled` alone: every row's field count must equal the
+declared name count, or the first offending row is one `IMPORT` finding. This
+row-width check does not apply to `labelled` or an unasserted import — a
+ragged row there is unchanged, silently accepted.
 
 **CSV parsing** is RFC 4180: quoting, `""` escaping, comma default delimiter,
 both `\n` and `\r\n` accepted (not mixed in one file), a UTF-8 BOM stripped
@@ -915,10 +929,11 @@ precision never applies, since it has no computed cells; a scalar derived from
 one still takes its precision from its own anchor, unchanged.
 
 **Elsewhere.** `explain` and `explain --json` surface the import's path,
-delimiter, labels, and stamp state ([§11](#11-cli)). `infer` never proposes a
-`from` clause, a stamp, or a `delimited`/`labelled` clause — a CSV sitting next
-to a document is not evidence it should be imported, the same restraint
-`infer` already shows toward `chart` and `assert`.
+delimiter, labels, mode (`labelled`/`unlabelled`/unspecified), and stamp state
+([§11](#11-cli)). `infer` never proposes a `from` clause, a stamp, or a
+`delimited`/`labelled`/`unlabelled` clause — a CSV sitting next to a document
+is not evidence it should be imported, the same restraint `infer` already
+shows toward `chart` and `assert`.
 
 **Deferred.** Git commit-reference stamps; any imported format other than CSV;
 computed columns on an imported sheet in any form; a performance budget or

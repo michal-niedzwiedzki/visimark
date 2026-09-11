@@ -448,6 +448,7 @@ export function cmdExplain(args: string[], out: Writer, err: Writer): number {
                   path: sheet.imported.path,
                   delimiter: sheet.imported.delimiter,
                   labels: sheet.imported.labels,
+                  mode: sheet.imported.labelsMode,
                   stamp: sheet.imported.stampDigest ? `sha256:${sheet.imported.stampDigest}` : null,
                   stampStatus: importSt?.state ?? null,
                 },
@@ -493,7 +494,10 @@ export function cmdExplain(args: string[], out: Writer, err: Writer): number {
       const st = importState.get(sid);
       const delim =
         sheet.imported.delimiter !== "," ? ` delimited ${sheet.imported.delimiter}` : "";
-      const labels = sheet.imported.labels ? ` labelled ${sheet.imported.labels.join(", ")}` : "";
+      const labelKeyword = sheet.imported.labelsMode ?? "labelled";
+      const labels = sheet.imported.labels
+        ? ` ${labelKeyword} ${sheet.imported.labels.join(", ")}`
+        : "";
       out(`  import:  ${sheet.imported.path}${delim}${labels}  [${st?.state ?? "unknown"}]`);
     }
     if (sheet.inputColumns.size > 0) {
