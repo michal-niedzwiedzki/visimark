@@ -1,6 +1,15 @@
 import type { Expr } from "../lang/ast.js";
 import type { LangError } from "../lang/token.js";
-import type { LocatedDoc, RawAnchor, RawBlock, RawTable, Span } from "../parse/document.js";
+import type {
+  ImportDecl,
+  LocatedDoc,
+  RawAnchor,
+  RawBlock,
+  RawTable,
+  Span,
+} from "../parse/document.js";
+
+export type { ImportDecl };
 
 export type FindingCode =
   | "STALE"
@@ -15,6 +24,7 @@ export type FindingCode =
   | "ANCHOR"
   | "ASSERT"
   | "ARTIFACT"
+  | "IMPORT"
   | "WARN"
   | "NOTE"
   | "COVERAGE";
@@ -38,6 +48,7 @@ export const ERROR_CODES: ReadonlySet<FindingCode> = new Set<FindingCode>([
   "ANCHOR",
   "ASSERT",
   "ARTIFACT",
+  "IMPORT",
   "COVERAGE",
 ]);
 
@@ -120,6 +131,23 @@ export interface Sheet {
   assertions: Assertion[];
   /** `chart` declarations, in block-declaration order */
   charts: Chart[];
+  /** a `from <path> ...` declaration — non-null marks this sheet as a
+   *  **declared input**: read-only, its table sourced from a local CSV file
+   *  rather than an inline GFM table. See visimark-design.md §3/§9. */
+  imported: ImportDecl | null;
+}
+
+/**
+ * The outcome of resolving one imported sheet's `from` declaration against
+ * the filesystem — see `import/resolve.ts`.
+ */
+export interface ImportStatus {
+  sheetId: string;
+  /** absolute path once the path gate passes, else null */
+  target: string | null;
+  /** sha256 of the file's raw bytes, once read; else null */
+  digest: string | null;
+  state: "ok" | "unstamped" | "stale" | "error" | "skipped";
 }
 
 /**

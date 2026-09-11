@@ -1,0 +1,5 @@
+Item,Unit,Qty,Rate,Net,VAT,Gross
+Discovery workshop,day,2,1800.00,3600.00,828.00,4428.00
+Backend implementation,hour,64,220.00,14080.00,3238.40,17318.40
+Code review retainer,month,1,2500.00,2500.00,575.00,3075.00
+On-call support,hour,12,260.00,3120.00,717.60,3837.60

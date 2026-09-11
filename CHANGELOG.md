@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### Added
+
+- **Declared local data imports with integrity stamps** (issue #66) — a sheet
+  may take its table from a declared local CSV file instead of an inline GFM
+  table: `` ```vmark #benchmark from benchmark.csv at sha256:<digest> ``. `fmt`
+  adds and updates the SHA-256 stamp; `check` verifies it and never updates it;
+  an unstamped import fails `check`. Imported sheets are read-only — no column
+  rules. `delimited <char>` names a non-comma delimiter; `labelled <col>,...`
+  asserts the header. The imported file is never written. See
+  [`declared-local-data-imports-spec.md`](docs/design/declared-local-data-imports-spec.md)
+  and [§19](docs/visimark-design.md#19-declared-local-data-imports).
+
 ## 0.1.2 - 2026-09-10
 
 ### Added

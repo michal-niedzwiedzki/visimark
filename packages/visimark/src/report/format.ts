@@ -148,6 +148,8 @@ function renderGroup(f: Finding): string[] {
       return [prefix("CYCLE") + (f.cyclePath ?? []).join(" → ")];
     case "SHEET":
       return [prefix("SHEET") + id(f).padEnd(ID_FIELD) + "  " + (f.message ?? "")];
+    case "IMPORT":
+      return [prefix("IMPORT") + sheetId(f).padEnd(ID_FIELD) + "  " + (f.message ?? "")];
     case "COVERAGE": {
       // `COVERAGE` fills the eight-column code field exactly, so its payload
       // starts one column right of `CONT`. Indent the continuation to the

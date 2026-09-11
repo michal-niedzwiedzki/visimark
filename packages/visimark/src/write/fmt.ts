@@ -32,6 +32,8 @@ export interface FmtResult {
   cellsUpdated: number;
   anchorsUpdated: number;
   datesFixed: number;
+  /** import stamps added or corrected — never the CSV file itself */
+  stampsUpdated: number;
   unfixable: Finding[];
   /** artifacts that are stale or missing — the caller writes them */
   artifacts: ArtifactWrite[];
@@ -103,7 +105,33 @@ export function planFmt(model: DocModel, result: CheckResult, opts: FmtOptions):
     }
   }
 
-  // 3. decidable non-ISO date inputs — only with --fix-dates
+  // 3. import stamps — added when missing, corrected when stale; an `error`
+  //    state import is never touched, same as any other non-STALE finding
+  for (const sheet of model.sheets.values()) {
+    const decl = sheet.imported;
+    if (!decl) continue;
+    const status = result.imports.get(sheet.id);
+    if (!status || status.digest === null) continue;
+    if (status.state === "ok" || status.state === "error" || status.state === "skipped") continue;
+    const text = `at sha256:${status.digest}`;
+    if (decl.stampSpan) {
+      edits.push({
+        start: decl.stampSpan.start,
+        end: decl.stampSpan.end,
+        text,
+        finding: findingFor(decl.stampSpan.start, decl.stampSpan.end),
+      });
+    } else {
+      edits.push({
+        start: decl.declSpan.end,
+        end: decl.declSpan.end,
+        text: " " + text,
+        finding: findingFor(decl.declSpan.start, decl.declSpan.end),
+      });
+    }
+  }
+
+  // 4. decidable non-ISO date inputs — only with --fix-dates
   if (opts.fixDates) {
     for (const f of result.findings) {
       if (f.code !== "DATE" || !f.isoFix || !f.sheetId || !f.name) continue;
@@ -152,11 +180,15 @@ export function fmt(source: string, opts: FmtOptions = {}): FmtResult {
   const datesFixed = opts.fixDates
     ? edits.filter((e) => /^\d{4}-\d{2}-\d{2}$/.test(e.text)).length
     : 0;
-  const anchorsUpdated = edits.length - cellsUpdated - datesFixed;
+  const stampsUpdated = countStampEdits(model, edits);
+  const anchorsUpdated = edits.length - cellsUpdated - datesFixed - stampsUpdated;
 
   const unfixable = result.findings.filter((f) => {
     if (FIXABLE_BY_FMT.has(f.code)) return false;
     if (opts.fixDates && f.code === "DATE" && f.isoFix) return false;
+    // an unstamped import is the one IMPORT finding `fmt` repairs, by adding
+    // the stamp — every other IMPORT finding needs a human
+    if (f.code === "IMPORT" && f.message === "unstamped import") return false;
     return true;
   });
 
@@ -172,9 +204,24 @@ export function fmt(source: string, opts: FmtOptions = {}): FmtResult {
     cellsUpdated,
     anchorsUpdated,
     datesFixed,
+    stampsUpdated,
     unfixable,
     artifacts,
   };
+}
+
+/** an edit counts as a stamp update when it lands at one of this document's
+ *  import declarations — either replacing an existing `at` clause or
+ *  inserting a new one right after the declaration */
+function countStampEdits(model: DocModel, edits: Edit[]): number {
+  const sites = new Set<string>();
+  for (const sheet of model.sheets.values()) {
+    const decl = sheet.imported;
+    if (!decl) continue;
+    if (decl.stampSpan) sites.add(`${decl.stampSpan.start}:${decl.stampSpan.end}`);
+    else sites.add(`${decl.declSpan.end}:${decl.declSpan.end}`);
+  }
+  return edits.filter((e) => sites.has(`${e.start}:${e.end}`)).length;
 }
 
 function countCellEdits(model: DocModel, _result: CheckResult, edits: Edit[]): number {

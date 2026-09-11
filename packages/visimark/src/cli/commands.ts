@@ -407,9 +407,11 @@ export function cmdExplain(args: string[], out: Writer, err: Writer): number {
     return 2;
   }
   const model = build(locate(source));
+  const checkResult = check(model, { docPath: path });
   const { order, assertionIds, chartIds } = topoOrder(model);
-  const chartResults = check(model, { docPath: path }).charts;
+  const chartResults = checkResult.charts;
   const chartState = new Map(chartResults.map((c) => [`${c.sheetId}.${c.name}`, c]));
+  const importState = checkResult.imports;
 
   const wanted = sheets.length > 0 ? sheets : [...model.sheets.keys()];
   for (const sid of wanted) {
@@ -436,9 +438,21 @@ export function cmdExplain(args: string[], out: Writer, err: Writer): number {
         const localOrder = order
           .filter((b) => b.sheetId === sid && !assertionIds.has(b.id) && !chartIds.has(b.id))
           .map((b) => b.name);
+        const importSt = importState.get(sid);
         return {
           id: sid,
           hasTable: Boolean(sheet.table),
+          ...(sheet.imported
+            ? {
+                import: {
+                  path: sheet.imported.path,
+                  delimiter: sheet.imported.delimiter,
+                  labels: sheet.imported.labels,
+                  stamp: sheet.imported.stampDigest ? `sha256:${sheet.imported.stampDigest}` : null,
+                  stampStatus: importSt?.state ?? null,
+                },
+              }
+            : {}),
           inputs: [...sheet.inputColumns],
           rules: [...sheet.columns.values()].map((b) => ({ name: b.name, rule: slice(model, b) })),
           scalars: [...sheet.scalars.values()].map((b) => ({
@@ -475,6 +489,13 @@ export function cmdExplain(args: string[], out: Writer, err: Writer): number {
   for (const sid of wanted) {
     const sheet = model.sheets.get(sid)!;
     out(`#${sid}${sheet.table ? "" : "  (no table)"}`);
+    if (sheet.imported) {
+      const st = importState.get(sid);
+      const delim =
+        sheet.imported.delimiter !== "," ? ` delimited ${sheet.imported.delimiter}` : "";
+      const labels = sheet.imported.labels ? ` labelled ${sheet.imported.labels.join(", ")}` : "";
+      out(`  import:  ${sheet.imported.path}${delim}${labels}  [${st?.state ?? "unknown"}]`);
+    }
     if (sheet.inputColumns.size > 0) {
       out(`  inputs:  ${[...sheet.inputColumns].join(", ")}`);
     }

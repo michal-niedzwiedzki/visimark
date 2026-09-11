@@ -18,6 +18,8 @@ import { chartNode, dependencies, refText, resolve, topoOrder } from "./graph.js
 import { buildArtifact, hasEngine, type Series, suggestEngine } from "../artifact/index.js";
 import { resolveArtifactPath } from "../artifact/path.js";
 import { classify } from "../artifact/stale.js";
+import { resolveImports } from "../import/resolve.js";
+import type { ImportStatus } from "../model/types.js";
 import { applyUnit, inferColumnUnit, numericValue, parseDecorated, type Unit } from "./units.js";
 import { date, EvalError, num, roundToPlaces, str, type Value } from "./value.js";
 
@@ -71,6 +73,8 @@ export interface CheckResult {
   assertions: AssertionResult[];
   /** one entry per `chart` declaration, in document order */
   charts: ChartResult[];
+  /** resolution outcome of every imported (`from`) sheet, keyed by sheet id */
+  imports: Map<string, ImportStatus>;
   exitCode: 0 | 1;
 }
 
@@ -93,6 +97,12 @@ const PERCENT_RE = /^(\d+(?:\.\d+)?)%$/;
 const DATEISH_RE = /^\d{1,4}[./-]\d{1,4}[./-]\d{1,4}$/;
 
 export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
+  // Imported sheets must be resolved — their table, column index, and input
+  // columns populated from the CSV — before the dependency graph is built,
+  // since every binding that reads an imported column needs that column to
+  // already be visible to name resolution (graph.ts).
+  const imported = resolveImports(model, opts.docPath);
+
   const { order, cycles, assertionIds, chartIds } = topoOrder(model);
 
   const assertionById = new Map<string, Assertion>();
@@ -133,6 +143,7 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
 
   // structural findings carried from the model (SHEET, binding parse errors)
   for (const f of model.findings) emit(f);
+  for (const f of imported.findings) emit(f, { sheetId: f.sheetId });
 
   emitCoverage(model, emit);
 
@@ -607,6 +618,7 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
     unitConflicts,
     assertions,
     charts,
+    imports: imported.statuses,
     exitCode: findings.some(isProblem) ? 1 : 0,
   };
 
@@ -1143,6 +1155,7 @@ function orderFindings(
     COVERAGE: 0,
     SHEET: 0,
     TYPE: 0,
+    IMPORT: 0,
     DATE: 1,
     UNIT: 1,
     NOTE: 1,
