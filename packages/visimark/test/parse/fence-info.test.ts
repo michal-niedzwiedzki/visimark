@@ -105,8 +105,7 @@ test("`labelled` sets labelsMode", () => {
 test("`unlabelled <col>,...`, combined with `delimited` and `at`", () => {
   const b = block(
     FENCE(
-      "#benchmark from benchmark.csv delimited : unlabelled Id, Time at sha256:" +
-        "d".repeat(64),
+      "#benchmark from benchmark.csv delimited : unlabelled Id, Time at sha256:" + "d".repeat(64),
     ),
   );
   expect(b.importDecl?.delimiter).toBe(":");

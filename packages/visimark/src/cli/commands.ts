@@ -495,7 +495,9 @@ export function cmdExplain(args: string[], out: Writer, err: Writer): number {
       const delim =
         sheet.imported.delimiter !== "," ? ` delimited ${sheet.imported.delimiter}` : "";
       const labelKeyword = sheet.imported.labelsMode ?? "labelled";
-      const labels = sheet.imported.labels ? ` ${labelKeyword} ${sheet.imported.labels.join(", ")}` : "";
+      const labels = sheet.imported.labels
+        ? ` ${labelKeyword} ${sheet.imported.labels.join(", ")}`
+        : "";
       out(`  import:  ${sheet.imported.path}${delim}${labels}  [${st?.state ?? "unknown"}]`);
     }
     if (sheet.inputColumns.size > 0) {
