@@ -74,7 +74,7 @@ stay byte-for-byte) and the existing `test/fixtures/import/benchmark.md` (the
 
 ## Task 1: Fence-info grammar for `unlabelled`
 
-- [ ] Parse `unlabelled <col>,...` as a mutually-exclusive alternative to
+- [x] Parse `unlabelled <col>,...` as a mutually-exclusive alternative to
       `labelled` in the fence-info tail.
 
 **Files:**
@@ -113,7 +113,7 @@ labelsMode: "labelled" | "unlabelled" | null;
 
 ## Task 2: `import/resolve.ts` — no-header parsing and row-width validation
 
-- [ ] `resolveImports` treats row 1 as data and validates every row's width
+- [x] `resolveImports` treats row 1 as data and validates every row's width
       against the declared name count when `labelsMode === "unlabelled"`.
 
 **Files:**
@@ -156,7 +156,7 @@ labelsMode: "labelled" | "unlabelled" | null;
 
 ## Task 3: `explain` and `eval --json` — surface `labelsMode`
 
-- [ ] Both surfaces already print/serialize `labels`; add the mode alongside
+- [x] Both surfaces already print/serialize `labels`; add the mode alongside
       it so a reader (or a script) can tell `labelled` from `unlabelled` from
       "neither given".
 
@@ -185,7 +185,7 @@ labelsMode: "labelled" | "unlabelled" | null;
 
 ## Task 4: Acceptance fixture
 
-- [ ] Commit the headerless fixture pair from spec §6 and its transcript
+- [x] Commit the headerless fixture pair from spec §6 and its transcript
       tests.
 
 **Files:**
@@ -212,7 +212,7 @@ labelsMode: "labelled" | "unlabelled" | null;
 
 ## Task 5: Documentation
 
-- [ ] Land the design-doc, changelog, catalogue, and CLI-reference updates
+- [x] Land the design-doc, changelog, catalogue, and CLI-reference updates
       the spec commits the project to.
 
 **Files:**

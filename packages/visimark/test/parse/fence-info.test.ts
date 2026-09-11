@@ -91,3 +91,53 @@ test("spans are absolute offsets into the source, not into the meta string", () 
   const decl = b.importDecl!;
   expect(src.slice(decl.pathSpan.start, decl.pathSpan.end)).toBe("benchmark.csv");
 });
+
+test("`from <path>` alone has no labels mode", () => {
+  const b = block(FENCE("#benchmark from benchmark.csv"));
+  expect(b.importDecl?.labelsMode).toBeNull();
+});
+
+test("`labelled` sets labelsMode", () => {
+  const b = block(FENCE("#benchmark from benchmark.csv labelled Id, Time"));
+  expect(b.importDecl?.labelsMode).toBe("labelled");
+});
+
+test("`unlabelled <col>,...`, combined with `delimited` and `at`", () => {
+  const b = block(
+    FENCE(
+      "#benchmark from benchmark.csv delimited : unlabelled Id, Time at sha256:" +
+        "d".repeat(64),
+    ),
+  );
+  expect(b.importDecl?.delimiter).toBe(":");
+  expect(b.importDecl?.labels).toEqual(["Id", "Time"]);
+  expect(b.importDecl?.labelsMode).toBe("unlabelled");
+  expect(b.importDecl?.stampDigest).toBe("d".repeat(64));
+  expect(b.grammarError).toBeNull();
+});
+
+test("`unlabelled` with an empty list is a grammar error", () => {
+  const b = block(FENCE("#benchmark from benchmark.csv unlabelled at sha256:" + "e".repeat(64)));
+  expect(b.importDecl).toBeNull();
+  expect(b.grammarError?.message).toContain("unlabelled");
+});
+
+test("`labelled` followed by `unlabelled` is out of order or repeated", () => {
+  const b = block(FENCE("#benchmark from benchmark.csv labelled Id, Time unlabelled Id, Time"));
+  expect(b.importDecl).toBeNull();
+  expect(b.grammarError?.message).toContain("unlabelled");
+  expect(b.grammarError?.message).toContain("out of order or repeated");
+});
+
+test("`unlabelled` followed by `labelled` is out of order or repeated", () => {
+  const b = block(FENCE("#benchmark from benchmark.csv unlabelled Id, Time labelled Id, Time"));
+  expect(b.importDecl).toBeNull();
+  expect(b.grammarError?.message).toContain("labelled");
+  expect(b.grammarError?.message).toContain("out of order or repeated");
+});
+
+test("`unlabelled` repeated is out of order or repeated", () => {
+  const b = block(FENCE("#benchmark from benchmark.csv unlabelled Id unlabelled Time"));
+  expect(b.importDecl).toBeNull();
+  expect(b.grammarError?.message).toContain("out of order or repeated");
+});

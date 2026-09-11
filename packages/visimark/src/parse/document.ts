@@ -36,9 +36,14 @@ export interface ImportDecl {
   pathSpan: Span;
   /** single-character CSV field delimiter; `","` when no `delimited` clause */
   delimiter: string;
-  /** the `labelled` header assertion, in order, or null if absent */
+  /** the `labelled` or `unlabelled` name list, in order, or null if neither
+   *  clause is present */
   labels: string[] | null;
   labelsSpan: Span | null;
+  /** which of the two mutually-exclusive clauses supplied `labels` — null
+   *  when neither is present, in which case the CSV's own header row is
+   *  taken unasserted, exactly as before this field existed */
+  labelsMode: "labelled" | "unlabelled" | null;
   /** the `at` clause's prefix token verbatim (before the `:`), or null if the
    *  clause is absent. Anything other than `"sha256"` is unrecognised. */
   stampPrefix: string | null;
@@ -281,6 +286,7 @@ function rebaseImportDecl(
     delimiter: decl.delimiter,
     labels: decl.labels,
     labelsSpan: decl.labelsSpan ? shift(decl.labelsSpan) : null,
+    labelsMode: decl.labelsMode,
     stampPrefix: decl.stampPrefix,
     stampDigest: decl.stampDigest,
     stampSpan: decl.stampSpan ? shift(decl.stampSpan) : null,

@@ -13,6 +13,14 @@
   asserts the header. The imported file is never written. See
   [`declared-local-data-imports-spec.md`](docs/design/declared-local-data-imports-spec.md)
   and [§19](docs/visimark-design.md#19-declared-local-data-imports).
+- **`unlabelled` clause for headerless CSV imports** (issue #70) — a
+  positional-names counterpart to `labelled` for a CSV file with no header
+  row: `` ```vmark #benchmark from benchmark.csv unlabelled Id, Time ``. Row 1
+  is read as data, not consumed as a header; the declared name count must
+  equal every row's field count, or `check` reports an `IMPORT` error.
+  `labelled` and `unlabelled` are mutually exclusive. See
+  [`explicit-schema-for-headerless-csv-imports-spec.md`](docs/design/explicit-schema-for-headerless-csv-imports-spec.md)
+  and [§19](docs/visimark-design.md#19-declared-local-data-imports).
 
 ## 0.1.2 - 2026-09-10
 

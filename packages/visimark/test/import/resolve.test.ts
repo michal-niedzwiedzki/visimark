@@ -131,3 +131,78 @@ test("mixed line endings surface as an IMPORT finding via the CSV parser", () =>
   const { findings } = resolveImports(m, docPath);
   expect(findings[0]!.message).toContain("mixed line endings");
 });
+
+test("unlabelled: clean import, row 1 is data, table populated positionally", () => {
+  csv("benchmark.csv", "1,12.3\n2,10.1\n");
+  const m = modelFor(
+    "```vmark #benchmark from benchmark.csv unlabelled Id, Time\nMean = AVG(benchmark.Time)\n```\n",
+  );
+  const { findings, statuses } = resolveImports(m, docPath);
+  expect(findings).toHaveLength(1); // unstamped
+  expect(findings[0]!.message).toContain("unstamped");
+  expect(statuses.get("benchmark")!.state).toBe("unstamped");
+  const sheet = m.sheets.get("benchmark")!;
+  expect(sheet.table?.rows.length).toBe(2); // both rows are data, none consumed as a header
+  expect(sheet.columnIndex.get("Time")).toBe(1);
+  expect(sheet.table?.rows[0]?.cells[0]?.text).toBe("1");
+});
+
+test("unlabelled: too few declared names is an IMPORT finding naming row 1", () => {
+  csv("benchmark.csv", "1,12.3,3\n");
+  const m = modelFor("```vmark #benchmark from benchmark.csv unlabelled Id, Time\n```\n");
+  const { findings } = resolveImports(m, docPath);
+  expect(findings).toHaveLength(1);
+  expect(findings[0]!.code).toBe("IMPORT");
+  expect(findings[0]!.message).toContain("too few names");
+  expect(findings[0]!.message).toContain("declared 2");
+  expect(findings[0]!.message).toContain("row 1");
+});
+
+test("unlabelled: too many declared names is an IMPORT finding naming row 1", () => {
+  csv("benchmark.csv", "1,12.3\n");
+  const m = modelFor("```vmark #benchmark from benchmark.csv unlabelled Id, Time, Extra\n```\n");
+  const { findings } = resolveImports(m, docPath);
+  expect(findings).toHaveLength(1);
+  expect(findings[0]!.message).toContain("too many names");
+  expect(findings[0]!.message).toContain("declared 3");
+});
+
+test("unlabelled: a ragged row past row 1 is an IMPORT finding naming that row", () => {
+  csv("benchmark.csv", "1,12.3\n2,10.1\n3,15.0,extra\n");
+  const m = modelFor("```vmark #benchmark from benchmark.csv unlabelled Id, Time\n```\n");
+  const { findings } = resolveImports(m, docPath);
+  expect(findings).toHaveLength(1);
+  expect(findings[0]!.message).toContain("row 3");
+});
+
+test("unlabelled: duplicate declared name is an IMPORT finding", () => {
+  csv("benchmark.csv", "1,2\n");
+  const m = modelFor("```vmark #benchmark from benchmark.csv unlabelled Id, Id\n```\n");
+  const { findings } = resolveImports(m, docPath);
+  expect(findings).toHaveLength(1);
+  expect(findings[0]!.message).toContain("duplicate column");
+  expect(findings[0]!.message).toContain("unlabelled");
+});
+
+test("unlabelled: a non-identifier declared name is an IMPORT finding", () => {
+  csv("benchmark.csv", "1,2\n");
+  const m = modelFor("```vmark #benchmark from benchmark.csv unlabelled Id, 9bad\n```\n");
+  const { findings } = resolveImports(m, docPath);
+  expect(findings).toHaveLength(1);
+  expect(findings[0]!.message).toContain("declared column");
+  expect(findings[0]!.message).toContain("9bad");
+});
+
+test("labelled resolution is unaffected by the unlabelled branch", () => {
+  csv("benchmark.csv", "Id,Time\n1,12.3\n2,10.1\n");
+  const m = modelFor(
+    "```vmark #benchmark from benchmark.csv labelled Id, Time\nMean = AVG(benchmark.Time)\n```\n",
+  );
+  const { findings, statuses } = resolveImports(m, docPath);
+  expect(findings).toHaveLength(1); // unstamped only
+  expect(findings[0]!.message).toContain("unstamped");
+  expect(statuses.get("benchmark")!.state).toBe("unstamped");
+  const sheet = m.sheets.get("benchmark")!;
+  expect(sheet.table?.rows.length).toBe(2);
+  expect(sheet.columnIndex.get("Time")).toBe(1);
+});
