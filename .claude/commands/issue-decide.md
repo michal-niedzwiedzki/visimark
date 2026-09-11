@@ -169,15 +169,28 @@ closed unmerged.
 
 1. **Merge, quoting the decision.** Write the merge-commit body to a temp file:
    the line `Decision: <VERDICT>. <comment-url>`, a blank line, then the full
-   deciding comment with every line prefixed `> `. Then:
+   deciding comment with every line prefixed `> `. First check which merge
+   method the repo actually allows — a merge commit is preferred, but some
+   repos disable it (`gh repo view --json mergeCommitAllowed,squashMergeAllowed`
+   — `false`/`true` there means only squash lands):
    ```bash
-   gh pr merge <num> --merge --delete-branch \
+   method=$(gh repo view --json mergeCommitAllowed,squashMergeAllowed \
+     -q 'if .mergeCommitAllowed then "merge" elif .squashMergeAllowed then "squash" else "" end')
+   [ -n "$method" ] && gh pr merge <num> --$method --delete-branch \
      --subject "docs: decide #<n> (<name>) — <VERDICT>" \
      --body-file <file>
    ```
-   If `gh pr merge` fails (merge conflict, or a required check not green), stop:
-   print the PR URL and the error, say "resolve and merge by hand, then re-run
-   `/issue-decide <n>`", and do nothing else. Never `--admin`, never force.
+   A squash commit still lands as one commit on `master` and still takes
+   `--subject`/`--body-file`, so the decision is quoted exactly the same way —
+   this is a repo-setting accommodation, not a relaxation of the "merged, never
+   closed unmerged" rule below. If neither `mergeCommitAllowed` nor
+   `squashMergeAllowed` is `true` (only rebase), stop: print the PR URL and say
+   "this repo only allows a rebase merge, which can't carry the decision as one
+   commit — merge by hand, quoting the decision, then re-run `/issue-decide <n>`."
+   If `gh pr merge` fails for any other reason (merge conflict, a required
+   check not green), stop the same way: print the PR URL and the error, say
+   "resolve and merge by hand, then re-run `/issue-decide <n>`", and do nothing
+   else. Never `--admin`, never force.
 2. **Set the issue state:**
    - `APPROVED` → leave it **open**; continue to step 7. It is closed
      automatically when the change ships in a tagged release
