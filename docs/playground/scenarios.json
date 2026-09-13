@@ -324,5 +324,28 @@
       "kind": "gist",
       "link": "https://"
     }
+  },
+
+  "13-imports.md": {
+    "body": "A sheet can take its table from a declared local CSV file instead of an inline GFM table. `labelled` asserts the header, and `at sha256:...` pins the file's exact bytes — `fmt` writes and updates that stamp, `check` verifies it and never updates it.",
+    "quest": [
+      {
+        "kind": "manual",
+        "text": "Find the `from 13-imports.csv ... at sha256:...` clause — it replaces the GFM table you'd otherwise write above the vmark block"
+      },
+      {
+        "kind": "manual",
+        "text": "An imported sheet has no column rules — Item, Qty, Price and Total are all read-only, straight from the CSV; only `grand_total = SUM(Total)` runs here"
+      },
+      {
+        "kind": "manual",
+        "text": "This playground runs entirely in your browser with no real filesystem, so the stamp is never actually checked here — clone the repo and run `visimark check docs/playground/tutorial/13-imports.md` to see it verified for real, or edit `13-imports.csv` and run it again to see a STALE finding"
+      }
+    ],
+    "reward": {
+      "text": "Post it to Gist.",
+      "kind": "gist",
+      "link": "https://"
+    }
   }
 }

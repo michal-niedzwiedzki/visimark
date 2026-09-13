@@ -1093,6 +1093,7 @@ applies those proposals to the document.</pre>
           "10-assertions.md",
           "11-build-automation.md",
           "12-charts.md",
+          "13-imports.md",
         ];
         var FILE_SOURCES = { "demo.md": "playground/demo.md" };
         TUTORIAL_CHAPTERS.forEach(function (name) {
@@ -1388,6 +1389,8 @@ applies those proposals to the document.</pre>
             '<svg viewBox="0 0 256 256" fill="currentColor"><path d="M248,120a48.05,48.05,0,0,0-48-48H160.2c-2.91-.17-53.62-3.74-101.91-44.24A16,16,0,0,0,32,40V200a16,16,0,0,0,26.29,12.25c37.77-31.68,77-40.76,93.71-43.3v31.72A16,16,0,0,0,159.12,214l11,7.33A16,16,0,0,0,194.5,212l11.77-44.36A48.07,48.07,0,0,0,248,120ZM48,199.93V40h0c42.81,35.91,86.63,45,104,47.24v65.48C134.65,155,90.84,164.07,48,199.93Zm131,8,0,.11-11-7.33V168h21.6ZM200,152H168V88h32a32,32,0,1,1,0,64Z"/></svg>',
           paintbrush:
             '<svg viewBox="0 0 256 256" fill="currentColor"><path d="M232,32a8,8,0,0,0-8-8c-44.08,0-89.31,49.71-114.43,82.63A60,60,0,0,0,32,164c0,30.88-19.54,44.73-20.47,45.37A8,8,0,0,0,16,224H92a60,60,0,0,0,57.37-77.57C182.3,121.31,232,76.08,232,32ZM92,208H34.63C41.38,198.41,48,183.92,48,164a44,44,0,1,1,44,44Zm32.42-94.45q5.14-6.66,10.09-12.55A76.23,76.23,0,0,1,155,121.49q-5.9,4.94-12.55,10.09A60.54,60.54,0,0,0,124.42,113.55Zm42.7-2.68a92.57,92.57,0,0,0-22-22c31.78-34.53,55.75-45,69.9-47.91C212.17,55.12,201.65,79.09,167.12,110.87Z"/></svg>',
+          stamp:
+            '<svg viewBox="0 0 256 256" fill="currentColor"><path d="M240,208H229.75A44.05,44.05,0,0,0,192,144h-4a35.91,35.91,0,0,0,4-16,36,36,0,0,0-64.86-21.34A59.81,59.81,0,0,0,100,96a60.09,60.09,0,0,0-59.75,64A44.05,44.05,0,0,0,16,204a4,4,0,0,0,0,4H240a8,8,0,0,0,0-16ZM168,144a8,8,0,0,1,8-8h16a28,28,0,0,1,27.71,24H140.7A43.86,43.86,0,0,1,168,144Zm-68-32a44,44,0,0,1,25.16,7.93A8,8,0,0,0,137,116.4a20,20,0,1,1,18.32,27.6H49A44.05,44.05,0,0,1,100,112ZM32.4,208A28,28,0,0,1,60,184a8,8,0,0,0,4.62-1.47A59.87,59.87,0,0,0,88,192a8,8,0,0,0,0-16,44.08,44.08,0,0,1-15.36-2.75A44.24,44.24,0,0,1,88.68,160h95.4A28,28,0,0,1,213.6,208Z"/></svg>',
         };
         // One entry per TUTORIAL_CHAPTERS index — see the "Badge:"/"Skill:" list
         // this was specified from.
@@ -1454,6 +1457,11 @@ applies those proposals to the document.</pre>
             icon: "paintbrush",
             skill:
               "Is soon to be promoted to executive role thanks to their VisiMark charting skill.",
+          },
+          {
+            name: "Data Importer",
+            icon: "stamp",
+            skill: "Knows how to declare a local CSV file as a read-only, integrity-stamped sheet in Markdown.",
           },
         ];
         var BADGES_BY_CHAPTER = {};
