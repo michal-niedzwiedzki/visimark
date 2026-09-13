@@ -391,7 +391,9 @@ Total: **35.00**<span class="c">&lt;!--vmark=order.total--&gt;</span>
 
             Total: **35.00**<!--vmark=order.total-->
           </script>
-          <p class="feature-statement" style="margin-top: 14px">&rarr; Still Markdown. Now verifiable.</p>
+          <p class="feature-statement" style="margin-top: 14px">
+            &rarr; Still Markdown. Now verifiable.
+          </p>
         </article>
 
         <article class="feature feature--lg" id="feature-wrong">
@@ -760,8 +762,8 @@ Process completed with exit code 1</pre>
             A <code>chart</code> statement draws an SVG straight from a sheet's own columns, kept
             honest by <code>fmt</code> and <code>check</code> the same way any other derived value
             is. A <code>from</code> clause does the reverse: a sheet's rows come from an external
-            CSV instead of a GFM table, pinned by hash so a change outside VisiMark's view is
-            never silent.
+            CSV instead of a GFM table, pinned by hash so a change outside VisiMark's view is never
+            silent.
           </p>
           <div class="chart-demo chart-demo--compact">
             <div class="chart-pane">
@@ -793,8 +795,9 @@ Process completed with exit code 1</pre>
             ![audience by segment](charts/example-charts-audience.svg)<!--vmark=audience.mix-->
           </script>
           <p class="chart-caption">
-            The SVG is drawn by <code>fmt</code> and checked byte-for-byte by <code>check</code>
-            &mdash; change a cell and the picture goes <code>STALE</code> until it's regenerated.
+            The SVG is drawn by <code>fmt</code> and checked byte-for-byte by
+            <code>check</code> &mdash; change a cell and the picture goes <code>STALE</code> until
+            it's regenerated.
           </p>
 
           <p style="margin-top: 20px">
@@ -808,7 +811,10 @@ Process completed with exit code 1</pre>
             </div>
             <div class="chart-pane">
               <h4>invoice.csv</h4>
-              <pre class="chart-source" tabindex="0"><span class="csv-c1">Item</span>,<span class="csv-c2">Unit</span>,<span class="csv-c3">Qty</span>,<span class="csv-c4">Rate</span>,<span class="csv-c5">Net</span>,<span class="csv-c6">VAT</span>,<span class="csv-c7">Gross</span>
+              <pre
+                class="chart-source"
+                tabindex="0"
+              ><span class="csv-c1">Item</span>,<span class="csv-c2">Unit</span>,<span class="csv-c3">Qty</span>,<span class="csv-c4">Rate</span>,<span class="csv-c5">Net</span>,<span class="csv-c6">VAT</span>,<span class="csv-c7">Gross</span>
 <span class="csv-c1">Discovery workshop</span>,<span class="csv-c2">day</span>,<span class="csv-c3">2</span>,<span class="csv-c4">1800.00</span>,<span class="csv-c5">3600.00</span>,<span class="csv-c6">828.00</span>,<span class="csv-c7">4428.00</span>
 <span class="csv-c1">Backend implementation</span>,<span class="csv-c2">hour</span>,<span class="csv-c3">64</span>,<span class="csv-c4">220.00</span>,<span class="csv-c5">14080.00</span>,<span class="csv-c6">3238.40</span>,<span class="csv-c7">17318.40</span>
 <span class="csv-c1">Code review retainer</span>,<span class="csv-c2">month</span>,<span class="csv-c3">1</span>,<span class="csv-c4">2500.00</span>,<span class="csv-c5">2500.00</span>,<span class="csv-c6">575.00</span>,<span class="csv-c7">3075.00</span>
@@ -833,10 +839,11 @@ Process completed with exit code 1</pre>
             **28659.00**<!--vmark=lines.gross_total--> PLN.
           </script>
           <p class="chart-caption">
-            No column rules here &mdash; <code>Net</code>, <code>VAT</code> and <code>Gross</code>
-            are read-only inputs from the CSV; only the <code>SUM</code> aggregates run in the
-            document. A changed byte in <code>invoice.csv</code> fails <code>check</code> with
-            <code>STALE</code>, or <code>IMPORT</code> if the hash clause is missing entirely.
+            No column rules here &mdash; <code>Net</code>, <code>VAT</code> and
+            <code>Gross</code> are read-only inputs from the CSV; only the
+            <code>SUM</code> aggregates run in the document. A changed byte in
+            <code>invoice.csv</code> fails <code>check</code> with <code>STALE</code>, or
+            <code>IMPORT</code> if the hash clause is missing entirely.
           </p>
         </article>
 

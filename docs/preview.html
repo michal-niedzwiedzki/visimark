@@ -253,8 +253,7 @@
           }
           if (start === -1) return;
           var section = lines.slice(start).join("\n").trim();
-          highlightEl.innerHTML =
-            typeof marked !== "undefined" ? marked.parse(section) : section;
+          highlightEl.innerHTML = typeof marked !== "undefined" ? marked.parse(section) : section;
           highlightEl.hidden = false;
         }
 
