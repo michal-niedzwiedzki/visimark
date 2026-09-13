@@ -51,8 +51,12 @@ test("niceTicks always spans zero and uses 1/2/5 steps", () => {
   expect(neg[0]).toBeLessThanOrEqual(-40);
 });
 
-test("all five engines are registered", () => {
-  expect(engineNames()).toEqual(["area", "bar", "line", "pie", "stacked-bar"]);
+test("all five built-in engines are registered", () => {
+  // other test files register throwaway stub engines into this same shared
+  // registry, so this checks presence, not the full set
+  for (const name of ["area", "bar", "line", "pie", "stacked-bar"]) {
+    expect(engineNames()).toContain(name);
+  }
 });
 
 test("pie: renders, is byte-stable, and carries the marker", () => {
