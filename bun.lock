@@ -17,7 +17,7 @@
     },
     "editors/vscode": {
       "name": "visimark-vscode",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "dependencies": {
         "visimark": "workspace:*",
         "vscode-languageclient": "^10.1.1",
@@ -31,7 +31,7 @@
     },
     "packages/visimark": {
       "name": "visimark",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "bin": {
         "visimark": "bin/visimark.js",
       },
@@ -49,7 +49,7 @@
     },
     "packages/visimark-lsp": {
       "name": "visimark-lsp",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "dependencies": {
         "visimark": "workspace:*",
         "vscode-jsonrpc": "^9.0.2",
