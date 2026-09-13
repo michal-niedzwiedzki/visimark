@@ -18,7 +18,7 @@ this session:
 | This session is | Trailer |
 |---|---|
 | Claude (Anthropic / Claude Code) | `Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>` |
-| Grok (xAI) | `Co-Authored-By: Grok 4.6 <noreply@x.ai>` |
+| Grok (xAI) | `Co-Authored-By: Grok 4.6 <grok@x.ai>` |
 
 If the model name you are running is different (a newer Claude, a different
 Grok), keep the vendor and put the real model name in the token. Do not invent

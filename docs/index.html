@@ -175,7 +175,8 @@ Total: **35.00**<span class="c">&lt;!--vmark=order.total--&gt;</span>
       </main>
 
       <p class="install-cta">
-        <a class="pill-link" href="#installation-header">Install VisiMark &rarr;</a>
+        <a class="pill-link" href="#installation-header">Install VisiMark</a>&nbsp;
+        <a class="pill-link" href="playground.html">Try in Playground</a>
       </p>
 
       <header class="section-head">
@@ -198,7 +199,7 @@ Total: **35.00**<span class="c">&lt;!--vmark=order.total--&gt;</span>
           <p>
             <strong
               >Find out:
-              <a href="example.html?file=example-ci-sharding.md"
+              <a href="preview.html?file=example-ci-sharding.md&amp;highlight=1"
                 ><em>why a build tool reads a Markdown file</em></a
               ></strong
             >
@@ -215,7 +216,7 @@ Total: **35.00**<span class="c">&lt;!--vmark=order.total--&gt;</span>
           <p>
             <strong
               >Find out:
-              <a href="example.html?file=example-agent-budget.md"
+              <a href="preview.html?file=example-agent-budget.md&amp;highlight=1"
                 ><em>why this is a harness artifact, not a spreadsheet</em></a
               ></strong
             >
@@ -235,7 +236,7 @@ Total: **35.00**<span class="c">&lt;!--vmark=order.total--&gt;</span>
           <p>
             <strong
               >Find out:
-              <a href="example.html?file=example-structural-check.md"
+              <a href="preview.html?file=example-structural-check.md&amp;highlight=1"
                 ><em>why this is a verifier, not a calculator</em></a
               ></strong
             >
@@ -254,7 +255,7 @@ Total: **35.00**<span class="c">&lt;!--vmark=order.total--&gt;</span>
           <p>
             <strong
               >Find out:
-              <a href="example.html?file=example-pricing-policy.md"
+              <a href="preview.html?file=example-pricing-policy.md&amp;highlight=1"
                 ><em>why this is knowledge extraction, not documentation-as-code</em></a
               ></strong
             >
@@ -274,7 +275,7 @@ Total: **35.00**<span class="c">&lt;!--vmark=order.total--&gt;</span>
           <p>
             <strong
               >Find out:
-              <a href="example.html?file=example-onboarding-dashboard.md"
+              <a href="preview.html?file=example-onboarding-dashboard.md&amp;highlight=1"
                 ><em>why this is the safety net, not the feature</em></a
               ></strong
             >
@@ -324,7 +325,7 @@ Total: **35.00**<span class="c">&lt;!--vmark=order.total--&gt;</span>
           <a
             class="tryout-btn"
             href="https://github.com/michal-niedzwiedzki/visimark/tree/master/editors/vscode"
-            >Install VisiMark &rarr;</a
+            >Install in VS Code &rarr;</a
           >
         </article>
       </section>
@@ -351,7 +352,7 @@ Total: **35.00**<span class="c">&lt;!--vmark=order.total--&gt;</span>
           <a href="#feature-verified">Green means verified</a>
           <a href="#feature-ci">Verification in CI</a>
           <a href="#feature-renderers">Works everywhere</a>
-          <a href="#feature-graph">Under the hood</a>
+          <a href="#feature-power">Charts and imports</a>
           <a href="#feature-tools">Power tools</a>
         </nav>
 
@@ -390,7 +391,9 @@ Total: **35.00**<span class="c">&lt;!--vmark=order.total--&gt;</span>
 
             Total: **35.00**<!--vmark=order.total-->
           </script>
-          <p class="feature-statement" style="margin-top: 14px">Still Markdown. Now verifiable.</p>
+          <p class="feature-statement" style="margin-top: 14px">
+            &rarr; Still Markdown. Now verifiable.
+          </p>
         </article>
 
         <article class="feature feature--lg" id="feature-wrong">
@@ -481,7 +484,7 @@ invoice.md
             >.
           </p>
           <p class="feature-statement" style="margin-top: 14px">
-            It rendered clean. It was not correct.
+            &rarr; It rendered clean. It was not correct.
           </p>
         </article>
 
@@ -579,13 +582,10 @@ invoice.md
 Net   = Qty * Rate
 VAT   = Net * vat
 Gross = Net + VAT
+Amount = SUM(lines.Gross)
 <span class="c">```</span>
 
-Due on delivery: **3837.60**<span class="c">&lt;!--vmark=schedule.Amount--&gt;</span> PLN.
-
-<span class="c">```</span><span class="k">vmark #schedule</span>
-Amount = SUM(lines.Gross)
-<span class="c">```</span></pre>
+Due on delivery: **3837.60**<span class="c">&lt;!--vmark=lines.Amount--&gt;</span> PLN.</pre>
               <pre
                 id="dep-after"
                 hidden
@@ -595,24 +595,22 @@ Amount = SUM(lines.Gross)
 
 <span class="c">```</span><span class="k">vmark #lines</span>
 Net   = Qty * Rate
-VAT   = Net * vat
+VAT   = Net * 0.23
 Gross = Net + VAT
+Amount = SUM(lines.Gross)
 <span class="c">```</span>
 
-Due on delivery: **<span class="add">6396.00</span>**<span class="c">&lt;!--vmark=schedule.Amount--&gt;</span> PLN.
-
-<span class="c">```</span><span class="k">vmark #schedule</span>
-Amount = SUM(lines.Gross)
-<span class="c">```</span></pre>
+Due on delivery: **<span class="add">6396.00</span>**<span class="c">&lt;!--vmark=lines.Amount--&gt;</span> PLN.</pre>
             </div>
             <div class="chart-pane">
               <h4>What it recalculates</h4>
               <pre class="mermaid" id="dep-diagram">
 graph TD
-    Qty["On-call support · Qty"] --> Net
+    Qty --> Net
+    Rate --> Net
     Net --> VAT
     Net --> Gross
-    Gross --> Amount["schedule.Amount"]
+    Gross --> Amount["lines.Amount"]
               </pre>
             </div>
           </div>
@@ -620,7 +618,7 @@ graph TD
             Change Qty: 12 &rarr; 20
           </button>
           <p class="feature-statement" style="margin-top: 14px">
-            One source of truth. Predictable downstream changes.
+            &rarr; One source of truth. Predictable downstream changes.
           </p>
         </article>
 
@@ -637,18 +635,14 @@ graph TD
             text &mdash; it never round-trips through a Markdown printer, which would reformat every
             paragraph and list in the file. Hypothetically, if it did:
           </p>
-          <pre><span class="c">--- a/invoice.md
-+++ b/invoice.md
-@@ -1,136 +1,136 @@
--Invoice 2026/09/014
-+Invoice 2026/09/014
-&hellip; four hundred more lines of re-wrapped paragraphs, renormalised emphasis
-   markers and realigned table columns, for one changed cell.</span></pre>
+          <pre><span class="p">$</span> git diff --stat
+<span class="c"> invoice.md | 272 <span class="add">++++++++++++++++++++++++++++++++++++++++</span><span class="del">------------------</span>
+ 1 file changed, 136 insertions(+), 136 deletions(-)</span></pre>
           <p>What <code>fmt</code> actually produces for the same change:</p>
           <pre><span class="del">- Gross total: 28,659.00</span>
 <span class="add">+ Gross total: 31,217.40</span></pre>
           <p class="feature-statement" style="margin-top: 14px">
-            The document stays a first-class version-controlled artifact.
+            &rarr; The document stays a first-class version-controlled artifact.
           </p>
         </article>
 
@@ -672,19 +666,12 @@ quote.md
            run `visimark infer` to derive them, or mark it &lt;!--vmark:no-formulas--&gt;
 
   1 problem (0 stale, 1 error)</pre>
-          <pre class="mermaid">
-graph LR
-    U[UNVERIFIED] --> I["infer automatically"] --> V["VERIFIED ✓"]
-    U --> H["write rules by hand"] --> V
-    class V verified
-    classDef verified fill:#eafaf0,stroke:#1a7f37,color:#1a7f37,font-weight:bold;
-          </pre>
           <pre><span class="p">$</span> visimark check quote.md
 <span class="ok">&#10003;</span> quote.md &mdash; every value agrees
 <span class="p">$</span> echo $?
 0</pre>
           <p class="feature-statement" style="margin-top: 14px">
-            The checkmark is a claim: these numbers were actually checked.
+            &rarr; The checkmark is a claim: these numbers were actually checked.
           </p>
         </article>
 
@@ -697,12 +684,10 @@ graph LR
             </p>
           </div>
           <pre class="mermaid">
-graph TD
-    PR["Pull request #184 — raise on-call hours"] --> Check["visimark check"]
-    Check --> Pass[PASS]
-    Check --> Fail[FAIL]
-    Pass --> Merge
-    Fail --> Fix["fmt, then re-run"]
+graph LR
+    PR["PR #184"] --> Check["check"]
+    Check --> Pass[PASS] --> Merge
+    Check --> Fail[FAIL] --> Fix["fmt"]
     class Pass pass
     class Fail fail
     classDef pass fill:#eafaf0,stroke:#1a7f37,color:#1a7f37,font-weight:bold;
@@ -768,52 +753,97 @@ Process completed with exit code 1</pre>
           </div>
         </article>
 
-        <article class="feature feature--sm" id="feature-graph">
+        <article class="feature feature--sm" id="feature-power">
           <div class="feature-head">
-            <h3>Under the hood</h3>
-            <p class="feature-statement">Dependency graph, evaluated in order</p>
+            <h3>Charts and imports</h3>
+            <p class="feature-statement">Generated artifacts and external data, both verified</p>
           </div>
           <p>
-            VisiMark turns formulas into a dependency graph, evaluates it in order, and reports
-            invalid relationships instead of silently producing a result.
+            A <code>chart</code> statement draws an SVG straight from a sheet's own columns, kept
+            honest by <code>fmt</code> and <code>check</code> the same way any other derived value
+            is. A <code>from</code> clause does the reverse: a sheet's rows come from an external
+            CSV instead of a GFM table, pinned by hash so a change outside VisiMark's view is never
+            silent.
           </p>
-          <div class="chart-demo">
+          <div class="chart-demo chart-demo--compact">
             <div class="chart-pane">
-              <h4>invoice.md</h4>
-              <pre><span class="c">```</span><span class="k">vmark</span>
-vat = 23%
-<span class="c">```</span>
-
-| Item    | <span class="add">Qty</span> |   <span class="add">Rate</span> |     <span class="k">Net</span> |     <span class="k">VAT</span> |   <span class="k">Gross</span> |
-|---------|----:|-------:|--------:|--------:|--------:|
-| On-call |  20 | 260.00 | 5200.00 | 1196.00 | 6396.00 |
-
-<span class="c">```</span><span class="k">vmark #lines</span>
-<span class="k">Net</span>   = <span class="add">Qty</span> * <span class="add">Rate</span>
-<span class="k">VAT</span>   = <span class="k">Net</span> * <span class="add">vat</span>
-<span class="k">Gross</span> = <span class="k">Net</span> + <span class="k">VAT</span>
-<span class="c">```</span></pre>
+              <h4>example-charts.md</h4>
+              <pre class="chart-source" id="power-chart-source" tabindex="0"></pre>
             </div>
             <div class="chart-pane">
-              <h4>Evaluation order</h4>
-              <pre class="mermaid">
-graph LR
-    Rate --> Net
-    Qty --> Net
-    Net --> VAT --> Gross
-              </pre>
+              <h4>Rendered preview</h4>
+              <div class="chart-preview" id="power-chart-preview" tabindex="0"></div>
             </div>
           </div>
-          <pre><span class="del">CYCLE   late_fees.base &rarr; late_fees.fee &rarr; late_fees.total &rarr; late_fees.base</span></pre>
+          <script type="text/plain" id="power-chart-source-md">
+            ## Audience
+
+            | Segment     | Headcount |
+            |-------------|----------:|
+            | Under 25    |      1240 |
+            | 25 to 39    |      3180 |
+            | 40 to 54    |      2470 |
+            | 55 and over |      1610 |
+
+            ```vmark #audience
+            total = SUM(Headcount)
+            chart mix as pie of Headcount labelled Segment
+            ```
+
+            The sample covers **8500**<!--vmark=audience.total--> people.
+
+            ![audience by segment](charts/example-charts-audience.svg)<!--vmark=audience.mix-->
+          </script>
           <p class="chart-caption">
-            A real cycle, from
-            <a
-              href="https://github.com/michal-niedzwiedzki/visimark/blob/master/docs/example-invoice-drift.md"
-              target="_blank"
-              rel="noopener"
-              >docs/example-invoice-drift.md</a
-            >
-            &mdash; reported with the full path, not a bare &ldquo;circular reference&rdquo;.
+            The SVG is drawn by <code>fmt</code> and checked byte-for-byte by
+            <code>check</code> &mdash; change a cell and the picture goes <code>STALE</code> until
+            it's regenerated.
+          </p>
+
+          <p style="margin-top: 20px">
+            <code>from</code> replaces the table entirely &mdash; the rows live in a CSV, and the
+            fence line pins its exact bytes:
+          </p>
+          <div class="chart-demo chart-demo--compact chart-demo--triple">
+            <div class="chart-pane">
+              <h4>invoice.md</h4>
+              <pre class="chart-source" id="power-import-source" tabindex="0"></pre>
+            </div>
+            <div class="chart-pane">
+              <h4>invoice.csv</h4>
+              <pre
+                class="chart-source"
+                tabindex="0"
+              ><span class="csv-c1">Item</span>,<span class="csv-c2">Unit</span>,<span class="csv-c3">Qty</span>,<span class="csv-c4">Rate</span>,<span class="csv-c5">Net</span>,<span class="csv-c6">VAT</span>,<span class="csv-c7">Gross</span>
+<span class="csv-c1">Discovery workshop</span>,<span class="csv-c2">day</span>,<span class="csv-c3">2</span>,<span class="csv-c4">1800.00</span>,<span class="csv-c5">3600.00</span>,<span class="csv-c6">828.00</span>,<span class="csv-c7">4428.00</span>
+<span class="csv-c1">Backend implementation</span>,<span class="csv-c2">hour</span>,<span class="csv-c3">64</span>,<span class="csv-c4">220.00</span>,<span class="csv-c5">14080.00</span>,<span class="csv-c6">3238.40</span>,<span class="csv-c7">17318.40</span>
+<span class="csv-c1">Code review retainer</span>,<span class="csv-c2">month</span>,<span class="csv-c3">1</span>,<span class="csv-c4">2500.00</span>,<span class="csv-c5">2500.00</span>,<span class="csv-c6">575.00</span>,<span class="csv-c7">3075.00</span>
+<span class="csv-c1">On-call support</span>,<span class="csv-c2">hour</span>,<span class="csv-c3">12</span>,<span class="csv-c4">260.00</span>,<span class="csv-c5">3120.00</span>,<span class="csv-c6">717.60</span>,<span class="csv-c7">3837.60</span></pre>
+            </div>
+            <div class="chart-pane">
+              <h4>Rendered preview</h4>
+              <div class="chart-preview" id="power-import-preview" tabindex="0"></div>
+            </div>
+          </div>
+          <script type="text/plain" id="power-import-source-md">
+            ## Services rendered
+
+            ```vmark #lines from invoice.csv labelled Item, Unit, Qty, Rate, Net, VAT, Gross at sha256:e6667fb8dda6801721d885c259e2456a9e6c92f1ec89af7f14330e0c54c6ac14
+            net_total   = SUM(Net)
+            vat_total   = SUM(VAT)
+            gross_total = SUM(Gross)
+            ```
+
+            Net of tax the engagement comes to **23300.00**<!--vmark=lines.net_total--> PLN.
+            VAT at 23% adds **5359.00**<!--vmark=lines.vat_total--> PLN, giving a total due of
+            **28659.00**<!--vmark=lines.gross_total--> PLN.
+          </script>
+          <p class="chart-caption">
+            No column rules here &mdash; <code>Net</code>, <code>VAT</code> and
+            <code>Gross</code> are read-only inputs from the CSV; only the
+            <code>SUM</code> aggregates run in the document. A changed byte in
+            <code>invoice.csv</code> fails <code>check</code> with <code>STALE</code>, or
+            <code>IMPORT</code> if the hash clause is missing entirely.
           </p>
         </article>
 
@@ -835,34 +865,42 @@ graph LR
             <div class="power-card">
               <h4><code>check</code></h4>
               <p>Verify calculations and fail on the first disagreement.</p>
+              <p class="feature-statement">&rarr; For your CI build.</p>
             </div>
             <div class="power-card">
               <h4><code>fmt</code></h4>
               <p>Update stale calculated values while preserving the rest of the document.</p>
+              <p class="feature-statement">&rarr; To refresh calculations.</p>
             </div>
             <div class="power-card">
               <h4><code>infer</code></h4>
               <p>Discover formulas from existing tables.</p>
+              <p class="feature-statement">&rarr; To power up your MDs.</p>
             </div>
             <div class="power-card">
               <h4><code>eval</code></h4>
               <p>Inspect calculated values programmatically, including as JSON.</p>
+              <p class="feature-statement">&rarr; For your AI agent.</p>
             </div>
             <div class="power-card">
               <h4><code>explain</code></h4>
               <p>Understand a sheet's inputs, rules and evaluation order.</p>
+              <p class="feature-statement">&rarr; As a cheat sheet.</p>
             </div>
             <div class="power-card">
               <h4><code>chart</code></h4>
               <p>Generate a verified SVG from a sheet's own columns.</p>
+              <p class="feature-statement">&rarr; To manage artifacts.</p>
             </div>
             <div class="power-card">
               <h4>Assertions</h4>
               <p><code>assert</code> states an invariant a stray formula could still satisfy.</p>
+              <p class="feature-statement">&rarr; For your CI build.</p>
             </div>
             <div class="power-card">
               <h4>VS Code extension</h4>
               <p>The same engine, as live diagnostics, quick fixes and hover.</p>
+              <p class="feature-statement">&rarr; Power up your editor.</p>
             </div>
           </div>
         </article>
@@ -1423,6 +1461,8 @@ variance  = lines.gross_total - scheduled
         renderDemo("eval-source", "eval-preview", "eval-source-md", null);
         renderDemo("computes-source", "computes-preview", "computes-source-md", null);
         renderDemo("drift-source", "drift-preview", "drift-source-md", null);
+        renderDemo("power-chart-source", "power-chart-preview", "power-chart-source-md", null);
+        renderDemo("power-import-source", "power-import-preview", "power-import-source-md", null);
       })();
     </script>
     <script>
@@ -1488,7 +1528,13 @@ variance  = lines.gross_total - scheduled
             // mermaid names each node group "…-flowchart-<id>-<n>"
             var parts = (node.id || "").split("-");
             var name = parts[parts.length - 2];
-            var tone = !on ? null : name === "Qty" ? DEP_TONES.input : DEP_TONES.derived;
+            var tone = !on
+              ? null
+              : name === "Qty"
+                ? DEP_TONES.input
+                : name === "Rate"
+                  ? null
+                  : DEP_TONES.derived;
             node.querySelectorAll("rect, polygon, path").forEach(function (shape) {
               shape.style.fill = tone ? tone.fill : "";
               shape.style.stroke = tone ? tone.stroke : "";
