@@ -30,3 +30,11 @@ updates:
     groups:
       bun:
         patterns: ["*"]
+    # @types/vscode tracks the VS Code API surface, not just a version
+    # number: vsce refuses to package an extension whose devDependency
+    # types are newer than its declared `engines.vscode` floor
+    # (editors/vscode/package.json), so an unattended bump here breaks
+    # `build` every time upstream ships a release past that floor. Bump
+    # it by hand alongside `engines.vscode` instead.
+    ignore:
+      - dependency-name: "@types/vscode"
