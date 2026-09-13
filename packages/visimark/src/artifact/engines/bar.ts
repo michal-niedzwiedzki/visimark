@@ -3,11 +3,13 @@ import {
   advance,
   greys,
   INK,
+  legendRow,
   n2,
   niceTicks,
   showNumber,
   STROKE_W,
   text,
+  valueAxis,
   VIEW_W,
   viewHeight,
 } from "../svg.js";
@@ -47,22 +49,7 @@ export function bar(input: EngineInput): EngineResult {
   const fills = greys(series.length);
   const body: string[] = [];
 
-  // value axis
-  for (const t of ticks) {
-    const ty = y(t);
-    body.push(
-      `<line x1="${n2(PAD_L)}" y1="${n2(ty)}" x2="${n2(VIEW_W - PAD_R)}" y2="${n2(ty)}" ` +
-        `stroke="${INK}" stroke-width="${t === 0 ? STROKE_W : 0.5}"/>`,
-    );
-    const label = trimNumber(t);
-    body.push(
-      text(PAD_L - 6, ty + 4, label, {
-        anchor: "end",
-        size: 11,
-        length: advance(label, 11),
-      }),
-    );
-  }
+  body.push(...valueAxis(ticks, y, PAD_L, VIEW_W - PAD_R));
 
   // grouped bars
   const slot = plotW / Math.max(rows, 1);
@@ -91,15 +78,7 @@ export function bar(input: EngineInput): EngineResult {
 
   // a legend only where it is needed to tell series apart
   if (series.length > 1) {
-    let lx = PAD_L;
-    series.forEach((s, si) => {
-      body.push(
-        `<rect x="${n2(lx)}" y="${n2(PAD_T - 8)}" width="10" height="10" ` +
-          `fill="${fills[si]!}" stroke="${INK}" stroke-width="${STROKE_W}"/>`,
-      );
-      body.push(text(lx + 14, PAD_T + 1, s.name, { anchor: "start", size: 11 }));
-      lx += 14 + advance(s.name, 11) + 16;
-    });
+    body.push(...legendRow(series, fills, PAD_L, PAD_T));
   }
 
   // a single series carries its values directly, since there is no legend
@@ -113,10 +92,4 @@ export function bar(input: EngineInput): EngineResult {
   }
 
   return { body, height: h };
-}
-
-/** axis labels drop a trailing `.00` so the scale reads as numbers, not cells */
-function trimNumber(v: number): string {
-  const s = v.toFixed(2);
-  return s.endsWith(".00") ? s.slice(0, -3) : s;
 }

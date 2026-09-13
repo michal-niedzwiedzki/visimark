@@ -780,8 +780,12 @@ a column, a scalar or another chart is a `DUP`. There is no `#` sigil — `#`
 already begins a comment inside a block body ([§4](#4-syntax)). `as` is
 mandatory: it marks the name/engine boundary structurally rather than
 positionally, which keeps a misspelled engine diagnosable. The engines are
-`pie` and `bar`, a closed built-in set — a document selects `pie` exactly as it
-selects `SUM`, and there is no plugin point ([§2](#2-constraints-that-shaped-the-design)).
+`pie`, `bar`, `line`, `area` and `stacked-bar`, a closed built-in set — a
+document selects `pie` exactly as it selects `SUM`, and there is no plugin
+point ([§2](#2-constraints-that-shaped-the-design)). `stacked-bar` is the one
+hyphenated name; the parser joins it from its two idents only when they sit
+with no spaces around the `-`, so a hyphen anywhere else in the statement
+still lexes as subtraction.
 
 Operands are **bare column references in the statement's own sheet**, the same
 rule a reduce follows: `of Profit / Revenue` is refused, so every series is a
@@ -854,8 +858,9 @@ state; `eval --json` carries a `charts` array. `infer` never proposes a chart �
 a chartable column is not evidence of an intended chart.
 
 **Deferred.** `numbered` labels (they would render strings appearing nowhere in
-the document — add a visible column instead), cross-sheet series, further
-engines (`line`, `area`, `scatter`, `stacked-bar`), orphan cleanup, and any
+the document — add a visible column instead), cross-sheet series, a `scatter`
+engine (it needs a numeric x axis, which no other engine here does, since
+labels are categorical strings rather than values), orphan cleanup, and any
 output format other than SVG.
 
 ## 19. Declared local data imports

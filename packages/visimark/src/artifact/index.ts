@@ -82,8 +82,14 @@ export function buildArtifact(
 
 // The built-in engine set, registered once at load. It is closed: a document
 // selects the name `pie` exactly as it selects the name `SUM`.
+import { area } from "./engines/area.js";
 import { bar } from "./engines/bar.js";
+import { line } from "./engines/line.js";
 import { pie } from "./engines/pie.js";
+import { stackedBar } from "./engines/stacked-bar.js";
 
 registerEngine("pie", pie);
 registerEngine("bar", bar);
+registerEngine("line", line);
+registerEngine("area", area);
+registerEngine("stacked-bar", stackedBar);

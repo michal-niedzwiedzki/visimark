@@ -128,3 +128,74 @@ export function niceTicks(dataMin: number, dataMax: number, target = 5): number[
   }
   return out;
 }
+
+/** axis labels drop a trailing `.00` so the scale reads as numbers, not cells */
+export function trimNumber(v: number): string {
+  const s = v.toFixed(2);
+  return s.endsWith(".00") ? s.slice(0, -3) : s;
+}
+
+/**
+ * The cartesian value axis shared by every row-and-column engine: gridlines
+ * at each tick, the zero line drawn heavier, and a left-hand tick label.
+ */
+export function valueAxis(
+  ticks: number[],
+  y: (v: number) => number,
+  plotL: number,
+  plotR: number,
+): string[] {
+  const body: string[] = [];
+  for (const t of ticks) {
+    const ty = y(t);
+    body.push(
+      `<line x1="${n2(plotL)}" y1="${n2(ty)}" x2="${n2(plotR)}" y2="${n2(ty)}" ` +
+        `stroke="${INK}" stroke-width="${t === 0 ? STROKE_W : 0.5}"/>`,
+    );
+    const label = trimNumber(t);
+    body.push(
+      text(plotL - 6, ty + 4, label, {
+        anchor: "end",
+        size: 11,
+        length: advance(label, 11),
+      }),
+    );
+  }
+  return body;
+}
+
+/** the bottom row-category labels, one per data row, centered in its slot */
+export function categoryLabels(
+  labels: string[],
+  rows: number,
+  slot: number,
+  padL: number,
+  plotBottom: number,
+): string[] {
+  const body: string[] = [];
+  for (let r = 0; r < rows; r++) {
+    const label = labels[r] ?? "";
+    body.push(
+      text(padL + slot * r + slot / 2, plotBottom + 16, label, {
+        size: 11,
+        length: Math.min(advance(label, 11), slot - 4),
+      }),
+    );
+  }
+  return body;
+}
+
+/** a swatch-and-name legend, drawn only where several series need telling apart */
+export function legendRow(series: Series[], fills: string[], padL: number, padT: number): string[] {
+  const body: string[] = [];
+  let lx = padL;
+  series.forEach((s, si) => {
+    body.push(
+      `<rect x="${n2(lx)}" y="${n2(padT - 8)}" width="10" height="10" ` +
+        `fill="${fills[si]!}" stroke="${INK}" stroke-width="${STROKE_W}"/>`,
+    );
+    body.push(text(lx + 14, padT + 1, s.name, { anchor: "start", size: 11 }));
+    lx += 14 + advance(s.name, 11) + 16;
+  });
+  return body;
+}

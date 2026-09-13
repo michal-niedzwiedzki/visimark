@@ -51,7 +51,7 @@ chart <name> as <engine> of <series> [, <series>]* labelled <column> [aspect <w>
 - `chart` is a **keyword**, tokenised by the lexer beside `assert`. It may not be a bound name or a column header — `chart = 1` is a `TYPE` error ("`chart` is a reserved word").
 - `<name>` is an identifier, `[A-Za-z_][A-Za-z0-9_]*` — `cost_component`, never `cost-component`. It occupies the sheet's namespace beside columns and scalars; a collision is a `DUP` error. **No `#` sigil**: `#` begins a comment inside a block body ([§4](../visimark-design.md#4-syntax)), so `chart #cost_component` would lex as a bare `chart` followed by a comment.
 - `as` is **mandatory**. It marks the name/engine boundary structurally rather than positionally, which keeps a misspelled engine diagnosable (`unknown chart type 'pei' — did you mean 'pie'?`) instead of ambiguous with a second name token.
-- `<engine>` is `pie` or `bar`. Any other word is an `ARTIFACT` error with a did-you-mean.
+- `<engine>` is `pie`, `bar`, `line`, `area` or `stacked-bar`. Any other word is an `ARTIFACT` error with a did-you-mean. `stacked-bar` is the one hyphenated name: the two idents and the `-` between them must sit with no spaces, joined only there, and only for the engine-name position — a hyphen anywhere else in a chart statement still lexes as subtraction.
 - `of <series>` takes one or more **bare column references in the statement's own sheet** — the exact parallel of the reducer rule ([§4](../visimark-design.md#4-syntax): a reduce takes a column reference, never an expression). `of Profit / Revenue` is refused; materialise a column first. A foreign column (`other.Net`) is a `VECTOR` error, as everywhere ([§6](../visimark-design.md#6-name-resolution-and-scoping)). Same-sheet operands share a row count by construction, so no length-mismatch case exists.
 - `labelled <column>` is **mandatory** and names one bare column of the same sheet.
 - `aspect <w>:<h>` is optional, `<w>` and `<h>` positive integers. It sets the **shape of the viewBox**, not a display size — geometry rather than styling. The viewBox width is always `640` units and the height follows the ratio, so `aspect 16:9` is `640 × 360`. Default `16:10`, i.e. `640 × 400` — a fixed constant, never inferred from row count. `:` becomes a token; a zero, negative or non-integer component is an `ARTIFACT` error.
@@ -128,6 +128,12 @@ Discrimination weakens past roughly five series, where adjacent steps differ by 
 **Pie.** Slices in row order, starting at 12 o'clock, clockwise. Each slice labelled with its label-column value and its share to one decimal place. A legend is not drawn — slices are labelled directly.
 
 **Bar.** Vertical bars, grouped for multiple series, in row order left to right. A value axis with a zero baseline; negative values extend below it. Tick values are chosen by the standard `1 / 2 / 5 × 10^k` rule, which is deterministic given the data range. Multiple series draw a **default legend** — necessary for the chart to be readable, with no configuration surface, which is why it is not a styling option.
+
+**Line.** One polyline per series through row-ordered points, on the same value axis and zero baseline as bar — a point sits at the same x position bar would center its group on, so a line and a bar of the same data agree pixel-for-pixel on the x axis. A negative value needs no special case: a line simply passes through the baseline rather than stopping at it. Each point carries a small marker circle. Multiple series draw the same default legend as bar; a single series carries its values directly, as bar's single series does.
+
+**Area.** The same scaffold as line, with each series additionally filled from its polyline down to the zero baseline. The fill is drawn at a fixed, non-configurable opacity — necessary so that overlapping series stay legible, the same necessity that makes bar's legend not a styling option — with a full-opacity stroke on top so an edge stays crisp where fills overlap. Series overlap rather than stack; stacked-bar, below, is the engine for a running total.
+
+**Stacked-bar.** One bar per row, its series stacked in declared order rather than grouped side by side. Positive and negative values stack independently — positives accumulate upward from zero, negatives accumulate downward from zero — so a row mixing signs still has a well-defined baseline for every segment, the same split an ordinary running total would use. The value axis spans the cumulative extremes across rows, not the raw per-cell values. A single series stacks trivially to one segment per bar, identical to plain bar; multiple series draw the same default legend.
 
 ## 7. Semantics and errors
 
@@ -237,7 +243,7 @@ and exit `1`. `fmt` must write no file and exit `1`.
 - **Styling.** Covered in §6 — settled, not a parameter.
 - **`title`.** The alt text and prose own the caption.
 - **`numbered` labels.** Deferred: it would render labels appearing nowhere in the document. Add a visible column and use `labelled`.
-- **More engines.** `line`, `area`, `scatter`, `stacked-bar` are later, and must land without touching anything outside their own file.
+- **More engines.** `line`, `area` and `stacked-bar` have landed, each in its own engine file plus the axis/legend helpers `bar` already shared through `svg.ts`; nothing outside `artifact/` and the parser's one-hyphen join changed. `scatter` remains later — it needs a numeric x axis, which no other engine here does, since labels are categorical strings rather than values.
 - **Cross-sheet series.** Same-sheet only; reversible if a real document needs it.
 - **Orphan handling.** Deferred; the metadata leaves an explicit `prune` possible later.
 - **A configurable artifact directory.** There is no directory convention at all — the document states the path.

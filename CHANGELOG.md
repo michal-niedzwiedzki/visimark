@@ -21,6 +21,15 @@
   `labelled` and `unlabelled` are mutually exclusive. See
   [`explicit-schema-for-headerless-csv-imports-spec.md`](docs/design/explicit-schema-for-headerless-csv-imports-spec.md)
   and [§19](docs/visimark-design.md#19-declared-local-data-imports).
+- **Three more chart engines** — `line`, `area` and `stacked-bar`, alongside
+  the existing `pie` and `bar`. `line` draws one polyline per series on bar's
+  value axis; `area` fills each series to the zero baseline at a fixed opacity
+  so overlapping series stay legible; `stacked-bar` stacks a row's series in
+  declared order, positives upward and negatives downward from zero
+  independently. `stacked-bar` is the one hyphenated engine name — its two
+  idents and the `-` between them must sit with no spaces. See
+  [`charts-spec.md`](docs/design/charts-spec.md) and
+  [§18](docs/visimark-design.md#18-generated-artifacts).
 
 ## 0.1.2 - 2026-09-10
 

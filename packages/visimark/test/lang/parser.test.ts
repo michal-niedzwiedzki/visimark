@@ -190,6 +190,17 @@ test("chart statement: multi-series and an explicit aspect", () => {
   expect(c.aspect).toEqual({ w: 16, h: 9 });
 });
 
+test("chart statement: a hyphenated engine name joins with no spaces", () => {
+  const c = chart("chart mix as stacked-bar of Revenue, Cost labelled Month");
+  expect(c.engine).toBe("stacked-bar");
+});
+
+test("chart statement: a spaced hyphen after the engine name is not joined", () => {
+  expect(() => chart("chart m as bar - 1 of Net labelled Item")).toThrow(
+    "a chart takes a column, not an expression",
+  );
+});
+
 test("chart statement: `as` is mandatory", () => {
   expect(() => chart("chart cost pie of Net labelled Item")).toThrow(LangError);
 });

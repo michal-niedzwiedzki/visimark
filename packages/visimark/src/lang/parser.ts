@@ -319,7 +319,20 @@ function parseChart(toks: Token[], kw: Token): ChartDecl {
 
   const name = ident("a chart name").value;
   word("as");
-  const engine = ident("a chart type").value;
+  const engineHead = ident("a chart type");
+  let engine = engineHead.value;
+  // a hyphenated built-in name like `stacked-bar` lexes as ident, op, ident;
+  // joined here, and only here, when the pieces are written with no spaces
+  if (at().kind === "op" && at().value === "-" && at().start === engineHead.end) {
+    const dash = at();
+    i++;
+    const tail = at();
+    if (tail.kind !== "ident" || tail.start !== dash.end) {
+      throw new LangError("expected a chart type", engineHead.start, dash.end);
+    }
+    i++;
+    engine = `${engine}-${tail.value}`;
+  }
   word("of");
 
   // a qualified `sheet.Col` parses here and is refused later as a VECTOR

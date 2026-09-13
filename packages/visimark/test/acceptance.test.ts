@@ -56,7 +56,7 @@ describe("the two worked examples are the acceptance suite", () => {
 describe("example-charts.md is the generated-artifact acceptance", () => {
   const run = (s: string, docPath: string) => check(build(locate(s)), { docPath });
 
-  test("zero findings, with both artifacts committed and current", () => {
+  test("zero findings, with all artifacts committed and current", () => {
     const r = run(charts, chartsPath);
     expect(r.findings).toEqual([]);
     expect(r.exitCode).toBe(0);
@@ -64,11 +64,11 @@ describe("example-charts.md is the generated-artifact acceptance", () => {
 
   test("every chart reports itself current", () => {
     const r = run(charts, chartsPath);
-    expect(r.charts.map((c) => c.state)).toEqual(["current", "current"]);
-    expect(r.charts.map((c) => c.engine)).toEqual(["bar", "pie"]);
+    expect(r.charts.map((c) => c.state)).toEqual(Array(5).fill("current"));
+    expect(r.charts.map((c) => c.engine)).toEqual(["bar", "line", "stacked-bar", "pie", "area"]);
   });
 
-  test("fmt leaves the document and both artifacts untouched", () => {
+  test("fmt leaves the document and all artifacts untouched", () => {
     const r = fmt(charts, { docPath: chartsPath });
     expect(r.output).toBe(charts);
     expect(r.artifacts).toEqual([]);

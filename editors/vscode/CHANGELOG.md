@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Three more chart engines are supported: `line`, `area` and `stacked-bar`,
+  alongside the existing `pie` and `bar`. `stacked-bar` is written as a single
+  hyphenated engine name with no spaces around the `-`.
 - Declared local data imports (`from <path>`) are now supported: a problem
   resolving one — an unstamped or stale import, a missing file, a bad path,
   malformed CSV, or a column rule attempted on a read-only imported sheet —
