@@ -114,9 +114,17 @@ export function resolveImports(
       continue;
     }
 
+    // `unlabelled`: row 1 is data, not a header — parseCsv always splits it
+    // off, so it is reassembled onto the front of the row set here, and the
+    // declared names stand in for the header everywhere below. See
+    // docs/design/explicit-schema-for-headerless-csv-imports-spec.md §2–§4.
+    const unlabelled = decl.labelsMode === "unlabelled";
+    const names = unlabelled ? decl.labels! : parsed.header;
+    const dataRows = unlabelled ? [parsed.header, ...parsed.rows] : parsed.rows;
+
     const dupes = new Set<string>();
     const seen = new Set<string>();
-    for (const h of parsed.header) {
+    for (const h of names) {
       if (seen.has(h)) dupes.add(h);
       seen.add(h);
     }
@@ -124,19 +132,24 @@ export function resolveImports(
       fail(
         "duplicate column " +
           [...dupes].map((d) => "`" + d + "`").join(", ") +
-          " in imported header",
-        decl.declSpan,
+          (unlabelled ? " in `unlabelled` declaration" : " in imported header"),
+        unlabelled ? (decl.labelsSpan ?? decl.declSpan) : decl.declSpan,
       );
       continue;
     }
 
-    const badId = parsed.header.find((h) => !IDENTIFIER_RE.test(h));
+    const badId = names.find((h) => !IDENTIFIER_RE.test(h));
     if (badId !== undefined) {
-      fail("imported column `" + badId + "` is not a valid identifier", decl.declSpan);
+      fail(
+        unlabelled
+          ? "declared column `" + badId + "` is not a valid identifier"
+          : "imported column `" + badId + "` is not a valid identifier",
+        unlabelled ? (decl.labelsSpan ?? decl.declSpan) : decl.declSpan,
+      );
       continue;
     }
 
-    if (decl.labels) {
+    if (!unlabelled && decl.labels) {
       const same =
         decl.labels.length === parsed.header.length &&
         decl.labels.every((l, i) => l === parsed.header[i]);
@@ -153,24 +166,41 @@ export function resolveImports(
       }
     }
 
+    // `unlabelled` only — no header row makes row width self-evident, so
+    // every row's field count is validated against the declared name count.
+    // A `labelled`/unasserted import validates none of this (spec §4:
+    // ragged-row checking is new for `unlabelled` alone).
+    if (unlabelled) {
+      const raggedIndex = dataRows.findIndex((r) => r.length !== names.length);
+      if (raggedIndex !== -1) {
+        const row = dataRows[raggedIndex]!;
+        const word = names.length < row.length ? "too few" : "too many";
+        fail(
+          `${word} names: declared ${names.length}, row ${raggedIndex + 1} has ${row.length} fields`,
+          decl.labelsSpan ?? decl.declSpan,
+        );
+        continue;
+      }
+    }
+
     // success: build a synthetic table the rest of the engine reads exactly
     // as a real GFM table — every cell's span is the declaration's own span,
     // since a CSV field has no location in the document
     const placeholder: Span = decl.declSpan;
-    const headers: RawCell[] = parsed.header.map((text) => ({ text, ...placeholder }));
-    const rows: RawRow[] = parsed.rows.map((r) => ({
+    const headers: RawCell[] = names.map((text) => ({ text, ...placeholder }));
+    const rows: RawRow[] = dataRows.map((r) => ({
       cells: r.map((text) => ({ text, ...placeholder })),
     }));
     const table: RawTable = { headers, rows, span: placeholder };
 
     sheet.table = table;
-    sheet.columnIndex = new Map(parsed.header.map((h, i) => [h, i]));
-    sheet.inputColumns = new Set(parsed.header);
+    sheet.columnIndex = new Map(names.map((h, i) => [h, i]));
+    sheet.inputColumns = new Set(names);
 
     // a binding whose name shadows an imported column is not a column rule —
     // there is no cell to write — so it is pulled out of `scalars` and
     // reported instead (spec §2, "An imported sheet has no column rules")
-    for (const name of parsed.header) {
+    for (const name of names) {
       const shadow = sheet.scalars.get(name);
       if (!shadow) continue;
       sheet.scalars.delete(name);
