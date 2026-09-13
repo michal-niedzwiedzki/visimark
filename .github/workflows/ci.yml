@@ -90,7 +90,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 20
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: visimark-tarball
       - name: global install under Node only
@@ -110,7 +110,7 @@ jobs:
     runs-on: ubuntu-latest
     container: oven/bun:latest
     steps:
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: visimark-tarball
       - name: global install under Bun only
