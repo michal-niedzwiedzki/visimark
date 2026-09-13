@@ -8,6 +8,7 @@
  * `fmt` never touches the CSV and is idempotent.
  */
 import { expect, test } from "bun:test";
+import { createHash } from "node:crypto";
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -134,4 +135,105 @@ test("8. fmt idempotence: a second fmt on an already-correct import is a no-op",
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+// `unlabelled` clause for headerless CSV imports — spec §6, the same
+// clean-committed / negative-in-memory pattern as the `labelled` transcript
+// above. See docs/design/explicit-schema-for-headerless-csv-imports-spec.md.
+
+const HEADERLESS_MD_PATH = join(FIXTURE_DIR, "benchmark-headerless.md");
+const HEADERLESS_DIGEST = "b492bea9f8ec9dd0af99331e30c96692dcfec70ad402023d4638d5ada7c20290";
+
+test("unlabelled 1. clean: 0 problems", () => {
+  const source = readFileSync(HEADERLESS_MD_PATH, "utf8");
+  const result = checkSource(source, HEADERLESS_MD_PATH);
+  expect(result.findings.filter((f) => f.code !== "WARN")).toEqual([]);
+  expect(result.exitCode).toBe(0);
+});
+
+test("unlabelled 2. too few names: one IMPORT finding naming row 1, exit 1", () => {
+  const source = readFileSync(HEADERLESS_MD_PATH, "utf8").replace(
+    "unlabelled Id, Time",
+    "unlabelled Id",
+  );
+  const result = checkSource(source, HEADERLESS_MD_PATH);
+  const importFindings = result.findings.filter((f) => f.code === "IMPORT");
+  expect(importFindings).toHaveLength(1);
+  expect(importFindings[0]!.message).toContain("too few names");
+  expect(importFindings[0]!.message).toContain("row 1");
+  expect(result.exitCode).toBe(1);
+});
+
+test("unlabelled 3. too many names: one IMPORT finding naming row 1, exit 1", () => {
+  const source = readFileSync(HEADERLESS_MD_PATH, "utf8").replace(
+    "unlabelled Id, Time",
+    "unlabelled Id, Time, Extra",
+  );
+  const result = checkSource(source, HEADERLESS_MD_PATH);
+  const importFindings = result.findings.filter((f) => f.code === "IMPORT");
+  expect(importFindings).toHaveLength(1);
+  expect(importFindings[0]!.message).toContain("too many names");
+  expect(importFindings[0]!.message).toContain("row 1");
+  expect(result.exitCode).toBe(1);
+});
+
+test("unlabelled 4. ragged data (row 3, not row 1): one IMPORT finding naming that row, exit 1", () => {
+  const dir = mkdtempSync(join(tmpdir(), "vmark-accept-"));
+  try {
+    cpSync(FIXTURE_DIR, dir, { recursive: true });
+    const mdPath = join(dir, "benchmark-headerless.md");
+    const csvPath = join(dir, "benchmark-headerless.csv");
+    writeFileSync(csvPath, "1,12.3\n2,10.1\n3,15.0,extra\n");
+    const digest = createHash("sha256").update(readFileSync(csvPath)).digest("hex");
+    const source = readFileSync(mdPath, "utf8").replace(HEADERLESS_DIGEST, digest);
+    const result = checkSource(source, mdPath);
+    const importFindings = result.findings.filter((f) => f.code === "IMPORT");
+    expect(importFindings).toHaveLength(1);
+    expect(importFindings[0]!.message).toContain("row 3");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("unlabelled 5. duplicate declared name: one IMPORT finding, exit 1", () => {
+  const source = readFileSync(HEADERLESS_MD_PATH, "utf8").replace(
+    "unlabelled Id, Time",
+    "unlabelled Id, Id",
+  );
+  const result = checkSource(source, HEADERLESS_MD_PATH);
+  const importFindings = result.findings.filter((f) => f.code === "IMPORT");
+  expect(importFindings).toHaveLength(1);
+  expect(importFindings[0]!.message).toContain("duplicate column");
+  expect(result.exitCode).toBe(1);
+});
+
+test("unlabelled 6. invalid declared identifier: one IMPORT finding, exit 1", () => {
+  const source = readFileSync(HEADERLESS_MD_PATH, "utf8").replace(
+    "unlabelled Id, Time",
+    "unlabelled Id, 9bad",
+  );
+  const result = checkSource(source, HEADERLESS_MD_PATH);
+  const importFindings = result.findings.filter((f) => f.code === "IMPORT");
+  expect(importFindings).toHaveLength(1);
+  expect(importFindings[0]!.message).toContain("9bad");
+  expect(result.exitCode).toBe(1);
+});
+
+test("unlabelled 7. both clauses present: one TYPE finding, exit 1", () => {
+  const source = readFileSync(HEADERLESS_MD_PATH, "utf8").replace(
+    "unlabelled Id, Time",
+    "labelled Id, Time unlabelled Id, Time",
+  );
+  const result = checkSource(source, HEADERLESS_MD_PATH);
+  const typeFindings = result.findings.filter((f) => f.code === "TYPE");
+  expect(typeFindings).toHaveLength(1);
+  expect(typeFindings[0]!.message).toContain("out of order or repeated");
+  expect(result.exitCode).toBe(1);
+});
+
+test("unlabelled 8. labelled fixture's full transcript is unaffected", () => {
+  const source = readFileSync(MD_PATH, "utf8");
+  const result = checkSource(source);
+  expect(result.findings.filter((f) => f.code !== "WARN")).toEqual([]);
+  expect(result.exitCode).toBe(0);
 });

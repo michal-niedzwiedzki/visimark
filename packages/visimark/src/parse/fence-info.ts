@@ -1,8 +1,10 @@
 /**
  * Parses the tail of a `vmark` fence info string: the sheet id, and — for a
- * **declared input** — the `from <path> [delimited <char>] [labelled
- * <col>,...] [at sha256:<digest>]` clause. See visimark-design.md §3 and
- * `docs/design/declared-local-data-imports-spec.md` §2.
+ * **declared input** — the `from <path> [delimited <char>]
+ * [labelled <col>,... | unlabelled <col>,...] [at sha256:<digest>]` clause.
+ * See visimark-design.md §3 and
+ * `docs/design/declared-local-data-imports-spec.md` §2 and
+ * `docs/design/explicit-schema-for-headerless-csv-imports-spec.md` §2.
  *
  * Offsets returned here are relative to the start of `meta` itself; the
  * caller (`document.ts`) rebases them to absolute source offsets, exactly as
@@ -20,6 +22,7 @@ export interface ImportDeclRel {
   delimiter: string;
   labels: string[] | null;
   labelsSpan: RelSpan | null;
+  labelsMode: "labelled" | "unlabelled" | null;
   stampPrefix: string | null;
   stampDigest: string | null;
   stampSpan: RelSpan | null;
@@ -33,6 +36,12 @@ export interface FenceInfoResult {
 }
 
 const WORD_RE = /^(\S+)/;
+/** where a `labelled`/`unlabelled` name list stops: the next clause keyword,
+ *  bare `at` included, or end of string. Without this a second clause with
+ *  no following `at` (`labelled X unlabelled Y`, `unlabelled X unlabelled
+ *  Y`) would be silently swallowed into the first clause's name list instead
+ *  of being caught as out of order or repeated. */
+const NEXT_CLAUSE_RE = /\b(?:at|labelled|unlabelled|delimited)\b/;
 /** a delimiter character may not be drawn from a field's own alphabet, or a
  *  quote, or the characters number literals use — see spec §2. */
 const BAD_DELIMITER_CHAR = /[A-Za-z0-9".\-\s]/;
@@ -84,6 +93,7 @@ export function parseFenceInfo(meta: string | null): FenceInfoResult {
   let delimiter = ",";
   let labels: string[] | null = null;
   let labelsSpan: RelSpan | null = null;
+  let labelsMode: "labelled" | "unlabelled" | null = null;
   let stampPrefix: string | null = null;
   let stampDigest: string | null = null;
   let stampSpan: RelSpan | null = null;
@@ -123,24 +133,33 @@ export function parseFenceInfo(meta: string | null): FenceInfoResult {
       continue;
     }
 
-    if (word.text === "labelled") {
-      if (stage >= 2) return err("`labelled` is out of order or repeated", word.start, word.end);
+    if (word.text === "labelled" || word.text === "unlabelled") {
+      // `labelled` and `unlabelled` are mutually exclusive — they fill the
+      // same clause slot (spec: docs/design/
+      // explicit-schema-for-headerless-csv-imports-spec.md §2), so either one
+      // appearing a second time, or the other one appearing after it, is
+      // "out of order or repeated", exactly like a doubled `delimited`/`at`.
+      if (stage >= 2) {
+        return err(`\`${word.text}\` is out of order or repeated`, word.start, word.end);
+      }
+      const mode = word.text as "labelled" | "unlabelled";
       stage = 2;
       pos = word.end;
-      // consume up to (but not including) a following bare `at` keyword, or EOF
+      // consume up to (but not including) a following clause keyword, or EOF
       const rest = meta.slice(pos);
-      const atBoundary = /\bat\b/.exec(rest);
-      const listEnd = atBoundary ? pos + atBoundary.index : meta.length;
+      const nextClause = NEXT_CLAUSE_RE.exec(rest);
+      const listEnd = nextClause ? pos + nextClause.index : meta.length;
       const listText = meta.slice(pos, listEnd);
       const names = listText
         .split(",")
         .map((s) => s.trim())
         .filter((s) => s.length > 0);
       if (names.length === 0) {
-        return err("`labelled` needs at least one column name", word.start, listEnd);
+        return err(`\`${mode}\` needs at least one column name`, word.start, listEnd);
       }
       labels = names;
       labelsSpan = { start: word.start, end: listEnd };
+      labelsMode = mode;
       pos = listEnd;
       continue;
     }
@@ -180,6 +199,7 @@ export function parseFenceInfo(meta: string | null): FenceInfoResult {
       delimiter,
       labels,
       labelsSpan,
+      labelsMode,
       stampPrefix,
       stampDigest,
       stampSpan,
