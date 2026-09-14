@@ -28,6 +28,33 @@ that answer. A registry that *rejects* a publish fails the whole run — it is
 never logged as "already done". A green `release` run still is not proof: see
 [Verify every leg](#verify-every-leg).
 
+```mermaid
+flowchart LR
+  tag[Push tag vX.Y.Z] --> run[release.yml]
+  run --> npm[npm visimark]
+  run --> vsce[VS Code Marketplace]
+  run --> ovsx[Open VSX]
+  run --> ghrel[GitHub Release with vsix]
+  run --> closeIss[Close shipped request issues]
+  npm --> present{Version already there?}
+  vsce --> present
+  ovsx --> present
+  present -->|yes| skip[Skip that leg]
+  present -->|no| pub[Publish]
+  pub --> rejected{Registry rejects?}
+  rejected -->|yes| fail[Fail the whole run]
+  rejected -->|no| ok[Leg done]
+  skip --> verify[Verify every leg]
+  ok --> verify
+  ghrel --> verify
+  closeIss --> verify
+  fail --> fix[Fix the cause]
+  fix --> dispatch["workflow_dispatch backfills missing legs"]
+  dispatch --> present
+```
+
+GitHub Release is cut on a tag push only. `workflow_dispatch` does not create one.
+
 ## Before you tag
 
 1. **Green locally**, from a clean tree on `master`:
@@ -70,6 +97,17 @@ never logged as "already done". A green `release` run still is not proof: see
    git tag vX.Y.Z
    git push origin vX.Y.Z
    ```
+
+```mermaid
+flowchart LR
+  local[Green locally] --> ci[Green CI on master]
+  ci --> bump[Bump the three package.json versions]
+  bump --> cl[Write the changelog]
+  cl --> promo[Fill Shipped Released cells]
+  promo --> commit[Commit and push]
+  commit --> wait[Wait for CI on that commit]
+  wait --> tag[Tag vX.Y.Z and push the tag]
+```
 
 ## Preparing the changelog
 

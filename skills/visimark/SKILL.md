@@ -34,6 +34,21 @@ call it refuses to make for you.
 
 `check` says the same thing, as a failure, on a document with no rules.
 
+```mermaid
+flowchart LR
+  incoming[Incoming document] --> existing{Numbers already there, no rules?}
+  existing -->|yes| infer["infer, then infer --write"]
+  existing -->|no| shape[Table, then vmark block, then anchors, then prose]
+  infer --> shape
+  shape --> fmt["fmt fills computed cells"]
+  fmt --> probe[Change one input]
+  probe --> checkCmd[check]
+  checkCmd --> broke{Reports problems?}
+  broke -->|no| unwired[Not derived: fix]
+  broke -->|yes| restore[Undo the probe]
+  restore --> later["Later: change an input or a rule, then fmt"]
+```
+
 A header that already exists as human-facing prose — `Bandwidth per Unit
 (TB/s, full-duplex)` — is not a formula name, and **you do not rewrite it into
 one.** Rewriting someone else's header is exactly the kind of intrusion this
@@ -123,6 +138,11 @@ once `bun run build` has been run. `npx visimark` for a published install.
 ## Authoring: the shape
 
 Four parts, in this order. The block must come **immediately after** its table.
+
+```mermaid
+flowchart LR
+  table[Table] --> block[vmark block] --> anchors[Anchors] --> prose[Prose] --> fmtFill[fmt]
+```
 
 ````markdown
 | Item           | Unit | Qty |    Rate |     Net |     VAT |

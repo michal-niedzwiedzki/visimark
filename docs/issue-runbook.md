@@ -14,6 +14,20 @@ attributed per [`.claude/rules/ai-attribution.md`](../.claude/rules/ai-attributi
 
 The commands look at the issue and pick a track:
 
+```mermaid
+flowchart LR
+  issue[Issue] --> track{vocabulary label and title?}
+  track -->|yes| vocab[VOCAB track]
+  vocab --> ad[Catalogue A to D]
+  track -->|no| general[GENERAL track]
+  general --> class{Class}
+  class -->|language feature| e[Catalogue E]
+  class -->|tooling or process| f[Catalogue F]
+  class -->|vocabulary primitive| refile[Refile on the template]
+  class -->|documentation or bug| comment[Pre-review comment, no row]
+  class -->|too thin| ask[Ask for the missing pieces]
+```
+
 - **Vocabulary request** — label `vocabulary` **and** title `vocabulary: …`.
   The full four-criteria shape rubric runs; the row lands in catalogue
   section A–D.
@@ -38,6 +52,27 @@ The commands look at the issue and pick a track:
 argument mattered and the issue thread should carry it before the decision.
 
 ## The sequence
+
+```mermaid
+flowchart LR
+  review["/issue-review"] --> talk[Talk it over]
+  talk -.-> discuss["/issue-discuss"]
+  talk --> decide["/issue-decide"]
+  discuss --> decide
+  decide --> verdict{Verdict}
+  verdict -->|DEFERRED or REJECTED| close[Merge catalogue, close issue]
+  verdict -->|APPROVED| spec[Draft spec, then Decision comment]
+  spec --> cat[Merge catalogue]
+  cat --> impl[Draft impl PR]
+  impl --> plan[Optional plan]
+  plan --> code[Optional implement]
+  code --> ci{CI green?}
+  ci -->|no| code
+  ci -->|yes| ready[Promote PR]
+  ready --> merge[Merge impl]
+  merge --> unreleased[Catalogue UNRELEASED]
+  unreleased --> shipped[Release tag: SHIPPED, close issue]
+```
 
 1. **`/issue-review <n>`** — add `--draft` first if you want to read the
    analysis before anything is public. Without `--draft` it posts the
@@ -82,10 +117,20 @@ argument mattered and the issue thread should carry it before the decision.
 ## Reopening
 
 The catalogue reopens a `REJECTED` row "only with new information". Add that
-information to the issue, then run `/issue-decide <n>` again: a fresh
-`Decision:` comment, and a PR that **edits the existing row** rather than
-adding a second one. If a re-decision lands on `APPROVED` and the `-impl` PR
-already exists, the revised spec is committed onto it rather than opening a
+information to the issue, then run `/issue-decide <n>` again:
+
+```mermaid
+flowchart LR
+  newInfo[New information on the issue] --> again["/issue-decide again"]
+  again --> edit[Edit the existing catalogue row]
+  edit --> reuse{APPROVED and impl PR exists?}
+  reuse -->|yes| onto[Commit the revised spec onto it]
+  reuse -->|no| rest[Same landing path as a first decision]
+```
+
+A fresh `Decision:` comment, and a PR that **edits the existing row** rather
+than adding a second one. If a re-decision lands on `APPROVED` and the `-impl`
+PR already exists, the revised spec is committed onto it rather than opening a
 second one.
 
 ## What the pre-review checks

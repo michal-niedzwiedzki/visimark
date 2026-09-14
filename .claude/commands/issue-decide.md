@@ -46,6 +46,33 @@ Settle on `APPROVED` / `DEFERRED` / `REJECTED` and the reason, citing the design
 
 **Order from here:** for `DEFERRED` / `REJECTED`, skip to step 4. For `APPROVED`, step 3 must complete — a handoff-ready spec — **before** step 4 posts anything or step 5 merges anything.
 
+```mermaid
+flowchart LR
+  reread[Re-read the issue] --> dirty{Dirty tree?}
+  dirty -->|yes| stop[Stop]
+  dirty -->|no| evalStep[Evaluate]
+  evalStep --> verdict{Verdict}
+  verdict -->|DEFERRED or REJECTED| comment[Post the Decision comment]
+  verdict -->|APPROVED| spec[Draft the spec with the maintainer]
+  spec --> ready{Spec ready?}
+  ready -->|Keep editing| spec
+  ready -->|Change the verdict| evalStep
+  ready -->|Ready| comment
+  comment --> cat[Update the catalogue PR and merge it]
+  cat --> after{Verdict}
+  after -->|DEFERRED or REJECTED| close[Close the issue]
+  after -->|APPROVED| impl[Open a draft impl PR with the spec]
+  impl --> planQ{Write the plan now?}
+  planQ -->|Not now| laterPlan[Stop: writing-plans later]
+  planQ -->|Write it| plan[Commit the plan]
+  plan --> implQ{Start implementation?}
+  implQ -->|Not now| laterImpl[Stop: executing-plans later]
+  implQ -->|Start| code[Execute the plan]
+  code --> ci{CI green?}
+  ci -->|no| code
+  ci -->|yes| readyPR[Promote the PR out of draft]
+```
+
 ## 3. Draft the spec — APPROVED only
 
 The approval is not landed until a feature spec exists that an
@@ -263,7 +290,7 @@ Ask the maintainer via `AskUserQuestion` — "Write the implementation plan now?
   - a `CHANGELOG.md` entry under `## Unreleased` → `### Added` (and a one-line `editors/vscode/CHANGELOG.md` entry when the LSP/extension surface changes — e.g. a name that used to flag as unknown no longer does, or a new diagnostic);
   - the `vocabulary-catalogue.md` row **moved out of its section table into the Shipped register** as `UNRELEASED` — condensed to that table's columns (`Name`, `Kind`, `Request`, `Landed` = this PR, `Released` = `—`, `Decision` = the deciding comment), dropping the prose columns;
   - `docs/cli-reference.md` if it enumerates the changed surface;
-  - `docs/issue-review.md` and this command / `issue-review.md` if the change is `tooling / process` and alters the workflow they describe.
+  - `docs/issue-runbook.md` and this command / `.claude/commands/issue-review.md` if the change is `tooling / process` and alters the workflow they describe.
   A merged implementation PR with no `## Unreleased` line is a bug in the plan.
 
   The row stays `UNRELEASED` until a tagged release ships it — `releasing.md`

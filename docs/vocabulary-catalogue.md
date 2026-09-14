@@ -21,7 +21,7 @@ syntax and what a document cannot express or verify without it. An issue too
 thin to assess is sent back for those pieces before review.
 
 Either way the process from issue to deciding comment is
-[`issue-review.md`](issue-review.md).
+[`issue-runbook.md`](issue-runbook.md).
 
 A vocabulary request is judged against the design doc's constraints, not against Excel:
 
@@ -47,7 +47,7 @@ above — a real document needs it — applies to every section.
 The maintainer records the outcome in the tables below: the **Request** column
 links the issue, the **Status** column links the comment that decided it. The
 process for getting from an issue to that comment is
-[`issue-review.md`](issue-review.md).
+[`issue-runbook.md`](issue-runbook.md).
 
 Once a primitive is implemented its row leaves its section table and is
 condensed into the [Shipped register](#shipped) at the foot of this file — the
@@ -64,6 +64,21 @@ ever-growing changelog.
 | `SHIPPED` | In a published release, and a [`visimark-design.md` §4](visimark-design.md#4-syntax) row. Listed in the [Shipped register](#shipped) with **Released** linking the release; the **Decision** link holds the full reasoning its section-table row once carried. |
 | `DEFERRED` | Plausible, but no motivating document yet, or it waits on another decision. Not a "no". |
 | `REJECTED` | Declined on a constraint. The linked comment is the reason; reopen only with new information. |
+
+```mermaid
+stateDiagram-v2
+  direction LR
+  [*] --> NEW: /issue-review catalogues
+  NEW --> APPROVED: /issue-decide
+  NEW --> DEFERRED: /issue-decide
+  NEW --> REJECTED: /issue-decide
+  APPROVED --> UNRELEASED: impl PR merges
+  UNRELEASED --> SHIPPED: release tag
+  DEFERRED --> APPROVED: reopen with new information
+  DEFERRED --> REJECTED: reopen with new information
+  REJECTED --> APPROVED: reopen with new information
+  REJECTED --> DEFERRED: reopen with new information
+```
 
 The seed entries below were catalogued from the **2026-09-06** design discussion
 and predate the issue tracker, so their **Request** cells are empty.

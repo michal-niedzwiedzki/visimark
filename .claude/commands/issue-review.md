@@ -16,6 +16,39 @@ Arguments: `$ARGUMENTS`
 - First token: the issue number `<n>`.
 - `--draft` present anywhere: do the analysis, print it, post and branch nothing.
 
+```mermaid
+flowchart LR
+  load[Load and guard] --> dirty{Dirty working tree?}
+  dirty -->|yes| stopDirty[Stop]
+  dirty -->|no| decided{Already decided?}
+  decided -->|yes| stopDecided["Stop: use /issue-decide"]
+  decided -->|no| track{Track}
+
+  track -->|VOCAB| parse[Parse the form]
+  parse --> incomplete{INCOMPLETE?}
+  incomplete -->|yes| commentFill[Comment: fill blank fields]
+  incomplete -->|no| rubricV[Verify document, score rubric]
+
+  track -->|GENERAL| classify[Classify]
+  classify --> kind{Class}
+  kind -->|vocabulary primitive| refile[Comment: refile on the template]
+  kind -->|thin| ask[Comment: ask for specifics]
+  kind -->|documentation or bug| rubricG[Score rubric]
+  kind -->|language feature or tooling| rubricG
+
+  rubricV --> out[Disposition]
+  rubricG --> out
+  out --> draft{--draft?}
+  draft -->|yes| print[Print only]
+  draft -->|no| post[Post pre-review comment]
+  post --> row{Catalogue row?}
+  row -->|yes| pr[Open NEW-row PR]
+  row -->|no| done[Stop after the comment]
+  commentFill --> done
+  refile --> done
+  ask --> done
+```
+
 ## 1. Load and guard
 
 Run `git status --porcelain`. If it is non-empty, stop: "Working tree is dirty — commit or stash first." Do nothing else.

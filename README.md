@@ -205,6 +205,16 @@ VisiMark parses the document, builds a dependency graph across every sheet,
 sorts it topologically, and evaluates in decimal arithmetic. Circular
 dependencies are reported with the full path through the cycle.
 
+```mermaid
+flowchart LR
+  parse[Parse Markdown] --> graph[Build dependency graph]
+  graph --> sort[Topological sort]
+  sort --> eval[Evaluate in decimal]
+  eval --> cycle{Cycle?}
+  cycle -->|yes| report[Report the CYCLE path]
+  cycle -->|no| values[Computed values]
+```
+
 The CLI is the product. An agent must be able to verify a document without an
 editor; a VS Code extension is a later, thin wrapper.
 
@@ -212,6 +222,16 @@ editor; a VS Code extension is a later, thin wrapper.
 
 Five of them. `check` is the one that matters; the rest exist to get a
 document into a state `check` can be strict about, or to explain what it did.
+
+```mermaid
+flowchart LR
+  plain[Plain table] -->|infer --write| wired[Rules and anchors in the file]
+  wired -->|edit an input or a rule| stale[Stored values disagree]
+  stale -->|fmt| wired
+  stale -->|check| fail[Exit 1]
+  wired -->|check| pass[Exit 0]
+  wired -.-> eval[eval / explain]
+```
 
 | Command | What it does | Options | What it writes | Exit codes |
 |---------|--------------|---------|----------------|------------|
@@ -355,7 +375,7 @@ an input column where a human wrote it down. Requests to grow that vocabulary â€
 and proposals for any other language or tooling change â€” go through
 [`docs/vocabulary-catalogue.md`](docs/vocabulary-catalogue.md), which records
 every one and the decision on it; the review process is
-[`docs/issue-review.md`](docs/issue-review.md).
+[`docs/issue-runbook.md`](docs/issue-runbook.md).
 
 This makes the format smaller, not merely stricter: there is no locale, no
 configuration, and no rule for what a bare `/` means.

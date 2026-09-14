@@ -741,7 +741,7 @@ git commit -m "feat: explain --json"
 - Modify: `CHANGELOG.md` — `## Unreleased` → `### Added`
 - Modify: `docs/vocabulary-catalogue.md` — **move** the section F `--json` row into the Shipped register as `UNRELEASED`
 
-**Do not modify:** `editors/vscode/CHANGELOG.md` (LSP unchanged); `docs/issue-review.md` / the issue-review commands (workflow unchanged).
+**Do not modify:** `editors/vscode/CHANGELOG.md` (LSP unchanged); `docs/issue-runbook.md` / the issue-review commands (workflow unchanged).
 
 - [ ] **Step 1: Design doc §11**
 
