@@ -29,6 +29,13 @@ test("assigning through the alias's short name is a column rule for the header",
   const sheet = r.sheets.get("network")!;
   expect(sheet.columns.has("Bandwidth per Unit (TB/s, full-duplex)")).toBe(true);
   expect(sheet.columns.has("bpu")).toBe(false); // canonical key is the header text
+  // the binding itself is renamed too, not just the map key: `id` and `name`
+  // are `<sheetId>.<header>` / `<header>`, exactly as `"H" = expr` would give.
+  // Reference analysis keys off these, so the alias symbol must not survive.
+  const rule = sheet.columns.get("Bandwidth per Unit (TB/s, full-duplex)")!;
+  expect(rule.id).toBe("network.Bandwidth per Unit (TB/s, full-duplex)");
+  expect(rule.name).toBe("Bandwidth per Unit (TB/s, full-duplex)");
+  expect(rule.kind).toBe("column");
 });
 
 test("assigning through the alias when the header already has a rule is DUP", () => {
