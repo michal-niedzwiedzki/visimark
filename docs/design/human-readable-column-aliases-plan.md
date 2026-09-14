@@ -295,10 +295,12 @@ git commit -m "feat: parse quoted column-rule left-hand sides and \`is\` alias d
 
 **Files:**
 - Modify: `packages/visimark/src/model/types.ts` (`Sheet` interface)
+- Modify: `packages/visimark/src/model/build.ts` (`ensureSheet` — the one place `build()` constructs a `Sheet`)
+- Modify: `packages/visimark/src/infer/context.ts` (`provisional()` and `cloneSheet()` — two more places that construct a `Sheet` object literal, for `infer`'s candidate-verification machinery; grep confirms these are the *only* other construction sites: `grep -rn "columnIndex: new Map\|inputColumns: new Set" packages/visimark/src --include="*.ts"`)
 - Test: none (a type-only change; exercised by Task 4's tests)
 
 **Interfaces:**
-- Produces: `Sheet.aliases: Map<string, { header: string; span: Span }>` — keyed by the alias symbol, for Task 4 (build), Task 5 (resolution), Task 6 (WARN), Task 7 (explain), Task 8 (infer) to consume.
+- Produces: `Sheet.aliases: Map<string, { header: string; span: Span }>` — keyed by the alias symbol, for Task 4 (build), Task 5 (resolution), Task 6 (WARN), Task 7 (explain), Task 8 (infer) to consume. `provisional()`'s and `cloneSheet()`'s synthetic sheets carry an accurate `aliases` map too (copied from the real sheet, or empty for a freshly-minted one) even though nothing in this feature exercises `infer`'s numeric-fit verification path through an alias — the field must exist and be correctly populated for these to typecheck and for `cloneSheet()` to round-trip a sheet faithfully.
 
 - [ ] **Step 1: Add the field**
 
@@ -319,11 +321,15 @@ In `types.ts`, extend the `Sheet` interface (after `inputColumns`):
 - [ ] **Step 2: Run typecheck to verify it fails**
 
 Run: `bun run typecheck`
-Expected: FAIL — `ensureSheet` in `model/build.ts` constructs a `Sheet` object literal missing the new required field.
+Expected: FAIL — three `Sheet` object-literal construction sites are now missing a required field: `model/build.ts`'s `ensureSheet`, and `infer/context.ts`'s `provisional()` (the freshly-minted-sheet branch) and `cloneSheet()`.
 
-- [ ] **Step 3: Fix the one call site**
+- [ ] **Step 3: Fix all three call sites**
 
 In `build.ts`'s `ensureSheet`, add `aliases: new Map()` to the object literal alongside `inputColumns: new Set()`.
+
+In `infer/context.ts`'s `provisional()`, the branch that constructs a `Sheet` for a table with no existing block (around the `if (!sheets.has(s.id))` block) gets `aliases: new Map()` alongside `inputColumns: new Set(s.index.keys())` — a freshly-minted sheet has no aliases yet.
+
+In `infer/context.ts`'s `cloneSheet()`, add `aliases: new Map(s.aliases)` alongside `inputColumns: new Set(s.inputColumns)` — this one **must** copy the source sheet's real aliases (not an empty map), since `cloneSheet()` exists to round-trip a sheet the document already declares, aliases included.
 
 - [ ] **Step 4: Run typecheck to verify it passes**
 
@@ -333,7 +339,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add packages/visimark/src/model/types.ts packages/visimark/src/model/build.ts
+git add packages/visimark/src/model/types.ts packages/visimark/src/model/build.ts packages/visimark/src/infer/context.ts
 git commit -m "feat: add Sheet.aliases for column-alias declarations"
 ```
 
@@ -1038,14 +1044,15 @@ git commit -m "feat: show column aliases in explain output"
 
 **Files:**
 - Create: `packages/visimark/src/infer/aliases.ts`
+- Modify: `packages/visimark/src/infer/context.ts` (`InferSheet` gains an `aliasedHeaders` field — see below; `buildContext` populates it)
 - Modify: `packages/visimark/src/infer/propose.ts` (merge alias proposals into `infer()`'s result)
 - Modify: `packages/visimark/src/report/infer.ts` (`formatInfer` — print the new bucket)
 - Modify: `packages/visimark/src/infer/write.ts` (`planInfer` — write `"<header>" is <symbol>` lines under `--write`)
 - Test: `packages/visimark/test/infer/aliases.test.ts` (new), extend `packages/visimark/test/infer/infer.test.ts` and `packages/visimark/test/infer/write.test.ts` if that file exists (check `test/infer/` for its actual write-path test filename first)
 
 **Interfaces:**
-- Consumes: `InferContext` / `InferSheet` from `infer/context.ts` (read `context.ts` before writing this task's implementation — it already carries each sheet's raw table and header list; use its existing header/identifier-shape helpers rather than re-deriving them).
-- Produces: `Proposal` (in `propose.ts`) gains `kind: "alias"` with `name` (the proposed symbol) and a new field `header: string` (the header text it aliases); `infer/aliases.ts` exports `proposeAliases(sheet: InferSheet, taken: Set<string>): Proposal[]` where `taken` is every name already spoken for in that sheet (columns, scalars, existing aliases, builtins, keywords) — Task 8 computes `taken` from `InferSheet`/`InferContext`, matching however `candidates.ts` already determines "is this name free" for its own proposals.
+- Consumes: `InferContext` / `InferSheet` from `infer/context.ts`. `infer` re-parses the whole document independently of `model/build.ts` for its own candidate-fitting search (`buildContext` in `context.ts` calls `build(doc)` once, into `ctx.base`, purely to know what a sheet already declares — `InferSheet` itself is `context.ts`'s own lighter view, built straight from the raw table). Concretely: `InferSheet.table.headers` is `RawCell[]` (each with `.text`); `InferSheet.index: Map<string, number>` is header text → column index; `InferSheet.managed: Set<string>` is header names that already carry a rule (derived from `ctx.base.sheets.get(id).columns.keys()`, which — per Task 4's design — is keyed by canonical header text only, so `managed` needs no change for this feature).
+- Produces: `InferSheet` gains `aliasedHeaders: Set<string>` — header texts that already carry an `is` alias, so `proposeAliases` skips them. Populate it in `buildContext`, next to `managed`: `aliasedHeaders: new Set([...(existing?.aliases.values() ?? [])].map((a) => a.header))`. `Proposal` (in `propose.ts`) gains `kind: "alias"` with `name` (the proposed symbol) and a new field `header: string` (the header text it aliases). `infer/aliases.ts` exports `proposeAliases(sheet: InferSheet, taken: Set<string>): Proposal[]` where `taken` is every name already spoken for in that sheet (columns, scalars, existing aliases, builtins, keywords) — Task 8 computes `taken` in `infer()` (in `propose.ts`) from `sheet.index.keys()`, `ctx.base.sheets.get(sheet.id)?.scalars.keys() ?? []`, `ctx.base.sheets.get(sheet.id)?.aliases.keys() ?? []`, and the fixed keyword/builtin list (`is`, `assert`, `chart`, plus the thirteen builtin function names in `eval/functions.ts`'s `FUNCTIONS` map).
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -1079,7 +1086,7 @@ test("a collision with an existing name falls back to no proposal", () => {
 });
 ```
 
-(`generateAliasName` should be exported from `infer/aliases.ts` alongside `proposeAliases` so the naming rule is independently testable; `sheetWithHeaders` is a small local test helper you write, matching whatever minimal shape `InferSheet` actually requires — read `infer/context.ts` first.)
+(`generateAliasName` should be exported from `infer/aliases.ts` alongside `proposeAliases` so the naming rule is independently testable; `sheetWithHeaders` is a small local test helper you write, constructing a minimal `InferSheet` — `{ id, minted: false, table: { headers: names.map((text) => ({ text, start: 0, end: 0 })), rows: [], span: { start: 0, end: 0 } }, block: null, index: new Map(names.map((n, i) => [n, i])), numeric: [], managed: new Set(), filled: new Map(), constant: new Set(), aliasedHeaders: new Set() }` — the last field only exists once this task's `context.ts` edit lands, so write this helper after that edit, not before.)
 
 - [ ] **Step 2: Run tests to verify they fail**
 
@@ -1125,6 +1132,7 @@ export function proposeAliases(sheet: InferSheet, taken: Set<string>): Proposal[
   for (const header of sheet.table.headers.map((h) => h.text)) {
     if (IDENT_RE.test(header)) continue;
     if (sheet.managed.has(header)) continue; // already has a rule
+    if (sheet.aliasedHeaders.has(header)) continue; // already has an alias
     const name = generateAliasName(header);
     if (seen.has(name)) continue; // collision — infer.ts's `ambiguous` bucket prints it, not this function
     seen.add(name);
@@ -1144,7 +1152,23 @@ export function proposeAliases(sheet: InferSheet, taken: Set<string>): Proposal[
 }
 ```
 
-(Adjust field names — `sheet.managed`, `sheet.table.span`, `sheet.id` — to whatever `InferSheet`/`InferContext` actually name them; read `context.ts` fully before finalising this file, since this plan's earlier research read only `candidates.ts`/`propose.ts`, not `context.ts` in full.)
+In `infer/context.ts`, add the `aliasedHeaders` field to the `InferSheet` interface (next to `managed`):
+
+```typescript
+  /** headers that already carry a rule; inference never proposes for these */
+  managed: Set<string>;
+  /** headers that already carry an `is` alias; inference never proposes a second one */
+  aliasedHeaders: Set<string>;
+```
+
+and populate it in `buildContext`'s sheet-construction loop, next to `managed: new Set(existing?.columns.keys() ?? [])`:
+
+```typescript
+      managed: new Set(existing?.columns.keys() ?? []),
+      aliasedHeaders: new Set([...(existing?.aliases.values() ?? [])].map((a) => a.header)),
+```
+
+(`existing` is `base.sheets.get(id)` — already in scope at that point in `buildContext`, a few lines above.)
 
 Add `kind: "alias"` to `ProposalKind` in `propose.ts`, and a `header?: string` field to `Proposal`. In `infer()`, after the existing column/scalar proposal search for each sheet, compute `taken` (every column name, scalar name, alias symbol, and the 13 builtin names plus `is`/`assert`/`chart`) and call `proposeAliases`, appending the result to the returned list.
 
@@ -1177,7 +1201,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add packages/visimark/src/infer/aliases.ts packages/visimark/src/infer/propose.ts packages/visimark/src/report/infer.ts packages/visimark/src/infer/write.ts packages/visimark/test/infer/aliases.test.ts
+git add packages/visimark/src/infer/aliases.ts packages/visimark/src/infer/context.ts packages/visimark/src/infer/propose.ts packages/visimark/src/report/infer.ts packages/visimark/src/infer/write.ts packages/visimark/test/infer/aliases.test.ts
 git commit -m "feat: infer proposes is aliases for non-identifier headers"
 ```
 
