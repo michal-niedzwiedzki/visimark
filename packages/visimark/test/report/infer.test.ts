@@ -48,12 +48,14 @@ describe("the report keeps check's visual idiom with its own field layout", () =
 
   test("the footer counts what was proposed across the file", () => {
     expect(formatInfer("i.md", strippedClean, infer(strippedClean))).toEndWith(
-      "\n4 rules, 4 scalars, 4 anchors.",
+      "\n4 rules, 0 aliases, 4 scalars, 4 anchors.",
     );
   });
 
   test("a document with nothing to say still says so", () => {
-    expect(formatInfer("i.md", "# nothing\n", [])).toBe("0 rules, 0 scalars, 0 anchors.");
+    expect(formatInfer("i.md", "# nothing\n", [])).toBe(
+      "0 rules, 0 aliases, 0 scalars, 0 anchors.",
+    );
   });
 });
 
@@ -79,6 +81,12 @@ describe("a non-identifier header gets an alias proposal end to end", () => {
     expect(firstTable(doc)).toContain(
       ["  column aliases", '    up     for "Unit Price"'].join("\n"),
     );
+  });
+
+  test("the footer counts the aliases it just printed", () => {
+    // a document whose only proposal is an alias used to close with
+    // `0 rules, 0 scalars, 0 anchors.`, contradicting the section above it
+    expect(formatInfer("i.md", doc, infer(doc))).toEndWith("1 alias, 0 scalars, 0 anchors.");
   });
 });
 

@@ -182,7 +182,7 @@ docs/example-quote-plain.md  table at line 24 — 3 rows, 4 columns
   also fits, not proposed
     Amount = Share * 29808    prefers a rule over materialised columns
 
-4 rules, 6 scalars, 6 anchors.
+4 rules, 0 aliases, 6 scalars, 6 anchors.
 ```
 
 A rule is proposed only if it reproduces every row exactly, at that column's

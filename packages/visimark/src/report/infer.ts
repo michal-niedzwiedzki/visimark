@@ -54,12 +54,13 @@ export function formatInfer(path: string, source: string, proposals: Proposal[])
   );
 
   const ruleCount = proposals.filter((p) => p.kind === "column" && !p.weak).length;
+  const aliasCount = proposals.filter((p) => p.kind === "alias").length;
   const scalarCount = proposals.filter((p) => p.kind === "scalar").length;
   const anchorCount = proposals.filter((p) => p.kind === "scalar" && p.anchorSite).length;
   if (lines.length > 0) lines.push("");
   lines.push(
-    `${plural(ruleCount, "rule")}, ${plural(scalarCount, "scalar")}, ` +
-      `${plural(anchorCount, "anchor")}.`,
+    `${plural(ruleCount, "rule")}, ${plural(aliasCount, "alias", "aliases")}, ` +
+      `${plural(scalarCount, "scalar")}, ${plural(anchorCount, "anchor")}.`,
   );
   return lines.join("\n");
 }
@@ -191,6 +192,6 @@ function column(heads: string[], min: number): number {
   return Math.max(min, ...heads.map((h) => h.length + 2));
 }
 
-function plural(n: number, what: string): string {
-  return `${n} ${what}${n === 1 ? "" : "s"}`;
+function plural(n: number, what: string, many = `${what}s`): string {
+  return `${n} ${n === 1 ? what : many}`;
 }

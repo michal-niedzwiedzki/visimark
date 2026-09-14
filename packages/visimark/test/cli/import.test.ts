@@ -44,7 +44,7 @@ test("infer proposes nothing for an imported sheet", async () => {
   const c = capture();
   const code = await runCli(["infer", FIXTURE], c.io);
   expect(code).toBe(0);
-  expect(c.out()).toContain("0 rules, 0 scalars, 0 anchors");
+  expect(c.out()).toContain("0 rules, 0 aliases, 0 scalars, 0 anchors");
 });
 
 test("explain --json surfaces `mode: unlabelled` for a headerless import", async () => {
@@ -70,5 +70,5 @@ test("infer proposes nothing for a headerless imported sheet", async () => {
   const c = capture();
   const code = await runCli(["infer", HEADERLESS_FIXTURE], c.io);
   expect(code).toBe(0);
-  expect(c.out()).toContain("0 rules, 0 scalars, 0 anchors");
+  expect(c.out()).toContain("0 rules, 0 aliases, 0 scalars, 0 anchors");
 });

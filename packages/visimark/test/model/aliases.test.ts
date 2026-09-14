@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { locate } from "../../src/parse/document.js";
 import { build } from "../../src/model/build.js";
+import { formatCheck } from "../../src/report/format.js";
 
 const run = (s: string) => build(locate(s));
 
@@ -199,6 +200,21 @@ test("a quoted binding matching no header is UNDEF, never a scalar", () => {
   const sheet = r.sheets.get("network")!;
   expect(sheet.scalars.has("Nope")).toBe(false);
   expect(sheet.columns.has("Nope")).toBe(false);
+});
+
+test("a quoted binding's UNDEF is named after the header it quotes", () => {
+  // the report's id is `sheetId.name`; with no name it renders a dangling
+  // `network.`, where the alias case already names its symbol
+  const r = run(withAlias('"Bandwidth per Unyt (TB/s)" = 1'));
+  const undef = r.findings.find((f) => f.code === "UNDEF");
+  expect(undef).toMatchObject({
+    sheetId: "network",
+    name: "Bandwidth per Unyt (TB/s)",
+    raw: "Bandwidth per Unyt (TB/s)",
+  });
+  expect(formatCheck("n.md", [undef!]).split("\n")[2]).toStartWith(
+    "  UNDEF   network.Bandwidth per Unyt (TB/s)",
+  );
 });
 
 test("`is` outside a sheet block is a SHEET finding, not a crash", () => {

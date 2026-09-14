@@ -1,6 +1,6 @@
 import type { Call, Expr, Ref } from "../lang/ast.js";
 import { closest } from "../report/levenshtein.js";
-import type { Assertion, Binding, Chart, DocModel } from "../model/types.js";
+import type { Assertion, Binding, Chart, DocModel, Sheet } from "../model/types.js";
 import { type CallProblem, callProblem, isReduce } from "./functions.js";
 
 /**
@@ -58,6 +58,19 @@ export type Resolution =
   | { kind: "input-column"; sheetId: string; column: string }
   | { kind: "unknown"; suggestion: string | null; badName: string };
 
+/**
+ * The canonical key `name` stands for in `sheet`: an alias symbol becomes the
+ * header text it was declared for, any other name is already canonical.
+ *
+ * `sheet.columns` / `scalars` / `columnIndex` / `inputColumns` are keyed by
+ * canonical header text only (see `Sheet.aliases`), so every lookup into them
+ * from a name the document wrote must pass through here first. An absent sheet
+ * has no aliases to apply, so the name comes back untouched.
+ */
+export function canonicalName(sheet: Sheet | undefined, name: string): string {
+  return sheet?.aliases.get(name)?.header ?? name;
+}
+
 export function refText(ref: Ref): string {
   return ref.qualifier ? `${ref.qualifier}.${ref.name}` : ref.name;
 }
@@ -76,8 +89,7 @@ export function resolve(
         suggestion: closest(ref.qualifier, model.sheets.keys()),
       };
     }
-    const alias = sheet.aliases.get(ref.name);
-    const name = alias ? alias.header : ref.name;
+    const name = canonicalName(sheet, ref.name);
     const col = sheet.columns.get(name);
     if (col) return { kind: "column", binding: col, sheetId: sheet.id };
     if (sheet.inputColumns.has(name)) {
@@ -98,8 +110,7 @@ export function resolve(
   }
 
   const sheet = model.sheets.get(fromSheetId);
-  const alias = sheet?.aliases.get(ref.name);
-  const name = alias ? alias.header : ref.name;
+  const name = canonicalName(sheet, ref.name);
   if (sheet) {
     const col = sheet.columns.get(name);
     if (col) return { kind: "column", binding: col, sheetId: sheet.id };

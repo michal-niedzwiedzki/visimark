@@ -27,14 +27,14 @@ describe("infer is advisory: it never exits 1", () => {
     const c = capture();
     expect(await runCli(["infer", scratch("a.md", strippedClean)], c.io)).toBe(0);
     expect(c.out()).toContain("Net    = Qty * Rate");
-    expect(c.out()).toContain("4 rules, 4 scalars, 4 anchors.");
+    expect(c.out()).toContain("4 rules, 0 aliases, 4 scalars, 4 anchors.");
   });
 
   test("a document with nothing to propose is not a failure", async () => {
     const c = capture();
     const code = await runCli(["infer", scratch("b.md", "# Nothing here\n")], c.io);
     expect(code).toBe(0);
-    expect(c.out()).toContain("0 rules, 0 scalars, 0 anchors.");
+    expect(c.out()).toContain("0 rules, 0 aliases, 0 scalars, 0 anchors.");
   });
 
   test("a document that already has its rules proposes none of them again", async () => {

@@ -14,7 +14,7 @@ import { closest } from "../report/levenshtein.js";
 import { parseIsoDate } from "./dates.js";
 import { evalExpr, type EvalEnv } from "./evaluate.js";
 import { describeCallProblem, FUNCTIONS, isReduce } from "./functions.js";
-import { chartNode, dependencies, refText, resolve, topoOrder } from "./graph.js";
+import { canonicalName, chartNode, dependencies, refText, resolve, topoOrder } from "./graph.js";
 import { buildArtifact, hasEngine, type Series, suggestEngine } from "../artifact/index.js";
 import { resolveArtifactPath } from "../artifact/path.js";
 import { classify } from "../artifact/stale.js";
@@ -406,7 +406,10 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
           failure = "`" + name + "` needs numbers";
           break;
         }
-        const plain = name.includes(".") ? name.slice(name.indexOf(".") + 1) : name;
+        // the unit and precision maps are keyed by canonical header text, so a
+        // series named through an alias must be translated before either lookup
+        const written = name.includes(".") ? name.slice(name.indexOf(".") + 1) : name;
+        const plain = canonicalName(sheet, written);
         const colId = `${c.sheetId}.${plain}`;
         built.push({
           name,
@@ -665,7 +668,8 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
   /** a label column's cells, verbatim */
   function readLabels(sheetId: string, name: string): string[] | string {
     const sheet = model.sheets.get(sheetId);
-    const idx = sheet?.columnIndex.get(name);
+    // `columnIndex` is keyed by header text; `labelled` may name an alias
+    const idx = sheet?.columnIndex.get(canonicalName(sheet, name));
     if (!sheet?.table || idx === undefined) {
       return "`" + name + "` is not a column of this sheet";
     }

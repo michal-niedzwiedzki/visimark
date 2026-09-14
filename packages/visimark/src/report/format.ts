@@ -67,11 +67,14 @@ function staleLine(f: Finding): string {
   }
   const left = f.rowLabel ? id(f).padEnd(ID_FIELD) + "· " + f.rowLabel : id(f);
   const stored = f.stored ?? "";
-  const pad = Math.max(1, STORED_END - left.length);
+  // the stored value ends at STORED_END, but a long left field (a rule named
+  // after a header text, say) can already run past it — count the spaces to
+  // insert rather than a total width, so there is always a visible gap
+  const gap = Math.max(1, STORED_END - left.length - stored.length);
   const computed = f.formula
     ? (f.computed ?? "").padEnd(COMPUTED_FIELD) + f.formula
     : (f.computed ?? "");
-  return prefix("STALE") + left + stored.padStart(pad) + " ≠ " + computed;
+  return prefix("STALE") + left + " ".repeat(gap) + stored + " ≠ " + computed;
 }
 
 function renderGroup(f: Finding): string[] {

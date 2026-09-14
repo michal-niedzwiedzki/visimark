@@ -308,6 +308,9 @@ export function build(doc: LocatedDoc): DocModel {
         findings.push({
           code: "UNDEF",
           sheetId,
+          // the quoted header text is the only name this binding has; without
+          // it the report renders a bare `sheetId.`
+          name: parsed.name,
           raw: parsed.name,
           suggestion: closest(parsed.name, headerIndex.keys()) ?? undefined,
           span: parsed.span,

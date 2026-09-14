@@ -54,6 +54,37 @@ test("padding for labels shorter than the field is untouched", () => {
   expect(out).toContain(`Delivery of backend   "15.10.2026"`);
 });
 
+test("a STALE row whose id and label overrun the field keeps a gap before the value", () => {
+  // `padStart` takes a total width, not a count of spaces, so a left field
+  // already past STORED_END produced no separator at all — now common, since
+  // a rule may be named after a header text rather than an identifier
+  const f: Finding = {
+    code: "STALE",
+    sheetId: "network",
+    name: "Bandwidth per Unit (TB/s, full-duplex)",
+    rowLabel: "DGX H100",
+    stored: "999",
+    computed: "1000",
+  };
+  const line = formatCheck("x.md", [f]).split("\n")[2]!;
+  expect(line).toContain("DGX H100 999 ≠ 1000");
+  expect(line).not.toContain("DGX H100999");
+});
+
+test("a STALE row of ordinary width still ends its stored value at the same column", () => {
+  const f: Finding = {
+    code: "STALE",
+    sheetId: "order",
+    name: "total",
+    rowLabel: "pen",
+    stored: "24.50",
+    computed: "25.50",
+  };
+  const line = formatCheck("x.md", [f]).split("\n")[2]!;
+  expect(line).toBe("  STALE   order.total     · pen" + " ".repeat(23) + "24.50 ≠ 25.50");
+  expect(line.indexOf(" ≠ ")).toBe(59); // prefix 10 + the 49-wide stored field
+});
+
 test("SHEET renders a bad sheet id's message", () => {
   const f: Finding = {
     code: "SHEET",
