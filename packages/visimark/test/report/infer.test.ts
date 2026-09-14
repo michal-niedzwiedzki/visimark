@@ -57,6 +57,31 @@ describe("the report keeps check's visual idiom with its own field layout", () =
   });
 });
 
+describe("a non-identifier header gets an alias proposal end to end", () => {
+  const doc = [
+    "| Item | Unit Price | Qty |",
+    "|------|-----------:|----:|",
+    "| pen  |       5.00 |   2 |",
+    "| mug  |       8.00 |   1 |",
+    "",
+  ].join("\n");
+
+  test("infer() proposes an alias, not just a column rule search", () => {
+    const proposals = infer(doc);
+    const p = proposals.find((x) => x.kind === "alias")!;
+    expect(p).toBeDefined();
+    expect(p.name).toBe("up");
+    expect(p.header).toBe("Unit Price");
+    expect(p.rule).toBe('"Unit Price" is up');
+  });
+
+  test("formatInfer prints a column aliases section", () => {
+    expect(firstTable(doc)).toContain(
+      ["  column aliases", '    up     for "Unit Price"'].join("\n"),
+    );
+  });
+});
+
 describe("line numbers", () => {
   test("are 1-based and count newlines before the offset", () => {
     const s = "a\nbb\nccc";

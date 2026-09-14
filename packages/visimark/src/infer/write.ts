@@ -47,7 +47,11 @@ export function planInfer(source: string, only?: Proposal[]): PlannedInsert[] {
   if (marker) return [marker];
 
   const writable = proposals.filter(
-    (p) => !p.weak && (p.kind === "column" || (p.kind === "scalar" && p.anchorSite !== undefined)),
+    (p) =>
+      !p.weak &&
+      (p.kind === "column" ||
+        p.kind === "alias" ||
+        (p.kind === "scalar" && p.anchorSite !== undefined)),
   );
 
   const out: PlannedInsert[] = [];
@@ -55,9 +59,14 @@ export function planInfer(source: string, only?: Proposal[]): PlannedInsert[] {
   for (const sheet of ctx.sheets) {
     const here = writable.filter((p) => p.sheetId === sheet.id);
     if (here.length === 0) continue;
+    const aliases = here.filter((p) => p.kind === "alias");
     const columns = here.filter((p) => p.kind === "column");
     const scalars = here.filter((p) => p.kind === "scalar");
-    const body = [align(columns), align(scalars)].filter((g) => g.length > 0).join("\n\n");
+    // Aliases first: they are declarations the rules below them may use, and
+    // a block reads the way it resolves.
+    const body = [alignAliases(aliases), align(columns), align(scalars)]
+      .filter((g) => g.length > 0)
+      .join("\n\n");
     out.push({
       ...blockEdit(source, sheet, body),
       kind: "block",
@@ -154,4 +163,13 @@ function align(group: Proposal[]): string {
   return group
     .map((p) => `${p.name.padEnd(w)} = ${p.rule.slice(p.rule.indexOf("=") + 2)}`)
     .join("\n");
+}
+
+/**
+ * Alias proposals as `"<header>" is <name>` lines, one per proposal. Unlike
+ * `align()`, there is no `name = ...` shape to reconstruct: an alias
+ * proposal's `rule` is already the complete statement, so this just emits it.
+ */
+function alignAliases(group: Proposal[]): string {
+  return group.map((p) => p.rule).join("\n");
 }

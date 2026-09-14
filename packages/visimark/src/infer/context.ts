@@ -23,6 +23,8 @@ export interface InferSheet {
   numeric: string[];
   /** headers that already carry a rule; inference never proposes for these */
   managed: Set<string>;
+  /** headers that already carry an `is` alias; inference never proposes a second one */
+  aliasedHeaders: Set<string>;
   /** rows with a non-empty cell, per header */
   filled: Map<string, number>;
   /** numeric headers whose non-empty cells all hold the same value */
@@ -88,6 +90,7 @@ export function buildContext(source: string): InferContext {
       index,
       numeric,
       managed: new Set(existing?.columns.keys() ?? []),
+      aliasedHeaders: new Set([...(existing?.aliases.values() ?? [])].map((a) => a.header)),
       filled,
       constant,
     } satisfies InferSheet;
