@@ -27,8 +27,8 @@ A second, independently-motivating case surfaced in review: reaching out to othe
 
 Two separate problems are being solved, and the spec keeps them as two separate primitives:
 
-1. **Reachability** — a quoted header is legal wherever an identifier binding name is legal today. This alone lets a formula write to (or, via [§4](../visimark-design.md#4-syntax)'s existing column/scalar split, read) a column whose header is not an identifier.
-2. **Ergonomics** — `is` gives that column a short, formula-facing name so the rest of the sheet does not have to keep repeating the full quoted header.
+1. **Reachability** — a quoted header is legal wherever an identifier binding name is legal today. This alone lets a formula **write** a column rule for a header that is not an identifier — useful when the column is only ever produced, never read back elsewhere in the sheet.
+2. **Ergonomics** — `is` gives that column a short, formula-facing name so the rest of the sheet does not have to keep repeating the full quoted header. `is` is also the *only* way to **read** an existing header's values in a formula: a quoted string is already a string literal in expression position (`IF(Terms == "net 30", …)`), so a bare quoted header cannot double as a column operand without colliding with that — constraint 3 forbids exactly this kind of context-dependent reading. An input column with a non-identifier header is therefore unreachable as a formula operand until it is named with `is`.
 
 No existing catalogue row covers this (see the pre-review's overlap analysis on #86: `Σ`/`SUM` is a closed two-codepoint lexer substitution; `labelled`/`unlabelled` name **imported** CSV columns, not in-document GFM headers; whole-sheet materialisation, REJECTED, was about inlining imported data, not naming).
 
