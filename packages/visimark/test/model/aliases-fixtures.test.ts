@@ -60,21 +60,8 @@ test("column-alias-unused.md: an alias declared and never referenced is WARN", (
 // says this header "cannot be referenced by a quoted form at all" and that
 // `infer` should list it only under "no rule found — treating as inputs",
 // proposing no alias for it.
-//
-// KNOWN GAP, found while writing this acceptance test: `aliasCandidates`
-// (src/infer/aliases.ts) does not check for an embedded `"` before building
-// the `"<header>" is <name>` rule string, so `infer()` currently *does*
-// propose an (unusable, unparseable) alias for this header — in addition to,
-// not instead of, listing it under "no rule found". This assertion documents
-// the CURRENT behaviour so the suite stays green; see the Task 9 report for
-// the full write-up. Flip this assertion to `toEqual([])` once
-// `aliasCandidates` is fixed to skip headers containing a literal `"`.
 test("column-alias-quoted-string-header.md: infer proposes no alias for a header containing a literal quote", () => {
   const proposals = infer(fixture("column-alias-quoted-string-header.md"));
   const aliasProposals = proposals.filter((p) => p.kind === "alias");
-  // TODO(known gap): per spec §7 this should be `toEqual([])`. It is not,
-  // today — see the comment above.
-  expect(aliasProposals).toEqual([
-    expect.objectContaining({ kind: "alias", header: 'Length ("inch")' }),
-  ]);
+  expect(aliasProposals).toEqual([]);
 });

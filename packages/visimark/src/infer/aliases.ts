@@ -58,6 +58,11 @@ export function aliasCandidates(
     if (IDENT_RE.test(header)) continue;
     if (sheet.managed.has(header)) continue; // already has a rule
     if (sheet.aliasedHeaders.has(header)) continue; // already has an alias
+    // A literal `"` can never be legally quoted — the lexer's string-literal
+    // grammar has no escape sequence (see lang/lexer.ts), so a header with
+    // one is unreachable by quoted reference or alias (spec §7). Skip it
+    // rather than propose an alias rule that could never parse.
+    if (header.includes('"')) continue;
     const name = generateAliasName(header);
     if (seen.has(name)) {
       collisions.push({ header, name });

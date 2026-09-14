@@ -69,4 +69,11 @@ describe("which headers get a proposal", () => {
     const ps = proposeAliases(sheetWithHeaders(["Net Total", "New Term"]), new Set());
     expect(ps.map((p) => p.header)).toEqual(["Net Total"]);
   });
+
+  test("a header containing a literal quote gets no alias proposal", () => {
+    // A `"` inside the header can never be legally quoted — the lexer's
+    // string-literal grammar has no escape sequence — so proposing an alias
+    // rule for it would be unparseable (spec §7).
+    expect(proposeAliases(sheetWithHeaders(['Length ("inch")']), new Set())).toEqual([]);
+  });
 });
