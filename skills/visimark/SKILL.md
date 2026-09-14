@@ -34,6 +34,13 @@ call it refuses to make for you.
 
 `check` says the same thing, as a failure, on a document with no rules.
 
+A header that already exists as human-facing prose — `Bandwidth per Unit
+(TB/s, full-duplex)` — is not a formula name, and **you do not rewrite it into
+one.** Rewriting someone else's header is exactly the kind of intrusion this
+tool exists to avoid. `infer` proposes a short `is` alias for such a header
+alongside its rule proposals; accept that, or write it yourself — see
+"Non-identifier headers" below.
+
 ## The trap it closes: a green check proves nothing on its own
 
 `visimark check` verifies that the formulas in a document agree with the
@@ -151,6 +158,30 @@ or **16236.00**<!--vmark=lines.gross_total--> PLN gross.
 Write the table cells as `0.00` placeholders and run `visimark fmt` to fill
 them in. Do not compute them yourself.
 
+## Non-identifier headers
+
+A column rule's name is ordinarily the header text itself, so it normally has
+to be a bare identifier. A header with spaces, units or punctuation — the kind
+a human actually writes — needs one of these instead of a rewrite:
+
+```
+"Bandwidth per Unit (TB/s, full-duplex)" is bpu
+"GPU-to-GPU Bandwidth (GB/s, full-duplex)" =
+    ROUND(bpu / GPUs * 1000, 0)
+```
+
+- **`"Header text" is symbol`** gives that column a short name usable
+  everywhere afterward — as an operand, inside `SUM()`/other reduces, and as
+  the left of an ordinary `symbol = expr` rule. This is the only way to *read*
+  such a column in a formula; a bare quoted string is already a string
+  literal, so it cannot double as an operand.
+- **`"Header text" = expr`** writes a rule directly, no alias needed, when you
+  only ever produce that column and never read it back elsewhere.
+
+Matching is byte-for-byte against the header's exact printed text — no
+trimming, no case-folding. Neither form ever touches the table: the header
+stays exactly as written.
+
 ## Rules that bite
 
 | Rule | Consequence if ignored |
@@ -164,6 +195,8 @@ them in. Do not compute them yourself.
 | Currency in prose goes **outside** the anchor | `**13200.00**<!--vmark=lines.net_total--> PLN` — not inside the bold. |
 | A name bound twice in one scope is a `DUP` error | The first binding wins and the second is reported. |
 | An unreferenced scalar is a `WARN` | Usually means you typo'd a column name and silently created a scalar. |
+| Two header cells sharing identical text is a `DUP` error | Neither becomes usable as a name — bare or quoted — until the headers are told apart. |
+| `is` is a reserved word | Naming a column or scalar `is` is refused; use it only for `"Header" is symbol` aliases. |
 
 ## Editing an existing document
 
