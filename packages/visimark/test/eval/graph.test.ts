@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { clean, drift } from "../examples.js";
 import { locate } from "../../src/parse/document.js";
 import { build } from "../../src/model/build.js";
+import { check } from "../../src/eval/check.js";
 import { dependencies, resolve, topoOrder } from "../../src/eval/graph.js";
 
 const cleanModel = () => build(locate(clean));
@@ -37,6 +38,48 @@ test("foreign column inside an aggregate is a legal dependency", () => {
   const info = dependencies(m, scheduled);
   expect(info.vectorRefs).toEqual([]);
   expect(info.deps.has("schedule.Amount")).toBe(true);
+});
+
+const aliasDoc = () => `
+| GPUs | Bandwidth per Unit (TB/s, full-duplex) |
+|-----:|----------------------------------------:|
+|    8 |                                      3.2 |
+
+\`\`\`vmark #network
+"Bandwidth per Unit (TB/s, full-duplex)" is bpu
+peak = bpu
+\`\`\`
+`;
+
+test("a bare alias resolves as an input-column, same as its header would", () => {
+  const model = build(locate(aliasDoc()));
+  const r = resolve(model, "network", { name: "bpu" });
+  expect(r).toMatchObject({
+    kind: "input-column",
+    sheetId: "network",
+    column: "Bandwidth per Unit (TB/s, full-duplex)",
+  });
+});
+
+test("a foreign reference through an alias is a vector outside an aggregate", () => {
+  const twoSheets = `
+${aliasDoc()}
+\`\`\`vmark #other
+x = network.bpu
+\`\`\`
+`;
+  const r = build(locate(twoSheets));
+  const checkResult = check(r);
+  expect(checkResult.findings.some((f) => f.code === "VECTOR" && f.raw === "network.bpu")).toBe(
+    true,
+  );
+});
+
+test("a typo'd alias suggests the real alias via did-you-mean", () => {
+  const model = build(locate(aliasDoc()));
+  const r = resolve(model, "network", { name: "bpuu" });
+  expect(r.kind).toBe("unknown");
+  if (r.kind === "unknown") expect(r.suggestion).toBe("bpu");
 });
 
 test("the late_fees cycle is reported with a full data-flow path", () => {

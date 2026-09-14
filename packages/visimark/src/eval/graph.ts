@@ -76,12 +76,14 @@ export function resolve(
         suggestion: closest(ref.qualifier, model.sheets.keys()),
       };
     }
-    const col = sheet.columns.get(ref.name);
+    const alias = sheet.aliases.get(ref.name);
+    const name = alias ? alias.header : ref.name;
+    const col = sheet.columns.get(name);
     if (col) return { kind: "column", binding: col, sheetId: sheet.id };
-    if (sheet.inputColumns.has(ref.name)) {
-      return { kind: "input-column", sheetId: sheet.id, column: ref.name };
+    if (sheet.inputColumns.has(name)) {
+      return { kind: "input-column", sheetId: sheet.id, column: name };
     }
-    const sc = sheet.scalars.get(ref.name);
+    const sc = sheet.scalars.get(name);
     if (sc) return { kind: "scalar", binding: sc, sheetId: sheet.id };
     return {
       kind: "unknown",
@@ -90,18 +92,21 @@ export function resolve(
         ...sheet.columns.keys(),
         ...sheet.inputColumns,
         ...sheet.scalars.keys(),
+        ...sheet.aliases.keys(),
       ]),
     };
   }
 
   const sheet = model.sheets.get(fromSheetId);
+  const alias = sheet?.aliases.get(ref.name);
+  const name = alias ? alias.header : ref.name;
   if (sheet) {
-    const col = sheet.columns.get(ref.name);
+    const col = sheet.columns.get(name);
     if (col) return { kind: "column", binding: col, sheetId: sheet.id };
-    if (sheet.inputColumns.has(ref.name)) {
-      return { kind: "input-column", sheetId: sheet.id, column: ref.name };
+    if (sheet.inputColumns.has(name)) {
+      return { kind: "input-column", sheetId: sheet.id, column: name };
     }
-    const sc = sheet.scalars.get(ref.name);
+    const sc = sheet.scalars.get(name);
     if (sc) return { kind: "scalar", binding: sc, sheetId: sheet.id };
   }
   const doc = model.docScope.get(ref.name);
@@ -112,6 +117,7 @@ export function resolve(
     for (const k of sheet.columns.keys()) candidates.add(k);
     for (const k of sheet.inputColumns) candidates.add(k);
     for (const k of sheet.scalars.keys()) candidates.add(k);
+    for (const k of sheet.aliases.keys()) candidates.add(k);
   }
   return {
     kind: "unknown",
