@@ -142,6 +142,11 @@ export function lex(src: string): Token[] {
         // rejected by the parser wherever a statement is not expected. See the
         // design doc, section 17.
         push("assert", text, start, i);
+      } else if (text === "is") {
+        // `is` introduces a column-alias declaration: `"Header" is symbol`.
+        // Reserved everywhere, like `chart`/`assert`. See
+        // docs/design/human-readable-column-aliases-spec.md.
+        push("is", text, start, i);
       } else {
         push("ident", text, start, i);
       }

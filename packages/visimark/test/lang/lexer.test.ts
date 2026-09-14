@@ -130,6 +130,13 @@ test("a word merely starting with `chart` is an ident", () => {
   expect(lex("charts")[0]!.kind).toBe("ident");
 });
 
+// --- human-readable column aliases (#86) ------------------------------------
+
+test("`is` lexes as a keyword, not an identifier", () => {
+  const toks = lex("is");
+  expect(toks[0]).toMatchObject({ kind: "is", value: "is" });
+});
+
 // --- Σ / ∑ alias for SUM (#43) ----------------------------------------------
 
 test("Σ and ∑ lex as the identifier SUM", () => {
