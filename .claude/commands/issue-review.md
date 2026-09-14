@@ -18,14 +18,14 @@ Arguments: `$ARGUMENTS`
 
 ```mermaid
 flowchart LR
-  load[Load and guard] --> dirty{Dirty working tree?}
+  load[Load and guard] --> dirty{"Dirty working tree?"}
   dirty -->|yes| stopDirty[Stop]
-  dirty -->|no| decided{Already decided?}
+  dirty -->|no| decided{"Already decided?"}
   decided -->|yes| stopDecided["Stop: use /issue-decide"]
   decided -->|no| track{Track}
 
   track -->|VOCAB| parse[Parse the form]
-  parse --> incomplete{INCOMPLETE?}
+  parse --> incomplete{"INCOMPLETE?"}
   incomplete -->|yes| commentFill[Comment: fill blank fields]
   incomplete -->|no| rubricV[Verify document, score rubric]
 
@@ -38,10 +38,10 @@ flowchart LR
 
   rubricV --> out[Disposition]
   rubricG --> out
-  out --> draft{--draft?}
+  out --> draft{"--draft?"}
   draft -->|yes| print[Print only]
   draft -->|no| post[Post pre-review comment]
-  post --> row{Catalogue row?}
+  post --> row{"Catalogue row?"}
   row -->|yes| pr[Open NEW-row PR]
   row -->|no| done[Stop after the comment]
   commentFill --> done

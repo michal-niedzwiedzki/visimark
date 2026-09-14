@@ -18,12 +18,12 @@ Arguments: `$ARGUMENTS` — the issue number `<n>`, nothing else.
 
 ```mermaid
 flowchart LR
-  load[Load the issue] --> decided{Decision comment exists?}
+  load[Load the issue] --> decided{"Decision comment exists?"}
   decided -->|yes| refuse["Refuse: reopen via /issue-decide"]
-  decided -->|no| session{Session discussion?}
+  decided -->|no| session{"Session discussion?"}
   session -->|no| nothing[Refuse: nothing to summarize]
   session -->|yes| draft[Draft the summary]
-  draft --> ask{Post this summary?}
+  draft --> ask{"Post this summary?"}
   ask -->|Revise| draft
   ask -->|Cancel| cancel[Post nothing]
   ask -->|Post| post[Comment on the issue]

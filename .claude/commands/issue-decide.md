@@ -48,13 +48,13 @@ Settle on `APPROVED` / `DEFERRED` / `REJECTED` and the reason, citing the design
 
 ```mermaid
 flowchart LR
-  reread[Re-read the issue] --> dirty{Dirty tree?}
+  reread[Re-read the issue] --> dirty{"Dirty tree?"}
   dirty -->|yes| stop[Stop]
   dirty -->|no| evalStep[Evaluate]
   evalStep --> verdict{Verdict}
   verdict -->|DEFERRED or REJECTED| comment[Post the Decision comment]
   verdict -->|APPROVED| spec[Draft the spec with the maintainer]
-  spec --> ready{Spec ready?}
+  spec --> ready{"Spec ready?"}
   ready -->|Keep editing| spec
   ready -->|Change the verdict| evalStep
   ready -->|Ready| comment
@@ -62,14 +62,14 @@ flowchart LR
   cat --> after{Verdict}
   after -->|DEFERRED or REJECTED| close[Close the issue]
   after -->|APPROVED| impl[Open a draft impl PR with the spec]
-  impl --> planQ{Write the plan now?}
+  impl --> planQ{"Write the plan now?"}
   planQ -->|Not now| laterPlan[Stop: writing-plans later]
   planQ -->|Write it| plan[Commit the plan]
-  plan --> implQ{Start implementation?}
+  plan --> implQ{"Start implementation?"}
   implQ -->|Not now| laterImpl[Stop: executing-plans later]
-  implQ -->|Start| code[Execute the plan]
-  code --> ci{CI green?}
-  ci -->|no| code
+  implQ -->|Start| implRun[Execute the plan]
+  implRun --> ci{"CI green?"}
+  ci -->|no| implRun
   ci -->|yes| readyPR[Promote the PR out of draft]
 ```
 

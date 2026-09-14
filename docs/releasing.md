@@ -36,12 +36,12 @@ flowchart LR
   run --> ovsx[Open VSX]
   run --> ghrel[GitHub Release with vsix]
   run --> closeIss[Close shipped request issues]
-  npm --> present{Version already there?}
+  npm --> present{"Version already there?"}
   vsce --> present
   ovsx --> present
   present -->|yes| skip[Skip that leg]
   present -->|no| pub[Publish]
-  pub --> rejected{Registry rejects?}
+  pub --> rejected{"Registry rejects?"}
   rejected -->|yes| fail[Fail the whole run]
   rejected -->|no| ok[Leg done]
   skip --> verify[Verify every leg]

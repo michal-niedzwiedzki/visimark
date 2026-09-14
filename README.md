@@ -207,10 +207,10 @@ dependencies are reported with the full path through the cycle.
 
 ```mermaid
 flowchart LR
-  parse[Parse Markdown] --> graph[Build dependency graph]
-  graph --> sort[Topological sort]
-  sort --> eval[Evaluate in decimal]
-  eval --> cycle{Cycle?}
+  parse[Parse Markdown] --> deps[Build dependency graph]
+  deps --> sort[Topological sort]
+  sort --> evaluate[Evaluate in decimal]
+  evaluate --> cycle{"Cycle?"}
   cycle -->|yes| report[Report the CYCLE path]
   cycle -->|no| values[Computed values]
 ```
@@ -225,12 +225,12 @@ document into a state `check` can be strict about, or to explain what it did.
 
 ```mermaid
 flowchart LR
-  plain[Plain table] -->|infer --write| wired[Rules and anchors in the file]
+  plain[Plain table] -->|"infer --write"| wired[Rules and anchors in the file]
   wired -->|edit an input or a rule| stale[Stored values disagree]
   stale -->|fmt| wired
   stale -->|check| fail[Exit 1]
   wired -->|check| pass[Exit 0]
-  wired -.-> eval[eval / explain]
+  wired -.-> evalCmd["eval / explain"]
 ```
 
 | Command | What it does | Options | What it writes | Exit codes |

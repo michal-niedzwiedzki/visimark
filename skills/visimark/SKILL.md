@@ -36,14 +36,14 @@ call it refuses to make for you.
 
 ```mermaid
 flowchart LR
-  incoming[Incoming document] --> existing{Numbers already there, no rules?}
+  incoming[Incoming document] --> existing{"Numbers already there, no rules?"}
   existing -->|yes| infer["infer, then infer --write"]
   existing -->|no| shape[Table, then vmark block, then anchors, then prose]
   infer --> shape
   shape --> fmt["fmt fills computed cells"]
   fmt --> probe[Change one input]
   probe --> checkCmd[check]
-  checkCmd --> broke{Reports problems?}
+  checkCmd --> broke{"Reports problems?"}
   broke -->|no| unwired[Not derived: fix]
   broke -->|yes| restore[Undo the probe]
   restore --> later["Later: change an input or a rule, then fmt"]

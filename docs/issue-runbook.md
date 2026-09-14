@@ -16,16 +16,16 @@ The commands look at the issue and pick a track:
 
 ```mermaid
 flowchart LR
-  issue[Issue] --> track{vocabulary label and title?}
+  issue[Issue] --> track{"vocabulary label and title?"}
   track -->|yes| vocab[VOCAB track]
   vocab --> ad[Catalogue A to D]
   track -->|no| general[GENERAL track]
-  general --> class{Class}
-  class -->|language feature| e[Catalogue E]
-  class -->|tooling or process| f[Catalogue F]
-  class -->|vocabulary primitive| refile[Refile on the template]
-  class -->|documentation or bug| comment[Pre-review comment, no row]
-  class -->|too thin| ask[Ask for the missing pieces]
+  general --> kind{Class}
+  kind -->|language feature| e[Catalogue E]
+  kind -->|tooling or process| f[Catalogue F]
+  kind -->|vocabulary primitive| refile[Refile on the template]
+  kind -->|documentation or bug| comment[Pre-review comment, no row]
+  kind -->|too thin| ask[Ask for the missing pieces]
 ```
 
 - **Vocabulary request** — label `vocabulary` **and** title `vocabulary: …`.
@@ -65,9 +65,9 @@ flowchart LR
   spec --> cat[Merge catalogue]
   cat --> impl[Draft impl PR]
   impl --> plan[Optional plan]
-  plan --> code[Optional implement]
-  code --> ci{CI green?}
-  ci -->|no| code
+  plan --> implRun[Optional implement]
+  implRun --> ci{"CI green?"}
+  ci -->|no| implRun
   ci -->|yes| ready[Promote PR]
   ready --> merge[Merge impl]
   merge --> unreleased[Catalogue UNRELEASED]
@@ -123,7 +123,7 @@ information to the issue, then run `/issue-decide <n>` again:
 flowchart LR
   newInfo[New information on the issue] --> again["/issue-decide again"]
   again --> edit[Edit the existing catalogue row]
-  edit --> reuse{APPROVED and impl PR exists?}
+  edit --> reuse{"APPROVED and impl PR exists?"}
   reuse -->|yes| onto[Commit the revised spec onto it]
   reuse -->|no| rest[Same landing path as a first decision]
 ```
