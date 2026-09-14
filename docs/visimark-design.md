@@ -104,6 +104,15 @@ block that declares column rules but owns no table is a `SHEET` error, so
 inserting a paragraph between a table and its block fails loudly rather than
 silently detaching the rules.
 
+**A column rule's left-hand side may also be a quoted string** instead of an
+identifier, matched byte-for-byte against a header cell's raw source text
+rather than parsed as a name — see [§4](#4-syntax). This is what lets a
+formula target a header that is not itself a valid identifier, one carrying
+spaces or punctuation, without rewriting the table. Two header cells sharing
+byte-identical text are a `DUP` finding ([§10](#10-error-taxonomy)), naming
+both positions — closing what was previously an unremarked last-write-wins
+collision, for identifier-shaped headers as much as for any other.
+
 **Anchors** materialise a scalar into prose:
 
 ```markdown
@@ -135,6 +144,28 @@ Columns not named by any rule are **inputs**: human-owned, never written.
 
 There are no per-row exceptions and no totals row inside a table. A total is a
 scalar, and it reaches the reader through an anchor.
+
+**Quoted bindings.** A binding's left-hand side may also be a string literal —
+`"Header text" = expr` — using the same grammar that already lexes `"net 30"`
+below, verbatim between two `"` characters, no escapes. It is a column rule if
+and only if the quoted text is byte-identical to some header cell's text in
+the sheet's table ([§3](#3-document-model)); there is no other outcome. **A
+quoted binding never falls back to becoming a scalar** the way an unresolved
+identifier binding never arises in the first place — an unresolved quoted
+header is unambiguously a mistake, not a new named value, so it is an `UNDEF`
+error naming the quoted text, with a did-you-mean against the sheet's header
+texts ([§10](#10-error-taxonomy)).
+
+**`is` — alias declaration.** `is` is a reserved word, tokenised beside `chart`
+([§18](#18-generated-artifacts)) and `assert` ([§17](#17-assertions)): it may
+not be a bound name or a column header. `"Header text" is symbol` gives that
+header's column a second name, an ordinary identifier, usable everywhere a
+column's own identifier name already is — as a bare operand, as a reduce's
+argument, or as the left-hand side of an ordinary `symbol = expr` binding,
+which is then a column rule for that header exactly as `"Header text" = expr`
+would be. The alias creates no second column and no second node in the
+dependency graph; it is a second key resolving to the same column data
+([§6](#6-name-resolution-and-scoping)).
 
 **Literals.**
 
@@ -292,6 +323,14 @@ qualified name `sheet.name` reaches another sheet's columns or scalars
 directly. An unresolvable name is an `UNDEF` error carrying a did-you-mean
 suggestion by edit distance.
 
+**An `is` alias ([§4](#4-syntax)) resolves before any other name lookup.**
+Once `"Header text" is symbol` is processed, `symbol` is inserted into the
+sheet's name space as a first-class key, and is indistinguishable everywhere
+after that from a column whose header was itself the identifier `symbol` —
+the same resolution order above, the same `DUP` check, the same did-you-mean
+on `UNDEF`. There is no separate alias-resolution step visible to the rest of
+the language.
+
 Because there is no global search, two tables that both have a `Net` column
 never collide: they are two sheets, and the names are `a.Net` and `b.Net`. A
 bare `Net` is always the one in the current sheet.
@@ -445,7 +484,7 @@ justifies the project.
 | `DATE` | not an ISO 8601 calendar date | only if decidable, with `--fix-dates` |
 | `UNIT` | a column mixes unit decorations, or a value is decorated on both sides | no |
 | `UNDEF` | unresolvable name | no |
-| `DUP` | a name is bound twice in one scope | no |
+| `DUP` | a name is bound twice in one scope, or two header cells sharing text | no |
 | `VECTOR` | foreign column outside an aggregate | no |
 | `CYCLE` | circular dependency | no |
 | `TYPE` | illegal operand types, or a malformed call (name, arity, shape) | no |
@@ -454,7 +493,7 @@ justifies the project.
 | `ASSERT` | an `assert` statement evaluated false ([§17](#17-assertions)) | no |
 | `ARTIFACT` | a declared artifact cannot be built or written ([§18](#18-generated-artifacts)) | no |
 | `IMPORT` | a declared local import cannot be resolved: unstamped, missing file, malformed stamp, bad path, malformed CSV, or a column rule attempted on a read-only imported sheet ([§19](#19-declared-local-data-imports)) | no (except the stamp itself — see below) |
-| `WARN` | scalar defined and never read | no |
+| `WARN` | scalar defined and never read, or an alias declared and never used | no |
 | `NOTE` | finding suppressed by an upstream error | n/a |
 
 `fmt` repairs every `STALE` finding without asking, because those cells are
@@ -466,6 +505,15 @@ import stamp is `STALE`, and `fmt` rewrites the digest — the one part of an
 `STALE`, but `fmt` still repairs it, by adding the stamp — the sole `IMPORT`
 finding `fmt` fixes without asking, since it is legal authoring syntax rather
 than a question for a human ([§19](#19-declared-local-data-imports)).
+
+`DUP` is widened again here, as it was for `STALE` above: two header cells
+sharing byte-identical text are `DUP` before any binding names them at all
+([§3](#3-document-model)), and an alias symbol colliding with an existing
+column, scalar, builtin or keyword is `DUP` by the same mechanism as any other
+name collision ([§6](#6-name-resolution-and-scoping)). `WARN` is widened the
+same way: an `is` alias declared and never referenced by any expression is
+`WARN`, naming the alias, exactly as an unreferenced scalar already is
+([§6](#6-name-resolution-and-scoping)).
 
 ## 11. CLI
 

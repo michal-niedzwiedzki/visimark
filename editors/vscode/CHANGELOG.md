@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- A quoted GFM header is now a legal column-rule left-hand side, and
+  `"Header" is symbol` names it for use in formulas. `is` is now a reserved
+  word: a document that used it as a column or scalar name will start getting
+  a diagnostic where it previously did not.
 - Three more chart engines are supported: `line`, `area` and `stacked-bar`,
   alongside the existing `pie` and `bar`. `stacked-bar` is written as a single
   hyphenated engine name with no spaces around the `-`.

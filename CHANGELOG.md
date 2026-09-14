@@ -4,6 +4,12 @@
 
 ### Added
 
+- **Human-readable column references and aliases** (issue #86) — a quoted GFM
+  header (`"Header" = expr`) is now a legal column-rule left-hand side, and
+  `"Header" is symbol` gives that column a short formula-facing name — closes
+  #86. See
+  [`human-readable-column-aliases-spec.md`](docs/design/human-readable-column-aliases-spec.md)
+  and [§4](docs/visimark-design.md#4-syntax).
 - **Declared local data imports with integrity stamps** (issue #66) — a sheet
   may take its table from a declared local CSV file instead of an inline GFM
   table: `` ```vmark #benchmark from benchmark.csv at sha256:<digest> ``. `fmt`
