@@ -94,3 +94,47 @@ test("two blocks sharing a sheet id collide on a repeated name", () => {
 test("splitting one sheet across blocks is legal when names do not collide", () => {
   expect(run(splitAcrossBlocksNoCollision).findings).toEqual([]);
 });
+
+const duplicateHeaders = `
+| Rate | Rate |
+|-----:|-----:|
+| 0.23 | 0.19 |
+
+\`\`\`vmark #tax
+x = 1
+\`\`\`
+`;
+
+test("two header cells sharing identical text is DUP", () => {
+  const r = build(locate(duplicateHeaders));
+  const dups = r.findings.filter((f) => f.code === "DUP");
+  expect(dups.length).toBe(1);
+  expect(dups[0]).toMatchObject({ sheetId: "tax", name: "Rate" });
+});
+
+test("a duplicated header DUP names both header positions", () => {
+  const d = build(locate(duplicateHeaders)).findings.find((f) => f.code === "DUP")!;
+  expect(duplicateHeaders.slice(d.span!.start, d.span!.end)).toBe("Rate");
+  expect(duplicateHeaders.slice(d.relatedSpan!.start, d.relatedSpan!.end)).toBe("Rate");
+  expect(d.relatedSpan!.start).toBeLessThan(d.span!.start);
+});
+
+test("a duplicated header name is unusable as a column rule target", () => {
+  const withRule = `
+| Rate | Rate |
+|-----:|-----:|
+| 0.23 | 0.19 |
+
+\`\`\`vmark #tax
+"Rate" = 1
+\`\`\`
+`;
+  const r = build(locate(withRule));
+  expect(r.findings.some((f) => f.code === "UNDEF")).toBe(true);
+});
+
+test("a duplicated header is not an input column either", () => {
+  const sheet = build(locate(duplicateHeaders)).sheets.get("tax")!;
+  expect(sheet.inputColumns.has("Rate")).toBe(false);
+  expect(sheet.columnIndex.has("Rate")).toBe(false);
+});
