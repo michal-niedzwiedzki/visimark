@@ -1,5 +1,5 @@
 import { expect, test, describe } from "bun:test";
-import { charts, chartsPath, chartFailPath, clean, drift } from "./examples.js";
+import { bandwidth, charts, chartsPath, chartFailPath, clean, drift } from "./examples.js";
 import { locate } from "../src/parse/document.js";
 import { build } from "../src/model/build.js";
 import { check } from "../src/eval/check.js";
@@ -105,5 +105,38 @@ describe("example-charts.md is the generated-artifact acceptance", () => {
     );
     expect(r.exitCode).toBe(1);
     expect(fmt(src, { docPath: chartFailPath }).artifacts).toEqual([]);
+  });
+});
+
+describe("example-bandwidth.md is the column-aliases acceptance", () => {
+  test("zero findings", () => {
+    const r = run(bandwidth);
+    expect(r.findings).toEqual([]);
+    expect(r.exitCode).toBe(0);
+  });
+
+  test("fmt is byte-for-byte identical", () => {
+    expect(fmt(bandwidth, {}).output).toBe(bandwidth);
+  });
+
+  test("the sheet's aliases name both the aliased input column and the aliased output column", () => {
+    const model = build(locate(bandwidth));
+    const sheet = model.sheets.get("network")!;
+    expect(sheet.aliases.get("bpu")).toMatchObject({
+      header: "Bandwidth per Unit (TB/s, full-duplex)",
+    });
+    expect(sheet.aliases.get("gpu_bw")).toMatchObject({
+      header: "GPU-to-GPU Bandwidth (GB/s, full-duplex)",
+    });
+    // gpu_bw is written through its alias, so the rule is keyed by the header,
+    // not the alias symbol (see test/model/aliases.test.ts for why).
+    expect(sheet.columns.has("GPU-to-GPU Bandwidth (GB/s, full-duplex)")).toBe(true);
+  });
+
+  test("peak is the larger of the two rows' GPU-to-GPU bandwidth", () => {
+    const r = run(bandwidth);
+    const peak = r.values.get("network.peak")!;
+    expect(peak.t).toBe("num");
+    expect(peak.t === "num" ? peak.d.toString() : undefined).toBe("400");
   });
 });
