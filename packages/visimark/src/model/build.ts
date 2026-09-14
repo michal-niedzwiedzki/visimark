@@ -235,6 +235,7 @@ function ensureSheet(
       scalars: new Map(),
       columnIndex: new Map(),
       inputColumns: new Set(),
+      aliases: new Map(),
       assertions: [],
       charts: [],
       imported,

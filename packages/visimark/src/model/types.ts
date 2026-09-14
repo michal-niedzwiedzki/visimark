@@ -127,6 +127,13 @@ export interface Sheet {
   columnIndex: Map<string, number>;
   /** header names with no rule — human-owned inputs */
   inputColumns: Set<string>;
+  /** `"<header>" is <symbol>` declarations, keyed by `symbol`. An alias is
+   *  never a second binding or a second column — `resolve()` in eval/graph.ts
+   *  translates a reference to `symbol` into a reference to `header` before
+   *  doing any lookup, so `columns` / `scalars` / `inputColumns` / `columnIndex`
+   *  stay keyed by canonical header text only. See
+   *  docs/design/human-readable-column-aliases-spec.md. */
+  aliases: Map<string, { header: string; span: Span }>;
   /** `assert` statements, in block-declaration order */
   assertions: Assertion[];
   /** `chart` declarations, in block-declaration order */
