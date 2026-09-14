@@ -190,6 +190,46 @@ test("an advisory finding is reported without failing the run", () => {
   expect(r.exitCode).toBe(0);
 });
 
+const unusedAlias = `
+| GPUs | Bandwidth per Unit (TB/s, full-duplex) |
+|-----:|----------------------------------------:|
+|    8 |                                      3.2 |
+
+\`\`\`vmark #network
+"Bandwidth per Unit (TB/s, full-duplex)" is bpu
+peak = 1
+assert peak > 0
+\`\`\`
+`;
+
+test("an alias declared and never referenced is WARN", () => {
+  const r = run(unusedAlias);
+  expect(r.findings).toEqual([
+    { code: "WARN", sheetId: "network", name: "bpu", span: expect.anything() },
+  ]);
+});
+
+const usedInExpr = unusedAlias.replace("peak = 1", "peak = bpu");
+test("an alias referenced in an expression is not WARN", () => {
+  const r = run(usedInExpr);
+  expect(r.findings.filter((f) => f.code === "WARN")).toEqual([]);
+});
+
+const usedInChart = `
+| GPUs | Bandwidth per Unit (TB/s, full-duplex) |
+|-----:|----------------------------------------:|
+|    8 |                                      3.2 |
+
+\`\`\`vmark #network
+"Bandwidth per Unit (TB/s, full-duplex)" is bpu
+chart bw as pie of bpu labelled GPUs
+\`\`\`
+`;
+test("an alias referenced only in a chart's series is not WARN", () => {
+  const r = run(usedInChart);
+  expect(r.findings.filter((f) => f.code === "WARN")).toEqual([]);
+});
+
 // ---- sheet-id / anchor-comment grammar hardening (issue #38) --------
 
 const HYPHENATED_SHEET_ID = `
