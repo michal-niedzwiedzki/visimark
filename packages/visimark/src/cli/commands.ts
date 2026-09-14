@@ -455,6 +455,7 @@ export function cmdExplain(args: string[], out: Writer, err: Writer): number {
               }
             : {}),
           inputs: [...sheet.inputColumns],
+          aliases: [...sheet.aliases].map(([symbol, entry]) => ({ symbol, header: entry.header })),
           rules: [...sheet.columns.values()].map((b) => ({ name: b.name, rule: slice(model, b) })),
           scalars: [...sheet.scalars.values()].map((b) => ({
             name: b.name,
@@ -502,6 +503,10 @@ export function cmdExplain(args: string[], out: Writer, err: Writer): number {
     }
     if (sheet.inputColumns.size > 0) {
       out(`  inputs:  ${[...sheet.inputColumns].join(", ")}`);
+    }
+    if (sheet.aliases.size > 0) {
+      out("  aliases:");
+      for (const [symbol, entry] of sheet.aliases) out(`    ${symbol} → "${entry.header}"`);
     }
     if (sheet.columns.size > 0) {
       out("  rules:");

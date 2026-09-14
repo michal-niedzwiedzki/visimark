@@ -261,3 +261,28 @@ test("explain --json unknown sheet: USAGE, exit 2", async () => {
     error: { code: "USAGE" },
   });
 });
+
+const withAlias = `
+| GPUs | Bandwidth per Unit (TB/s, full-duplex) |
+|-----:|----------------------------------------:|
+|    8 |                                      3.2 |
+
+\`\`\`vmark #network
+"Bandwidth per Unit (TB/s, full-duplex)" is bpu
+peak = bpu
+\`\`\`
+`;
+
+test("explain --json lists an aliased column's header", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "visimark-json-"));
+  const p = join(dir, "alias.md");
+  writeFileSync(p, withAlias);
+  const c = capture();
+  expect(await runCli(["explain", p, "--json"], c.io)).toBe(0);
+  const j = parseOut(c);
+  const sheets = j.sheets as { id: string; aliases?: { symbol: string; header: string }[] }[];
+  const networkSheet = sheets.find((s) => s.id === "network");
+  expect(networkSheet?.aliases).toEqual([
+    { symbol: "bpu", header: "Bandwidth per Unit (TB/s, full-duplex)" },
+  ]);
+});

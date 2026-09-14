@@ -214,3 +214,25 @@ test("explain lists a sheet's assertions", async () => {
   await runCli(["explain", assertFailPath], c.io);
   expect(c.out()).toContain("  assertions:\n    total == 1");
 });
+
+const withAlias = `
+| GPUs | Bandwidth per Unit (TB/s, full-duplex) |
+|-----:|----------------------------------------:|
+|    8 |                                      3.2 |
+
+\`\`\`vmark #network
+"Bandwidth per Unit (TB/s, full-duplex)" is bpu
+peak = bpu
+\`\`\`
+`;
+
+test("explain lists an aliased column's header", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "visimark-"));
+  const p = join(dir, "alias.md");
+  writeFileSync(p, withAlias);
+  const c = capture();
+  const code = await runCli(["explain", p], c.io);
+  expect(code).toBe(0);
+  expect(c.out()).toContain("aliases:");
+  expect(c.out()).toContain('bpu → "Bandwidth per Unit (TB/s, full-duplex)"');
+});
