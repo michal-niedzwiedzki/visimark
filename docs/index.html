@@ -1228,10 +1228,13 @@ $ npx visimark check invoice.md</pre>
             <h3>As an agent skill</h3>
           </div>
           <p>
-            VisiMark ships an agent skill &mdash; copy it in, and an agent picks up authoring and
+            VisiMark ships an agent skill &mdash; install it and an agent picks up authoring and
             verification discipline automatically, no prompting required.
           </p>
-          <pre>$ cp -r skills/visimark ~/.claude/skills/visimark</pre>
+          <pre>
+$ npx skills add michal-niedzwiedzki/visimark
+<span class="c"># or, copied in by hand</span>
+$ cp -r skills/visimark ~/.claude/skills/visimark</pre>
           <p style="margin-top: 14px">
             Its central warning is worth stating here too: a green check is evidence of agreement,
             not of derivation. Change an input and confirm the checker starts complaining before
