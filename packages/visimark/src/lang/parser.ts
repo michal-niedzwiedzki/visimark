@@ -1,5 +1,6 @@
 import { Decimal } from "decimal.js";
 import {
+  type AliasDecl,
   type Assertion,
   type ChartDecl,
   COMPARISON_OPS,
@@ -188,6 +189,8 @@ export interface Binding {
   expr: Expr;
   nameStart: number;
   nameEnd: number;
+  /** true when the left-hand side was a quoted column header, not an identifier */
+  quoted: boolean;
 }
 
 const LEADING_NAME_RE = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=/;
@@ -211,7 +214,7 @@ export function parseBinding(line: string): Binding {
  * ordinary `name = expression` binding. `assert` is a keyword — `assert = 1`
  * and a binding named `assert` are rejected here rather than silently parsed.
  */
-export function parseStatement(line: string): Binding | Assertion | ChartDecl {
+export function parseStatement(line: string): Binding | Assertion | ChartDecl | AliasDecl {
   try {
     return parseStatementInner(line);
   } catch (e) {
@@ -223,7 +226,7 @@ export function parseStatement(line: string): Binding | Assertion | ChartDecl {
   }
 }
 
-function parseStatementInner(line: string): Binding | Assertion | ChartDecl {
+function parseStatementInner(line: string): Binding | Assertion | ChartDecl | AliasDecl {
   const toks = lex(line);
   const first = toks.find((t) => t.kind !== "eof");
   if (first?.kind === "chart") {
@@ -248,6 +251,17 @@ function parseStatementInner(line: string): Binding | Assertion | ChartDecl {
     const at = toks.find((t) => t.kind === "assert")!;
     throw new LangError("`assert` is a keyword", at.start, at.end);
   }
+  if (first?.kind === "string") {
+    const afterIdx = toks.indexOf(first) + 1;
+    const after = toks[afterIdx];
+    if (after?.kind === "is") {
+      return parseAlias(toks, first, after);
+    }
+  }
+  if (toks.some((t) => t.kind === "is")) {
+    const at = toks.find((t) => t.kind === "is")!;
+    throw new LangError("`is` is a keyword", at.start, at.end);
+  }
   return parseBinding(line);
 }
 
@@ -259,10 +273,10 @@ function parseBindingInner(line: string): Binding {
   }
   const lhs = toks.slice(0, eqIndex);
   const nameToks = lhs.filter((t) => t.kind !== "eof");
-  if (nameToks.length !== 1 || nameToks[0]!.kind !== "ident") {
+  if (nameToks.length !== 1 || (nameToks[0]!.kind !== "ident" && nameToks[0]!.kind !== "string")) {
     const start = nameToks[0]?.start ?? 0;
     const end = nameToks[nameToks.length - 1]?.end ?? line.length;
-    throw new LangError("the left of `=` must be a single name", start, end);
+    throw new LangError("the left of `=` must be a name or a quoted column header", start, end);
   }
   const nameTok = nameToks[0]!;
   const rhs = toks.slice(eqIndex + 1); // keeps the trailing eof
@@ -272,6 +286,7 @@ function parseBindingInner(line: string): Binding {
     expr,
     nameStart: nameTok.start,
     nameEnd: nameTok.end,
+    quoted: nameTok.kind === "string",
   };
 }
 
@@ -389,4 +404,32 @@ function parseChart(toks: Token[], kw: Token): ChartDecl {
     );
   }
   return { type: "chart", name, engine, series, labels, aspect, start: kw.start, end: end.start };
+}
+
+/** `"<header>" is <symbol>` — see docs/design/human-readable-column-aliases-spec.md */
+function parseAlias(toks: Token[], headerTok: Token, isTok: Token): AliasDecl {
+  let i = toks.indexOf(isTok) + 1;
+  const at = (): Token => toks[i] ?? toks[toks.length - 1]!;
+
+  const symTok = at();
+  if (symTok.kind !== "ident") {
+    throw new LangError("expected a name after `is`", symTok.start, symTok.end);
+  }
+  i++;
+
+  const end = at();
+  if (end.kind !== "eof") {
+    throw new LangError(
+      `unexpected ${end.kind === "op" ? `operator \`${end.value}\`` : end.kind}`,
+      end.start,
+      end.end,
+    );
+  }
+  return {
+    type: "alias",
+    header: headerTok.value,
+    symbol: symTok.value,
+    start: headerTok.start,
+    end: symTok.end,
+  };
 }

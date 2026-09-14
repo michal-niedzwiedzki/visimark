@@ -230,3 +230,36 @@ test("`chart` may not be a bound name", () => {
 test("a chart needs a name", () => {
   expect(() => chart("chart as pie of Net labelled Item")).toThrow(LangError);
 });
+
+test("a quoted string is legal as a binding's left-hand side", () => {
+  const b = parseBinding('"Bandwidth per Unit (TB/s, full-duplex)" = ROUND(x, 2)');
+  expect(b.name).toBe("Bandwidth per Unit (TB/s, full-duplex)");
+  expect(b.quoted).toBe(true);
+});
+
+test("a plain identifier binding is not marked quoted", () => {
+  const b = parseBinding("Net = Price * Qty");
+  expect(b.quoted).toBe(false);
+});
+
+test("`is` parses as an alias declaration", () => {
+  const s = parseStatement('"Bandwidth per Unit (TB/s, full-duplex)" is bpu');
+  expect(s).toMatchObject({
+    type: "alias",
+    header: "Bandwidth per Unit (TB/s, full-duplex)",
+    symbol: "bpu",
+  });
+});
+
+test("`is` with no symbol after it is a parse error", () => {
+  expect(() => parseStatement('"Header" is')).toThrow(/expected a name after `is`/);
+});
+
+test("`is` used outside the alias shape is rejected as a keyword", () => {
+  expect(() => parseStatement("is = 1")).toThrow(/`is` is a keyword/);
+  expect(() => parseStatement("x = is")).toThrow(/`is` is a keyword/);
+});
+
+test("a quoted binding with trailing junk after `is symbol` is a parse error", () => {
+  expect(() => parseStatement('"Header" is bpu extra')).toThrow(/unexpected/);
+});
