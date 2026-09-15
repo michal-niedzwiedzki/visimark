@@ -38,7 +38,11 @@ test.each([
   ["parenthesis nest", "(".repeat(N) + "1" + ")".repeat(N), "parseBp via nud's lparen arm"],
   ["call nest", "ABS(".repeat(N) + "1" + ")".repeat(N), "parseBp via identTail"],
   ["unary minus run", "-".repeat(N) + "1", "parseBp via nud's unary arm"],
-  ["right-associative chain", Array.from({ length: N }, () => "2").join("^"), "parseBp's rbp recursion"],
+  [
+    "right-associative chain",
+    Array.from({ length: N }, () => "2").join("^"),
+    "parseBp's rbp recursion",
+  ],
 ])("%s of %s levels is refused, not a stack overflow", (_name, formula) => {
   const e = refusal(formula);
   expect(e.message).toMatch(/nests more than \d+ levels deep/);

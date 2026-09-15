@@ -103,7 +103,7 @@ async function runCheck(doc: TextDocument): Promise<void> {
     await connection.sendNotification("visimark/status", statusOf(doc.uri, analysis));
   } catch (e) {
     connection.console.error(
-      `visimark: analysing ${doc.uri} failed: ${e instanceof Error ? e.stack ?? e.message : String(e)}`,
+      `visimark: analysing ${doc.uri} failed: ${e instanceof Error ? (e.stack ?? e.message) : String(e)}`,
     );
     await connection.sendDiagnostics({ uri: doc.uri, diagnostics: [] });
   }
