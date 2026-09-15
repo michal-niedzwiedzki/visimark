@@ -231,23 +231,23 @@ class Parser {
 function deepestNode(root: Expr): { depth: number; at: Expr };
 ```
 
-- [ ] **Step 1.1** Guard 1: `depth` field on `Parser`, incremented on entry to
+- [x] **Step 1.1** Guard 1: `depth` field on `Parser`, incremented on entry to
       `parseBp` and decremented in a `finally`. On exceeding the cap, throw
       `LangError(DEPTH_MESSAGE, t.start, t.end)` for the token at the point of refusal.
       The `finally` matters — `parseStatement`'s outer `catch` inspects and rethrows, and
       a leaked counter would make a later statement on the same line refuse spuriously.
-- [ ] **Step 1.2** Guard 2: `deepestNode`, walked with an explicit `Expr[]` stack
+- [x] **Step 1.2** Guard 2: `deepestNode`, walked with an explicit `Expr[]` stack
       carrying a parallel depth, and called once at the end of `parseTopLevel`. On
       exceeding the cap, throw `LangError(DEPTH_MESSAGE, at.start, at.end)` — the
       deepest node's own span, not the whole line, so the caret lands somewhere useful
       in a 60 KB expression.
-- [ ] **Step 1.3** The comment carrying finding 3 and finding 4: that the two guards
+- [x] **Step 1.3** The comment carrying finding 3 and finding 4: that the two guards
       exist because parser recursion depth and AST depth diverge on left-associative
       chains, that the ceiling is the shallowest of five AST walkers and not the
       parser, the measured numbers from finding 1 including the Node figure from
       Task 4, and that the deepest real formula in the repo is 5. This is the comment
       that stops the second guard being deleted as redundant.
-- [ ] **Step 1.4** Verification gate.
+- [x] **Step 1.4** Verification gate.
 
 **Commit:** `fix: refuse expressions deeper than the pipeline can walk`
 
@@ -263,27 +263,27 @@ function deepestNode(root: Expr): { depth: number; at: Expr };
 Each case asserts a **finding or a result, never a throw** — the property
 `SECURITY.md` actually promises.
 
-- [ ] **Step 2.1** Depth cases through `parseStatement`: deep parens, deep calls, a
+- [x] **Step 2.1** Depth cases through `parseStatement`: deep parens, deep calls, a
       unary-minus run, a right-associative `^` chain, and — the case from finding 3 —
       a long left-associative `+` chain. Each asserts a `LangError` with a span inside
       the line, and each is annotated with the `RangeError` it pins so a future reader
       knows why the number is what it is.
-- [ ] **Step 2.2** End-to-end through `check()`: a document with a pathological formula
+- [x] **Step 2.2** End-to-end through `check()`: a document with a pathological formula
       yields findings and a normal exit, and the findings carry usable spans.
-- [ ] **Step 2.3** The cases that already pass, pinned as regressions with a comment
+- [x] **Step 2.3** The cases that already pass, pinned as regressions with a comment
       saying so (finding 5): a 200,000-character identifier, a 300-column table read
       by a short formula, and a 200 KB block asserting linear lexer time. Separately,
       the 300-term `SUM(C0) + … + SUM(C299)` chain over that same table, pinned as
       **now refused** with a comment citing maintainer decision 1 — it is the one
       input this change makes stricter, so the test says so out loud.
-- [ ] **Step 2.4** The LSP case the brief asks for, and the sharpest test here: open a
+- [x] **Step 2.4** The LSP case the brief asks for, and the sharpest test here: open a
       pathological document, then open a clean one and assert its diagnostics still
       arrive. On today's code the second open fails with `Connection is closed.`
-- [ ] **Step 2.5** The catch-all, per maintainer decision 3: wrap `runCheck`'s body in
+- [x] **Step 2.5** The catch-all, per maintainer decision 3: wrap `runCheck`'s body in
       `try`/`catch`, publish an empty diagnostic set for that document, and log the
       error to the connection so it is visible in the client's output channel rather
       than swallowed. `void runCheck(doc)` stops being able to end the process.
-- [ ] **Step 2.6** Verification gate.
+- [x] **Step 2.6** Verification gate.
 
 **Commit:** `fix: keep the language server alive through an unexpected throw`
 
@@ -297,21 +297,21 @@ Each case asserts a **finding or a result, never a throw** — the property
 Per finding 7: a seeded generator and two test-local printers, no production printer and
 no generator dependency.
 
-- [ ] **Step 3.1** A 3-line xorshift PRNG with a fixed seed, and `randomExpr(depth)`
+- [x] **Step 3.1** A 3-line xorshift PRNG with a fixed seed, and `randomExpr(depth)`
       producing `num` / `str` / `date` / `ref` / qualified `ref` / `unary` / `binary`
       over the real `LEFT_BP` table / `call` with a real arity from
       `eval/functions.ts`. Generated depth stays under the cap; the boundary itself is
       Task 2's job.
-- [ ] **Step 3.2** `printFull` (every node parenthesised — the oracle, correct by
+- [x] **Step 3.2** `printFull` (every node parenthesised — the oracle, correct by
       inspection) and `printMin` (minimal parenthesisation from `LEFT_BP` /
       `RIGHT_ASSOC`).
-- [ ] **Step 3.3** Over ~2,000 generated trees assert
+- [x] **Step 3.3** Over ~2,000 generated trees assert
       `parse(printMin(e)) ≡ parse(printFull(e)) ≡ e`, comparing modulo `start`/`end`.
       On failure, print the seed and the offending source — a property test that cannot
       be reproduced from its output is a flake report.
-- [ ] **Step 3.4** A note at the top of the file on why the printers live in the test
+- [x] **Step 3.4** A note at the top of the file on why the printers live in the test
       and not in `src/lang/`, so nobody promotes them later without a reason to.
-- [ ] **Step 3.5** Verification gate.
+- [x] **Step 3.5** Verification gate.
 
 **Commit:** `test: round-trip generated expressions against a parenthesised oracle`
 
@@ -320,19 +320,24 @@ no generator dependency.
 ### Task 4: Fix the cap against the smallest runtime, and record the promise
 
 **Files:**
-- Modify: `packages/visimark/src/lang/parser.ts` (the constant and its comment)
+- Create: `scripts/stack-headroom.mjs`
+- Modify: `.github/workflows/ci.yml` (the `acceptance-node` job)
 - Modify: `SECURITY.md`
 
-- [ ] **Step 4.1** Measure the overflow threshold for each of the five AST walkers
-      under **Node** as well as Bun, using the packed tarball the way `ci.yml` does.
-      Record the smallest. If it puts the chosen cap within ~10× of an overflow, lower
-      the cap and say so here rather than shipping a number that only holds on Bun.
-- [ ] **Step 4.2** Fold the measured numbers into the Task 1 comment.
-- [ ] **Step 4.3** `SECURITY.md` Scope gains a short paragraph, alongside the
+- [x] **Step 4.1** Measure the overflow threshold under **Node** as well as Bun.
+      *Changed during execution* — Node is not installed in the authoring
+      environment, and `dist/` is a bundle that does not export the parser, so a
+      one-off local measurement was not available and would have been stale the
+      moment a walker changed. Made permanent instead: `scripts/stack-headroom.mjs`
+      measures the engine it runs under, and `acceptance-node` — the job that already
+      has Node — runs it on every CI run alongside a behavioural check that the built
+      CLI refuses a 30,000-deep formula with a finding and no `RangeError`.
+- [x] **Step 4.2** Fold the measured numbers into the Task 1 comment.
+- [x] **Step 4.3** `SECURITY.md` Scope gains a short paragraph, alongside the
       concurrent-processes one: expression depth is bounded at parse time so that no
       document can exhaust the stack, the bound is far above any real formula, and a
       document that still exhausts memory or time is in scope and worth a report.
-- [ ] **Step 4.4** Verification gate.
+- [x] **Step 4.4** Verification gate.
 
 **Commit:** `docs: state the expression-depth bound in SECURITY.md`
 
@@ -352,6 +357,58 @@ no generator dependency.
    the catch-all closes the class, because `void runCheck(doc)` will turn any future
    unexpected throw into a dead server for every open file. It logs rather than
    swallowing, so it cannot quietly mask a real bug.
+
+## Outcome
+
+Five commits. Two source files changed (~55 lines), three test files and one CI script
+added, two CI steps. **741 → 758 green**; typecheck clean; lint unchanged at 1,785
+warnings, all from `docs/vendor/` (§2.6's problem, untouched). `fmt` over
+`docs/example-charts.md` is still a no-op and `git diff` over `docs/` is empty.
+
+**Every shape the review named now refuses cleanly.** Through the real CLI, at 30,000
+levels: nested parens, nested calls, a unary-minus run, a `^` chain and a `+` chain each
+produce `expression nests more than 256 levels deep` as a positioned `TYPE` finding and
+exit `1`. Before this branch, all five printed a bare `RangeError` and a 10,000-frame
+stack trace.
+
+**The correction in finding 3 was load-bearing, not theoretical.** The `+` chain is in
+that list. A guard built to the brief's letter — a counter in `parseBp` — passes every
+other case above and still crashes on it, because `parseBp` consumes a left-associative
+chain in a loop and never recurses. The second guard exists for that one input, which is
+why it carries a comment saying so.
+
+**The LSP finding was the sharpest thing here.** Driven through the real harness on the
+parent commit, opening a pathological document yields no diagnostics and leaves the
+*next* document with `Connection is closed.` Both tests in
+`packages/visimark-lsp/test/resilience.test.ts` fail against that commit and pass
+against this one.
+
+Three things worth knowing that the plan did not anticipate:
+
+- **The property test needed an oracle to have teeth, and the oracle earned its
+  keep.** Mutation-tested: treating `^` as left-associative, dropping the
+  equal-precedence associativity parens, and weakening the unary operand's `<=` to `<`
+  each fail the property. The third is the subtle one — a unary parses its operand with
+  `parseBp(bp)`, which stops at an operator of *equal* binding power, so `-a * b` is
+  `(-a) * b` and an operand that is itself a `*` has to be wrapped. A single-printer
+  round trip would not have found that.
+- **Task 4 became a CI check rather than a measurement.** Node is not installed in the
+  authoring environment and `dist/` does not export the parser, so the Node figure the
+  plan asked for could not be taken locally. Making it permanent is the better outcome
+  anyway: a number pasted into a comment goes stale the first time a walker gains a
+  local, whereas `scripts/stack-headroom.mjs` re-measures on every CI run and fails
+  below 10×. It is calibrated, not asserted — it reaches 31,925 under Bun where the
+  shallowest real path overflows at 12,501, so it reads ~2.5× optimistic and the
+  threshold is set with that in mind.
+- **Three of the review's sub-items were already sound** (finding 5), so they landed as
+  regression pins with comments saying which is which. The one input this change makes
+  stricter — summing all 300 columns of a 300-column table — has its own test citing
+  maintainer decision 1, so it reads as a recorded trade rather than a bug someone finds
+  in a year.
+
+`MAX_EXPR_DEPTH` is now the single place any future AST walker inherits its budget from,
+and the comment beside it says why one guard is not enough.
+
 
 ## Out of scope
 
