@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { locate } from "../../src/parse/document.js";
@@ -206,3 +206,28 @@ test("labelled resolution is unaffected by the unlabelled branch", () => {
   expect(sheet.table?.rows.length).toBe(2);
   expect(sheet.columnIndex.get("Time")).toBe(1);
 });
+
+// Out-of-tree data must not reach the model through a link, by either of the
+// two refusals that can stop it: the gate's, when the link predates the call,
+// or `openForRead`'s O_NOFOLLOW, when it is planted in the window after the
+// gate. Only the first is reachable from this entry point - there is no seam
+// to plant a link mid-function - so the second is asserted directly in
+// test/fs/open.test.ts. Windows has neither unprivileged symlinks nor
+// O_NOFOLLOW.
+test.skipIf(process.platform === "win32")(
+  "a symlink to an out-of-tree CSV never reaches the model",
+  () => {
+    const outside = join(dir, "..", "vmark-import-victim.csv");
+    writeFileSync(outside, "Secret\n42\n");
+    symlinkSync(outside, join(dir, "benchmark.csv"));
+
+    const m = modelFor("```vmark #benchmark from benchmark.csv\n```\n");
+    const { findings, statuses } = resolveImports(m, docPath);
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.code).toBe("IMPORT");
+    expect(statuses.get("benchmark")!.state).toBe("error");
+    expect(m.sheets.get("benchmark")!.table).toBeFalsy();
+    rmSync(outside);
+  },
+);
