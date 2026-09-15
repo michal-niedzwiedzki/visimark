@@ -84,7 +84,7 @@ the absolute target `fmt` used internally.
 | `command` | `"check"` \| `"fmt"` \| `"infer"` \| `"eval"` \| `"explain"` | always |
 | `visimark` | string, the package version (`0.1.1`), **not** the `visimark 0.1.1` `--version` line | always |
 | `status` | `"ok"` \| `"problems"` \| `"error"` | always — exit 0 / 1 / 2. Not a boolean `ok`. |
-| `error` | `{ "code": "USAGE" \| "READ", "message": string }` | only when `status` is `"error"` |
+| `error` | `{ "code": "USAGE" \| "READ" \| "WRITE", "message": string }` | only when `status` is `"error"` |
 | command body | see below | always on success and on `problems`; on `error` only what was already produced (a multi-file run that read some files still lists them) |
 
 `status` tracks the process exit code. Advisory findings (`WARN`, `NOTE`) never
@@ -372,6 +372,7 @@ the envelope `error` object:
 |---|---|---|---|
 | No file given; unknown `eval --get` name; unknown `explain` `#sheet` | `USAGE` | 2 | Same cases as today's usage errors. `message` is the current `visimark: …` / `usage: …` line. That line is **also** written to stderr so a person who typed it still sees it. |
 | Named file cannot be read | `READ` | 2 | Per-file in multi-file commands; whole-command for `eval` / `explain`. |
+| `fmt` refuses to write a chart artifact | `WRITE` | 2 | Per-file, same shape as `READ`. The target moved between the check and the write, is no longer VisiMark's, or cannot be opened. The document itself is then left unspliced — a partly-applied `fmt` is worse than none. See [`close-toctou-path-gates-plan.md`](close-toctou-path-gates-plan.md). |
 | Unknown command / no command | n/a | 2 | Happens before a document command runs. `--json` is not a command. Human usage text, as today. |
 
 `--json` mode still emits the JSON envelope to stdout **before** exiting 2,

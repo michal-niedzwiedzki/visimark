@@ -16,6 +16,11 @@ import { dirname, isAbsolute, resolve, sep } from "node:path";
  * one side but not the other is the failure this module exists to prevent.
  * Anything beyond path legality belongs to the caller - notably the write
  * side's refusal to overwrite a file lacking VisiMark's metadata marker.
+ *
+ * **This verdict is about a name, and only at the instant it is asked.** It is
+ * carried a long way before it is used, so it is not on its own evidence about
+ * the object finally opened. `fs/open.ts` is where the use re-establishes its
+ * own proof, and it says which part of the window stays open.
  */
 
 export type PathResult = { ok: string } | { err: string };
