@@ -361,6 +361,13 @@
            eating into a plain 12px and leaving the right edge tighter than
            the left */
         padding: 10px 18px 10px 12px;
+        /* A column flex container, not plain block flow, so .quest below
+           can stretch to fill whatever height scenario-body's text doesn't
+           use — the badge's margin-top: auto only has room to push it to
+           the bottom of a *short* scenario when .quest itself reaches that
+           far down. */
+        display: flex;
+        flex-direction: column;
       }
       #scenario-body p {
         margin: 0 0 14px;
@@ -376,6 +383,13 @@
         margin-top: 4px;
         padding-top: 14px;
         border-top: 1px solid rgba(255, 255, 255, 0.12);
+        /* Stretches to fill whatever vertical space scenario-body's text
+           leaves in the panel (see .knowledge .panel-body above), so the
+           badge's margin-top: auto below has somewhere to push it down to. */
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
       }
       .quest-title {
         font-size: 0.68rem;
@@ -397,7 +411,7 @@
         padding: 5px 0;
         /* Starts invisible and fades in on its own schedule — see the
            per-step scheduleReveal() call in startQuest(), which staggers
-           these 1s apart instead of the whole list appearing at once. */
+           these 0.5s apart instead of the whole list appearing at once. */
         opacity: 0;
         transition: opacity 0.5s ease;
       }
@@ -507,11 +521,31 @@
          sessions (localStorage), so this also renders on revisiting a
          chapter whose badge was earned in an earlier session. */
       .badge-award {
-        margin-top: 10px;
+        /* Pushes itself to the bottom of .quest's flex column — filling the
+           leftover space on a short scenario — rather than sitting directly
+           under the reward box. When the panel's content is tall enough to
+           scroll instead, this margin resolves to 0 and position: sticky
+           below takes over, keeping the badge pinned to the bottom edge. */
+        margin-top: auto;
         padding: 12px;
-        border-radius: 10px;
-        background: linear-gradient(135deg, rgba(255, 69, 58, 0.14), rgba(86, 211, 100, 0.1));
+        border-radius: 9px;
+        /* Layered over an opaque #2a2a2a (the panel's own background) rather
+           than left on the bare rgba gradient — position: sticky below keeps
+           this pinned to the bottom of the panel while the quest list
+           scrolls underneath it, and a transparent background would let
+           that scrolled content show through. */
+        background: linear-gradient(180deg, #234927, #1d291e), #2a2a2a;
         border: 1px solid rgba(255, 255, 255, 0.14);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+        position: sticky;
+        bottom: 0;
+        z-index: 1;
+        /* Forces the gradient to paint precisely inside the rounded corners
+           instead of leaving a hairline sliver of the panel's own
+           background showing through at the top edge — a sub-pixel
+           rounding artifact of position: sticky inside a scrolling
+           ancestor. */
+        overflow: hidden;
       }
       .badge-award-head {
         display: flex;
@@ -529,6 +563,7 @@
         align-items: center;
         justify-content: center;
         color: #ffb454;
+        box-shadow: 0 3px 6px rgba(0, 0, 0, 0.35);
       }
       .badge-award-icon svg {
         width: 26px;
@@ -538,14 +573,14 @@
         min-width: 0;
       }
       .badge-award-label {
-        font-size: 0.62rem;
+        font-size: 0.7rem;
         font-weight: 800;
         letter-spacing: 0.1em;
         text-transform: uppercase;
         color: #7a97ab;
       }
       .badge-award-name {
-        font-size: 0.95rem;
+        font-size: 1rem;
         font-weight: 800;
         color: #ffffff;
         margin: 2px 0 0;
@@ -554,7 +589,7 @@
          as the icon — spans the full width, using the space the icon's
          column used to cost it, instead of wrapping in a narrower strip. */
       .badge-award-skill {
-        font-size: 0.78rem;
+        font-size: 0.9rem;
         color: #d7e4ee;
         margin: 8px 0 10px;
       }
@@ -573,9 +608,9 @@
       .share-btn {
         border: none;
         border-radius: 999px;
-        padding: 5px 12px;
+        padding: 4px 10px;
         font: inherit;
-        font-size: 0.7rem;
+        font-size: 0.64rem;
         font-weight: 800;
         letter-spacing: 0.03em;
         cursor: pointer;
@@ -1091,6 +1126,13 @@ applies those proposals to the document.</pre>
               <div class="quest-complete" id="quest-complete" hidden>
                 ✨ Nice work — all quests complete.
               </div>
+              <div class="reward-box" id="reward-box" hidden>
+                <div class="reward-label">🎁 Reward unlocked</div>
+                <div class="agent-popover-host" id="reward-cta-host">
+                  <button class="reward-cta" id="reward-cta" type="button"></button>
+                </div>
+                <div class="reward-status" id="reward-status"></div>
+              </div>
               <div class="badge-award" id="badge-award" hidden>
                 <div class="badge-award-head">
                   <div class="badge-award-icon" id="badge-award-icon"></div>
@@ -1108,13 +1150,6 @@ applies those proposals to the document.</pre>
                   <button class="share-btn share-li" id="share-li" type="button">LinkedIn</button>
                 </div>
                 <div class="badge-share-status" id="badge-share-status" hidden></div>
-              </div>
-              <div class="reward-box" id="reward-box" hidden>
-                <div class="reward-label">🎁 Reward unlocked</div>
-                <div class="agent-popover-host" id="reward-cta-host">
-                  <button class="reward-cta" id="reward-cta" type="button"></button>
-                </div>
-                <div class="reward-status" id="reward-status"></div>
               </div>
             </div>
           </div>
@@ -1237,7 +1272,13 @@ applies those proposals to the document.</pre>
         var FILES = await loadFiles();
         var order = Object.keys(FILES);
         var contents = Object.assign({}, FILES);
-        var current = "demo.md";
+        // Lets a link point straight at a specific file (e.g. a tutorial
+        // chapter) — falls back to demo.md when the param is absent or
+        // names a file that doesn't exist in FILES.
+        var requestedFile = new URLSearchParams(window.location.search).get("file");
+        var current = Object.prototype.hasOwnProperty.call(FILES, requestedFile)
+          ? requestedFile
+          : "demo.md";
 
         // ---- scenario data -----------------------------------------------------
         // Declarative — see normalizeStep() below for the schema and check-name
@@ -1376,7 +1417,16 @@ applies those proposals to the document.</pre>
         //                                     `check` names a predicate in
         //                                     CHECKS below — the fixed,
         //                                     reviewed vocabulary scenario data
-        //                                     is allowed to reach for.
+        //                                     is allowed to reach for. One
+        //                                     check, "column-added", also
+        //                                     reads a sibling `column` field
+        //                                     — the column name to watch for
+        //                                     (pgEval keys cells "sheetId.
+        //                                     columnName", so this matches
+        //                                     either the bare name or that
+        //                                     suffix) — since "did column X
+        //                                     appear" can't be a fixed
+        //                                     predicate with no name to check.
         //   "text"   { contains }          — done as soon as the current
         //                                     document text contains this
         //                                     exact substring (e.g. a value
@@ -1435,6 +1485,20 @@ applies those proposals to the document.</pre>
             })
           );
         }
+        // pgEval flattens each sheet's columns/scalars into top-level keys
+        // named "sheetId.columnName" (see VisiMark.pgEval) — a bare `column`
+        // name is matched against either the whole key or that suffix, so
+        // scenario data doesn't need to know the sheet id.
+        function hasColumn(evalResult, column) {
+          var suffix = "." + column;
+          return Object.keys(evalResult).some(function (key) {
+            return key === column || key.slice(-suffix.length) === suffix;
+          });
+        }
+        function columnAdded(ctx, column) {
+          var baseline = JSON.parse(ctx.baselineJson);
+          return !hasColumn(baseline, column) && hasColumn(ctx.evalResult, column);
+        }
         var CHECKS = {
           "value-changed": evalChanged,
           "source-changed": sourceChanged,
@@ -1442,6 +1506,7 @@ applies those proposals to the document.</pre>
           "stale-fixed": staleFixed,
           "assertion-failing": assertionsFailing,
           "assertion-passing": assertionsPassing,
+          "column-added": columnAdded,
         };
 
         /** Turns one JSON step descriptor into the internal step shape the
@@ -1457,7 +1522,13 @@ applies those proposals to the document.</pre>
           if (raw.kind === "eval") {
             var check = CHECKS[raw.check];
             if (!check) throw new Error('scenarios.json: unknown check "' + raw.check + '"');
-            return { id: raw.id || "eval:" + index, text: raw.text, evalCheck: check };
+            var evalCheck =
+              raw.check === "column-added"
+                ? function (ctx) {
+                    return check(ctx, raw.column);
+                  }
+                : check;
+            return { id: raw.id || "eval:" + index, text: raw.text, evalCheck: evalCheck };
           }
           if (raw.kind === "text") {
             return { id: raw.id || "text:" + index, text: raw.text, textContains: raw.contains };
@@ -1780,7 +1851,7 @@ applies those proposals to the document.</pre>
               else if (step.manual) questMarkDone(step.id);
             });
             questListEl.appendChild(li);
-            // Reveal each "Try this" step 1s apart, first one included,
+            // Reveal each "Try this" step 0.5s apart, first one included,
             // instead of the whole checklist appearing at once —
             // clearRevealTimers() above cancels any reveal still in flight
             // from a scenario this one is replacing.
@@ -1788,7 +1859,7 @@ applies those proposals to the document.</pre>
               function () {
                 li.classList.add("show");
               },
-              (i + 1) * 1000,
+              (i + 1) * 500,
             );
           });
         }
@@ -1868,11 +1939,22 @@ applies those proposals to the document.</pre>
           revealFadeIn(rewardBoxEl);
         }
 
+        /** Finds the first not-yet-done step, or null once every step is
+         *  done — the one step questSignal() and questCheckEval() are
+         *  allowed to test and complete on a given call, so steps are always
+         *  worked through in order and a later one can never complete while
+         *  an earlier one is still outstanding. */
+        function firstIncompleteStep() {
+          for (var i = 0; i < questState.steps.length; i++) {
+            if (!questState.done[questState.steps[i].id]) return questState.steps[i];
+          }
+          return null;
+        }
+
         /** UI-event steps: tab clicks, Infer/Build runs. */
         function questSignal(action) {
-          questState.steps.forEach(function (step) {
-            if (step.action === action) questMarkDone(step.id);
-          });
+          var step = firstIncompleteStep();
+          if (step && step.action === action) questMarkDone(step.id);
         }
 
         /** Mirrors `visimark check FILE`'s STALE findings — cheap enough to
@@ -1891,34 +1973,38 @@ applies those proposals to the document.</pre>
         /** Eval-driven steps: re-checked against the file's baseline snapshot
          *  on every fresh pgEval() result — the first call after a file loads
          *  only captures that baseline, it can't complete a step against
-         *  itself. */
+         *  itself. Tests only the first not-yet-done step (see
+         *  firstIncompleteStep()) — a single edit can easily satisfy several
+         *  steps' conditions at once (e.g. pasting in a whole finished
+         *  example), and steps complete one at a time, in order, rather than
+         *  the whole list jumping to done together. */
         function questCheckEval(evalResult, source) {
-          // "text" steps don't need a baseline — they're just a substring
-          // check against whatever's in the document right now.
-          questState.steps.forEach(function (step) {
-            if (step.textContains && source.indexOf(step.textContains) !== -1) {
-              questMarkDone(step.id);
-            }
-          });
           var hasStale = hasStaleFindings(source);
-          if (questState.baselineEvalJson === null) {
+          var isBaseline = questState.baselineEvalJson === null;
+          var ctx = isBaseline
+            ? null
+            : {
+                evalResult: evalResult,
+                baselineJson: questState.baselineEvalJson,
+                hasStale: hasStale,
+                baselineHasStale: questState.baselineHasStale,
+                sourceChanged: source !== questState.baselineSource,
+              };
+          var step = firstIncompleteStep();
+          if (step) {
+            // "text" steps don't need a baseline — they're just a substring
+            // check against whatever's in the document right now. evalCheck
+            // steps can't complete on the call that establishes the
+            // baseline, since there's nothing yet to compare against.
+            var textMatch = step.textContains && source.indexOf(step.textContains) !== -1;
+            var evalMatch = ctx && step.evalCheck && step.evalCheck(ctx);
+            if (textMatch || evalMatch) questMarkDone(step.id);
+          }
+          if (isBaseline) {
             questState.baselineEvalJson = JSON.stringify(evalResult);
             questState.baselineHasStale = hasStale;
             questState.baselineSource = source;
-            return;
           }
-          var ctx = {
-            evalResult: evalResult,
-            baselineJson: questState.baselineEvalJson,
-            hasStale: hasStale,
-            baselineHasStale: questState.baselineHasStale,
-            sourceChanged: source !== questState.baselineSource,
-          };
-          questState.steps.forEach(function (step) {
-            if (step.evalCheck && step.evalCheck(ctx)) {
-              questMarkDone(step.id);
-            }
-          });
         }
 
         // ---- tab strip: Reasoning/Knowledge/Inference/Build (Terminal is its
@@ -2344,6 +2430,12 @@ applies those proposals to the document.</pre>
             if (result.cellsUpdated || result.anchorsUpdated) {
               questSignal("action:fmt-corrected");
             }
+          }
+          if (result && result.unfixable.length === 0) {
+            questSignal("action:fmt-clean");
+          }
+          if (result && result.unfixable.length > 0) {
+            questSignal("action:fmt-failing");
           }
           refreshDerived();
         }
