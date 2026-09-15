@@ -11,7 +11,6 @@ import {
   type Sheet,
 } from "../model/types.js";
 import { closest } from "../report/levenshtein.js";
-import { parseIsoDate } from "./dates.js";
 import { evalExpr, type EvalEnv } from "./evaluate.js";
 import { describeCallProblem, FUNCTIONS, isReduce } from "./functions.js";
 import { canonicalName, chartNode, dependencies, refText, resolve, topoOrder } from "./graph.js";
@@ -20,8 +19,12 @@ import { resolveArtifactPath } from "../artifact/path.js";
 import { classify } from "../artifact/stale.js";
 import { resolveImports } from "../import/resolve.js";
 import type { ImportStatus } from "../model/types.js";
-import { applyUnit, inferColumnUnit, numericValue, parseDecorated, type Unit } from "./units.js";
-import { date, EvalError, num, roundToPlaces, str, type Value } from "./value.js";
+import { applyUnit, inferColumnUnit, parseDecorated, type Unit } from "./units.js";
+import { EvalError, num, roundToPlaces, type Value } from "./value.js";
+import { coerceInput, lookupVector, rowLabel, Unevaluable } from "./check-lookup.js";
+import { type CheckOptions, type Entry, newCheckState } from "./check-state.js";
+
+export type { CheckOptions } from "./check-state.js";
 
 /** a misspelling this far from a builtin is a different word, not a typo */
 const MAX_FN_SUGGESTION_DISTANCE = 2;
@@ -34,12 +37,6 @@ const MAX_FN_SUGGESTION_DISTANCE = 2;
  */
 const BOOLEAN_BINDING_MESSAGE =
   "a boolean cannot be stored; wrap it in `IF()` to produce a number or a string";
-
-export interface CheckOptions {
-  /** the document's own path — required to resolve and compare artifacts.
-   *  Without it charts are still validated, but staleness cannot be judged. */
-  docPath?: string;
-}
 
 /** one entry per `chart` declaration, in document order */
 export interface ChartResult {
@@ -91,10 +88,7 @@ export interface AssertionResult {
   substituted: string;
 }
 
-class Unevaluable extends Error {}
-
 const PERCENT_RE = /^(\d+(?:\.\d+)?)%$/;
-const DATEISH_RE = /^\d{1,4}[./-]\d{1,4}[./-]\d{1,4}$/;
 
 export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
   // Imported sheets must be resolved — their table, column index, and input
@@ -117,37 +111,30 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
     assertSuppressed.set(sheetId, (assertSuppressed.get(sheetId) ?? 0) + 1);
   };
 
-  const values = new Map<string, Value>();
-  const cells = new Map<string, (Value | null)[]>();
-  const unevaluable = new Set<string>();
-  const columnPrecision = new Map<string, number>();
-  const scalarPrecision = new Map<string, number>();
-  const columnUnits = new Map<string, Unit | null>();
-  const scalarUnits = new Map<string, Unit | null>();
-  const unitConflicts = new Set<string>();
-  const staleScalars = new Set<string>();
-  const dateErrorRows = new Set<string>(); // `${sheet}.${col}#${row}` already reported
-
-  interface Entry {
-    f: Finding;
-    det: number;
-    sheetId?: string;
-    rowIndex?: number;
-    isColumnCell?: boolean;
-  }
   const entries: Entry[] = [];
-  let det = 0;
-  const emit = (f: Finding, extra: Omit<Entry, "f" | "det"> = {}): void => {
-    entries.push({ f, det: det++, ...extra });
-  };
+  const st = newCheckState(model, opts, docPrecision(model), entries);
+  // Phases still reach these by their old names. Each is the object living in
+  // `st`, not a copy — `CheckResult` hands the same instances to the caller.
+  const {
+    values,
+    cells,
+    unevaluable,
+    columnPrecision,
+    scalarPrecision,
+    columnUnits,
+    scalarUnits,
+    unitConflicts,
+    staleScalars,
+    buildableCharts,
+    fallbackPrecision,
+  } = st;
+  const emit = st.emit;
 
   // structural findings carried from the model (SHEET, binding parse errors)
   for (const f of model.findings) emit(f);
   for (const f of imported.findings) emit(f, { sheetId: f.sheetId });
 
   emitCoverage(model, emit);
-
-  const fallbackPrecision = docPrecision(model);
 
   // A column's decoration is inferred from its own cells, exactly as write
   // precision is. Input columns count too: a computed neighbour never inherits
@@ -200,9 +187,6 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
       }
     }
   }
-
-  /** charts whose operands resolved — the artifact pass picks these up */
-  const buildableCharts = new Set<string>();
 
   const sheetSeen: string[] = [];
 
@@ -659,7 +643,7 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
             end: node.span.end,
           };
     try {
-      return lookupVector(node, ref, undefined);
+      return lookupVector(st, node, ref);
     } catch {
       return "`" + name + "` contains a blank cell";
     }
@@ -850,7 +834,7 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
   function scalarEnv(binding: Binding): EvalEnv {
     return {
       scalar: (ref) => lookupScalar(binding, ref, null),
-      vector: (ref) => lookupVector(binding, ref, null),
+      vector: (ref) => lookupVector(st, binding, ref),
     };
   }
 
@@ -1023,7 +1007,7 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
   function rowEnv(binding: Binding, sheet: Sheet, row: number): EvalEnv {
     return {
       scalar: (ref) => lookupScalar(binding, ref, { sheet, row }),
-      vector: (ref) => lookupVector(binding, ref, { sheet, row }),
+      vector: (ref) => lookupVector(st, binding, ref),
     };
   }
 
@@ -1052,78 +1036,13 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
     if (!ctx) throw new Unevaluable();
     const colIdx = ctx.sheet.columnIndex.get(res.column)!;
     const cell = ctx.sheet.table?.rows[ctx.row]?.cells[colIdx];
-    return coerceInput(cell?.text ?? "", ctx.sheet.id, res.column, ctx.row, cell);
-  }
-
-  function lookupVector(binding: Binding, ref: Ref, _ctx: unknown): Value[] {
-    const res = resolve(model, binding.sheetId, ref);
-    if (res.kind === "column") {
-      const col = cells.get(res.binding.id);
-      if (!col || col.some((v) => v === null)) throw new Unevaluable();
-      return col as Value[];
-    }
-    if (res.kind === "input-column") {
-      const sheet = model.sheets.get(res.sheetId)!;
-      const colIdx = sheet.columnIndex.get(res.column)!;
-      return (sheet.table?.rows ?? []).map((row, r) => {
-        const cell = row.cells[colIdx];
-        return coerceInput(cell?.text ?? "", sheet.id, res.column, r, cell);
-      });
-    }
-    throw new Unevaluable();
-  }
-
-  function coerceInput(
-    text: string,
-    sheetId: string,
-    column: string,
-    row: number,
-    cell: { start: number; end: number } | undefined,
-  ): Value {
-    const t = text.trim();
-    const n = numericValue(t);
-    if (n !== null) return num(n);
-    const iso = parseIsoDate(t);
-    if (iso.ok) return date(iso.iso);
-    if (DATEISH_RE.test(t) || /^\d{4}-\d{2}-\d{2}$/.test(t)) {
-      const key = `${sheetId}.${column}#${row}`;
-      if (!dateErrorRows.has(key)) {
-        dateErrorRows.add(key);
-        const table = model.sheets.get(sheetId)!.table!;
-        emit(
-          {
-            code: "DATE",
-            sheetId,
-            name: column,
-            rowLabel: rowLabel(table, row),
-            raw: t,
-            isoFix: iso.ok ? undefined : iso.decidable,
-            altA: iso.ok ? undefined : iso.ambiguous?.a,
-            altB: iso.ok ? undefined : iso.ambiguous?.b,
-            daysApart: iso.ok ? undefined : iso.ambiguous?.daysApart,
-            span: cell ? { start: cell.start, end: cell.end } : undefined,
-          },
-          { sheetId },
-        );
-      }
-      throw new Unevaluable();
-    }
-    return str(t);
+    return coerceInput(st, cell?.text ?? "", ctx.sheet.id, res.column, ctx.row, cell);
   }
 }
 
 // ---------------------------------------------------------------------------
 
-function orderFindings(
-  entries: {
-    f: Finding;
-    det: number;
-    sheetId?: string;
-    rowIndex?: number;
-    isColumnCell?: boolean;
-  }[],
-  sheetOrder: string[],
-): Finding[] {
+function orderFindings(entries: Entry[], sheetOrder: string[]): Finding[] {
   const staleCells = entries.filter((e) => e.f.code === "STALE" && e.isColumnCell);
   const staleScalars = entries.filter(
     (e) => e.f.code === "STALE" && !e.isColumnCell && !e.f.anchorGroup,
@@ -1234,10 +1153,6 @@ export function showValue(v: Value, places: number): string {
   // Unreachable, as above; the branch keeps the formatter total over `Value`.
   if (v.t === "bool") return String(v.b);
   return v.s;
-}
-
-function rowLabel(table: RawTable, row: number): string {
-  return table.rows[row]?.cells[0]?.text ?? `row ${row + 1}`;
 }
 
 export function countBindings(model: DocModel): number {
