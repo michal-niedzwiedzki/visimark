@@ -6,7 +6,18 @@ on:
   # Manual runs re-check every registry and backfill whatever is missing for the
   # versions currently in the package manifests. Every publish leg is guarded by
   # a version-exists check, so a dispatch with nothing to do is a no-op.
-  workflow_dispatch: {}
+  #
+  # `tag` is what makes that promise whole. The GitHub Release and the issue
+  # bookkeeping need a tag to point at, and a dispatch has no tag ref of its
+  # own; given one, the run checks that tag out and backfills those two as well.
+  # Left empty, a dispatch can only repair the three publish legs — it says so
+  # in the log rather than quietly doing two thirds of the job.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to back-fill, e.g. v0.1.3. Must already exist. Leave empty to repair only the npm / Marketplace / Open VSX legs."
+        required: false
+        type: string
 
 permissions:
   contents: write # cut the GitHub Release
@@ -17,8 +28,12 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
+      # On a dispatch with a `tag`, build that tag's tree rather than the
+      # default branch: a backfill has to publish what was released, not what
+      # master happens to hold now.
       - uses: actions/checkout@v7
         with:
+          ref: ${{ inputs.tag || github.ref }}
           fetch-depth: 0 # the vocab issue-close step walks history back to the previous tag
       - uses: oven-sh/setup-bun@v2
         with:
@@ -33,6 +48,38 @@ jobs:
       - run: bun run build
       - run: bun test
 
+      # The tag the tag-gated steps below work from: the dispatch input if one
+      # was given, else the pushed tag. Anything else — a dispatch with no input
+      # — leaves it empty, and those steps skip with the reason on the log
+      # instead of being silently absent.
+      - name: Resolve the effective tag
+        id: tag
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          if [ -n "$INPUT_TAG" ]; then
+            tag="$INPUT_TAG"
+          elif [ "$GITHUB_REF_TYPE" = tag ]; then
+            tag="$GITHUB_REF_NAME"
+          else
+            tag=""
+          fi
+          if [ -n "$tag" ] && ! git rev-parse -q --verify "refs/tags/$tag^{commit}" >/dev/null; then
+            # fetch-depth: 0 brings every tag with it, so a tag that is missing
+            # here does not exist on the remote either. Fix the input rather
+            # than relaxing this check: the issue-close step's ancestry walk
+            # would otherwise compare against nothing and close nothing.
+            echo "::error file=.github/workflows/release.yml::tag '$tag' does not exist in this repository. Pass an existing tag to the workflow_dispatch input — see docs/releasing.md."
+            exit 1
+          fi
+          if [ -z "$tag" ]; then
+            echo "::warning::No tag for this run, so the GitHub Release and the request-issue bookkeeping will be skipped. Re-dispatch with the 'tag' input to backfill those too — see docs/releasing.md."
+          else
+            echo "Effective tag: $tag"
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
       - name: Resolve the versions to publish
         run: |
           {
@@ -46,8 +93,19 @@ jobs:
       # already there, and publishes or skips on that answer. None of them reads
       # "already published" off a command's exit code: an unexpected failure has
       # to fail the job, not be mistaken for a no-op.
-
+      #
+      # `continue-on-error` does not soften that. Because the legs are
+      # independent and idempotent, one of them erroring is no reason to strand
+      # the others — v0.1.3 lost Open VSX, the GitHub Release and the issue
+      # bookkeeping to a Marketplace credential problem none of them shared. So
+      # each leg records its outcome, the run carries on, and "every leg must
+      # have landed" at the end turns any recorded failure back into a failed
+      # job. The only dependency that is real is the .vsix: the two extension
+      # registries and the GitHub Release consume the file "Package the
+      # extension" produces, so they are gated on it rather than on `always()`.
       - name: Publish the engine to npm
+        id: npm
+        continue-on-error: true
         working-directory: packages/visimark
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -59,17 +117,22 @@ jobs:
           fi
 
       - name: Package the extension
+        id: package
+        continue-on-error: true
         working-directory: editors/vscode
         run: bunx @vscode/vsce package --no-dependencies --out visimark.vsix
 
       - name: Publish to the VS Code Marketplace
+        id: marketplace
+        if: steps.package.outcome == 'success'
+        continue-on-error: true
         working-directory: editors/vscode
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
         run: |
           # `vsce show --json` exits 0 whether or not the extension exists (it
           # prints "undefined" when it doesn't), so a non-zero exit here is a
-          # real error and `bash -e` fails the job on it. On success the parsed
+          # real error and `bash -e` fails the step on it. On success the parsed
           # version list decides: a version not listed means the publish runs.
           bunx @vscode/vsce show "$EXT_NS.$EXT_NAME" --json >/tmp/marketplace.json 2>/dev/null
           if node -e 'const fs=require("fs"); let d; try { d = JSON.parse(fs.readFileSync("/tmp/marketplace.json","utf8")) } catch { process.exit(1) } process.exit((d.versions||[]).some(v => v.version === process.env.EXT_VERSION) ? 0 : 1)'; then
@@ -79,6 +142,9 @@ jobs:
           fi
 
       - name: Publish to Open VSX
+        id: ovsx
+        if: steps.package.outcome == 'success'
+        continue-on-error: true
         working-directory: editors/vscode
         env:
           OVSX_PAT: ${{ secrets.OVSX_PAT }}
@@ -96,10 +162,17 @@ jobs:
             bunx ovsx publish visimark.vsix -p "$OVSX_PAT"
           fi
 
+      # Needs both a tag to hang the release off and the .vsix to attach, and
+      # nothing else — a marketplace credential problem is not a reason to
+      # withhold it. `action-gh-release` is idempotent on an existing release,
+      # so a backfill dispatch repairs a missing one and leaves a present one.
       - name: GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
+        id: ghrelease
+        if: steps.tag.outputs.tag != '' && steps.package.outcome == 'success'
+        continue-on-error: true
         uses: softprops/action-gh-release@v3
         with:
+          tag_name: ${{ steps.tag.outputs.tag }}
           files: editors/vscode/visimark.vsix
           body_path: CHANGELOG.md
           generate_release_notes: true
@@ -109,13 +182,18 @@ jobs:
       # (general), and its issue is left open until the change ships. Close each
       # such issue whose implementation PR merged into this release. "Issue
       # still open" is the guard, so a workflow_dispatch backfill or a re-run is
-      # a no-op. Skipped on workflow_dispatch (no tag) by the same guard as the
-      # release above.
+      # a no-op. It needs a tag and nothing else, so it runs whatever the
+      # publish legs did: the comment it leaves points at the tag, and a leg
+      # that still has to be backfilled does not un-ship the change. v0.1.3 is
+      # the argument — bookkeeping that only happens when all three registries
+      # cooperate is bookkeeping that gets done by hand, or missed.
       - name: Close shipped request issues
-        if: startsWith(github.ref, 'refs/tags/')
+        id: issues
+        if: steps.tag.outputs.tag != ''
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ steps.tag.outputs.tag }}
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
@@ -141,3 +219,82 @@ jobs:
                 echo "#$n is $state — skipping"
               fi
             done
+
+      # The verdict. Two halves, because a green run has twice told this repo
+      # something false: v0.1.1 went green with both marketplace legs empty, and
+      # v0.1.3's failure sat unnoticed for a day with npm ahead of Open VSX.
+      #
+      # First, any leg that recorded a failure above fails the job here — that
+      # is what buys the legs the right to continue past each other, and it is
+      # why `continue-on-error` is not a softening. Second, ask all three
+      # registries whether the versions are actually there: the same "ask the
+      # registry, don't trust the exit code" discipline each leg uses, applied
+      # once at the end as an assertion rather than a branch, so a leg that
+      # exits 0 without publishing cannot pass for done.
+      #
+      # No `set -e`: every check below is explicitly tested and accumulated into
+      # `fail`, so one missing registry still reports the other two.
+      - name: every leg must have landed
+        env:
+          NPM_OUTCOME: ${{ steps.npm.outcome }}
+          PACKAGE_OUTCOME: ${{ steps.package.outcome }}
+          MARKETPLACE_OUTCOME: ${{ steps.marketplace.outcome }}
+          OVSX_OUTCOME: ${{ steps.ovsx.outcome }}
+          GHRELEASE_OUTCOME: ${{ steps.ghrelease.outcome }}
+          ISSUES_OUTCOME: ${{ steps.issues.outcome }}
+        run: |
+          set -uo pipefail
+          fail=0
+
+          # A skipped leg is not a failed one: the extension legs skip when
+          # packaging failed (reported on its own line), and the two tag-gated
+          # steps skip on a dispatch with no tag, which is documented behaviour.
+          for pair in \
+            "Publish the engine to npm=$NPM_OUTCOME" \
+            "Package the extension=$PACKAGE_OUTCOME" \
+            "Publish to the VS Code Marketplace=$MARKETPLACE_OUTCOME" \
+            "Publish to Open VSX=$OVSX_OUTCOME" \
+            "GitHub Release=$GHRELEASE_OUTCOME" \
+            "Close shipped request issues=$ISSUES_OUTCOME"; do
+            leg="${pair%%=*}"; outcome="${pair##*=}"
+            if [ "$outcome" = failure ]; then
+              echo "::error::the '$leg' step failed. The independent legs were allowed to run on; read that step's log for the cause, fix it, then re-run with 'gh workflow run release.yml -f tag=<tag>' — see docs/releasing.md."
+              fail=1
+            fi
+          done
+
+          # Registries can lag a few seconds behind a publish they have already
+          # accepted, so each check gets a handful of attempts. This is a last
+          # line of defence, not a poll: still absent after this and the release
+          # really is incomplete.
+          retry() { for _ in 1 2 3 4 5; do if "$@"; then return 0; fi; sleep 15; done; return 1; }
+
+          on_npm() { npm view "visimark@$ENGINE_VERSION" version >/dev/null 2>&1; }
+          on_marketplace() {
+            bunx @vscode/vsce show "$EXT_NS.$EXT_NAME" --json >/tmp/verify-marketplace.json 2>/dev/null || return 1
+            node -e 'const fs=require("fs"); let d; try { d = JSON.parse(fs.readFileSync("/tmp/verify-marketplace.json","utf8")) } catch { process.exit(1) } process.exit((d.versions||[]).some(v => v.version === process.env.EXT_VERSION) ? 0 : 1)'
+          }
+          on_ovsx() { [ "$(curl -sS -o /dev/null -w '%{http_code}' "https://open-vsx.org/api/$EXT_NS/$EXT_NAME/$EXT_VERSION")" = "200" ]; }
+
+          if retry on_npm; then
+            echo "npm has visimark@$ENGINE_VERSION."
+          else
+            echo "::error::npm does not have visimark@$ENGINE_VERSION. The release is incomplete — fix the npm leg and re-run this workflow; do not publish by hand (see docs/releasing.md)."
+            fail=1
+          fi
+
+          if retry on_marketplace; then
+            echo "The Marketplace has $EXT_NS.$EXT_NAME@$EXT_VERSION."
+          else
+            echo "::error::the VS Code Marketplace does not list $EXT_NS.$EXT_NAME@$EXT_VERSION. A first publish for a publisher can sit in verification for a while — check the publisher hub before assuming a credential problem — then fix the cause and re-run this workflow. Fix this check rather than deleting it: it is the only thing that noticed v0.1.3 was half-published."
+            fail=1
+          fi
+
+          if retry on_ovsx; then
+            echo "Open VSX has $EXT_NS.$EXT_NAME@$EXT_VERSION."
+          else
+            echo "::error::Open VSX does not have $EXT_NS.$EXT_NAME@$EXT_VERSION. The release is incomplete — fix the Open VSX leg and re-run this workflow (see docs/releasing.md)."
+            fail=1
+          fi
+
+          exit $fail

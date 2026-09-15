@@ -16,7 +16,7 @@ and left an untraceable tarball on the registry for good.
 | `visimark` on npm, with a provenance attestation | `packages/visimark/package.json` | `npm view visimark@<v>` — skip if already there |
 | `visimark-vscode` on the VS Code Marketplace | `editors/vscode/package.json` | `vsce show` — skip if the version is listed |
 | `visimark-vscode` on Open VSX | `editors/vscode/package.json` | Open VSX API — skip if the version is there; create the namespace only if it is genuinely missing |
-| GitHub Release, with the `.vsix` attached | the tag | tag pushes only, not `workflow_dispatch` |
+| GitHub Release, with the `.vsix` attached | the tag | needs a tag — the pushed one, or the `tag` input on a `workflow_dispatch` |
 | Each request issue whose change ships in this release, closed | the `vocab/issue-<n>-<slug>-impl` or `issue/<n>-<slug>-impl` merge commit is an ancestor of the tag | the issue is still open — a re-run skips what is already closed |
 
 `packages/visimark-lsp` is bundled into the extension and is not published on
@@ -24,9 +24,20 @@ its own, but its version moves in lockstep. The root `visimark-monorepo`
 package is private and unversioned — leave it alone.
 
 Every leg checks the registry for the exact version and publishes or skips on
-that answer. A registry that *rejects* a publish fails the whole run — it is
-never logged as "already done". A green `release` run still is not proof: see
-[Verify every leg](#verify-every-leg).
+that answer. A registry that *rejects* a publish fails the run — it is never
+logged as "already done". It no longer fails it *immediately*, though: the legs
+are independent and each one is guarded, so a credential problem in one does not
+stop the others, the GitHub Release, or the issue bookkeeping. The run records
+each leg's outcome and fails at the end. The only ordering that is real is the
+`.vsix`: if packaging the extension fails, both marketplace legs and the GitHub
+Release are skipped, because there is nothing to publish.
+
+The last step of the run, **every leg must have landed**, asks all three
+registries whether the versions are actually there and fails the job if any is
+missing. That is what makes a green run mean something — v0.1.1 went green with
+both marketplace legs empty, and v0.1.3 shipped npm only. It is not a substitute
+for [Verify every leg](#verify-every-leg), which also covers the provenance
+attestation and the GitHub Release.
 
 ```mermaid
 flowchart LR
@@ -42,18 +53,24 @@ flowchart LR
   present -->|yes| skip[Skip that leg]
   present -->|no| pub[Publish]
   pub --> rejected{"Registry rejects?"}
-  rejected -->|yes| fail[Fail the whole run]
+  rejected -->|yes| legfail[Record the leg as failed, carry on]
   rejected -->|no| ok[Leg done]
-  skip --> verify[Verify every leg]
-  ok --> verify
-  ghrel --> verify
-  closeIss --> verify
+  skip --> gate["every leg must have landed: re-ask all three registries"]
+  ok --> gate
+  legfail --> gate
+  ghrel --> gate
+  closeIss --> gate
+  gate -->|all present, no leg failed| verify[Verify every leg by hand]
+  gate -->|anything missing| fail[Fail the run]
   fail --> fix[Fix the cause]
-  fix --> dispatch["workflow_dispatch backfills missing legs"]
+  fix --> dispatch["workflow_dispatch -f tag=vX.Y.Z backfills what is missing"]
   dispatch --> present
 ```
 
-GitHub Release is cut on a tag push only. `workflow_dispatch` does not create one.
+A `workflow_dispatch` without a `tag` cuts no GitHub Release and closes no
+issues — it has no tag to point at, and it says so in the run log. Pass
+`-f tag=vX.Y.Z` to backfill those two as well; the run then checks that tag out
+and builds from it.
 
 ## Before you tag
 
@@ -139,10 +156,11 @@ did, so it got one).
 
 ## Verify every leg
 
-`release.yml` reporting success is where the check starts, not where it ends —
-the v0.1.1 run went green while both marketplace legs shipped nothing. `check`
-refuses to call a formula-free table verified; hold a release to the same bar.
-After the run, for the version you released:
+`release.yml`'s own final step now asserts all three registries have the
+version, so a green run is no longer the empty signal it was for v0.1.1. It
+still does not check the provenance attestation or the GitHub Release, and
+`check` refuses to call a formula-free table verified — hold a release to the
+same bar. After the run, for the version you released:
 
 ```bash
 # This is also the Action's pinned default (ci.yml asserts the two agree), so
@@ -168,13 +186,16 @@ Fix the cause — a missing secret, an unverified publisher, a namespace that wa
 never created — then re-run:
 
 ```bash
-gh workflow run release.yml
+gh workflow run release.yml -f tag=vX.Y.Z
 ```
 
-`workflow_dispatch` re-checks every registry against the version currently in
-the manifests and backfills only what is missing. It does not cut a GitHub
-Release (that needs a tag). **Never bump the version just to re-trigger the
-pipeline.**
+`workflow_dispatch` re-checks every registry and backfills only what is missing.
+With `tag`, it checks that tag out, so the versions it publishes are the tagged
+ones and the GitHub Release and the request-issue bookkeeping are backfilled
+too. Without `tag` it runs from the default branch against the versions
+currently in the manifests, repairs the three publish legs only, and warns in
+the log that it skipped the other two. **Never bump the version just to
+re-trigger the pipeline.**
 
 ## Rules that bite
 
@@ -188,7 +209,7 @@ pipeline.**
 | `action.yml`'s `version` default is bumped with the manifests. | Every consumer who pins the new Action ref keeps running the previous engine, with nothing at run time to tell them. Nothing fails; it just quietly verifies with the old code. |
 | Changelog dates are ISO 8601, `YYYY-MM-DD`. | The project's own date rule, unenforced here because nothing runs `check` with date repair on the changelog. |
 | Never retag, force-push a tag, or `npm unpublish` to tidy a botched release. | It rewrites history to look like the pipeline did something it did not. Bump to the next patch and let the record stand — the move `infer`'s near-miss refusal exists to enforce, applied to the release instead of a spreadsheet. |
-| A green `release` run is not a released package. Verify each leg. | The v0.1.1 run reported success with npm and the GitHub Release done and both extension registries empty. |
+| A green `release` run is not a fully released package. Verify each leg. | The run's final step asserts the three registries have the version, but nothing automated checks the provenance attestation or the GitHub Release. The v0.1.1 run reported success with npm and the GitHub Release done and both extension registries empty — that gap is closed; the remaining ones are yours. |
 
 ## Secrets the workflow needs
 
