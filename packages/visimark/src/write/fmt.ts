@@ -8,14 +8,16 @@ import {
   roundValue,
   showValue,
 } from "../eval/check.js";
+import type { DocumentFile } from "../fs/reader.js";
 import type { DocModel, Finding } from "../model/types.js";
 import { applyUnit } from "../eval/units.js";
 import { applyEdits, type Edit } from "./splice.js";
 
 export interface FmtOptions {
   fixDates?: boolean;
-  /** the document's own path — needed to resolve and write its artifacts */
-  docPath?: string;
+  /** where the document lives and how to read the files around it — needed to
+   *  resolve and write its artifacts. See `CheckOptions.doc`. */
+  doc?: DocumentFile;
 }
 
 /** a generated artifact `fmt` must write: absolute target, and its bytes */
@@ -182,7 +184,7 @@ const FIXABLE_BY_FMT = new Set(["STALE"]);
 
 export function fmt(source: string, opts: FmtOptions = {}): FmtResult {
   const model = build(locate(source));
-  const result = check(model, { docPath: opts.docPath });
+  const result = check(model, { doc: opts.doc });
   const edits = planFmt(model, result, opts);
   const output = applyEdits(source, edits);
 

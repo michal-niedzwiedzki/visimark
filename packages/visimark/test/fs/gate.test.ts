@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { resolveArtifactPath } from "../../src/artifact/path.js";
+import { onDisk } from "../../src/fs/node-reader.js";
 import { resolveImportPath } from "../../src/import/path.js";
 
 /**
@@ -15,8 +16,9 @@ import { resolveImportPath } from "../../src/import/path.js";
  */
 
 const dir = mkdtempSync(join(tmpdir(), "vmark-gate-"));
-const doc = join(dir, "report.md");
-writeFileSync(doc, "# x\n");
+const docPath = join(dir, "report.md");
+const doc = onDisk(docPath);
+writeFileSync(docPath, "# x\n");
 
 /** the two faces of `gatePath`, named by the noun each one reports */
 const gates = [

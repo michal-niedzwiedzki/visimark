@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, test } from "bun:test";
+import { onDisk } from "../../src/fs/node-reader.js";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -40,7 +41,7 @@ function staged(): { dir: string; doc: string; write: ReturnType<typeof plan> } 
 }
 
 function plan(doc: string) {
-  const r = fmt(readFileSync(doc, "utf8"), { docPath: doc });
+  const r = fmt(readFileSync(doc, "utf8"), { doc: onDisk(doc) });
   expect(r.artifacts).toHaveLength(1);
   return r.artifacts[0]!;
 }

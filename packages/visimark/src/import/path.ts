@@ -1,4 +1,5 @@
 import { type GateSpec, gatePath, type PathResult } from "../fs/gate.js";
+import type { DocumentFile } from "../fs/reader.js";
 
 /**
  * The declared-input path gate - the read-side face of `fs/gate.ts`, and the
@@ -14,6 +15,6 @@ export type { PathResult };
 
 const IMPORT: GateSpec = { noun: "imported file path", ext: ".csv" };
 
-export function resolveImportPath(docPath: string, url: string): PathResult {
-  return gatePath(docPath, url, IMPORT);
+export function resolveImportPath(doc: DocumentFile, url: string): PathResult {
+  return gatePath(doc, url, IMPORT);
 }

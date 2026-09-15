@@ -1,11 +1,22 @@
+import type { DocumentFile } from "../fs/reader.js";
 import type { Assertion, DocModel, Finding } from "../model/types.js";
 import type { Unit } from "./units.js";
 import type { Value } from "./value.js";
 
-/** the document's own path — required to resolve and compare artifacts.
- *  Without it charts are still validated, but staleness cannot be judged. */
+/**
+ * `doc` is where the document lives *and* the `ReaderPort` that reaches the
+ * files around it — required to resolve and compare artifacts, and to read
+ * declared imports. Without it charts are still validated and imports are
+ * still accepted, but nothing on disk can be looked at, so staleness cannot be
+ * judged and no import is read.
+ *
+ * It is one field, not a path plus an optional reader, so that "this document
+ * is not on a filesystem" is a single condition every phase branches on the
+ * same way. The browser playground is the caller that leaves it out; see
+ * `fs/reader.ts`.
+ */
 export interface CheckOptions {
-  docPath?: string;
+  doc?: DocumentFile;
 }
 
 /** one entry per `chart` declaration, in document order */

@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import type { ReaderPort } from "../fs/reader.js";
 
 /**
  * Staleness by **byte comparison**, not by checksum.
@@ -40,18 +40,16 @@ export function normalise(s: string): string {
 }
 
 export function classify(
+  reader: ReaderPort,
   target: string,
   rendered: string,
   sheetId: string,
   chart: string,
 ): ArtifactState {
-  if (!existsSync(target)) return { state: "missing" };
-  let onDisk: string;
-  try {
-    onDisk = readFileSync(target, "utf8");
-  } catch {
-    return { state: "missing" };
-  }
+  // both of the old branches — nothing there, and there but unreadable —
+  // arrive as `null` and still mean `missing`
+  const onDisk = reader.readText(target);
+  if (onDisk === null) return { state: "missing" };
   const mark = readMarker(onDisk);
   if (!mark) return { state: "unowned" };
   if (mark.sheet !== sheetId || mark.chart !== chart) {

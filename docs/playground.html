@@ -2105,7 +2105,8 @@ applies those proposals to the document.</pre>
          *  never runs, see runFmt()'s doc comment), so a chart's SVG never
          *  lands at the `![...](path)` its anchor names. `pgEval`'s `charts[]`
          *  carries the rendered SVG in memory regardless — check() always
-         *  builds it, it just can't compare it to a file without a docPath —
+         *  builds it, it just can't compare it to a file without a reader
+         *  (`CheckOptions.doc`, which this build has no way to supply) —
          *  so PREVIEW substitutes it into the matching <img> by hand. */
         function refreshDerived() {
           var source = cm.getValue();

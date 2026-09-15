@@ -8,6 +8,7 @@
  * `fmt` never touches the CSV and is idempotent.
  */
 import { expect, test } from "bun:test";
+import { onDisk } from "../src/fs/node-reader.js";
 import { createHash } from "node:crypto";
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -23,7 +24,7 @@ const DIGEST = "c4e418b2a0f4bdc584b99007dcfd39e200b51ff3555e66ae5d42694e0bbd19ee
 
 function checkSource(md: string, docPath: string = MD_PATH) {
   const model = build(locate(md));
-  return check(model, { docPath });
+  return check(model, { doc: onDisk(docPath) });
 }
 
 test("1. clean: 0 problems", () => {
@@ -54,12 +55,12 @@ test("3. stale: one STALE finding on the import; fmt corrects it and leaves the 
 
     const source = readFileSync(mdPath, "utf8");
     const model = build(locate(source));
-    const result = check(model, { docPath: mdPath });
+    const result = check(model, { doc: onDisk(mdPath) });
     const staleFindings = result.findings.filter((f) => f.code === "STALE");
     expect(staleFindings).toHaveLength(1);
     expect(result.exitCode).toBe(1);
 
-    const fmtResult = fmt(source, { docPath: mdPath });
+    const fmtResult = fmt(source, { doc: onDisk(mdPath) });
     expect(fmtResult.changed).toBe(true);
     expect(fmtResult.stampsUpdated).toBe(1);
     writeFileSync(mdPath, fmtResult.output);
@@ -122,10 +123,10 @@ test("8. fmt idempotence: a second fmt on an already-correct import is a no-op",
     const csvPath = join(dir, "benchmark.csv");
     const source = readFileSync(mdPath, "utf8");
 
-    const first = fmt(source, { docPath: mdPath });
+    const first = fmt(source, { doc: onDisk(mdPath) });
     expect(first.changed).toBe(false);
 
-    const second = fmt(first.output, { docPath: mdPath });
+    const second = fmt(first.output, { doc: onDisk(mdPath) });
     expect(second.output).toBe(first.output);
     expect(second.changed).toBe(false);
 
