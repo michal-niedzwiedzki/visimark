@@ -62,6 +62,28 @@ jobs:
             echo "::error::plain quote passed under Node; it must fail (COVERAGE)"; exit 1
           fi
 
+      # The expression-depth cap was measured against JavaScriptCore, but V8's
+      # default stack is smaller and this is the job that has Node. Both halves
+      # matter: the behaviour, and the margin that makes the behaviour hold.
+      - name: pathological input is refused, not a stack overflow, under Node
+        run: |
+          set -e
+          bin=packages/visimark/bin/visimark.js
+          deep=$(node -e 'const n=30000;process.stdout.write("# deep\n\n```vmark #s\nx = "+"(".repeat(n)+"1"+")".repeat(n)+"\n```\n")')
+          printf '%s' "$deep" > /tmp/deep.md
+          out=$(node "$bin" check /tmp/deep.md 2>&1) && rc=0 || rc=$?
+          if printf '%s' "$out" | grep -q 'RangeError'; then
+            echo "::error::deeply nested formula crashed the CLI under Node"
+            printf '%s\n' "$out" | head -20; exit 1
+          fi
+          if ! printf '%s' "$out" | grep -q 'nests more than'; then
+            echo "::error::no depth finding under Node; got:"; printf '%s\n' "$out" | head -20; exit 1
+          fi
+          [ "$rc" = 1 ] || { echo "::error::expected exit 1, got $rc"; exit 1; }
+
+      - name: the depth cap still has stack headroom under Node
+        run: node scripts/stack-headroom.mjs
+
   # Pack once, then install the tarball globally in two isolated environments —
   # a Node-only runner and a Bun-only container — and run the command. This is
   # the regression test for #29 (bun add -g on a machine with no Node).

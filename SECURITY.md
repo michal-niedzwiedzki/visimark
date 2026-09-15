@@ -26,6 +26,21 @@ evaluator, read or write files it was not asked to, or hang the process on
 input of a reasonable size is in scope. A formula that merely produces a wrong
 number is a correctness bug — open a normal issue.
 
+### Expression depth
+
+A formula's nesting is bounded at parse time. Five recursive walkers descend
+whatever the parser returns — the evaluator, the model builder, the reporter
+and two more — so an expression deep enough to exhaust the stack used to end
+the process with an uncaught `RangeError` rather than report anything, and
+under `visimark-lsp` it ended the server for every open file, not just the one.
+An expression past the bound is now refused like any other parse error: a
+positioned finding, a normal exit code. The bound is two orders of magnitude
+above the deepest formula in this repository's own documents, so no document a
+person would write comes near it.
+
+That covers stack exhaustion only. A document that exhausts *memory* or runs
+for an unreasonable time is still in scope and still worth reporting.
+
 ### Concurrent local processes
 
 A document states where its chart artifact is written and where its imported
