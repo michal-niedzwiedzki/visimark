@@ -1,8 +1,29 @@
 // Browser bundle entry for the web playground (docs/playground.html).
-// Exposes VisiMark's pure parse/model/eval/write pipeline — no node:fs, no CLI
-// argv/file plumbing. `pgEval` and `pgExplain` are the browser-safe
-// equivalents of `cmdEval`/`cmdExplain` in ../cli/commands.ts, operating on an
-// in-memory source string instead of a file path.
+// Exposes VisiMark's parse/model/eval/write pipeline — no CLI argv/file
+// plumbing. `pgEval` and `pgExplain` are the browser-safe equivalents of
+// `cmdEval`/`cmdExplain` in ../cli/commands.ts, operating on an in-memory
+// source string instead of a file path.
+//
+// **No node:fs, and no node:crypto — structurally, not by convention.** The
+// three phases that touch a filesystem (the path gate, artifact staleness,
+// import resolution) are still in this graph, because whether they run is a
+// runtime condition no bundler can see. They no longer *import* `node:fs`:
+// they take a `ReaderPort` (../fs/reader.ts), whose only `node:fs`
+// implementation lives in ../fs/node-reader.ts, which nothing reachable from
+// this file imports. So `bun build --target browser` has no `node:fs` or
+// `node:crypto` to stub, and the stubbed-call-site crash class that took the
+// playground down for 74 minutes (PR #99) cannot recur here.
+//
+// That claim is a test, not a comment: ../../test/playground/browser-graph.test.ts
+// walks this file's transitive imports and greps the committed bundle.
+//
+// The wrappers below are the other half. `check` and `fmt` both accept a
+// `doc: { path, reader }`, and this build ships no reader — so the only way to
+// reach the filesystem phases from `window.VisiMark` is for a caller to write
+// a `ReaderPort` themselves, which in a browser means an in-memory one. There
+// is no bare `docPath` string that silently means "use node:fs"; that option,
+// and the crash it could reproduce, no longer exists. A browser-side reader
+// over playground.html's in-memory file store is what review §4.3 will supply.
 //
 // playground.html loads the built bundle as a classic `<script>`, not a
 // module: the playground is meant to be opened straight from disk
@@ -10,7 +31,7 @@
 // --format iife` has no notion of a UMD-style global export, so this file
 // assigns itself to `window.VisiMark` as its last statement (see bottom).
 import { applyEdits } from "../write/splice.js";
-import { check } from "../eval/check.js";
+import { check as checkDoc, type CheckOptions } from "../eval/check.js";
 import { topoOrder } from "../eval/graph.js";
 import type { Value } from "../eval/value.js";
 import { infer } from "../infer/propose.js";
@@ -20,7 +41,26 @@ import type { DocModel } from "../model/types.js";
 import { locate } from "../parse/document.js";
 import { formatCheck } from "../report/format.js";
 import { formatInfer } from "../report/infer.js";
-import { fmt } from "../write/fmt.js";
+import { fmt as fmtDoc, type FmtOptions, type FmtResult } from "../write/fmt.js";
+
+/**
+ * The browser's `check`/`fmt`, with the Node-only half of their options gone.
+ *
+ * `FmtOptions.fixDates` is pure string work and is kept. `doc` is kept too,
+ * but re-stated here so the reader of this file can see what it now costs to
+ * use: a `ReaderPort` the caller implements. Nothing in this bundle can build
+ * one out of a path, because nothing in this bundle can reach a filesystem.
+ */
+export type BrowserCheckOptions = Pick<CheckOptions, "doc">;
+export type BrowserFmtOptions = Pick<FmtOptions, "fixDates" | "doc">;
+
+function check(model: DocModel, opts: BrowserCheckOptions = {}) {
+  return checkDoc(model, opts);
+}
+
+function fmt(source: string, opts: BrowserFmtOptions = {}): FmtResult {
+  return fmtDoc(source, opts);
+}
 
 function showValue(v: Value): string {
   if (v.t === "num") return v.d.toString();

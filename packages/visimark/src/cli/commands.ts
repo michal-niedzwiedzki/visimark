@@ -1,6 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { writeArtifact } from "../artifact/write.js";
+import { onDisk } from "../fs/node-reader.js";
 import { check } from "../eval/check.js";
 import type { Value } from "../eval/value.js";
 import { build } from "../model/build.js";
@@ -90,7 +91,7 @@ export function cmdCheck(args: string[], out: Writer, err: Writer): number {
       exit = 2;
       continue;
     }
-    const result = check(build(locate(source)), { docPath: path });
+    const result = check(build(locate(source)), { doc: onDisk(path) });
     if (!json) out(formatCheck(path, result.findings));
     else {
       const summary = findingSummary(result.findings);
@@ -148,7 +149,7 @@ export function cmdFmt(args: string[], out: Writer, err: Writer): number {
       exit = 2;
       continue;
     }
-    const r = fmt(source, { fixDates, docPath: path });
+    const r = fmt(source, { fixDates, doc: onDisk(path) });
     // a generated artifact is written whole; the document itself is spliced.
     // `mkdirSync` still resolves a path - it has to, since the artifact's
     // directory may not exist yet - but nothing is decided by it: the open
@@ -422,7 +423,7 @@ export function cmdExplain(args: string[], out: Writer, err: Writer): number {
     return 2;
   }
   const model = build(locate(source));
-  const checkResult = check(model, { docPath: path });
+  const checkResult = check(model, { doc: onDisk(path) });
   for (const sid of sheets.length > 0 ? sheets : model.sheets.keys()) {
     if (!model.sheets.get(sid)) {
       const msg = `visimark: no sheet #${sid}`;

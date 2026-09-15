@@ -1,4 +1,5 @@
 import { type GateSpec, gatePath, type PathResult } from "../fs/gate.js";
+import type { DocumentFile } from "../fs/reader.js";
 
 /**
  * The artifact path gate - the write-side face of `fs/gate.ts`.
@@ -14,6 +15,6 @@ export type { PathResult };
 
 const ARTIFACT: GateSpec = { noun: "artifact path", ext: ".svg" };
 
-export function resolveArtifactPath(docPath: string, url: string): PathResult {
-  return gatePath(docPath, url, ARTIFACT);
+export function resolveArtifactPath(doc: DocumentFile, url: string): PathResult {
+  return gatePath(doc, url, ARTIFACT);
 }

@@ -22,6 +22,15 @@ export type {
   Span,
 } from "./parse/document.js";
 export { runCli } from "./cli/main.js";
+// The reader port and its `node:fs` implementation. A library caller that has
+// a document on disk passes `onDisk(path)` as `CheckOptions.doc` /
+// `FmtOptions.doc`; a caller that does not (a browser, an editor working on an
+// unsaved buffer) passes nothing, and the filesystem phases stand down.
+// `node-reader.js` is imported *here* and not from the engine, so that the
+// browser bundle's graph never reaches it — see `fs/reader.ts`.
+export type { DocumentFile, ReaderPort, SealedRead } from "./fs/reader.js";
+export { nodeReader, onDisk } from "./fs/node-reader.js";
+export type { CheckOptions } from "./eval/check.js";
 
 import { check as runCheck, type CheckResult } from "./eval/check.js";
 import { build as buildModel } from "./model/build.js";

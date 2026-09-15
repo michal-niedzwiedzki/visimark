@@ -1,6 +1,4 @@
-import { createHash } from "node:crypto";
-import { closeSync, readFileSync } from "node:fs";
-import { openForRead } from "../fs/open.js";
+import type { DocumentFile } from "../fs/reader.js";
 import type { DocModel, Finding, ImportStatus } from "../model/types.js";
 import type { RawCell, RawRow, RawTable, Span } from "../parse/document.js";
 import { parseCsv } from "./csv.js";
@@ -21,10 +19,16 @@ const BOM = "﻿";
  * already takes.
  *
  * See `docs/design/declared-local-data-imports-spec.md` §3–§4.
+ *
+ * `doc` is `undefined` when the document is not on a filesystem — the browser
+ * playground's case. That is the same condition the old `docPath === undefined`
+ * check tested, now stated structurally: without a `ReaderPort` there is no
+ * `readSealed` to call, so the phase cannot reach a filesystem whether or not
+ * one exists. See `fs/reader.ts`.
  */
 export function resolveImports(
   model: DocModel,
-  docPath: string | undefined,
+  doc: DocumentFile | undefined,
 ): { findings: Finding[]; statuses: Map<string, ImportStatus> } {
   const findings: Finding[] = [];
   const statuses = new Map<string, ImportStatus>();
@@ -38,40 +42,34 @@ export function resolveImports(
       statuses.set(sheet.id, { sheetId: sheet.id, target: null, digest: null, state });
     };
 
-    if (docPath === undefined) {
-      // no document path to resolve against — mirrors chart handling: valid,
-      // but nothing on disk can be checked, so nothing is reported either
+    if (doc === undefined) {
+      // no reader, so no document path to resolve against and nothing to read
+      // — mirrors chart handling: valid, but nothing on disk can be checked,
+      // so nothing is reported either
       statuses.set(sheet.id, { sheetId: sheet.id, target: null, digest: null, state: "skipped" });
       continue;
     }
 
-    const gated = resolveImportPath(docPath, decl.path);
+    const gated = resolveImportPath(doc, decl.path);
     if ("err" in gated) {
       fail(gated.err, decl.pathSpan);
       continue;
     }
 
-    // read through a descriptor that cannot have followed a symlink, rather
-    // than re-resolving the gated path: a link swapped in after the gate
-    // would otherwise put an out-of-tree file's bytes into the model, and
+    // `readSealed`, not a plain read: the bytes come back from a descriptor
+    // that cannot have followed a symlink, opened once and read through
+    // rather than re-resolving the gated path. A link swapped in after the
+    // gate would otherwise put an out-of-tree file's bytes into the model, and
     // from there into `check` output. An unstamped import - the common case
-    // until `fmt` adds the stamp - has nothing to catch that afterwards.
-    const opened = openForRead(gated.ok);
-    if ("err" in opened) {
+    // until `fmt` adds the stamp - has nothing to catch that afterwards. The
+    // digest is of the bytes that descriptor produced, which is why it comes
+    // back from the same call; see `fs/reader.ts`.
+    const read = doc.reader.readSealed(gated.ok);
+    if (read === null) {
       fail("imported file not found: `" + decl.path + "`", decl.pathSpan);
       continue;
     }
-    let raw: Buffer;
-    try {
-      raw = readFileSync(opened.ok);
-    } catch {
-      fail("imported file not found: `" + decl.path + "`", decl.pathSpan);
-      continue;
-    } finally {
-      closeSync(opened.ok);
-    }
-
-    const digest = createHash("sha256").update(raw).digest("hex");
+    const digest = read.sha256;
 
     // stamp clause well-formedness, checked before content — a malformed
     // stamp is a structural problem, judged without reading the file's data
@@ -117,9 +115,7 @@ export function resolveImports(
       state = "unstamped";
     }
 
-    const bomStripped = raw.toString("utf8").startsWith(BOM)
-      ? raw.toString("utf8").slice(1)
-      : raw.toString("utf8");
+    const bomStripped = read.text.startsWith(BOM) ? read.text.slice(1) : read.text;
 
     const parsed = parseCsv(bomStripped, decl.delimiter);
     if (!parsed.ok) {

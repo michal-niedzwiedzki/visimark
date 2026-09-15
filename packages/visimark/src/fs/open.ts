@@ -28,11 +28,16 @@ import { constants, openSync } from "node:fs";
  */
 
 /**
- * `undefined` on Windows, which has no symlink without elevation. Read lazily
- * (not at module scope): this module is pulled into the browser playground
- * bundle for its types, and a bundled `node:fs` shim there has no `constants`
- * to read at load time — only `openSync`/`attempt` ever actually run, and
- * only under Node.
+ * `undefined` on Windows, which has no symlink without elevation.
+ *
+ * **Read lazily, not at module scope.** Reading `constants.O_NOFOLLOW` at
+ * module scope is what threw when this file was bundled for the browser and
+ * `node:fs` was a `(()=>({}))` stub, taking the public playground down for 74
+ * minutes (PR #99). The reader port has since removed this module from that
+ * graph, so the stub cannot be underneath it any more — but the laziness
+ * stays: it costs nothing, and "this constant is only read when a real open is
+ * about to happen" is a weaker precondition than "this module is never loaded
+ * anywhere without a real node:fs". Do not hoist it back.
  */
 function nofollow(): number {
   return constants.O_NOFOLLOW ?? 0;

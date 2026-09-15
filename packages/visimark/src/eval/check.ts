@@ -81,7 +81,7 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
   // columns populated from the CSV — before the dependency graph is built,
   // since every binding that reads an imported column needs that column to
   // already be visible to name resolution (graph.ts).
-  const imported = resolveImports(model, opts.docPath);
+  const imported = resolveImports(model, opts.doc);
 
   const { order, cycles, assertionIds, chartIds } = topoOrder(model);
 

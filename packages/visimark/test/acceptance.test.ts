@@ -1,4 +1,5 @@
 import { expect, test, describe } from "bun:test";
+import { onDisk } from "../src/fs/node-reader.js";
 import { bandwidth, charts, chartsPath, chartFailPath, clean, drift } from "./examples.js";
 import { locate } from "../src/parse/document.js";
 import { build } from "../src/model/build.js";
@@ -54,7 +55,7 @@ describe("the two worked examples are the acceptance suite", () => {
 });
 
 describe("example-charts.md is the generated-artifact acceptance", () => {
-  const run = (s: string, docPath: string) => check(build(locate(s)), { docPath });
+  const run = (s: string, docPath: string) => check(build(locate(s)), { doc: onDisk(docPath) });
 
   test("zero findings, with all artifacts committed and current", () => {
     const r = run(charts, chartsPath);
@@ -69,7 +70,7 @@ describe("example-charts.md is the generated-artifact acceptance", () => {
   });
 
   test("fmt leaves the document and all artifacts untouched", () => {
-    const r = fmt(charts, { docPath: chartsPath });
+    const r = fmt(charts, { doc: onDisk(chartsPath) });
     expect(r.output).toBe(charts);
     expect(r.artifacts).toEqual([]);
   });
@@ -83,7 +84,7 @@ describe("example-charts.md is the generated-artifact acceptance", () => {
       expect(stale).toHaveLength(1);
       expect(stale[0]!.message).toContain("artifact missing");
 
-      const r = fmt(charts, { docPath: chartsPath });
+      const r = fmt(charts, { doc: onDisk(chartsPath) });
       expect(r.artifacts).toHaveLength(1);
       expect(r.artifacts[0]!.svg).toBe(original);
     } finally {
@@ -104,7 +105,7 @@ describe("example-charts.md is the generated-artifact acceptance", () => {
       ].join("\n"),
     );
     expect(r.exitCode).toBe(1);
-    expect(fmt(src, { docPath: chartFailPath }).artifacts).toEqual([]);
+    expect(fmt(src, { doc: onDisk(chartFailPath) }).artifacts).toEqual([]);
   });
 });
 

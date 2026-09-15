@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { onDisk } from "../../src/fs/node-reader.js";
 import { join } from "node:path";
 import { readFileSync } from "node:fs";
 import { bandwidth, charts, chartsPath, clean, cleanPath, quote, repoRoot } from "../examples.js";
@@ -10,7 +11,7 @@ import { explainJson, explainText, explainView } from "../../src/report/explain.
 /** the pair the CLI hands the renderers, without going through runCli */
 function view(source: string, docPath?: string, sheets: string[] = []) {
   const model = build(locate(source));
-  return explainView(model, check(model, docPath ? { docPath } : {}), sheets);
+  return explainView(model, check(model, docPath ? { doc: onDisk(docPath) } : {}), sheets);
 }
 
 const importPath = join(repoRoot, "docs", "example-invoice-csv-import.md");
