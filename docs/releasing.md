@@ -68,14 +68,19 @@ GitHub Release is cut on a tag push only. `workflow_dispatch` does not create on
    run on every push to `master`. Wait for both before tagging — `release.yml`
    checks out the tag, not your working tree, so an unpushed or red commit
    cannot be in the release.
-3. **Bump the version** to the same `X.Y.Z` in all three manifests:
+3. **Bump the version** to the same `X.Y.Z` in all four version-carrying files:
    ```
    packages/visimark/package.json
    packages/visimark-lsp/package.json
    editors/vscode/package.json
+   action.yml          # the `version` input's default
    ```
-   They must match each other and the tag exactly. Edit all three and confirm
-   they agree — `grep -r '"version"' packages/*/package.json editors/*/package.json`.
+   They must match each other and the tag exactly. `action.yml` is in the list
+   because its default is what a consumer's `npx` installs: leave it behind and
+   everyone who pinned the new Action ref quietly keeps running the old engine.
+   No hand-run `grep` needed any more — `ci.yml`'s "every version-carrying file
+   must agree" step fails the build if you miss one, so step 6's green CI is
+   the confirmation.
 4. **Write the changelog** — see [Preparing the changelog](#preparing-the-changelog).
 5. **Promote the shipped rows.** In
    [`docs/vocabulary-catalogue.md`](vocabulary-catalogue.md)'s
@@ -140,6 +145,11 @@ refuses to call a formula-free table verified; hold a release to the same bar.
 After the run, for the version you released:
 
 ```bash
+# This is also the Action's pinned default (ci.yml asserts the two agree), so
+# it doubles as proof that a consumer's `npx visimark@<default>` can resolve.
+# CI proves the number matches the manifests; only npm proves it was ever
+# published, and v0.1.0 is the standing reminder that those are different
+# questions.
 npm view visimark@X.Y.Z version
 npm view visimark@X.Y.Z dist.attestations            # provenance must be present
 npx @vscode/vsce show michal-niedzwiedzki.visimark-vscode
@@ -175,6 +185,7 @@ pipeline.**
 | The changelog entry is written, dated and merged **before** the tag. | The GitHub Release body is built from `CHANGELOG.md` at the tagged commit — a tag ahead of the changelog ships the previous version's notes. |
 | The Shipped-register **Released** cells are filled **before** the tag (step 5). | The released `vocabulary-catalogue.md` shows shipped primitives as still pending, while `release.yml` closes their issues — the catalogue and the tracker disagree. |
 | Tag a commit already on `origin/master` with green `ci` and `dogfood`. | `release.yml` builds from the tag. Uncommitted, unpushed or red work is silently not in the release. |
+| `action.yml`'s `version` default is bumped with the manifests. | Every consumer who pins the new Action ref keeps running the previous engine, with nothing at run time to tell them. Nothing fails; it just quietly verifies with the old code. |
 | Changelog dates are ISO 8601, `YYYY-MM-DD`. | The project's own date rule, unenforced here because nothing runs `check` with date repair on the changelog. |
 | Never retag, force-push a tag, or `npm unpublish` to tidy a botched release. | It rewrites history to look like the pipeline did something it did not. Bump to the next patch and let the record stand — the move `infer`'s near-miss refusal exists to enforce, applied to the release instead of a spreadsheet. |
 | A green `release` run is not a released package. Verify each leg. | The v0.1.1 run reported success with npm and the GitHub Release done and both extension registries empty. |
