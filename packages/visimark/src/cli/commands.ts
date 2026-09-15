@@ -1,5 +1,6 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
+import { writeArtifact } from "../artifact/write.js";
 import { check } from "../eval/check.js";
 import { topoOrder } from "../eval/graph.js";
 import type { Value } from "../eval/value.js";
@@ -148,10 +149,24 @@ export function cmdFmt(args: string[], out: Writer, err: Writer): number {
       continue;
     }
     const r = fmt(source, { fixDates, docPath: path });
-    // a generated artifact is written whole; the document itself is spliced
+    // a generated artifact is written whole; the document itself is spliced.
+    // `mkdirSync` still resolves a path - it has to, since the artifact's
+    // directory may not exist yet - but nothing is decided by it: the open
+    // inside `writeArtifact` is what refuses a target that moved.
+    let refused: string | undefined;
     for (const a of r.artifacts) {
       mkdirSync(dirname(a.target), { recursive: true });
-      writeFileSync(a.target, a.svg);
+      const w = writeArtifact(a);
+      if ("err" in w) {
+        refused = "visimark: " + w.err;
+        break;
+      }
+    }
+    if (refused !== undefined) {
+      err(refused);
+      if (json) fileEntries.push({ path, error: { code: "WRITE", message: refused } });
+      exit = 2;
+      continue;
     }
     if (r.changed) writeFileSync(path, r.output);
     if (!json) {

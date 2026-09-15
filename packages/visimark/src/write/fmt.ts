@@ -24,6 +24,16 @@ export interface ArtifactWrite {
   svg: string;
   /** path as the document named it; JSON reports this, never `target` */
   path: string | null;
+  /**
+   * what `classify()` found there. The writer re-proves this against the
+   * descriptor it writes through, so it must know what was promised:
+   * `missing` means nothing may be there now, `stale` means our own marker
+   * must still be. See `artifact/write.ts`.
+   */
+  state: "missing" | "stale";
+  sheetId: string;
+  /** the chart's name, the second half of the ownership marker */
+  chart: string;
 }
 
 export interface FmtResult {
@@ -194,9 +204,19 @@ export function fmt(source: string, opts: FmtOptions = {}): FmtResult {
 
   // an artifact carrying an ARTIFACT error is not written at all — the same
   // rule a column with a UNIT conflict already follows
-  const artifacts = result.charts
-    .filter((c) => (c.state === "stale" || c.state === "missing") && c.target && c.svg)
-    .map((c) => ({ target: c.target!, svg: c.svg!, path: c.path }));
+  const artifacts: ArtifactWrite[] = [];
+  for (const c of result.charts) {
+    if (c.state !== "stale" && c.state !== "missing") continue;
+    if (!c.target || !c.svg) continue;
+    artifacts.push({
+      target: c.target,
+      svg: c.svg,
+      path: c.path,
+      state: c.state,
+      sheetId: c.sheetId,
+      chart: c.name,
+    });
+  }
 
   return {
     output,
