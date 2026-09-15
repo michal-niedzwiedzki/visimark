@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { closeSync, readFileSync } from "node:fs";
+import { openForRead } from "../fs/open.js";
 import type { DocModel, Finding, ImportStatus } from "../model/types.js";
 import type { RawCell, RawRow, RawTable, Span } from "../parse/document.js";
 import { parseCsv } from "./csv.js";
@@ -50,12 +51,24 @@ export function resolveImports(
       continue;
     }
 
+    // read through a descriptor that cannot have followed a symlink, rather
+    // than re-resolving the gated path: a link swapped in after the gate
+    // would otherwise put an out-of-tree file's bytes into the model, and
+    // from there into `check` output. An unstamped import - the common case
+    // until `fmt` adds the stamp - has nothing to catch that afterwards.
+    const opened = openForRead(gated.ok);
+    if ("err" in opened) {
+      fail("imported file not found: `" + decl.path + "`", decl.pathSpan);
+      continue;
+    }
     let raw: Buffer;
     try {
-      raw = readFileSync(gated.ok);
+      raw = readFileSync(opened.ok);
     } catch {
       fail("imported file not found: `" + decl.path + "`", decl.pathSpan);
       continue;
+    } finally {
+      closeSync(opened.ok);
     }
 
     const digest = createHash("sha256").update(raw).digest("hex");
