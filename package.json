@@ -30,7 +30,7 @@
     "test": "bun test",
     "typecheck": "bun run --filter '*' typecheck",
     "build": "bun run --filter '*' build",
-    "lint": "oxlint",
+    "lint": "oxlint --max-warnings 0",
     "lint:fix": "oxlint --fix",
     "format": "oxfmt",
     "format:check": "oxfmt --check",
