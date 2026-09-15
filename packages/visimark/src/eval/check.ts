@@ -15,15 +15,28 @@ import { describeCallProblem, FUNCTIONS, isReduce } from "./functions.js";
 import { dependencies, refText, resolve, topoOrder } from "./graph.js";
 import { resolveImports } from "../import/resolve.js";
 import type { ImportStatus } from "../model/types.js";
-import { applyUnit, decimalPlaces, inferColumnUnit, parseDecorated, type Unit } from "./units.js";
+import { applyUnit, decimalPlaces, parseDecorated, type Unit } from "./units.js";
 import { EvalError, num, roundToPlaces, type Value } from "./value.js";
 import { coerceInput, lookupVector, rowLabel, Unevaluable } from "./check-lookup.js";
 import { checkCharts } from "./check-charts.js";
-import { type CheckOptions, type Entry, newCheckState } from "./check-state.js";
+import { inferDecoration } from "./check-decoration.js";
+import {
+  reportAnchors,
+  reportCycles,
+  reportUnreachableAssertions,
+  reportUnused,
+} from "./check-report.js";
+import {
+  type AssertionResult,
+  type CheckOptions,
+  type Entry,
+  newAssertionLedger,
+  newCheckState,
+} from "./check-state.js";
 
 import type { ChartResult } from "./check-state.js";
 
-export type { CheckOptions, ChartResult } from "./check-state.js";
+export type { AssertionResult, CheckOptions, ChartResult } from "./check-state.js";
 // `fmt` and the chart pass both need this; it lives with the decoration parser
 // it depends on, and is re-exported here because callers have always found it here.
 export { decimalPlaces } from "./units.js";
@@ -61,19 +74,6 @@ export interface CheckResult {
   exitCode: 0 | 1;
 }
 
-export interface AssertionResult {
-  sheetId: string;
-  /** the `assert …` line verbatim */
-  source: string;
-  /** `true` / `false`, or `null` when a dependency stopped it being evaluated */
-  holds: boolean | null;
-  /** each named operand in the expression → its evaluated value */
-  operands: Record<string, string>;
-  /** the expression as written with each named operand replaced by its value;
-   *  equals the bare expression when `holds` is `null` */
-  substituted: string;
-}
-
 const PERCENT_RE = /^(\d+(?:\.\d+)?)%$/;
 
 export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
@@ -85,17 +85,7 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
 
   const { order, cycles, assertionIds, chartIds } = topoOrder(model);
 
-  const assertionById = new Map<string, Assertion>();
-  for (const sheet of model.sheets.values()) {
-    for (const a of sheet.assertions) assertionById.set(a.id, a);
-  }
-  /** per-sheet count of assertions not evaluated because a dependency failed */
-  const assertSuppressed = new Map<string, number>();
-  const assertionsHandled = new Set<string>();
-  const assertionResults = new Map<string, AssertionResult>();
-  const bumpSuppressed = (sheetId: string): void => {
-    assertSuppressed.set(sheetId, (assertSuppressed.get(sheetId) ?? 0) + 1);
-  };
+  const ledger = newAssertionLedger(model);
 
   const entries: Entry[] = [];
   const st = newCheckState(model, opts, docPrecision(model), entries);
@@ -122,57 +112,7 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
 
   emitCoverage(model, emit);
 
-  // A column's decoration is inferred from its own cells, exactly as write
-  // precision is. Input columns count too: a computed neighbour never inherits
-  // their decoration, but a reader still sees it.
-  for (const sheet of model.sheets.values()) {
-    const table = sheet.table;
-    if (!table) continue;
-    for (const [name, idx] of sheet.columnIndex) {
-      const colId = `${sheet.id}.${name}`;
-      const texts = table.rows.map((r) => r.cells[idx]?.text);
-
-      const bothSidesRow = texts.findIndex((t) => parseDecorated(t ?? "").kind === "both-sides");
-      if (bothSidesRow !== -1) {
-        const cell = table.rows[bothSidesRow]!.cells[idx];
-        unitConflicts.add(colId);
-        columnUnits.set(colId, null);
-        emit(
-          {
-            code: "UNIT",
-            sheetId: sheet.id,
-            name,
-            rowLabel: rowLabel(table, bothSidesRow),
-            raw: texts[bothSidesRow],
-            message: `\`${texts[bothSidesRow]}\` is decorated on both sides; a unit sits before the number or after it, not both`,
-            span: cell ? { start: cell.start, end: cell.end } : undefined,
-          },
-          { sheetId: sheet.id },
-        );
-        continue;
-      }
-
-      const inferred = inferColumnUnit(texts);
-      columnUnits.set(colId, inferred.unit);
-      if (inferred.conflict) {
-        unitConflicts.add(colId);
-        const row = inferred.firstDeviantRow!;
-        const cell = table.rows[row]!.cells[idx];
-        emit(
-          {
-            code: "UNIT",
-            sheetId: sheet.id,
-            name,
-            rowLabel: rowLabel(table, row),
-            raw: texts[row],
-            message: `column mixes units: ${inferred.forms.join(" and ")}`,
-            span: cell ? { start: cell.start, end: cell.end } : undefined,
-          },
-          { sheetId: sheet.id },
-        );
-      }
-    }
-  }
+  inferDecoration(st);
 
   const sheetSeen: string[] = [];
 
@@ -184,7 +124,7 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
     const dep = dependencies(model, binding);
 
     if (assertionIds.has(binding.id)) {
-      evalAssertion(assertionById.get(binding.id)!, binding, dep);
+      evalAssertion(ledger.byId.get(binding.id)!, binding, dep);
       continue;
     }
 
@@ -277,119 +217,22 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
     }
   }
 
-  // cycles reported last
-  for (const cyc of cycles) {
-    emit({
-      code: "CYCLE",
-      sheetId: cyc[0]?.sheetId,
-      cyclePath: cyc.map((b) => b.id),
-      span: cyc[0]?.span,
-    });
-    for (const b of cyc) unevaluable.add(b.id);
-  }
-
-  // assertions the topological sort could not reach — a dependency is on a
-  // cycle, or otherwise never evaluated. One NOTE per sheet, like a column rule.
-  for (const id of assertionIds) {
-    if (assertionsHandled.has(id)) continue;
-    const a = assertionById.get(id)!;
-    assertionResults.set(id, {
-      sheetId: a.sheetId,
-      source: a.source,
-      holds: null,
-      operands: {},
-      substituted: a.source.replace(/^assert\s+/, ""),
-    });
-    bumpSuppressed(a.sheetId);
-  }
-  for (const [sheetId, n] of assertSuppressed) {
-    if (n > 0) {
-      emit(
-        {
-          code: "NOTE",
-          sheetId,
-          suppressedCount: n,
-          message: `${n} assertion${n === 1 ? "" : "s"} not verified (upstream errors)`,
-        },
-        { sheetId },
-      );
-    }
-  }
+  reportCycles(st, cycles);
+  reportUnreachableAssertions(st, ledger, assertionIds);
 
   // ---- generated artifacts -------------------------------------------------
   // Emits findings, so it runs here and not later: orderFindings sorts on the
   // order phases emitted in.
   const charts = checkCharts(st);
 
-  // anchors: collapse staleness, flag rewrite-less anchors
-  const chartIdSet = new Set<string>();
-  for (const sheet of model.sheets.values()) {
-    for (const c of sheet.charts) chartIdSet.add(`${c.sheetId}.${c.name}`);
-  }
-  let staleAnchorCount = 0;
-  for (const a of model.anchors) {
-    const id = `${a.sheetId}.${a.name}`;
-    if (staleScalars.has(id)) staleAnchorCount++;
-    const anchorFinding = (message?: string) =>
-      emit({
-        code: "ANCHOR",
-        sheetId: a.sheetId,
-        name: a.name,
-        sourceOffset: a.commentSpan.start,
-        span: a.commentSpan,
-        ...(message ? { message } : {}),
-      });
-    if (a.value === null) {
-      anchorFinding();
-      continue;
-    }
-    const isChart = chartIdSet.has(id);
-    if (a.value.kind === "image" && !isChart) {
-      // an image holds no value to rewrite; only a chart may be anchored to one
-      anchorFinding("an image anchor must name a chart");
-      continue;
-    }
-    if (a.value.kind !== "image" && isChart) {
-      anchorFinding("a chart must be anchored to an image");
-    }
-  }
-  if (staleAnchorCount > 0) {
-    emit({ code: "STALE", anchorGroup: true, suppressedCount: staleAnchorCount });
-  }
-
-  // WARN: a scalar defined, never read, never anchored, and otherwise clean
-  const { referenced, usedAliases } = collectReferenced(model);
-  const anchored = new Set(model.anchors.map((a) => `${a.sheetId}.${a.name}`));
-  for (const sheet of model.sheets.values()) {
-    for (const b of sheet.scalars.values()) {
-      if (referenced.has(b.id) || anchored.has(b.id)) continue;
-      if (unevaluable.has(b.id)) continue;
-      if (entries.some((e) => e.f.sheetId === b.sheetId && e.f.name === b.name)) {
-        continue;
-      }
-      emit({
-        code: "WARN",
-        sheetId: b.sheetId,
-        name: b.name,
-        suggestion: closest(b.name, [...referenced].map(idName)) ?? undefined,
-        span: b.span,
-      });
-    }
-  }
-
-  // WARN: an `is` alias declared and never used anywhere
-  for (const sheet of model.sheets.values()) {
-    for (const [symbol, entry] of sheet.aliases) {
-      if (usedAliases.has(`${sheet.id}.${symbol}`)) continue;
-      emit({ code: "WARN", sheetId: sheet.id, name: symbol, span: entry.span });
-    }
-  }
+  reportAnchors(st);
+  reportUnused(st, entries);
 
   const findings = orderFindings(entries, sheetSeen);
   const assertions: AssertionResult[] = [];
   for (const sheet of model.sheets.values()) {
     for (const a of sheet.assertions) {
-      const r = assertionResults.get(a.id);
+      const r = ledger.results.get(a.id);
       if (r) assertions.push(r);
     }
   }
@@ -574,10 +417,10 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
   }
 
   function evalAssertion(a: Assertion, node: Binding, dep: ReturnType<typeof dependencies>): void {
-    assertionsHandled.add(a.id);
+    ledger.handled.add(a.id);
     const base = { sheetId: a.sheetId, source: a.source, span: a.span } as const;
     const record = (holds: boolean | null): void => {
-      assertionResults.set(a.id, {
+      ledger.results.set(a.id, {
         sheetId: a.sheetId,
         source: a.source,
         holds,
@@ -634,7 +477,7 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
     }
     if ([...dep.deps].some((d) => unevaluable.has(d))) {
       record(null);
-      bumpSuppressed(a.sheetId);
+      ledger.bumpSuppressed(a.sheetId);
       return;
     }
 
@@ -662,7 +505,7 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
     } catch (e) {
       if (e instanceof Unevaluable) {
         record(null);
-        bumpSuppressed(a.sheetId);
+        ledger.bumpSuppressed(a.sheetId);
       } else if (e instanceof EvalError) {
         record(null);
         emit({ ...base, code: e.code, message: e.message }, { sheetId: a.sheetId });
@@ -964,45 +807,4 @@ function anchorValueText(model: DocModel, id: string): string | undefined {
     }
   }
   return undefined;
-}
-
-function collectReferenced(model: DocModel): { referenced: Set<string>; usedAliases: Set<string> } {
-  const out = new Set<string>();
-  const usedAliases = new Set<string>();
-  const markAlias = (sheetId: string, name: string): void => {
-    const sheet = model.sheets.get(sheetId);
-    if (sheet?.aliases.has(name)) usedAliases.add(`${sheetId}.${name}`);
-  };
-  const visit = (e: Expr, sheetId: string): void => {
-    if (e.type === "ref") {
-      markAlias(e.qualifier ?? sheetId, e.name);
-      const r = resolve(model, sheetId, e);
-      if (r.kind === "scalar" || r.kind === "doc-scalar" || r.kind === "column") {
-        out.add(r.binding.id);
-      }
-    } else if (e.type === "unary") visit(e.operand, sheetId);
-    else if (e.type === "binary") {
-      visit(e.left, sheetId);
-      visit(e.right, sheetId);
-    } else if (e.type === "call") for (const a of e.args) visit(a, sheetId);
-  };
-  for (const b of model.docScope.values()) visit(b.expr, b.sheetId);
-  for (const sheet of model.sheets.values()) {
-    for (const b of sheet.columns.values()) visit(b.expr, b.sheetId);
-    for (const b of sheet.scalars.values()) visit(b.expr, b.sheetId);
-    for (const a of sheet.assertions) visit(a.expr, a.sheetId);
-    for (const c of sheet.charts) {
-      for (const full of [...c.series, c.labels]) {
-        const dot = full.indexOf(".");
-        if (dot === -1) markAlias(c.sheetId, full);
-        else markAlias(full.slice(0, dot), full.slice(dot + 1));
-      }
-    }
-  }
-  return { referenced: out, usedAliases };
-}
-
-function idName(id: string): string {
-  const i = id.lastIndexOf(".");
-  return i === -1 ? id : id.slice(i + 1);
 }

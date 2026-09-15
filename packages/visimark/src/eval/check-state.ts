@@ -1,4 +1,4 @@
-import type { DocModel, Finding } from "../model/types.js";
+import type { Assertion, DocModel, Finding } from "../model/types.js";
 import type { Unit } from "./units.js";
 import type { Value } from "./value.js";
 
@@ -22,6 +22,52 @@ export interface ChartResult {
   target?: string;
   /** the rendered artifact, present when it built — `fmt` writes this */
   svg?: string;
+}
+
+/**
+ * The assertion bookkeeping, which the binding loop fills in and the
+ * unreachable-assertion pass finishes. It is its own object rather than four
+ * more `CheckState` fields because no other phase has any business in it.
+ */
+export interface AssertionLedger {
+  /** every assertion by binding id, so an unreached one can still be reported */
+  readonly byId: Map<string, Assertion>;
+  /** assertions the binding loop actually evaluated */
+  readonly handled: Set<string>;
+  readonly results: Map<string, AssertionResult>;
+  /** per-sheet count of assertions not evaluated because a dependency failed */
+  readonly suppressed: Map<string, number>;
+  bumpSuppressed(sheetId: string): void;
+}
+
+export interface AssertionResult {
+  sheetId: string;
+  /** the `assert …` line verbatim */
+  source: string;
+  /** `true` / `false`, or `null` when a dependency stopped it being evaluated */
+  holds: boolean | null;
+  /** each named operand in the expression → its evaluated value */
+  operands: Record<string, string>;
+  /** the expression as written with each named operand replaced by its value;
+   *  equals the bare expression when `holds` is `null` */
+  substituted: string;
+}
+
+export function newAssertionLedger(model: DocModel): AssertionLedger {
+  const byId = new Map<string, Assertion>();
+  for (const sheet of model.sheets.values()) {
+    for (const a of sheet.assertions) byId.set(a.id, a);
+  }
+  const suppressed = new Map<string, number>();
+  return {
+    byId,
+    handled: new Set(),
+    results: new Map(),
+    suppressed,
+    bumpSuppressed(sheetId) {
+      suppressed.set(sheetId, (suppressed.get(sheetId) ?? 0) + 1);
+    },
+  };
 }
 
 /**
