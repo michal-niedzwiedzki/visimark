@@ -27,8 +27,16 @@ import { constants, openSync } from "node:fs";
  * change that.
  */
 
-/** `undefined` on Windows, which has no symlink without elevation. */
-const NOFOLLOW = constants.O_NOFOLLOW ?? 0;
+/**
+ * `undefined` on Windows, which has no symlink without elevation. Read lazily
+ * (not at module scope): this module is pulled into the browser playground
+ * bundle for its types, and a bundled `node:fs` shim there has no `constants`
+ * to read at load time — only `openSync`/`attempt` ever actually run, and
+ * only under Node.
+ */
+function nofollow(): number {
+  return constants.O_NOFOLLOW ?? 0;
+}
 
 export type OpenResult = { ok: number } | { err: string };
 
@@ -41,14 +49,14 @@ export type OpenResult = { ok: number } | { err: string };
  */
 export function openForWrite(target: string, expectExisting: boolean): OpenResult {
   const flags = expectExisting
-    ? constants.O_RDWR | NOFOLLOW
+    ? constants.O_RDWR | nofollow()
     : constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL;
   return attempt(target, flags);
 }
 
 /** The read-side counterpart: the declared-input gate's `.csv`. */
 export function openForRead(target: string): OpenResult {
-  return attempt(target, constants.O_RDONLY | NOFOLLOW);
+  return attempt(target, constants.O_RDONLY | nofollow());
 }
 
 function attempt(target: string, flags: number): OpenResult {
