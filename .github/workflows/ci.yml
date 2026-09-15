@@ -35,6 +35,33 @@ jobs:
           name: visimark-vsix
           path: editors/vscode/visimark.vsix
 
+  # docs/vendor/visimark-browser.js is a committed build artifact. pages.yml
+  # uploads docs/ verbatim with no build step, so nothing else in this pipeline
+  # notices it drifting from packages/visimark/src/**. It did drift, silently,
+  # for two releases — the deployed playground was missing three chart engines
+  # the docs already documented (see docs/reviews/2026-09-15.md §2.5).
+  #
+  # Its own job rather than a step in `build`, because Bun has to be pinned here
+  # and nowhere else: the comparison is byte-exact against an artifact produced
+  # by the packageManager toolchain, so a minifier change in a newer Bun would
+  # fail this check for a reason that has nothing to do with the pull request.
+  # `build` keeps `latest` so the "VisiMark works on current Bun" signal stays.
+  playground-bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+      - run: bun install --frozen-lockfile
+      - name: the committed playground bundle must match the source
+        run: |
+          bun run --filter visimark build:playground
+          if ! git diff --exit-code -- docs/vendor/; then
+            echo "::error::docs/vendor/ is stale. Run 'bun run --filter visimark build:playground' and commit the result. If the diff looks like pure minifier churn rather than a real change, check that your local Bun matches packageManager in package.json."
+            exit 1
+          fi
+
   # The published CLI must run under Node, not only Bun. Build with Bun (the
   # only supported build path), then exercise the built dist/ under Node.
   acceptance-node:
