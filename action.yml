@@ -22,10 +22,18 @@ inputs:
     description: "Extra flags, e.g. --fix-dates for fmt"
     required: false
     default: ""
+  # Pinned rather than `latest` so that pinning the Action ref pins the engine
+  # that does the work: a consumer on `@v0.1.3` re-running an unchanged commit
+  # next month gets the same verifier, and one bad publish cannot reach every
+  # downstream repo at once. The cost is a fourth place the release commit has
+  # to bump, so ci.yml asserts this equals packages/visimark/package.json.
   version:
-    description: "visimark npm version or dist-tag to install"
+    description: >-
+      visimark npm version or dist-tag to install. Defaults to the release this
+      Action ref ships, so pinning the Action pins the engine too. Set it to
+      `latest` to track releases as they land instead.
     required: false
-    default: "latest"
+    default: "0.1.3"
 
 runs:
   using: "composite"
