@@ -9,7 +9,7 @@ import { locate, NO_FORMULAS_MARKER } from "../parse/document.js";
 import { infer } from "../infer/propose.js";
 import { planInfer } from "../infer/write.js";
 import { formatCheck } from "../report/format.js";
-import { explainText, explainView } from "../report/explain.js";
+import { explainJson, explainText, explainView } from "../report/explain.js";
 import { formatInfer } from "../report/infer.js";
 import {
   emitJson,
@@ -434,61 +434,7 @@ export function cmdExplain(args: string[], out: Writer, err: Writer): number {
   const view = explainView(model, checkResult, sheets);
 
   if (json) {
-    emitJson(out, {
-      command: "explain",
-      visimark: readVersion(),
-      status: "ok",
-      file: path,
-      documentScope: [...model.docScope.values()].map((b) => ({
-        name: b.name,
-        rule: slice(model, b),
-      })),
-      sheets: view.sheets.map((sid) => {
-        const sheet = model.sheets.get(sid)!;
-        const localOrder = view.order
-          .filter(
-            (b) => b.sheetId === sid && !view.assertionIds.has(b.id) && !view.chartIds.has(b.id),
-          )
-          .map((b) => b.name);
-        const importSt = view.importState.get(sid);
-        return {
-          id: sid,
-          hasTable: Boolean(sheet.table),
-          ...(sheet.imported
-            ? {
-                import: {
-                  path: sheet.imported.path,
-                  delimiter: sheet.imported.delimiter,
-                  labels: sheet.imported.labels,
-                  mode: sheet.imported.labelsMode,
-                  stamp: sheet.imported.stampDigest ? `sha256:${sheet.imported.stampDigest}` : null,
-                  stampStatus: importSt?.state ?? null,
-                },
-              }
-            : {}),
-          inputs: [...sheet.inputColumns],
-          aliases: [...sheet.aliases].map(([symbol, entry]) => ({ symbol, header: entry.header })),
-          rules: [...sheet.columns.values()].map((b) => ({ name: b.name, rule: slice(model, b) })),
-          scalars: [...sheet.scalars.values()].map((b) => ({
-            name: b.name,
-            rule: slice(model, b),
-          })),
-          order: localOrder,
-          assertions: sheet.assertions.map((a) => a.source.replace(/^assert\s+/, "")),
-          charts: sheet.charts.map((c) => {
-            const r = view.chartState.get(`${c.sheetId}.${c.name}`);
-            return {
-              name: c.name,
-              engine: c.engine,
-              series: c.series,
-              labels: c.labels,
-              path: r?.path ?? null,
-              state: r?.state ?? null,
-            };
-          }),
-        };
-      }),
-    });
+    emitJson(out, explainJson(view, path));
     return 0;
   }
 
@@ -498,10 +444,6 @@ export function cmdExplain(args: string[], out: Writer, err: Writer): number {
   const text = explainText(view);
   if (text) out(text);
   return 0;
-}
-
-function slice(model: DocModel, b: { expr: { start: number; end: number } }): string {
-  return model.source.slice(b.expr.start, b.expr.end);
 }
 
 export type Writer = (line: string) => void;

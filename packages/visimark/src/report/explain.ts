@@ -1,6 +1,7 @@
 import type { ChartResult, CheckResult } from "../eval/check.js";
 import { topoOrder } from "../eval/graph.js";
 import type { Binding, DocModel, ImportStatus } from "../model/types.js";
+import { readVersion } from "../cli/version.js";
 
 /**
  * The model slice both renderings read. Deriving it once matters: the text and
@@ -108,4 +109,63 @@ export function explainText(view: ExplainView): string {
   // newline and the caller's single `out()` supplies the second — byte-identical
   // to the per-line writes this replaced.
   return lines.join("\n");
+}
+
+/**
+ * Key order here is the wire format — `JSON.stringify` emits insertion order, so
+ * the conditional `import` spread has to stay between `hasTable` and `inputs`.
+ * This owns its whole envelope, matching `errorEnvelope` in json.ts.
+ */
+export function explainJson(view: ExplainView, file: string): object {
+  const { model } = view;
+  return {
+    command: "explain",
+    visimark: readVersion(),
+    status: "ok",
+    file,
+    documentScope: [...model.docScope.values()].map((b) => ({
+      name: b.name,
+      rule: slice(model, b),
+    })),
+    sheets: view.sheets.map((sid) => {
+      const sheet = model.sheets.get(sid)!;
+      const importSt = view.importState.get(sid);
+      return {
+        id: sid,
+        hasTable: Boolean(sheet.table),
+        ...(sheet.imported
+          ? {
+              import: {
+                path: sheet.imported.path,
+                delimiter: sheet.imported.delimiter,
+                labels: sheet.imported.labels,
+                mode: sheet.imported.labelsMode,
+                stamp: sheet.imported.stampDigest ? `sha256:${sheet.imported.stampDigest}` : null,
+                stampStatus: importSt?.state ?? null,
+              },
+            }
+          : {}),
+        inputs: [...sheet.inputColumns],
+        aliases: [...sheet.aliases].map(([symbol, entry]) => ({ symbol, header: entry.header })),
+        rules: [...sheet.columns.values()].map((b) => ({ name: b.name, rule: slice(model, b) })),
+        scalars: [...sheet.scalars.values()].map((b) => ({
+          name: b.name,
+          rule: slice(model, b),
+        })),
+        order: localOrder(view, sid),
+        assertions: sheet.assertions.map((a) => a.source.replace(/^assert\s+/, "")),
+        charts: sheet.charts.map((c) => {
+          const r = view.chartState.get(`${c.sheetId}.${c.name}`);
+          return {
+            name: c.name,
+            engine: c.engine,
+            series: c.series,
+            labels: c.labels,
+            path: r?.path ?? null,
+            state: r?.state ?? null,
+          };
+        }),
+      };
+    }),
+  };
 }
