@@ -47,11 +47,18 @@ const UNARY_NOT_BP = 2;
  *    `1+1+…+1` at n = 30,000 parses cleanly, then overflows `evalExpr`.
  *
  * So the ceiling is the *shallowest* of those walkers, not the parser, and the
- * figures above are JavaScriptCore's. The CLI ships to Node and the LSP runs
- * under the editor's Node, whose default stack is smaller — hence a cap two
- * orders of magnitude below the smallest number measured anywhere, rather than
- * one tuned close to it. A future walker inherits the budget for free, which is
- * why it lives here, at the only place that produces an `Expr`.
+ * figures above are JavaScriptCore's. That distinction is not academic: the CLI
+ * ships to Node and the LSP runs under the editor's Node, and `acceptance-node`
+ * measures the same synthetic walker at **9,520 levels under Node 20 against
+ * 31,925 under Bun** — V8's usable stack here is 3.3x smaller. A cap chosen
+ * against the Bun figure alone would have about a third of the margin it
+ * appeared to have.
+ *
+ * Hence a cap two orders of magnitude below the smallest number measured
+ * anywhere, rather than one tuned close to it, and `scripts/stack-headroom.mjs`
+ * re-measuring on every CI run so this comment cannot quietly go stale. A
+ * future walker inherits the budget for free, which is why it lives here, at
+ * the only place that produces an `Expr`.
  *
  * 256 is not a squeeze: the deepest formula in this repository's own documents
  * is 5 (`ROUND(MaxNodes * (1 - budget.reserved_capacity) - 0.5, 0)`). The one

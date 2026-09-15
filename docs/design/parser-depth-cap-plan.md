@@ -400,6 +400,12 @@ Three things worth knowing that the plan did not anticipate:
   below 10×. It is calibrated, not asserted — it reaches 31,925 under Bun where the
   shallowest real path overflows at 12,501, so it reads ~2.5× optimistic and the
   threshold is set with that in mind.
+- **Finding 4 was vindicated by the first CI run.** The same synthetic walker reaches
+  **9,520 levels under Node 20 and 31,925 under Bun** — V8's usable stack is 3.3x
+  smaller here. Had the cap been chosen against the Bun figure alone, as the brief's
+  framing invited, it would have had about a third of the margin it appeared to have.
+  The number is now in the comment beside the constant, and re-measured on every CI run
+  so it cannot quietly go stale.
 - **Three of the review's sub-items were already sound** (finding 5), so they landed as
   regression pins with comments saying which is which. The one input this change makes
   stricter — summing all 300 columns of a 300-column table — has its own test citing
