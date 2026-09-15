@@ -124,3 +124,13 @@ export function numericValue(text: string): Decimal | null {
   const dec = parseDecorated(t);
   return dec.kind === "number" ? new Decimal(dec.num) : null;
 }
+
+/** how many decimals a written cell shows, so a rewrite keeps its shape */
+export function decimalPlaces(text: string, fallback: number): number {
+  const dec = parseDecorated(text);
+  const t = (dec.kind === "number" ? dec.num : text).trim();
+  const m = /\.(\d+)\s*$/.exec(t);
+  if (m) return m[1]!.length;
+  if (/^-?\d+$/.test(t)) return 0;
+  return fallback;
+}

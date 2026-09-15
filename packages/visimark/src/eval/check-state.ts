@@ -8,6 +8,22 @@ export interface CheckOptions {
   docPath?: string;
 }
 
+/** one entry per `chart` declaration, in document order */
+export interface ChartResult {
+  sheetId: string;
+  name: string;
+  engine: string;
+  series: string[];
+  labels: string;
+  /** the path as the document wrote it, or null when there is no image line */
+  path: string | null;
+  state: "current" | "stale" | "missing" | "error" | "skipped";
+  /** absolute target, present when the path passed the gate */
+  target?: string;
+  /** the rendered artifact, present when it built — `fmt` writes this */
+  svg?: string;
+}
+
 /**
  * Routing hints carried alongside a finding. They are not part of the finding
  * itself because they exist only to let `orderFindings` sort a flat list back
