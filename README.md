@@ -300,7 +300,7 @@ this repo ships ([`action.yml`](action.yml)) instead of hand-rolling the
 `npx` line:
 
 ```yaml
-- uses: michal-niedzwiedzki/visimark@v0.1.0
+- uses: michal-niedzwiedzki/visimark@v0.1.3
   with:
     files: "docs/**/*.md"
 ```
