@@ -62,7 +62,7 @@ parsing, which is the seam the review guessed at. The one real seam is the
 `doc.source` and writes only `docScope` and `findings` — a genuinely narrow signature.
 Task 3 below extracts exactly that and stops. Everything past it would be moving
 closure variables into parameters over the code that turns source into the model,
-for a line count. See "Maintainer decision required" below.
+for a line count. See "Maintainer decision" below.
 
 ---
 
@@ -140,11 +140,11 @@ export function explainView(model: DocModel, result: CheckResult,
 export function explainText(view: ExplainView): string;
 ```
 
-- [ ] **Step 1.1** Capture the byte-diff baseline above.
-- [ ] **Step 1.2** Add `explain.ts` with `explainView` (the five derivation lines from
+- [x] **Step 1.1** Capture the byte-diff baseline above.
+- [x] **Step 1.2** Add `explain.ts` with `explainView` (the five derivation lines from
       424–431 plus `wanted`) and `explainText` (498–554), building a `string[]` and
       returning `lines.join("\n")`. Move `slice()` in as a module-private helper.
-- [ ] **Step 1.3** `cmdExplain` calls `out(explainText(view))` in place of the loop.
+- [x] **Step 1.3** `cmdExplain` calls `out(explainText(view))` in place of the loop.
       Verification gate, including the trailing-blank check in the harness.
 
 **Commit:** `refactor: move the explain text renderer into report/explain.ts`
@@ -165,20 +165,20 @@ It returns the whole envelope including `command`/`visimark`/`status`, matching 
 `errorEnvelope` in `json.ts` already owns its envelope. `readVersion` is imported
 from `../cli/version.js` — `json.ts` sets that precedent, so this adds no new edge.
 
-- [ ] **Step 2.1** Move 441–496 into `explainJson`, key order untouched.
-- [ ] **Step 2.2** `cmdExplain` becomes `if (json) { emitJson(out, explainJson(view, path)); return 0; }`.
-- [ ] **Step 2.3** Add `packages/visimark/test/report/explain.test.ts` exercising both
+- [x] **Step 2.1** Move 441–496 into `explainJson`, key order untouched.
+- [x] **Step 2.2** `cmdExplain` becomes `if (json) { emitJson(out, explainJson(view, path)); return 0; }`.
+- [x] **Step 2.3** Add `packages/visimark/test/report/explain.test.ts` exercising both
       renderers directly against a built model — matching how `report/format.test.ts`
       and `report/infer.test.ts` already work, and covering the charts and imports
       branches the CLI tests do not. Do not delete or weaken any existing test.
-- [ ] **Step 2.4** Verification gate. `cmdExplain` should now be ~40 lines and
+- [x] **Step 2.4** Verification gate. `cmdExplain` should now be ~40 lines and
       `commands.ts` ~450.
 
 **Commit:** `refactor: move the explain --json envelope into report/explain.ts`
 
 ---
 
-### Task 3: Extract `build()`'s document-scope branch — *pending decision*
+### Task 3: Extract `build()`'s document-scope branch
 
 **Files:** modify `packages/visimark/src/model/build.ts`
 
@@ -188,20 +188,20 @@ function buildDocScope(block: RawBlock, source: string,
                        docScope: Map<string, Binding>, findings: Finding[]): void;
 ```
 
-- [ ] **Step 3.1** Move 47–104 into `buildDocScope`. The outer loop becomes
+- [x] **Step 3.1** Move 47–104 into `buildDocScope`. The outer loop becomes
       `if (block.sheetId === null) { buildDocScope(…); continue; }`. `build()` drops
       to ~258 lines and the loop reads as the two-case dispatch it is.
-- [ ] **Step 3.2** Verification gate plus `explain` on a document-scope document.
+- [x] **Step 3.2** Verification gate plus `explain` on a document-scope document.
 
 **Commit:** `refactor: extract build()'s document-scope branch`
 
 ---
 
-## Maintainer decision required
+## Maintainer decision
 
-Task 3 is the only judgement call. Three options:
+**Maintainer decision (2026-09-15): option A — run Tasks 1–3.**
 
-- **A (recommended): Tasks 1–3.** Explain renderers move out; `build()` gets the one
+- **A (chosen): Tasks 1–3.** Explain renderers move out; `build()` gets the one
   extraction with a genuinely narrow signature and keeps the rest. `build()` is not
   the finding's headline and this is the part of it that pays.
 - **B: Tasks 1–2 only.** Close §2.8's `cmdExplain` half, record `build()` as
@@ -211,6 +211,26 @@ Task 3 is the only judgement call. Three options:
   recommended. Each pass touches `sheet`, `headerIndex`, `table`, `findings`,
   `stmts` and the alias map, so the extracted signatures would be nearly as wide as
   the loop body, over the code that defines the model. High diff, low boundary.
+
+## Outcome
+
+`cmdExplain` ended at **43 lines** (from 152) and `commands.ts` at **449** (from 562);
+`build()` at **262** (from 316). `explainView`/`explainText`/`explainJson` live in
+`packages/visimark/src/report/explain.ts`, with `slice()` module-private beside them.
+
+Output verified byte-identical for `explain` and `check` across every
+`docs/example-*.md`, with and without `--json`, plus a `#sheet` selector, an unknown
+selector, and the usage and read-error paths — 27 invocations, 1,389 lines, diff empty.
+Tests: **711 pass, 0 fail** (700 before, plus 11 in the new
+`test/report/explain.test.ts`).
+
+One behaviour detail worth recording: `explainText` returns `""` for a document with
+no scope bindings and no sheets, and `cmdExplain` guards the write. The per-line loop
+this replaced made no call at all in that case, so an unguarded single `out()` would
+have added a blank line to `visimark explain docs/example-quote-plain.md`. The
+harness caught it; there is a comment at the call site and a test pinning it.
+
+No bugs found along the way.
 
 ## Out of scope
 
