@@ -38,6 +38,74 @@ function invalidSheetIdChars(id: string): string[] {
   return out;
 }
 
+/**
+ * A document-scope block carries bare scalar bindings and nothing else: `assert`,
+ * `chart`, `is` and quoted headers all name something that exists only relative to
+ * a sheet's table, so each gets a SHEET finding rather than an unnameable binding.
+ */
+function buildDocScope(
+  block: RawBlock,
+  source: string,
+  docScope: Map<string, Binding>,
+  findings: Finding[],
+): void {
+  for (const rb of block.bindings) {
+    const stmt = parseOne(rb, source, findings, DOC_SCOPE);
+    if (!stmt) continue;
+    if (stmt.kind === "assert") {
+      findings.push({
+        code: "SHEET",
+        message: "`assert` must be in a `#id` sheet block",
+        sourceOffset: stmt.assertion.span.start,
+        span: stmt.assertion.span,
+      });
+      continue;
+    }
+    if (stmt.kind === "chart") {
+      findings.push({
+        code: "SHEET",
+        message: "`chart` must be in a `#id` sheet block",
+        sourceOffset: stmt.chart.span.start,
+        span: stmt.chart.span,
+      });
+      continue;
+    }
+    if (stmt.kind === "alias") {
+      // both quoted forms name a column of the sheet's own table, so
+      // neither means anything in a table-less document-scope block
+      // (spec §2) — say so rather than inventing an unnameable binding.
+      findings.push({
+        code: "SHEET",
+        message: "`is` must be in a `#id` sheet block",
+        sourceOffset: stmt.alias.span.start,
+        span: stmt.alias.span,
+      });
+      continue;
+    }
+    if (stmt.quoted) {
+      findings.push({
+        code: "SHEET",
+        message: "a quoted column header must be in a `#id` sheet block",
+        sourceOffset: stmt.binding.span.start,
+        span: stmt.binding.span,
+      });
+      continue;
+    }
+    const parsed = stmt.binding;
+    const first = docScope.get(parsed.name);
+    if (first) {
+      findings.push({
+        code: "DUP",
+        name: parsed.name,
+        span: parsed.span,
+        relatedSpan: first.span,
+      });
+      continue;
+    }
+    docScope.set(parsed.name, parsed);
+  }
+}
+
 export function build(doc: LocatedDoc): DocModel {
   const sheets = new Map<string, Sheet>();
   const docScope = new Map<string, Binding>();
@@ -46,61 +114,7 @@ export function build(doc: LocatedDoc): DocModel {
 
   for (const block of doc.blocks) {
     if (block.sheetId === null) {
-      for (const rb of block.bindings) {
-        const stmt = parseOne(rb, doc.source, findings, DOC_SCOPE);
-        if (!stmt) continue;
-        if (stmt.kind === "assert") {
-          findings.push({
-            code: "SHEET",
-            message: "`assert` must be in a `#id` sheet block",
-            sourceOffset: stmt.assertion.span.start,
-            span: stmt.assertion.span,
-          });
-          continue;
-        }
-        if (stmt.kind === "chart") {
-          findings.push({
-            code: "SHEET",
-            message: "`chart` must be in a `#id` sheet block",
-            sourceOffset: stmt.chart.span.start,
-            span: stmt.chart.span,
-          });
-          continue;
-        }
-        if (stmt.kind === "alias") {
-          // both quoted forms name a column of the sheet's own table, so
-          // neither means anything in a table-less document-scope block
-          // (spec §2) — say so rather than inventing an unnameable binding.
-          findings.push({
-            code: "SHEET",
-            message: "`is` must be in a `#id` sheet block",
-            sourceOffset: stmt.alias.span.start,
-            span: stmt.alias.span,
-          });
-          continue;
-        }
-        if (stmt.quoted) {
-          findings.push({
-            code: "SHEET",
-            message: "a quoted column header must be in a `#id` sheet block",
-            sourceOffset: stmt.binding.span.start,
-            span: stmt.binding.span,
-          });
-          continue;
-        }
-        const parsed = stmt.binding;
-        const first = docScope.get(parsed.name);
-        if (first) {
-          findings.push({
-            code: "DUP",
-            name: parsed.name,
-            span: parsed.span,
-            relatedSpan: first.span,
-          });
-          continue;
-        }
-        docScope.set(parsed.name, parsed);
-      }
+      buildDocScope(block, doc.source, docScope, findings);
       continue;
     }
 
