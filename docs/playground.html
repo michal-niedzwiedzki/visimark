@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>VisiMark Playground</title>
+    <link rel="icon" type="image/webp" href="visimark.webp" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -891,7 +892,7 @@
   <body>
     <div class="playground">
       <header class="topbar">
-        <img id="logo" alt="VisiMark logo" />
+        <img id="logo" src="visimark.webp" alt="VisiMark logo" />
         <h1>VisiMark</h1>
         <p class="tagline">Playground</p>
         <div class="spacer"></div>
@@ -1200,32 +1201,23 @@ applies those proposals to the document.</pre>
       referrerpolicy="no-referrer"
     ></script>
 
-    <!-- Classic scripts, not modules: playground-data.js and
-         visimark-browser.js assign plain globals instead of `export`ing, so
-         they work as plain <script src> tags with no bundler. The starter
-         files themselves are no longer baked into a vendor file — they're
-         siblings of this page (see FILE_SOURCES below) and are fetched at
-         runtime, which means playground.html must be served over http(s)
-         (e.g. `bun scripts/serve.mjs` or GitHub Pages) rather than opened
-         directly via file://, since `fetch()` of local files is blocked by
-         CORS there. -->
-    <script src="./vendor/playground-data.js"></script>
+    <!-- A classic script, not a module: visimark-browser.js assigns a plain
+         global instead of `export`ing, so it works as a plain <script src> tag
+         with no bundler. Nothing this page needs is baked into a vendor file
+         any more — the starter documents and the logo are all siblings of this
+         page (see FILE_SOURCES below) and are fetched at runtime, which means
+         playground.html must be served over http(s) (e.g. `bun scripts/serve.mjs`
+         or GitHub Pages) rather than opened directly via file://, since
+         `fetch()` of local files is blocked by CORS there. -->
     <script src="./vendor/visimark-browser.js"></script>
     <script>
       (async function () {
-        var LOGO_DATA_URI = window.LOGO_DATA_URI;
         var VM = window.VisiMark;
-
-        document.getElementById("logo").src = LOGO_DATA_URI;
-        var favicon = document.createElement("link");
-        favicon.rel = "icon";
-        favicon.href = LOGO_DATA_URI;
-        document.head.appendChild(favicon);
 
         // ---- in-memory file store -------------------------------------------------
         // Fetched fresh from this page's own directory on every load — docs/
         // and the playground are now the same tree, so there's nothing to bake
-        // or keep in sync by hand (contrast the logo above, which still is).
+        // or keep in sync by hand.
         // The numbered chapters are a tutorial track, one concept per file —
         // their SCENARIO-panel body/quest comes from scenarios.json below.
         var TUTORIAL_CHAPTERS = [
