@@ -1,4 +1,3 @@
-import { lstatSync } from "node:fs";
 import { type GateSpec, gatePath, type PathResult } from "../fs/gate.js";
 
 /**
@@ -17,13 +16,4 @@ const ARTIFACT: GateSpec = { noun: "artifact path", ext: ".svg" };
 
 export function resolveArtifactPath(docPath: string, url: string): PathResult {
   return gatePath(docPath, url, ARTIFACT);
-}
-
-/** true when the path exists and is a symlink - callers refuse to write through one */
-export function isSymlink(p: string): boolean {
-  try {
-    return lstatSync(p).isSymbolicLink();
-  } catch {
-    return false;
-  }
 }
