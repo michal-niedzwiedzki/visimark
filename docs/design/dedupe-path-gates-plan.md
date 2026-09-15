@@ -38,10 +38,10 @@ Four corrections and additions to the brief, which change the plan:
    from `artifact/path.ts:90`, is not re-exported from `src/index.ts`, and grep across
    `src/` and `test/` in all three packages finds no call site. It was introduced in
    `8646427` (Spec #36, charts) and the overwrite protection it was meant to serve was
-   instead implemented as the metadata-marker check (point 3). It is left exactly where
-   it is by this plan — deleting an exported symbol is a behaviour change to the
-   package surface, and that is the maintainer's call, not a refactor's. **Raised as a
-   question below.**
+   instead implemented as the metadata-marker check (point 3). **Maintainer decision
+   (2026-09-15): delete it** — an unused export in the most security-sensitive module
+   invites someone to assume it is load-bearing, and history restores it trivially if a
+   caller ever wants it. Task 3.
 
 2. **The import gate has almost no test coverage, and that is the concrete form of the
    risk the review describes.** `test/artifact/path.test.ts` exercises all nine
@@ -122,7 +122,7 @@ Plus a mechanical proof that the extraction is behaviour-preserving, captured **
 before Task 1** and re-run after each task — for every rule, against both gates:
 
 ```
-bun run scripts-local/gate-matrix.ts > /tmp/gate-baseline.txt   # scratch, not committed
+bun <scratch>/gate-matrix.ts > gate-baseline.txt   # scratch harness, not committed
 ```
 
 The harness calls `resolveArtifactPath` and `resolveImportPath` over a fixed list of
@@ -155,19 +155,19 @@ export interface GateSpec {
 export function gatePath(docPath: string, url: string, spec: GateSpec): PathResult;
 ```
 
-- [ ] **Step 1.1** Capture the gate-matrix baseline above.
-- [ ] **Step 1.2** Create `fs/gate.ts` with `gatePath`, `contains`, `realpathSyncSafe`,
+- [x] **Step 1.1** Capture the gate-matrix baseline above.
+- [x] **Step 1.2** Create `fs/gate.ts` with `gatePath`, `contains`, `realpathSyncSafe`,
       `WINDOWS_DEVICE` and `CONTROL_CHARS`, moved verbatim from `artifact/path.ts`
       (the copy with the fuller comments) with `"artifact path"` replaced by
       `spec.noun` and `".svg"` by `spec.ext`. The "refusal, never a transformation"
       paragraph becomes the module header.
-- [ ] **Step 1.3** Reduce `artifact/path.ts` to its header comment, a
+- [x] **Step 1.3** Reduce `artifact/path.ts` to its header comment, a
       `const ARTIFACT: GateSpec = { noun: "artifact path", ext: ".svg" }`, a
       `resolveArtifactPath` delegating to `gatePath`, a re-export of `PathResult`, and
       `isSymlink` unchanged.
-- [ ] **Step 1.4** The same for `import/path.ts` with
+- [x] **Step 1.4** The same for `import/path.ts` with
       `{ noun: "imported file path", ext: ".csv" }`.
-- [ ] **Step 1.5** Verification gate + gate-matrix diff.
+- [x] **Step 1.5** Verification gate + gate-matrix diff.
 
 **Commit:** `refactor: extract one shared path gate behind gatePath()`
 
@@ -185,29 +185,55 @@ Per finding 2, the extraction removes the duplicated *code* but the duplicated
 runs the nine refusals and the three acceptances against **both** specs, table-driven,
 asserting the exact message each produces.
 
-- [ ] **Step 2.1** Write the table-driven test over `[artifactSpec, importSpec]`.
-- [ ] **Step 2.2** Leave every existing test in `test/artifact/path.test.ts` and
+- [x] **Step 2.1** Write the table-driven test over `[artifactSpec, importSpec]`.
+- [x] **Step 2.2** Leave every existing test in `test/artifact/path.test.ts` and
       `test/import/resolve.test.ts` exactly as it is. They now overlap with the new
       file; that is correct, since they pin the *public* names while `gate.test.ts`
       pins the shared implementation.
-- [ ] **Step 2.3** Verification gate.
+- [x] **Step 2.3** Verification gate.
 
 **Commit:** `test: assert every path-gate refusal against both gate specs`
 
 ---
 
-## Questions for the maintainer
+### Task 3: Delete the unused `isSymlink()`
 
-1. **`isSymlink()` is dead** (finding 1) — exported from `artifact/path.ts`, called
-   nowhere, superseded by the metadata-marker check. Delete it in this branch as a
-   third commit, leave it, or split it to its own PR? This plan leaves it.
-2. **Is `src/fs/` the right home?** It is the review's suggestion and it is honest —
-   the gate is filesystem policy, not a pipeline stage — but it adds a top-level
-   directory for one file. `src/path/gate.ts` is the alternative. This plan uses
-   `src/fs/`.
-3. **Confirm §2.3 (TOCTOU) stays out.** The extraction makes that fix a one-place
-   change afterwards, which is an argument for doing this first and deciding §2.3
-   separately, exactly as the review orders them.
+Kept as its own commit so Task 1 stays a provably pure extraction, and so the removal
+is independently revertible.
+
+- [x] **Step 3.1** Remove `isSymlink` and its now-unused `lstatSync` import from
+      `artifact/path.ts`. Verification gate.
+
+**Commit:** `refactor: drop the unused isSymlink() export`
+
+---
+
+## Maintainer decisions (2026-09-15)
+
+1. **`isSymlink()`** — delete; easily recreated if it becomes wanted again. Task 3.
+2. **`src/fs/`** — confirmed. One more directory is affordable for a responsibility
+   this well isolated.
+3. **§2.3 (TOCTOU)** — stays out; follow the review's ordering.
+
+## Outcome
+
+The two gates went from ~85 lines each to 19 lines each over one 96-line `fs/gate.ts`.
+No caller changed, no error message changed, no dependency added.
+
+Verified three ways:
+
+- The 122-case gate matrix (every refusal, bare and extension-suffixed, over both
+  gates, plus symlink escapes) is **byte-identical** before and after.
+- `bun test` went 686 → 725 green, the 39 new tests coming entirely from
+  `test/fs/gate.test.ts`. Typecheck clean; lint unchanged at 1,785 warnings, all from
+  `docs/vendor/` (§2.6's problem, untouched).
+- **Mutation-tested.** Dropping `\x7f` from the control-char class, reordering the
+  drive-letter and URL-scheme checks, and disabling the parent-symlink re-check each
+  fail on *both* gates. Before this branch the first and third would have failed on the
+  write gate alone — which is finding 2 stated as a passing test.
+
+No bug was found in the gate logic along the way. The TOCTOU window (§2.3) is
+untouched and is now a one-place change.
 
 ## Out of scope
 
