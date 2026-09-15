@@ -30,8 +30,73 @@ const RIGHT_ASSOC = new Set(["^"]);
 const UNARY_MINUS_BP = 5;
 const UNARY_NOT_BP = 2;
 
+/**
+ * Deepest expression the pipeline will accept, guarding *two* different
+ * overflows that a single guard does not cover. See
+ * docs/design/parser-depth-cap-plan.md.
+ *
+ * 1. The parser's own recursion. `((((…1…))))` never returns an AST at all —
+ *    `parseBp` overflows the stack first (measured: n = 18,751 under Bun on
+ *    Linux; `ABS(ABS(…))` and a unary-minus run at n = 12,501).
+ * 2. The depth of the tree that *does* come back. `parseBp` consumes a
+ *    left-associative chain iteratively, so `1+1+…+1` recurses to depth 1 and
+ *    still builds a left-leaning spine as deep as the chain is long. A
+ *    recursion counter never fires on it, and five recursive AST walkers then
+ *    have to descend it: `evalExpr`, `build`'s `rebase`, `check-report`'s
+ *    `visit`, and the walkers in `eval/graph.ts` and `eval/check.ts`. Measured:
+ *    `1+1+…+1` at n = 30,000 parses cleanly, then overflows `evalExpr`.
+ *
+ * So the ceiling is the *shallowest* of those walkers, not the parser, and the
+ * figures above are JavaScriptCore's. The CLI ships to Node and the LSP runs
+ * under the editor's Node, whose default stack is smaller — hence a cap two
+ * orders of magnitude below the smallest number measured anywhere, rather than
+ * one tuned close to it. A future walker inherits the budget for free, which is
+ * why it lives here, at the only place that produces an `Expr`.
+ *
+ * 256 is not a squeeze: the deepest formula in this repository's own documents
+ * is 5 (`ROUND(MaxNodes * (1 - budget.reserved_capacity) - 0.5, 0)`). The one
+ * real input it refuses is a summed-every-column chain over a 300-column table,
+ * which is accepted knowingly — it now gets a positioned finding instead of a
+ * `RangeError` and a 10,000-frame stack trace.
+ */
+const MAX_EXPR_DEPTH = 256;
+
+const DEPTH_MESSAGE = `expression nests more than ${MAX_EXPR_DEPTH} levels deep`;
+
+/**
+ * Deepest node under `root`, found with an explicit worklist. A recursive
+ * guard against runaway recursion would overflow on exactly the input it is
+ * meant to refuse, so this one never touches the call stack.
+ */
+function deepestNode(root: Expr): { depth: number; at: Expr } {
+  let best = { depth: 0, at: root };
+  const stack: { node: Expr; depth: number }[] = [{ node: root, depth: 1 }];
+  for (;;) {
+    const top = stack.pop();
+    if (top === undefined) break;
+    const { node, depth } = top;
+    if (depth > best.depth) best = { depth, at: node };
+    switch (node.type) {
+      case "unary":
+        stack.push({ node: node.operand, depth: depth + 1 });
+        break;
+      case "binary":
+        stack.push({ node: node.left, depth: depth + 1 });
+        stack.push({ node: node.right, depth: depth + 1 });
+        break;
+      case "call":
+        for (const a of node.args) stack.push({ node: a, depth: depth + 1 });
+        break;
+      default:
+        break;
+    }
+  }
+  return best;
+}
+
 class Parser {
   private pos = 0;
+  private depth = 0;
   constructor(private readonly toks: Token[]) {}
 
   private peek(): Token {
@@ -58,10 +123,34 @@ class Parser {
         t.end,
       );
     }
+    // Guard 2. The recursion counter in parseBp cannot see a left-associative
+    // spine, which that loop builds without recursing at all.
+    const deepest = deepestNode(expr);
+    if (deepest.depth > MAX_EXPR_DEPTH) {
+      // Point at the deepest node rather than the whole expression: on a 60 KB
+      // line a whole-line span is not a location.
+      throw new LangError(DEPTH_MESSAGE, deepest.at.start, deepest.at.end);
+    }
     return expr;
   }
 
   private parseBp(minBp: number): Expr {
+    // Guard 1. The decrement is in a `finally` because parseStatement's outer
+    // catch inspects and rethrows; a counter leaked on the error path would
+    // make a later statement refuse for a depth it never reached.
+    if (++this.depth > MAX_EXPR_DEPTH) {
+      this.depth--;
+      const t = this.peek();
+      throw new LangError(DEPTH_MESSAGE, t.start, t.end);
+    }
+    try {
+      return this.parseBpInner(minBp);
+    } finally {
+      this.depth--;
+    }
+  }
+
+  private parseBpInner(minBp: number): Expr {
     let left = this.nud();
 
     for (;;) {
