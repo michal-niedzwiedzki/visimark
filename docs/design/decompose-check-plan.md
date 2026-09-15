@@ -156,16 +156,16 @@ export class Unevaluable extends Error {}
 `Unevaluable` moves here because both callers throw and catch it. Confirm nothing else
 in the package imports it (it is currently module-private).
 
-- [ ] **Step 1.1** Capture the byte-diff baseline above.
-- [ ] **Step 1.2** Add `check-state.ts` and construct a `CheckState` at the top of
+- [x] **Step 1.1** Capture the byte-diff baseline above.
+- [x] **Step 1.2** Add `check-state.ts` and construct a `CheckState` at the top of
       `check()`. Keep every existing `const` as a local **alias** into the state object
       (`const { values, cells, … } = st;`) so no body line changes yet. This commit
       should be provably no-op.
-- [ ] **Step 1.3** Move `lookupVector`, `coerceInput` and `Unevaluable` to
+- [x] **Step 1.3** Move `lookupVector`, `coerceInput` and `Unevaluable` to
       `check-lookup.ts`, threading `st`. Update `rowEnv`, `lookupScalar`, `readColumn`.
       `lookupScalar` stays inside `check()` for now — it reads `values` and
       `unevaluable` and is not needed by charts.
-- [ ] **Step 1.4** Verification gate.
+- [x] **Step 1.4** Verification gate.
 
 **Commit:** `refactor: introduce CheckState and extract the shared value lookups`
 
@@ -193,17 +193,17 @@ The narrowed `ChartState` is the point of the exercise: the signature now *state
 the chart pass cannot touch `values`, `scalarUnits`, `staleScalars`, `assertionResults`
 or anything else. Today that is only knowable by reading 199 lines.
 
-- [ ] **Step 2.1** Move lines 349–547 into `checkCharts`. `claimedPaths` and the
+- [x] **Step 2.1** Move lines 349–547 into `checkCharts`. `claimedPaths` and the
       `charts` array become locals of the new function; `charts` is its return value.
       The per-sheet `skipped` NOTE stays inside the same sheet loop, in position.
-- [ ] **Step 2.2** Move `base`, `readLabels`, `inputPrecision` (636–691) into
+- [x] **Step 2.2** Move `base`, `readLabels`, `inputPrecision` (636–691) into
       `check-charts.ts`. `base` takes only a `Chart`; `readLabels` and `inputPrecision`
       take `model` plus their arguments — none of the three needs `CheckState`.
-- [ ] **Step 2.3** `readColumn` moves too, now a thin wrapper over `lookupVector(st, …)`.
+- [x] **Step 2.3** `readColumn` moves too, now a thin wrapper over `lookupVector(st, …)`.
       Keep its `try/catch → "contains a blank cell"` message exactly as written.
-- [ ] **Step 2.4** `check()` calls `const charts = checkCharts(st);` at line 349's
+- [x] **Step 2.4** `check()` calls `const charts = checkCharts(st);` at line 349's
       position. Verification gate.
-- [ ] **Step 2.5** Add `packages/visimark/test/eval/check-charts.test.ts` exercising
+- [x] **Step 2.5** Add `packages/visimark/test/eval/check-charts.test.ts` exercising
       `checkCharts` directly against a built model, so the pass is testable without
       running the whole checker. Do not delete or weaken any existing test.
 
@@ -226,17 +226,18 @@ After Task 2, `check()` drops to roughly **800 lines, of which ~340
 is straight-line phase code**, and the sharpest remaining edges are cheap and
 independent:
 
-- [ ] **3a** Extract phase A (decoration/precision inference, 152–204) — it writes
+- [x] **3a** Extract phase A (decoration/precision inference, 152–204) — it writes
       `columnUnits`/`unitConflicts` and reads nothing else. Genuinely narrow. ~55 lines.
-- [ ] **3b** Extract phases C + E (cycles, unreachable assertions, anchors, unused-scalar
+- [x] **3b** Extract phases C + E (cycles, unreachable assertions, anchors, unused-scalar
       and unused-alias WARNs — 310–348 and 549–635). Each is small, terminal, and mostly
       emit-only. ~130 lines.
-- [ ] **3c** Leave the binding loop (205–309) and its eval helpers (694–1022) *inside*
+- [x] **3c** Leave the binding loop (205–309) and its eval helpers (694–1022) *inside*
       `check()` unless a concrete need appears. They are cohesive, they are the thing the
       function is actually for, and they are the highest-risk lines to move.
 
-If 3a–3c land, `check()` ends at roughly 500 lines with the evaluation core intact —
-which is a defensible resting point, not a compromise.
+**Outcome.** `check()` ended at **541 lines** (from 1,015), of which about 100 is
+straight-line phase code; the rest is the binding loop and its evaluation helpers,
+left in place per 3c. All three tasks verified byte-for-byte; 686 tests green.
 
 ---
 
