@@ -65,6 +65,11 @@ const UNARY_NOT_BP = 2;
  * real input it refuses is a summed-every-column chain over a 300-column table,
  * which is accepted knowingly — it now gets a positioned finding instead of a
  * `RangeError` and a 10,000-frame stack trace.
+ *
+ * The declaration below is read verbatim by `scripts/stack-headroom.mjs`, so
+ * that the headroom CI checks is the cap actually in force. Renaming or
+ * reformatting this line fails that check loudly rather than silently; update
+ * the pattern there too.
  */
 const MAX_EXPR_DEPTH = 256;
 

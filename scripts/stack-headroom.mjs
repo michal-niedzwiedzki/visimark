@@ -21,8 +21,48 @@
 // allows, which is the quantity that differs between engines. The calibration
 // below ties that number back to the real ones.
 
-/** Must match MAX_EXPR_DEPTH in packages/visimark/src/lang/parser.ts. */
-const CAP = 256;
+import { readFileSync } from "node:fs";
+
+/**
+ * The cap, read out of the parser rather than restated here. A second copy of
+ * the number is a copy that can drift: lower the real cap and a hardcoded 256
+ * would keep certifying headroom for a number no longer in force, while this
+ * script's own failure message told you to lower the cap further.
+ *
+ * Read with a regex, not an import: parser.ts is TypeScript, which neither
+ * `bun` nor `node` loads from a plain .mjs, and `dist/` may not exist in a
+ * clean checkout. If the pattern stops matching — the constant renamed, moved,
+ * or reformatted — this aborts. It must never fall through to 0 or NaN, which
+ * would read as infinite headroom and pass forever.
+ */
+const CAP_SOURCE = "packages/visimark/src/lang/parser.ts";
+
+function readCap() {
+  const file = new URL(`../${CAP_SOURCE}`, import.meta.url);
+  let src;
+  try {
+    src = readFileSync(file, "utf8");
+  } catch (e) {
+    fail(`could not read ${CAP_SOURCE}: ${e.message}`);
+  }
+  const m = /^const MAX_EXPR_DEPTH = (\d+);$/m.exec(src);
+  if (!m) fail(`could not find \`const MAX_EXPR_DEPTH = <number>;\` in ${CAP_SOURCE}`);
+  const cap = Number(m[1]);
+  if (!Number.isInteger(cap) || cap <= 0)
+    fail(`MAX_EXPR_DEPTH in ${CAP_SOURCE} is not a positive integer: ${m[1]}`);
+  return cap;
+}
+
+function fail(what) {
+  console.error(
+    `ERROR: ${what}.\n` +
+      `This check reads the depth cap out of ${CAP_SOURCE} so the two cannot drift apart.\n` +
+      `Fix the path or the pattern in scripts/stack-headroom.mjs rather than deleting the check.`,
+  );
+  process.exit(1);
+}
+
+const CAP = readCap();
 
 /**
  * Required headroom, and the calibration behind the number. Under Bun 1.4.2 on
