@@ -36,8 +36,8 @@ export const FUNCTION_TABLE = {
   SUM: { kind: "reduce", arity: 1 },
   MIN: { kind: "reduce", arity: 1 },
   MAX: { kind: "reduce", arity: 1 },
-  COUNT: { kind: "reduce", arity: 1 },
   AVG: { kind: "reduce", arity: 1 },
+  COUNT: { kind: "reduce", arity: 1 },
   // maps: scalars in, one scalar out
   ROUND: { kind: "map", arity: 2 },
   ABS: { kind: "map", arity: 1 },

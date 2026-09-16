@@ -96,14 +96,6 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
     examples: [{ expr: "MAX(t.Amount)", is: "30", given: AMOUNTS }],
     see: ["MIN"],
   },
-  COUNT: {
-    summary: "number of rows",
-    params: [{ name: "col", type: "column", note: "the column whose rows are counted" }],
-    returns: "number",
-    errors: [],
-    examples: [{ expr: "COUNT(t.Amount)", is: "3", given: AMOUNTS }],
-    see: ["SUM"],
-  },
   AVG: {
     summary: "arithmetic mean",
     params: [{ name: "col", type: "column", note: "the column to average" }],
@@ -111,6 +103,14 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
     errors: [{ when: "an empty column", code: "TYPE" }],
     examples: [{ expr: "AVG(t.Amount)", is: "20", given: AMOUNTS }],
     see: ["SUM", "COUNT"],
+  },
+  COUNT: {
+    summary: "number of rows",
+    params: [{ name: "col", type: "column", note: "the column whose rows are counted" }],
+    returns: "number",
+    errors: [],
+    examples: [{ expr: "COUNT(t.Amount)", is: "3", given: AMOUNTS }],
+    see: ["SUM"],
   },
   ROUND: {
     summary: "half-up to `places` decimals",
@@ -163,7 +163,7 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
     ],
   },
   FLOOR: {
-    summary: "greatest multiple of `s` that does not exceed `x`, toward -∞",
+    summary: "greatest multiple of `s` that does not exceed `x`, toward −∞",
     params: [
       { name: "x", type: "number", note: "the value to round down" },
       { name: "s", type: "number", note: "the positive step to round to" },
@@ -213,7 +213,7 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
     returns: "date",
     errors: [
       { when: "a non-whole `months`", code: "TYPE" },
-      { when: "a result outside years 1-9999", code: "DATE" },
+      { when: "a result outside years 1–9999", code: "DATE" },
     ],
     examples: [
       { expr: "EOMONTH(2026-01-15, 0)", is: "2026-01-31" },
