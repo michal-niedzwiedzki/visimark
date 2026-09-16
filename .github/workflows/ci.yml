@@ -98,6 +98,26 @@ jobs:
             exit 1
           fi
 
+  # The generated function documents must match the registry they come from.
+  # Modelled on `playground-bundle`, but Bun is not pinned: the output is
+  # Markdown rendered by our own script, so there is no minifier whose version
+  # could churn it.
+  function-reference:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - name: the generated function reference must match the registry
+        run: |
+          bun run gen:docs
+          if ! git diff --exit-code -- docs/function-reference.md docs/visimark-design.md; then
+            echo "::error::The generated function documents are stale. Run 'bun run gen:docs' and commit the result."
+            exit 1
+          fi
+
   # The published CLI must run under Node, not only Bun. Build with Bun (the
   # only supported build path), then exercise the built dist/ under Node.
   acceptance-node:
