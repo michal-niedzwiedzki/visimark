@@ -22,14 +22,14 @@
     "type": "git",
     "url": "https://github.com/michal-niedzwiedzki/visimark"
   },
-  "publisher": "michal-niedzwiedzki",
+  "publisher": "visimark-michal-niedzwiedzki",
   "main": "./dist/extension.js",
   "scripts": {
     "typecheck": "tsc --noEmit",
     "build": "node esbuild.mjs",
     "package": "bun run build && vsce package --no-dependencies --out visimark.vsix",
     "install-local": "command -v code >/dev/null 2>&1 || { echo \"VS Code CLI not found on PATH. In VS Code run: Shell Command: Install code command in PATH\" >&2; exit 1; } && bun run package && code --install-extension visimark.vsix --force",
-    "uninstall-local": "command -v code >/dev/null 2>&1 || { echo \"VS Code CLI not found on PATH. In VS Code run: Shell Command: Install code command in PATH\" >&2; exit 1; } && code --uninstall-extension michal-niedzwiedzki.visimark-vscode"
+    "uninstall-local": "command -v code >/dev/null 2>&1 || { echo \"VS Code CLI not found on PATH. In VS Code run: Shell Command: Install code command in PATH\" >&2; exit 1; } && code --uninstall-extension visimark-michal-niedzwiedzki.visimark-vscode"
   },
   "dependencies": {
     "visimark": "workspace:*",
