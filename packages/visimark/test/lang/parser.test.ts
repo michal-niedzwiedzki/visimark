@@ -263,3 +263,42 @@ test("`is` used outside the alias shape is rejected as a keyword", () => {
 test("a quoted binding with trailing junk after `is symbol` is a parse error", () => {
   expect(() => parseStatement('"Header" is bpu extra')).toThrow(/unexpected/);
 });
+
+test("parseStatement: a `precision` clause on the binding head", () => {
+  const st = parseStatement("eur_total precision 2 = gross / fx");
+  expect("type" in st).toBe(false);
+  expect(st).toMatchObject({ name: "eur_total", precision: 2 });
+});
+
+test("parseStatement: a `precision` clause on a quoted header and on an alias", () => {
+  expect(parseStatement('"Gross amount" precision 2 = Net + VAT')).toMatchObject({
+    name: "Gross amount",
+    precision: 2,
+  });
+  expect(parseStatement("gross precision 0 = Net + VAT")).toMatchObject({
+    name: "gross",
+    precision: 0,
+  });
+});
+
+test("parseStatement: no clause leaves precision absent", () => {
+  expect((parseStatement("total = SUM(Net)") as { precision?: number }).precision).toBeUndefined();
+});
+
+test("parseStatement: `precision` cannot be a bound name", () => {
+  expect(() => parseStatement("precision = 2")).toThrow(
+    "`precision` is a keyword — write `precision 2`, not `precision = 2`",
+  );
+});
+
+test("parseStatement: N must be a whole number from 0 to 18", () => {
+  const msg = "precision must be a whole number from 0 to 18";
+  expect(() => parseStatement("x precision 19 = 1")).toThrow(msg);
+  expect(() => parseStatement("x precision 2.5 = 1")).toThrow(msg);
+  expect(() => parseStatement("x precision -1 = 1")).toThrow(msg);
+  expect(parseStatement("x precision 18 = 1")).toMatchObject({ precision: 18 });
+});
+
+test("parseStatement: `precision` mid-expression is rejected", () => {
+  expect(() => parseStatement("x = 1 precision 2")).toThrow("`precision` is a keyword");
+});

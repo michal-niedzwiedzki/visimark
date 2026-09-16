@@ -460,6 +460,7 @@ function parseOne(
         name: s.name,
         expr: s.expr,
         kind: "scalar",
+        ...(s.precision === undefined ? {} : { precision: s.precision }),
         span: { start: rb.start, end: rb.end },
       },
     };

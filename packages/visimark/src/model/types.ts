@@ -23,6 +23,7 @@ export type FindingCode =
   | "SHEET"
   | "ANCHOR"
   | "ASSERT"
+  | "PRECISION"
   | "ARTIFACT"
   | "IMPORT"
   | "WARN"
@@ -47,6 +48,7 @@ export const ERROR_CODES: ReadonlySet<FindingCode> = new Set<FindingCode>([
   "SHEET",
   "ANCHOR",
   "ASSERT",
+  "PRECISION",
   "ARTIFACT",
   "IMPORT",
   "COVERAGE",
@@ -100,6 +102,9 @@ export interface Binding {
   name: string;
   expr: Expr;
   kind: "column" | "scalar";
+  /** declared write precision from a `precision N` clause on the head; absent
+   *  means derive it from the expression (declared-precision-spec.md §3) */
+  precision?: number;
   /** absolute source span of the binding line */
   span: { start: number; end: number };
   parseError?: LangError;

@@ -7,6 +7,7 @@ export type TokenKind =
   | "assert"
   | "chart"
   | "is"
+  | "precision"
   | "colon"
   | "op"
   | "dot"

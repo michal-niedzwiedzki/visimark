@@ -163,3 +163,13 @@ test("lowercase sigma is not aliased", () => {
   expect(() => lex("σ(Net)")).toThrow('unexpected character "σ"');
   expect(() => lex("ς(Net)")).toThrow('unexpected character "ς"');
 });
+
+test("`precision` is a statement keyword, case-sensitively", () => {
+  expect(pairs("precision")).toEqual([
+    ["precision", "precision"],
+    ["eof", ""],
+  ]);
+  // A capitalised column header must stay an ordinary identifier, so a table
+  // with a `Precision` column is unaffected by the keyword.
+  expect(kinds("Precision")).toEqual(["ident", "eof"]);
+});

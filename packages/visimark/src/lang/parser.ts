@@ -292,6 +292,8 @@ export interface Binding {
   nameEnd: number;
   /** true when the left-hand side was a quoted column header, not an identifier */
   quoted: boolean;
+  /** declared write precision, from a `precision N` clause on the head */
+  precision?: number;
 }
 
 const LEADING_NAME_RE = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=/;
@@ -363,6 +365,15 @@ function parseStatementInner(line: string): Binding | Assertion | ChartDecl | Al
     const at = toks.find((t) => t.kind === "is")!;
     throw new LangError("`is` is a keyword", at.start, at.end);
   }
+  // A `precision` clause belongs on the binding head, where `parseBindingInner`
+  // takes it from. Anywhere to the right of `=` it is a keyword inside an
+  // expression, which is never legal.
+  const eqAt = toks.findIndex((t) => t.kind === "op" && t.value === "=");
+  const precAt = toks.findIndex((t) => t.kind === "precision");
+  if (precAt !== -1 && eqAt !== -1 && precAt > eqAt) {
+    const at = toks[precAt]!;
+    throw new LangError("`precision` is a keyword", at.start, at.end);
+  }
   return parseBinding(line);
 }
 
@@ -373,7 +384,8 @@ function parseBindingInner(line: string): Binding {
     throw new LangError("binding has no `=`", 0, line.length);
   }
   const lhs = toks.slice(0, eqIndex);
-  const nameToks = lhs.filter((t) => t.kind !== "eof");
+  const headToks = lhs.filter((t) => t.kind !== "eof");
+  const { nameToks, precision } = takePrecisionClause(headToks);
   if (nameToks.length !== 1 || (nameToks[0]!.kind !== "ident" && nameToks[0]!.kind !== "string")) {
     const start = nameToks[0]?.start ?? 0;
     const end = nameToks[nameToks.length - 1]?.end ?? line.length;
@@ -388,7 +400,43 @@ function parseBindingInner(line: string): Binding {
     nameStart: nameTok.start,
     nameEnd: nameTok.end,
     quoted: nameTok.kind === "string",
+    ...(precision === undefined ? {} : { precision }),
   };
+}
+
+export const PRECISION_RANGE_MESSAGE = "precision must be a whole number from 0 to 18";
+export const PRECISION_KEYWORD_MESSAGE =
+  "`precision` is a keyword — write `precision 2`, not `precision = 2`";
+/** the widest declarable width: `Decimal.precision` is 40 significant digits,
+ *  so 18 decimals stays exact for integer parts up to 22 digits. See
+ *  docs/design/declared-precision-spec.md section 3.5. */
+const MAX_PRECISION = 18;
+
+/**
+ * Split a `precision N` clause off the end of a binding head, leaving the name
+ * tokens. The head is already multi-token for `"Header" is symbol`, so a
+ * trailing clause needs no new grammar layer — only that the clause is last.
+ */
+function takePrecisionClause(head: Token[]): { nameToks: Token[]; precision?: number } {
+  const kwIndex = head.findIndex((t) => t.kind === "precision");
+  if (kwIndex === -1) return { nameToks: head };
+  const kw = head[kwIndex]!;
+  if (kwIndex === 0) {
+    // `precision = 2` — the removed document-scope constant.
+    throw new LangError(PRECISION_KEYWORD_MESSAGE, kw.start, kw.end);
+  }
+  const rest = head.slice(kwIndex + 1);
+  const digits = rest[0];
+  if (rest.length !== 1 || digits?.kind !== "number" || !/^\d+$/.test(digits.value)) {
+    const start = digits?.start ?? kw.start;
+    const end = rest[rest.length - 1]?.end ?? kw.end;
+    throw new LangError(PRECISION_RANGE_MESSAGE, start, end);
+  }
+  const n = Number(digits.value);
+  if (!Number.isInteger(n) || n < 0 || n > MAX_PRECISION) {
+    throw new LangError(PRECISION_RANGE_MESSAGE, digits.start, digits.end);
+  }
+  return { nameToks: head.slice(0, kwIndex), precision: n };
 }
 
 const ASPECT_MESSAGE = "aspect needs two positive integers, as `16:9`";
