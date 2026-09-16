@@ -45,3 +45,35 @@ test("a name unlike anything builtin gets no misleading guess", async () => {
   expect(await runCli(["ref", "ZZZZZZZZ"], c.io)).toBe(2);
   expect(c.err()).not.toContain("did you mean");
 });
+
+test("ref --json emits the structured envelope", async () => {
+  const c = capture();
+  expect(await runCli(["ref", "EOMONTH", "--json"], c.io)).toBe(0);
+  const doc = JSON.parse(c.out());
+  expect(doc.command).toBe("ref");
+  expect(doc.status).toBe("ok");
+  expect(typeof doc.visimark).toBe("string");
+  expect(doc.function.name).toBe("EOMONTH");
+  expect(doc.function.signature).toBe("EOMONTH(d, months)");
+  expect(doc.function.errors).toContainEqual({ when: "a non-whole `months`", code: "TYPE" });
+});
+
+test("ref --json with no name lists every function", async () => {
+  const c = capture();
+  expect(await runCli(["ref", "--json"], c.io)).toBe(0);
+  expect(JSON.parse(c.out()).functions).toHaveLength(13);
+});
+
+test("ref --json on an unknown name emits the error envelope", async () => {
+  const c = capture();
+  expect(await runCli(["ref", "NOPE", "--json"], c.io)).toBe(2);
+  const doc = JSON.parse(c.out());
+  expect(doc.status).toBe("error");
+  expect(doc.error.code).toBe("USAGE");
+});
+
+test("an unrecognised flag is ignored, as elsewhere in the CLI", async () => {
+  const c = capture();
+  expect(await runCli(["ref", "SUM", "--jsonn"], c.io)).toBe(0);
+  expect(c.out()).toContain("SUM(col)");
+});
