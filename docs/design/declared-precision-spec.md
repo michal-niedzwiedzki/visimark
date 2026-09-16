@@ -78,6 +78,18 @@ Rounding still happens at every name binding and nowhere else, half-up, exactly
 as [§7](../visimark-design.md#7-numeric-semantics) already specifies. What
 changes is only where the width comes from.
 
+Two bindings are outside this, because neither materialises a number and so
+neither has a *write* precision to declare:
+
+- **A scalar with no anchor.** A working value — `Lmax = SQRT(…)`, feeding an
+  anchored `ROUND(Lmax, 2)` — is never written, so it keeps full precision, as
+  it already did. Requiring a declaration there would round an intermediate for
+  no reader's benefit, and rounding it twice is strictly worse arithmetic.
+- **A date- or string-valued binding.** It has no width at all, so `PRECISION`
+  waits until a numeric value actually needs one: on a column, until a row
+  produces a number. Date arithmetic is typed through the derivation table,
+  since `date - date` is a whole number of days.
+
 ### 3.2 The invariant
 
 **A derived precision never discards a digit.** Every rule in
@@ -318,43 +330,59 @@ Plus:
 Declarations fall into two classes, and the distinction matters for review:
 
 - **Required** — the binding is not derivable. Without a clause it is an error.
-- **Elective** — the binding derives a width wider than the author wants. Legal
-  either way; the clause records a rounding decision.
+- **Elective** — a width follows from the formula, but the author wants a
+  narrower one. Legal either way; the clause records a rounding decision and
+  guards it against a later edit.
 
-`example-invoice.md` needs one of each:
+**Only the required class blocks a document**, and the reason is worth stating
+because it is easy to assume otherwise: `fmt` rewrites a cell or anchor only
+where the stored value *disagrees* with the computed one at the governing width.
+`1104.00` equals `1104` at four decimals, so a money column that derives four
+and shows two is stale in neither direction and `fmt` leaves it alone. A wider
+derived width is therefore not a migration cost by itself.
+
+Measured on the flagship: `example-invoice.md` needs **one** declaration.
 
 ```
-eur_total       precision 2 = lines.gross_total / fx_eur          # required
-early_pay_total precision 2 = lines.gross_total * (1 - early_pay_disc)   # elective
+eur_total precision 2 = lines.gross_total / fx_eur     # required — division
 ```
 
-The second derives `2 + 2 = 4` decimals exactly; the author keeps two, which is a
-genuine rounding decision and now written down. Without the clause `fmt` would
-rewrite the anchor to `28085.8200` and break byte-stability.
+It carries three more by choice — on `VAT`, `schedule.Amount` and
+`early_pay_total`, each a money product deriving `2 + 2 = 4`. None is needed to
+pass today. Each is kept because the column holds money and must stay at two
+decimals if an input later gains a third, which is exactly the rounding decision
+this clause exists to record.
 
 ### 7.1 Document inventory
 
-Measured across `docs/example-*.md`, the bindings at issue are divisions,
-averages, square roots and money products. Known cases:
+Measured across `docs/example-*.md`. The required cases are divisions, averages
+and square roots; nothing else blocks.
 
 | Document | Binding | Class |
 |---|---|---|
-| `example-invoice.md` | `eur_total` | required |
-| `example-invoice.md` | `early_pay_total` | elective |
-| `example-invoice-drift.md` | `eur_total` | already `UNDEF`-poisoned; transcript regenerates |
-| `example-ci-sharding.md` | `avg_per_runner` | required |
-| `example-quote-plain.md` | `fee_avg` | required |
-| `example-structural-check.md` | `w_plf`, `Mallow`, `Lmax` | required |
+| `example-invoice.md` | `eur_total` | required — division |
+| `example-invoice.md` | `VAT`, `schedule.Amount`, `early_pay_total` | elective — money products |
+| `example-invoice-drift.md` | the same four, carried from its clean twin | transcript regenerates; still 26 problems |
+| `example-ci-sharding.md` | `avg_per_runner` | required — division |
+| `example-executable-documentation.md` | `WorkerBudgetPercentage` | required — division |
+| `example-structural-check.md` | `w_plf`, `Mallow` | required — division |
 | `example-onboarding-dashboard.md` | `retention` | none — outermost `ROUND(…, 4)` derives 4 |
 | `example-bandwidth.md` | `peak = MAX(gpu_bw)` | none — derives `0` from its column |
 | `example-executable-documentation.md` | `MaxNodes` | none — outermost `ROUND` |
 | `example-agent-budget.md` | `Cost` | none — column, outermost `ROUND` |
+| `example-quote-plain.md` | `fee_avg`, written by `infer` | none — `infer` proposes the clause |
 
-The last four are the point of the closure rules: a flat default would have
-silently overridden `retention`'s four declared digits, turned `peak` from `400`
-into `400.00`, and broken a live assertion. Every document must still be
-re-audited during implementation; this table is the measured starting point, not
-a completed audit.
+Two findings from the audit that the closure rules exist for. A flat default
+would have overridden `retention`'s four declared digits and turned `peak` from
+`400` into `400.00`, breaking a live assertion. And
+`example-onboarding-dashboard.md` was displaying `0.80` for a value its author
+wrote `ROUND(…, 4)` for: the old anchor-derived width had been truncating their
+declared digits, and it now reads `0.8023`.
+
+Two cases the table predicted and the audit corrected: `Lmax = SQRT(…)` needs no
+clause, because an unanchored working value is never written and so has no write
+precision ([§3.1](#31-three-sources-in-order)); and `example-quote-plain.md`'s
+`fee_avg` is written by `infer`, which proposes the clause itself.
 
 ### 7.2 Documentation
 
