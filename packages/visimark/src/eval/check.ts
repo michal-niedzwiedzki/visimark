@@ -17,7 +17,14 @@ import { resolveImports } from "../import/resolve.js";
 import type { ImportStatus } from "../model/types.js";
 import { derivePrecision, type Width } from "./precision.js";
 import { applyUnit, cellPrecision, parseDecorated, type Unit } from "./units.js";
-import { EvalError, num, roundToPlaces, type Value } from "./value.js";
+import {
+  EvalError,
+  exceedsWorkingPrecision,
+  MAX_SIGNIFICANT_DIGITS,
+  num,
+  roundToPlaces,
+  type Value,
+} from "./value.js";
 import { coerceInput, lookupVector, rowLabel, Unevaluable } from "./check-lookup.js";
 import { checkCharts } from "./check-charts.js";
 import { inferDecoration } from "./check-decoration.js";
@@ -349,6 +356,25 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
     );
   }
 
+  /**
+   * The `PRECISION` finding's other trigger: the width is known, but honouring
+   * it here would print digits the engine never computed. Reported rather than
+   * padded — a fabricated tail is exactly the claim this feature removes.
+   */
+  function emitCeiling(binding: Binding, places: number, rowLabel?: string): void {
+    emit(
+      {
+        code: "PRECISION",
+        sheetId: binding.sheetId,
+        name: binding.name,
+        ...(rowLabel === undefined ? {} : { rowLabel }),
+        message: `this value is too large to carry ${places} decimal${places === 1 ? "" : "s"}: ${places} decimals past its integer digits exceeds the ${MAX_SIGNIFICANT_DIGITS}-significant-digit working precision`,
+        span: binding.span,
+      },
+      { sheetId: binding.sheetId },
+    );
+  }
+
   function evalColumn(binding: Binding, sheet: Sheet, table: RawTable): void {
     const colId = `${sheet.id}.${binding.name}`;
     const idx = sheet.columnIndex.get(binding.name)!;
@@ -385,6 +411,11 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
           return;
         }
         if (prec === null && v0.t === "num") needsWidth = true;
+        if (prec !== null && v0.t === "num" && exceedsWorkingPrecision(v0.d, prec)) {
+          emitCeiling(binding, prec, rowLabel(table, r));
+          unevaluable.add(binding.id);
+          return;
+        }
         const v = prec === null ? v0 : roundValue(v0, prec);
         out.push(v);
         const cell = table.rows[r]!.cells[idx];
@@ -491,6 +522,11 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
       // declaration there would round an intermediate for no reader's benefit.
       if (prec === null && anchorText !== undefined && v0.t === "num") {
         emitNotDerivable(binding);
+        unevaluable.add(binding.id);
+        return;
+      }
+      if (prec !== null && v0.t === "num" && exceedsWorkingPrecision(v0.d, prec)) {
+        emitCeiling(binding, prec);
         unevaluable.add(binding.id);
         return;
       }

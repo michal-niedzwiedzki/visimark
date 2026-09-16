@@ -2,6 +2,10 @@ import { expect, test } from "bun:test";
 import { Decimal } from "decimal.js";
 import { parseExpr } from "../../src/lang/parser.js";
 import { derivePrecision } from "../../src/eval/precision.js";
+import { exceedsWorkingPrecision } from "../../src/eval/value.js";
+import { locate } from "../../src/parse/document.js";
+import { build } from "../../src/model/build.js";
+import { check } from "../../src/eval/check.js";
 
 /** stand-in for the column/scalar precision a real check would resolve */
 const known: Record<string, number> = { zero: 0, one: 1, two: 2, four: 4 };
@@ -101,4 +105,49 @@ test("derivation never discards a digit", () => {
     expect(p).not.toBeNull();
     expect(exact.toDecimalPlaces(p as number, Decimal.ROUND_HALF_UP).equals(exact)).toBe(true);
   }
+});
+
+// --- the working-precision ceiling (spec §3.5) ------------------------------
+
+test("no digit is ever fabricated: the ceiling is reported, not padded", () => {
+  // `Decimal.precision` is 40 *significant* digits, so a declared width is real
+  // only while a value's integer digits plus that width stay inside it. The
+  // oracle is a raised working precision, never inspection: one digit over the
+  // ceiling often agrees with the true value by luck, while far over it the
+  // fractional part is a run of zeros that looks orderly and is invented.
+  // 28 ones over 7: the true tail is ...714285714286 and the engine returns
+  // ...714285700000 — five real digits replaced by zeros. (30 ones would not
+  // do: a repunit of length divisible by 6 divides exactly by 7, so its zeros
+  // are genuine.)
+  const big = "1".repeat(28);
+  const src = [
+    "| Item | V |",
+    "|------|--:|",
+    `| a    | ${big} |`,
+    "",
+    "```vmark #s",
+    "wide precision 18 = SUM(V) / 7",
+    "```",
+    "",
+    "Wide: **0.000000000000000000**<!--vmark=s.wide-->.",
+  ].join("\n");
+
+  const findings = check(build(locate(src))).findings;
+  expect(findings.map((f) => f.code)).toEqual(["PRECISION"]);
+  expect(findings[0]!.message).toContain("too large to carry 18 decimals");
+
+  // and the reason it must be reported: at this magnitude the engine's own
+  // answer disagrees with the answer a wider working precision gives
+  const q = new Decimal(big).div(7);
+  const at40 = q.toDecimalPlaces(18, Decimal.ROUND_HALF_UP).toFixed(18);
+  const saved = Decimal.precision;
+  Decimal.set({ precision: 120 });
+  const at120 = new Decimal(big).div(7).toDecimalPlaces(18, Decimal.ROUND_HALF_UP).toFixed(18);
+  Decimal.set({ precision: saved });
+  expect(at40).not.toBe(at120);
+});
+
+test("an ordinary money value is nowhere near the ceiling", () => {
+  expect(exceedsWorkingPrecision(new Decimal("28659.00"), 2)).toBe(false);
+  expect(exceedsWorkingPrecision(new Decimal("4.2650"), 18)).toBe(false);
 });

@@ -152,7 +152,7 @@ integer digits plus `N` stay inside it. Measured at the current setting:
 | `1234567890.00 / 7` | 32 | 41 requested; last digit wrong (`…857142857140`) |
 | `12345678901234567890.00 / 7` | 32 | 51 requested; tail padded with eleven fabricated zeros |
 | all three | 18 | ≤ 38 significant digits — correct |
-| 30 ones `/ 7` | 18 | eighteen fabricated zeros: `…873.000000000000000000` |
+| 28 ones `/ 7` | 18 | five fabricated zeros: `…158.714285714285700000`, true tail `…714285714286` |
 
 At `N = 32` the tool prints digits it never computed, which is exactly the class
 of claim this feature exists to eliminate. Raising `Decimal.precision` would make
@@ -292,12 +292,13 @@ original defect ship:
    than padding zeros onto a tail decimal.js never computed
    ([§3.5](#35-the-working-precision-ceiling)).
 
-   The oracle is a **raised working precision**, not inspection: recompute at
-   `Decimal.precision = 120` and require the same rendered value. Eyeballing does
-   not work — at 23 integer digits and `precision 18` the two agree, while at 30
-   the fractional part is eighteen zeros that look orderly and are invented. The
-   guarantee is `integer digits + N ≤ Decimal.precision`; past it there is no
-   guarantee even where a case happens to agree.
+   The oracle is a **raised working precision**, not inspection: recompute at a
+   higher `Decimal.precision` and require the same rendered value. Eyeballing
+   does not work in either direction — at 22 integer digits and `precision 18`
+   the two agree, and a value that *is* exactly divisible has a genuine run of
+   trailing zeros. The guarantee is `integer digits + N ≤ Decimal.precision`;
+   past it there is no guarantee even where a case happens to agree, which is
+   why the guard is the inequality and not a comparison of renderings.
 
 Plus:
 
