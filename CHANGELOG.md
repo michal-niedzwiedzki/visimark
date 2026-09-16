@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+## 0.1.4 - 2026-09-16
+
+### Fixed
+
+- **The VS Code Marketplace publisher `michal-niedzwiedzki` never existed as a
+  real account** — a `VSCE_PAT` authenticates to Azure DevOps but does not
+  create a publisher, and `vsce publish` reported false success against it.
+  v0.1.3's Marketplace leg failed outright once the workflow started checking
+  the registry for real. The extension is now published under the publisher
+  `visimark-michal-niedzwiedzki`, created under the maintainer's account. The
+  Open VSX namespace `michal-niedzwiedzki` is unaffected.
+
 ## 0.1.3 - 2026-09-15
 
 ### Added
@@ -292,6 +304,7 @@ record that the publish happened, and making the history read clean after the
 fact is the kind of underived edit this project exists to catch. There is no
 0.1.0 of the VS Code extension.
 
+[0.1.4]: https://github.com/michal-niedzwiedzki/visimark/releases/tag/v0.1.4
 [0.1.3]: https://github.com/michal-niedzwiedzki/visimark/releases/tag/v0.1.3
 [0.1.2]: https://github.com/michal-niedzwiedzki/visimark/releases/tag/v0.1.2
 [0.1.1]: https://github.com/michal-niedzwiedzki/visimark/releases/tag/v0.1.1

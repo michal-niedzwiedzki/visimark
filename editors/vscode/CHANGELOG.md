@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.1.4 - 2026-09-16
+
+- The extension now publishes under the Marketplace publisher
+  `visimark-michal-niedzwiedzki`. If you installed a build with the old
+  `michal-niedzwiedzki.visimark-vscode` identifier by hand (e.g. a `.vsix`),
+  uninstall it and reinstall from the Marketplace.
+
 ## 0.1.3 - 2026-09-15
 
 - A quoted GFM header is now a legal column-rule left-hand side, and

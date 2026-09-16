@@ -33,7 +33,7 @@ inputs:
       Action ref ships, so pinning the Action pins the engine too. Set it to
       `latest` to track releases as they land instead.
     required: false
-    default: "0.1.3"
+    default: "0.1.4"
 
 runs:
   using: "composite"
