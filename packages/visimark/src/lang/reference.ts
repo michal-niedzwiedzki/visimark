@@ -53,12 +53,19 @@ export interface FnDoc {
   see?: readonly FunctionName[];
 }
 
-/** The smallest table a reduce example can be demonstrated over. */
+/**
+ * The smallest table a reduce example can be demonstrated over. The empty
+ * `vmark #t` block is what gives the table its sheet id; without it `t.Amount`
+ * does not resolve.
+ */
 const AMOUNTS = `| Amount |
 |-------:|
 |  10.00 |
 |  20.00 |
 |  30.00 |
+
+\`\`\`vmark #t
+\`\`\`
 `;
 
 export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
