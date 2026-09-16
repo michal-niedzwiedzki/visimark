@@ -163,6 +163,7 @@ Net = Qty * Rate
 VAT = Net * vat
 net_total   = SUM(Net)
 gross_total = SUM(Net) + SUM(VAT)
+avg_line precision 2 = net_total / COUNT(Net)
 ```
 
 Net of tax this comes to **13200.00**<!--vmark=lines.net_total--> PLN,
@@ -174,7 +175,16 @@ or **16236.00**<!--vmark=lines.gross_total--> PLN gross.
 - **Totals are scalars**, declared in the same block. Never add a totals row —
   tables stay rectangular.
 - **Anchors** put a scalar into a sentence. The HTML comment is invisible in
-  GitHub, VS Code preview and pandoc.
+  GitHub, VS Code preview and pandoc. An anchor is an *output*: it never decides
+  how wide a number is written.
+- **Precision** is usually silent. A value's decimal width follows from its
+  formula wherever the arithmetic bounds it — `+ - MIN MAX SUM` take the wider
+  operand, `*` sums the two, `COUNT` is 0, `ROUND`/`FLOOR`/`CEILING` take theirs
+  from an argument. **Division, `AVG` and `SQRT` bound nothing**, so a binding
+  using one must say how wide it writes: `name precision N = expr`, `N` from 0
+  to 18. Not declaring it is a `PRECISION` error, and `fmt` will not guess for
+  you. Declare it electively too wherever a column holds money and must stay at
+  two decimals if an input later gains a third.
 - **`assert <boolean expr>`** in a `#id` block states an invariant `check` must
   hold — `assert variance == 0`, `assert ROUND(SUM(Share), 2) == 1`,
   `assert delivery >= signature`. It stores nothing and `fmt` never touches it;
@@ -225,6 +235,9 @@ stays exactly as written.
 | An unreferenced scalar is a `WARN` | Usually means you typo'd a column name and silently created a scalar. |
 | Two header cells sharing identical text is a `DUP` error | Neither becomes usable as a name — bare or quoted — until the headers are told apart. |
 | `is` is a reserved word | Naming a column or scalar `is` is refused; use it only for `"Header" is symbol` aliases. |
+| `precision` is a reserved word too | Naming anything `precision` is refused, and `precision = 2` is not a document setting — there is no document- or sheet-wide precision. It goes on the binding: `total precision 2 = …`. |
+| A division, `AVG` or `SQRT` with no `precision N` is a `PRECISION` error | No width follows from those operations. Take the width from what the document already shows, or decide it. |
+| A number's width never comes from prose | Writing `0` as an anchor placeholder does **not** mean "zero decimals" any more. The anchor is rewritten at the binding's width, whatever you put there. |
 
 ## Editing an existing document
 
@@ -247,6 +260,7 @@ only a person can answer — do not paper over a `DATE`, `UNIT`, `CYCLE`,
 | "I'll just fix that one cell by hand" | That cell is an output. Change the input or the rule and run `fmt`. |
 | "The document already has numbers, I'll just write the same rules by hand" | Run `infer` first. It derives and verifies the rule from the numbers already there; hand-authoring re-does that work and can introduce the exact mistake the tool exists to catch. |
 | "The date format is obvious from context" | `11/12/2026` is two different dates. VisiMark refuses on purpose. |
+| "I'll widen the anchor to get more decimals" | The anchor is an output. Change the binding's `precision N`, or the formula. |
 
 ## Red flags — stop
 
@@ -256,6 +270,8 @@ only a person can answer — do not paper over a `DATE`, `UNIT`, `CYCLE`,
 - You edited a value inside a `<!--vmark=…-->` anchor or a computed column.
 - You added a `Total` row to a table.
 - You wrote a date that is not exactly ten characters of `YYYY-MM-DD`.
+- You wrote a division, `AVG` or `SQRT` and did not say how wide it writes.
+- You changed a number's decimals by editing the text in front of an anchor.
 - You silenced a finding by changing the number it complained about.
 
 ## Reference
