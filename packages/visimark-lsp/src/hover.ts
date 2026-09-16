@@ -1,6 +1,6 @@
 import { MarkupKind, type Hover, type Position } from "vscode-languageserver/node";
 import type { TextDocument } from "vscode-languageserver-textdocument";
-import { dependencies, refText, type Binding } from "visimark";
+import { dependencies, describeFunction, refText, type Binding, type Expr } from "visimark";
 import type { Analysis } from "./analysis.js";
 
 export function hoverAt(doc: TextDocument, analysis: Analysis, position: Position): Hover | null {
@@ -26,7 +26,27 @@ export function hoverAt(doc: TextDocument, analysis: Analysis, position: Positio
     ...[...model.sheets.values()].flatMap((s) => [...s.columns.values(), ...s.scalars.values()]),
   ];
 
-  // 1. inside a vmark block, on a binding line
+  // 1. a function name, hovered inside a vmark block. `Call` spans cover the
+  // whole call including its arguments, so hovering `Net` in `SUM(Net)` would
+  // match `SUM` too; narrow to the name token, innermost call first.
+  const called = innermostCallNameAt(allBindings, off);
+  if (called) {
+    const e = describeFunction(called);
+    if (e) {
+      const params = e.params.map((p) => `- \`${p.name}\` (${p.type}) — ${p.note}`).join("\n");
+      const errors = e.errors.map((x) => `- ${x.when} → \`${x.code}\``).join("\n");
+      const summary = `${e.summary[0]!.toUpperCase()}${e.summary.slice(1)}`;
+      return md(
+        "```vmark\n" +
+          `${e.name}(${e.params.map((p) => p.name).join(", ")})\n` +
+          "```\n\n" +
+          `${summary}.\n\n${params}\n\nreturns: ${e.returns}` +
+          (errors ? `\n\nerrors:\n${errors}` : ""),
+      );
+    }
+  }
+
+  // 2. inside a vmark block, on a binding line
   for (const b of allBindings) {
     if (off < b.span.start || off > b.span.end) continue;
     const v = result.values.get(b.id);
@@ -36,7 +56,7 @@ export function hoverAt(doc: TextDocument, analysis: Analysis, position: Positio
     return md("```vmark\n" + formula(b) + "\n```" + shown + deps(b));
   }
 
-  // 2. a table cell in a computed column
+  // 3. a table cell in a computed column
   for (const sheet of model.sheets.values()) {
     const table = sheet.table;
     if (!table) continue;
@@ -58,7 +78,7 @@ export function hoverAt(doc: TextDocument, analysis: Analysis, position: Positio
     }
   }
 
-  // 3. an anchored value in prose
+  // 4. an anchored value in prose
   for (const a of model.anchors) {
     if (!a.value) continue;
     if (off < a.value.start || off > a.value.end) continue;
@@ -69,4 +89,25 @@ export function hoverAt(doc: TextDocument, analysis: Analysis, position: Positio
   }
 
   return null;
+}
+
+/** The name of the innermost call whose *name token* covers `off`, if any. */
+function innermostCallNameAt(bindings: Binding[], off: number): string | null {
+  const hits: { name: string; width: number }[] = [];
+  const visit = (e: Expr): void => {
+    if (e.type === "call") {
+      if (off >= e.start && off < e.start + e.name.length) {
+        hits.push({ name: e.name, width: e.end - e.start });
+      }
+      for (const a of e.args) visit(a);
+    } else if (e.type === "binary") {
+      visit(e.left);
+      visit(e.right);
+    } else if (e.type === "unary") {
+      visit(e.operand);
+    }
+  };
+  for (const b of bindings) visit(b.expr);
+  if (hits.length === 0) return null;
+  return hits.reduce((a, b) => (b.width < a.width ? b : a)).name;
 }
