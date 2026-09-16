@@ -34,12 +34,14 @@ const meaning = (e: FnEntry): string =>
   [e.summary, ...e.errors.map((x) => `${x.when} is a \`${x.code}\` error`)].join("; ");
 
 export function renderTable(): string {
-  const rows = entries().map((e) => `| \`${sig(e)}\` | ${e.kind} | ${e.arity} | ${meaning(e)} |`);
+  const rows = entries().map(
+    (e) => `| \`${sig(e)}\` | ${e.kind} | ${e.arity} | ${e.precisionRule} | ${meaning(e)} |`,
+  );
   return [
     BEGIN,
     "",
-    "| Function | Kind | Arity | Meaning |",
-    "|----------|------|------:|---------|",
+    "| Function | Kind | Arity | Precision | Meaning |",
+    "|----------|------|------:|-----------|---------|",
     ...rows,
     "",
     "Parameters, precision and worked examples for each are in",

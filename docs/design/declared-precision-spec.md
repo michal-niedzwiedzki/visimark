@@ -436,3 +436,5 @@ copy edits. It is its own step, and it is the last one.
    addressed here is the span: `no problem<!--vmark=s.x-->` rewrites only the
    trailing word. That is accepted for now; delimiting a string value —
    whether by `**`, `_` or `"` — is a later discussion, tracked separately.
+
+<!--vmark:no-formulas-->

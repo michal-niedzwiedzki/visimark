@@ -2,6 +2,44 @@
 
 ## Unreleased
 
+### Changed
+
+- **A value's decimal width no longer comes from prose.** A binding's head may
+  carry a `precision N` clause (`eur_total precision 2 = gross / fx_eur`, `N`
+  from 0 to 18); without one the width is derived from the binding's own
+  expression, but only where the operation bounds the result's scale exactly.
+  `+ - MIN MAX SUM` take the wider operand, `*` sums the scales, `COUNT` is 0,
+  `ROUND`/`FLOOR`/`CEILING` take theirs from an argument, `ABS`/`MOD`/`IF` pass
+  theirs through. **Division, `AVG` and `SQRT` bound nothing**, so a binding
+  using them must declare a width. One invariant holds throughout: a derived
+  precision never discards a digit.
+
+  This closes three defects that `check` reported as `0 problems`: anchoring a
+  constant with a `0` placeholder rounded the stored value and moved every
+  figure derived from it; a second anchor on the same scalar rendered decimal
+  places that had already been rounded away, order-dependently; and a
+  string-valued scalar could not be anchored in bare prose at all, so `fmt`
+  wrote documents `check` then rejected.
+
+  An anchor is now purely an output — it supplies the unit and nothing else. A
+  bare anchor is seeded by `fmt`, and an anchor whose rendering disagrees with
+  its scalar's width is `STALE`. **The document-scope `precision` constant is
+  removed**; there is no sheet-scope equivalent.
+
+### Added
+
+- **`PRECISION` finding** — a numeric binding with no declared width and none
+  derivable, or a value large enough that its declared width would print digits
+  the engine never computed (`Decimal.precision` is 40 *significant* digits, so
+  the ceiling binds on the integer part). Not auto-fixable; `visimark infer`
+  proposes the clause where the document's own cells or figures verify one.
+- **`explain` shows each binding's width** and whether it was declared or
+  derived.
+- **`Precision behaviour` is a required field** on the vocabulary-request
+  template, and a judging criterion in the catalogue: every new primitive states
+  whether its result's width derives from its operands, comes from an argument,
+  or requires a declaration.
+
 ## 0.1.4 - 2026-09-16
 
 ### Fixed

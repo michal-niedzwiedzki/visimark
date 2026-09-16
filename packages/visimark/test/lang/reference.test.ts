@@ -1,5 +1,7 @@
 import { expect, test } from "bun:test";
 import { FUNCTION_TABLE } from "../../src/eval/functions.js";
+import { derivePrecision } from "../../src/eval/precision.js";
+import type { Expr } from "../../src/lang/ast.js";
 import { describeFunction, FUNCTION_DOCS, functionNames } from "../../src/lang/reference.js";
 import { ERROR_CODES } from "../../src/model/types.js";
 
@@ -56,4 +58,31 @@ test("describeFunction is case-sensitive and returns null for an unknown name", 
 
 test("functionNames lists all thirteen", () => {
   expect(functionNames()).toHaveLength(13);
+});
+
+// The `Precision` column of the design-doc table is prose in `reference.ts`,
+// while the rule the engine actually applies is the switch in
+// `eval/precision.ts`. Nothing but this test stops the two drifting, and a
+// table that misreports which functions bound their result's scale is the
+// exact class of claim declared precision exists to remove.
+test("`must be declared` names exactly the functions that derive no width", () => {
+  const num = (v: string): Expr => ({ type: "num", value: v, start: 0, end: 0 });
+  // Every argument is a literal of known width, so a `null` result is the
+  // function's own rule rather than an operand the lookup could not resolve.
+  // `1` rather than `1.0` because `ROUND` reads its width off the literal
+  // itself and takes only a non-negative integer there.
+  const call = (name: string, arity: number): Expr => ({
+    type: "call",
+    name,
+    args: Array.from({ length: arity }, () => num("1")),
+    start: 0,
+    end: 0,
+  });
+  for (const n of names) {
+    const derivesNothing = derivePrecision(call(n, FUNCTION_TABLE[n].arity), () => 2) === null;
+    expect([n, FUNCTION_DOCS[n].precisionRule.includes("must be declared")]).toEqual([
+      n,
+      derivesNothing,
+    ]);
+  }
 });

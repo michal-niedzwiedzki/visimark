@@ -13,6 +13,9 @@ body:
         - it fits the shape system (mapper is scalar → scalar; reducer is vector → scalar over a bare column reference; no vector → vector);
         - its value is document-local — no locale, clock, network, ambient data, or config;
         - it adds no ambiguity — no context-dependent coercion;
+        - its precision behaviour is stated — the result's decimal width either
+          derives exactly from its operands, comes from an argument, or requires
+          the binding to declare one;
         - a real document needs it. A request with no motivating document is deferred by default.
   - type: input
     id: name
@@ -40,6 +43,23 @@ body:
       label: Signature and shape
       description: Arguments, result type, arity, and whether it is a map or a reduce.
       placeholder: "EOMONTH(date, months) -> date   |   map, arity 2"
+    validations:
+      required: true
+  - type: dropdown
+    id: precision
+    attributes:
+      label: Precision behaviour
+      description: >
+        Whether the result's decimal width follows exactly from its operands,
+        comes from one of its arguments, or does not follow at all — in which
+        case a binding using it must declare `precision N`. See the design doc
+        section 7.
+      options:
+        - Exact — derives from operands (like + - * MIN MAX SUM COUNT)
+        - Fixed by an argument (like ROUND(x, n), FLOOR(x, s))
+        - Not derivable — a binding using it must declare precision (like / AVG SQRT)
+        - Not a number (a date, or a string)
+        - Not sure
     validations:
       required: true
   - type: textarea

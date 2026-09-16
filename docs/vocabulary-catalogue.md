@@ -37,6 +37,12 @@ A vocabulary request is judged against the design doc's constraints, not against
    is deferred by default — "nothing in either worked example repeats" is why
    user-defined functions are deferred, and the same bar applies here. Paste the
    table and its `vmark` block into the issue.
+5. **Its precision behaviour is stated.** The result's decimal width either
+   derives exactly from its operands, comes from an argument, or does not follow
+   at all — in which case a binding using the primitive must declare
+   `precision N` ([§7](visimark-design.md#7-numeric-semantics)). A primitive
+   whose width nobody has thought about is not assessable, and the request
+   template asks for it.
 
 A general issue (sections E–F) is judged against the same design doc: [§1](visimark-design.md#1-purpose)
 scope and non-goals, the four [§2](visimark-design.md#2-constraints-that-shaped-the-design)
