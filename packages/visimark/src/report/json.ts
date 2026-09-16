@@ -58,6 +58,10 @@ export function publicFinding(file: string, f: Finding): object {
     if (f.altA !== undefined) details.altA = f.altA;
     if (f.altB !== undefined) details.altB = f.altB;
     if (f.daysApart !== undefined) details.daysApart = f.daysApart;
+  } else if (f.code === "PRECISION") {
+    // the formula that has no derivable width, or the ceiling message
+    if (f.raw !== undefined) details.formula = f.raw;
+    if (f.message) details.message = f.message;
   } else if (f.code === "CYCLE") {
     details.cyclePath = f.cyclePath ?? [];
   } else if (f.code === "ASSERT") {

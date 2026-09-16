@@ -19,6 +19,20 @@ export interface ExplainView {
   readonly importState: ReadonlyMap<string, ImportStatus>;
   /** the requested scope, in request order; the caller has already validated it */
   readonly sheets: readonly string[];
+  /** write precision per column id and per binding id, as `check` settled it */
+  readonly columnPrecision: ReadonlyMap<string, number>;
+  readonly scalarPrecision: ReadonlyMap<string, number>;
+}
+
+/** the same two facts `precisionOf` renders, for `--json` */
+function precisionJson(
+  view: ExplainView,
+  b: Binding,
+  colId: string,
+): { precision?: number; precisionFrom?: "declared" | "derived" } {
+  const p = b.kind === "column" ? view.columnPrecision.get(colId) : view.scalarPrecision.get(b.id);
+  if (p === undefined) return {};
+  return { precision: p, precisionFrom: b.precision === undefined ? "derived" : "declared" };
 }
 
 export function explainView(model: DocModel, result: CheckResult, sheets: string[]): ExplainView {
@@ -31,11 +45,33 @@ export function explainView(model: DocModel, result: CheckResult, sheets: string
     chartState: new Map(result.charts.map((c) => [`${c.sheetId}.${c.name}`, c])),
     importState: result.imports,
     sheets: sheets.length > 0 ? sheets : [...model.sheets.keys()],
+    columnPrecision: result.columnPrecision,
+    scalarPrecision: result.scalarPrecision,
   };
 }
 
 function slice(model: DocModel, b: { expr: { start: number; end: number } }): string {
   return model.source.slice(b.expr.start, b.expr.end);
+}
+
+/**
+ * How wide this binding writes, and where that came from. The result only — a
+ * derivation chain is deliberately not shown (declared-precision-spec.md §9).
+ */
+function precisionOf(view: ExplainView, b: Binding, colId: string): string | undefined {
+  const p = b.kind === "column" ? view.columnPrecision.get(colId) : view.scalarPrecision.get(b.id);
+  if (p === undefined) return undefined;
+  return `precision ${p} (${b.precision === undefined ? "derived" : "declared"})`;
+}
+
+/** `name = expr` lines with their precision aligned into one column */
+function bindingLines(view: ExplainView, sheetId: string, bs: Binding[]): string[] {
+  const rows = bs.map((b) => ({
+    text: `${b.name} = ${slice(view.model, b)}`,
+    prec: precisionOf(view, b, `${sheetId}.${b.name}`),
+  }));
+  const w = Math.max(0, ...rows.filter((r) => r.prec).map((r) => r.text.length));
+  return rows.map((r) => `    ${r.prec ? `${r.text.padEnd(w)}   ${r.prec}` : r.text}`);
 }
 
 /** the bindings of one sheet in evaluation order, with assertions and charts dropped */
@@ -79,11 +115,11 @@ export function explainText(view: ExplainView): string {
     }
     if (sheet.columns.size > 0) {
       lines.push("  rules:");
-      for (const b of sheet.columns.values()) lines.push(`    ${b.name} = ${slice(model, b)}`);
+      lines.push(...bindingLines(view, sid, [...sheet.columns.values()]));
     }
     if (sheet.scalars.size > 0) {
       lines.push("  scalars:");
-      for (const b of sheet.scalars.values()) lines.push(`    ${b.name} = ${slice(model, b)}`);
+      lines.push(...bindingLines(view, sid, [...sheet.scalars.values()]));
     }
     const order = localOrder(view, sid);
     if (order.length > 0) lines.push(`  order:   ${order.join(" → ")}`);
@@ -147,10 +183,15 @@ export function explainJson(view: ExplainView, file: string): object {
           : {}),
         inputs: [...sheet.inputColumns],
         aliases: [...sheet.aliases].map(([symbol, entry]) => ({ symbol, header: entry.header })),
-        rules: [...sheet.columns.values()].map((b) => ({ name: b.name, rule: slice(model, b) })),
+        rules: [...sheet.columns.values()].map((b) => ({
+          name: b.name,
+          rule: slice(model, b),
+          ...precisionJson(view, b, `${sid}.${b.name}`),
+        })),
         scalars: [...sheet.scalars.values()].map((b) => ({
           name: b.name,
           rule: slice(model, b),
+          ...precisionJson(view, b, `${sid}.${b.name}`),
         })),
         order: localOrder(view, sid),
         assertions: sheet.assertions.map((a) => a.source.replace(/^assert\s+/, "")),

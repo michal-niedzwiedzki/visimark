@@ -175,6 +175,28 @@ function renderGroup(f: Finding): string[] {
           : []),
       ];
     }
+    case "PRECISION": {
+      // `PRECISION` is one character past the 8-wide code field, so its payload
+      // overhangs by one — the same degradation an over-long row label already
+      // takes, and cheaper than widening the grid under every other code.
+      const head =
+        prefix("PRECISION") +
+        id(f).padEnd(ID_FIELD) +
+        (f.rowLabel ? "· " + f.rowLabel + "  " : "  ") +
+        (f.message ??
+          (f.raw
+            ? `\`${f.raw}\` has no derivable precision`
+            : "no precision declared and none follows from the formula"));
+      return [
+        head,
+        ...(f.message
+          ? []
+          : [
+              " ".repeat(prefix("PRECISION").length) +
+                `declare the width: \`${f.name ?? "name"} precision N = …\``,
+            ]),
+      ];
+    }
     case "ANCHOR":
       return [
         prefix("ANCHOR") +
