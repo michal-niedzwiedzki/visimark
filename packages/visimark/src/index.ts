@@ -5,6 +5,16 @@ export { fmt, planFmt, type FmtOptions, type FmtResult, type PlannedEdit } from 
 export { applyEdits, type Edit } from "./write/splice.js";
 export { topoOrder, dependencies, resolve, refText } from "./eval/graph.js";
 export { FUNCTIONS, isReduce, type FnKind, type FnSpec } from "./eval/functions.js";
+export type { FunctionName } from "./eval/functions.js";
+export {
+  describeFunction,
+  functionNames,
+  type FnDoc,
+  type FnEntry,
+  type FnError,
+  type FnExample,
+  type FnParam,
+} from "./lang/reference.js";
 export { infer, type Proposal, type ProposalKind } from "./infer/propose.js";
 export { planInfer, type PlannedInsert } from "./infer/write.js";
 export { formatCheck } from "./report/format.js";

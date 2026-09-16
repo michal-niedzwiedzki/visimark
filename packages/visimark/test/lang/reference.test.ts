@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { FUNCTION_TABLE } from "../../src/eval/functions.js";
-import { FUNCTION_DOCS } from "../../src/lang/reference.js";
+import { describeFunction, FUNCTION_DOCS, functionNames } from "../../src/lang/reference.js";
 import { ERROR_CODES } from "../../src/model/types.js";
 
 const names = Object.keys(FUNCTION_TABLE) as (keyof typeof FUNCTION_TABLE)[];
@@ -38,4 +38,22 @@ test("an error condition is a noun phrase, not a sentence", () => {
       expect(e.when).not.toMatch(/\.$/);
     }
   }
+});
+
+test("describeFunction returns shape and documentation together", () => {
+  const e = describeFunction("EOMONTH");
+  expect(e).not.toBeNull();
+  expect(e!.name).toBe("EOMONTH");
+  expect(e!.kind).toBe("map");
+  expect(e!.arity).toBe(2);
+  expect(e!.returns).toBe("date");
+});
+
+test("describeFunction is case-sensitive and returns null for an unknown name", () => {
+  expect(describeFunction("eomonth")).toBeNull();
+  expect(describeFunction("NOPE")).toBeNull();
+});
+
+test("functionNames lists all thirteen", () => {
+  expect(functionNames()).toHaveLength(13);
 });
