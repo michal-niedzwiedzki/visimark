@@ -1235,8 +1235,15 @@ applies those proposals to the document.</pre>
           "12-charts.md",
           "13-imports.md",
         ];
+        // Data files a chapter imports, rather than chapters themselves — no
+        // badge, no scenario quest, but fetched into the same store so the
+        // engine can actually read them (see PLAYGROUND FILESYSTEM below).
+        // 13-imports.md declares `from 13-imports.csv ... at sha256:...`; with
+        // the CSV absent the sheet has no table and every imported column
+        // reads UNDEF, which is the spurious failure review §4.3 fixes.
+        var TUTORIAL_DATA = ["13-imports.csv"];
         var FILE_SOURCES = { "demo.md": "playground/demo.md" };
-        TUTORIAL_CHAPTERS.forEach(function (name) {
+        TUTORIAL_CHAPTERS.concat(TUTORIAL_DATA).forEach(function (name) {
           FILE_SOURCES[name] = "playground/tutorial/" + name;
         });
         Object.assign(FILE_SOURCES, {
@@ -1298,6 +1305,63 @@ applies those proposals to the document.</pre>
           theme: "default",
         });
         cm.setValue(contents[current]);
+
+        // ---- the playground filesystem ---------------------------------------
+        // VisiMark's three filesystem-touching phases (the path gate, artifact
+        // staleness, CSV imports) take an injected ReaderPort rather than
+        // importing node:fs — see packages/visimark/src/fs/reader.ts and
+        // docs/design/browser-fs-port-plan.md. This is the browser's
+        // implementation of that port, over the in-memory store above, so
+        // 13-imports.md's declared CSV import resolves for real here:
+        // the header is asserted, the SHA-256 stamp is verified against a
+        // digest computed from the bytes the store is holding *right now*
+        // (VM.sha256Hex, a synchronous SHA-256 — crypto.subtle is async and
+        // the port is not), and grand_total = SUM(Total) actually runs.
+        //
+        // READER_FS maps a synthetic absolute path to a file in the store.
+        // The paths are absolute and share one directory because that is what
+        // fs/gate.ts's containment rules are written against: it resolves the
+        // import against dirname(document path) and refuses anything that
+        // escapes it.
+        //
+        // **Only the files listed here get a reader, and that is deliberate.**
+        // A document handed a ReaderPort also gets its chart artifacts checked
+        // against the filesystem — and this store has no SVGs in it, because
+        // the playground never writes any (`fmt --write` does not run here).
+        // So handing 12-charts.md a reader would replace the `skipped` chart it
+        // correctly reports today with `artifact missing at ...`: a second
+        // spurious failure, in the chapter review §4.3 names as the reference
+        // behaviour. A file the store cannot fully serve is better off with no
+        // reader at all, which is precisely the `doc === undefined` case the
+        // engine already handles by staying quiet.
+        var READER_FS = {
+          "/tutorial/13-imports.md": "13-imports.md",
+          "/tutorial/13-imports.csv": "13-imports.csv",
+        };
+        // The file being edited lives in the CodeMirror buffer, not in
+        // `contents` — it is only flushed back on a file switch. The reader
+        // has to see the buffer, or editing 13-imports.csv would never move
+        // the digest and the STALE demonstration would be fake.
+        function fileText(name) {
+          if (name === current) return cm.getValue();
+          return contents[name];
+        }
+        var playgroundReader = VM.memoryReader(function (path) {
+          var name = READER_FS[path];
+          return name === undefined ? null : fileText(name);
+        });
+        /** The `doc` option for a file the store can serve, else undefined. */
+        function docFor(name) {
+          for (var path in READER_FS) {
+            if (READER_FS[path] === name) return { path: path, reader: playgroundReader };
+          }
+          return undefined;
+        }
+        /** `{ doc }` for VM.check/VM.fmt/pgEval — `{}` when there is no reader. */
+        function optsFor(name) {
+          var doc = docFor(name);
+          return doc ? { doc: doc } : {};
+        }
 
         // ---- terminal ------------------------------------------------------------
         var termEl = document.getElementById("terminal-body");
@@ -1953,7 +2017,7 @@ applies those proposals to the document.</pre>
          *  run a second time per keystroke-settle for a hand-typed document. */
         function hasStaleFindings(source) {
           try {
-            var findings = VM.check(VM.build(VM.locate(source))).findings;
+            var findings = VM.check(VM.build(VM.locate(source)), optsFor(current)).findings;
             return findings.some(function (f) {
               return f.code === "STALE";
             });
@@ -2073,7 +2137,10 @@ applies those proposals to the document.</pre>
           termCmd("visimark fmt " + current);
           var result;
           try {
-            result = VM.fmt(source, {});
+            // the reader too: `fmt` re-checks, and without it an imported
+            // sheet's columns all read UNDEF and the STATUS bar goes red on a
+            // document the CLI passes clean (review §4.3)
+            result = VM.fmt(source, optsFor(current));
           } catch (e) {
             term("visimark: " + e.message, "err");
             setStatus(false, "fmt crashed");
@@ -2113,7 +2180,7 @@ applies those proposals to the document.</pre>
           var evalResult = null;
 
           try {
-            evalResult = VM.pgEval(source);
+            evalResult = VM.pgEval(source, optsFor(current));
             knowledgeEl.textContent = JSON.stringify(evalResult, redactSvg, 2);
             var failed = (evalResult.assertions || []).filter(function (a) {
               return a.holds === false;
@@ -2127,7 +2194,7 @@ applies those proposals to the document.</pre>
           }
 
           try {
-            reasoningEl.textContent = VM.pgExplain(source).join("\n");
+            reasoningEl.textContent = VM.pgExplain(source, optsFor(current)).join("\n");
           } catch (e) {
             reasoningEl.textContent = "error: " + e.message;
           }
@@ -2509,20 +2576,26 @@ applies those proposals to the document.</pre>
           buildBtn.disabled = true;
           buildStatusEl.textContent = "running…";
           buildBodyEl.innerHTML = "";
-          termCmd("visimark check " + order.join(" "));
+          // Data files (13-imports.csv) are in the store for the engine to
+          // read, not for `visimark check` to run over — a CSV is not a
+          // VisiMark document and the CLI would refuse it.
+          var documents = order.filter(function (name) {
+            return /\.md$/i.test(name);
+          });
+          termCmd("visimark check " + documents.join(" "));
 
           var passed = 0;
-          order.forEach(function (name) {
+          documents.forEach(function (name) {
             var outcome = checkOne(name, contents[name]);
             if (outcome.ok) passed++;
             buildBodyEl.appendChild(buildRow(name, outcome));
           });
 
-          var summary = passed + "/" + order.length + " files passing";
+          var summary = passed + "/" + documents.length + " files passing";
           buildStatusEl.textContent = summary;
           term("visimark check: " + summary);
           trimTerminal();
-          setStatus(passed === order.length, passed === order.length ? "" : summary);
+          setStatus(passed === documents.length, passed === documents.length ? "" : summary);
           buildBtn.disabled = false;
           questSignal("action:build-run");
           if (checkOne(current, contents[current]).ok) {
@@ -2535,7 +2608,7 @@ applies those proposals to the document.</pre>
          *  separate reportFailures), a failed assertion also counts here. */
         function checkOne(name, source) {
           try {
-            var result = VM.check(VM.build(VM.locate(source)));
+            var result = VM.check(VM.build(VM.locate(source)), optsFor(name));
             var failedAssertions = result.assertions.filter(function (a) {
               return a.holds === false;
             });

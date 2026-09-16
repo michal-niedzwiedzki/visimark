@@ -228,7 +228,40 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
   reportAnchors(st);
   reportUnused(st, entries);
 
-  const findings = orderFindings(entries, sheetSeen);
+  // An import that was never *attempted* — `state: "skipped"`, meaning no
+  // reader was supplied, which is the browser's situation — leaves its sheet
+  // with no table at all. Every binding reading a column the CSV would have
+  // supplied then fails with UNDEF, and `did you mean` runs its suggestion
+  // over a name set missing exactly those columns: on the tutorial's imports
+  // chapter that proposed `grand_total` refer to itself, on a document the CLI
+  // passes clean (review 2026-09-16 §3.1 row 4 / §4.3).
+  //
+  // Those findings are consequences of a check that did not happen, so they
+  // are dropped here — `checkCharts` already does the same for a `skipped`
+  // chart, and this is the suppression that mirrors it. `resolveImports`
+  // stays silent about the cause; this is the consequence.
+  //
+  // **Only "skipped".** An import that genuinely failed has already reported
+  // its own IMPORT finding, and its sheet's UNDEFs are real information about
+  // a real document; suppressing those would hide a broken import. `state` is
+  // the discriminant that keeps the two apart, and it is the reason this is
+  // safe. Unreachable from the CLI, which always supplies a reader.
+  const neverAttempted = new Set(
+    [...imported.statuses.values()].filter((s) => s.state === "skipped").map((s) => s.sheetId),
+  );
+  const surviving =
+    neverAttempted.size === 0
+      ? entries
+      : entries.filter(
+          (e) =>
+            !(
+              (e.f.code === "UNDEF" || e.f.code === "VECTOR") &&
+              e.f.sheetId !== undefined &&
+              neverAttempted.has(e.f.sheetId)
+            ),
+        );
+
+  const findings = orderFindings(surviving, sheetSeen);
   const assertions: AssertionResult[] = [];
   for (const sheet of model.sheets.values()) {
     for (const a of sheet.assertions) {

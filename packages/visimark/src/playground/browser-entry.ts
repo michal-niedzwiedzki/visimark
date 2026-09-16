@@ -22,8 +22,9 @@
 // reach the filesystem phases from `window.VisiMark` is for a caller to write
 // a `ReaderPort` themselves, which in a browser means an in-memory one. There
 // is no bare `docPath` string that silently means "use node:fs"; that option,
-// and the crash it could reproduce, no longer exists. A browser-side reader
-// over playground.html's in-memory file store is what review §4.3 will supply.
+// and the crash it could reproduce, no longer exists. `memoryReader`
+// (../playground/memory-reader.ts) is that browser-side reader, over
+// playground.html's in-memory file store — review §4.3.
 //
 // playground.html loads the built bundle as a classic `<script>`, not a
 // module: the playground is meant to be opened straight from disk
@@ -42,6 +43,8 @@ import { locate } from "../parse/document.js";
 import { formatCheck } from "../report/format.js";
 import { formatInfer } from "../report/infer.js";
 import { fmt as fmtDoc, type FmtOptions, type FmtResult } from "../write/fmt.js";
+import { memoryReader } from "./memory-reader.js";
+import { sha256Hex } from "./sha256.js";
 
 /**
  * The browser's `check`/`fmt`, with the Node-only half of their options gone.
@@ -69,10 +72,18 @@ function showValue(v: Value): string {
   return v.s;
 }
 
-/** Mirrors `cmdEval FILE --json` — the JSON object `visimark eval --json` prints. */
-function pgEval(source: string): unknown {
+/**
+ * Mirrors `cmdEval FILE --json` — the JSON object `visimark eval --json` prints.
+ *
+ * `opts` is the same `doc` the other entry points take. Without it a document
+ * whose sheet is imported from a CSV evaluates with no table at all, so every
+ * imported column reads `UNDEF` — which is exactly the spurious failure review
+ * §4.3 is about. The KNOWLEDGE panel and the quest engine both read this, so
+ * they need the reader as much as the check panel does.
+ */
+function pgEval(source: string, opts: BrowserCheckOptions = {}): unknown {
   const model = build(locate(source));
-  const result = check(model);
+  const result = check(model, opts);
 
   const all = new Map<string, string>();
   for (const [k, v] of result.values) all.set(k, showValue(v));
@@ -92,7 +103,7 @@ function slice(model: DocModel, b: { expr: { start: number; end: number } }): st
 }
 
 /** Mirrors `cmdExplain FILE` — the text `visimark explain` prints, as lines. */
-function pgExplain(source: string): string[] {
+function pgExplain(source: string, opts: BrowserCheckOptions = {}): string[] {
   const out: string[] = [];
   const model = build(locate(source));
   const { order, assertionIds, chartIds } = topoOrder(model);
@@ -103,7 +114,7 @@ function pgExplain(source: string): string[] {
     out.push("");
   }
 
-  const chartState = new Map(check(model).charts.map((c) => [`${c.sheetId}.${c.name}`, c]));
+  const chartState = new Map(check(model, opts).charts.map((c) => [`${c.sheetId}.${c.name}`, c]));
 
   for (const sid of model.sheets.keys()) {
     const sheet = model.sheets.get(sid)!;
@@ -156,6 +167,8 @@ const api = {
   formatInfer,
   pgEval,
   pgExplain,
+  memoryReader,
+  sha256Hex,
 };
 
 declare global {
