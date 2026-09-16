@@ -279,28 +279,31 @@ the single home for a classification the dependency walk, the evaluator and the
 reporter each need. The parser stays function-agnostic: it builds a call node
 for any name, and the name is judged afterwards.
 
-**Precision** is the fourth column: whether the result's decimal width follows
-from the operands, comes from an argument, or does not follow at all — in which
-case a binding using it must declare one ([§7](#7-numeric-semantics)). Every
-new primitive states this; the request template asks for it.
+**Precision** is the fourth column: where the result's decimal width comes
+from — the operands, an argument's *value*, an argument's *width*, or nowhere,
+in which case a binding using it must declare one ([§7](#7-numeric-semantics)).
+It is a property of the function in the same way its arity is, so `visimark ref
+NAME` and the editor's hover state it too. Every new primitive states it; the
+request template asks for it, and a test holds each answer against the
+derivation the engine actually performs.
 
 <!-- generated: function-table — `bun run gen:docs` -->
 
 | Function | Kind | Arity | Precision | Meaning |
 |----------|------|------:|-----------|---------|
-| `SUM(col)` | reduce | 1 | the column's | total of a column; `0` over an empty column |
-| `MIN(col)` | reduce | 1 | the column's | least value; a column mixing numbers and dates is a `TYPE` error |
-| `MAX(col)` | reduce | 1 | the column's | greatest value; a column mixing numbers and dates is a `TYPE` error |
+| `SUM(col)` | reduce | 1 | the width of `col` | total of a column; `0` over an empty column |
+| `MIN(col)` | reduce | 1 | the width of `col` | least value; a column mixing numbers and dates is a `TYPE` error |
+| `MAX(col)` | reduce | 1 | the width of `col` | greatest value; a column mixing numbers and dates is a `TYPE` error |
 | `AVG(col)` | reduce | 1 | **must be declared** | arithmetic mean; an empty column is a `TYPE` error |
-| `COUNT(col)` | reduce | 1 | `0` | number of rows |
-| `ROUND(x, places)` | map | 2 | `places` | half-up to `places` decimals |
-| `ABS(x)` | map | 1 | `x`'s | absolute value |
-| `MOD(x, y)` | map | 2 | the wider operand's | remainder |
+| `COUNT(col)` | reduce | 1 | always 0 | number of rows |
+| `ROUND(x, places)` | map | 2 | the value of `places` | half-up to `places` decimals |
+| `ABS(x)` | map | 1 | the width of `x` | absolute value |
+| `MOD(x, y)` | map | 2 | the wider of `x` and `y` | remainder |
 | `SQRT(x)` | map | 1 | **must be declared** | non-negative square root; a negative operand is a `TYPE` error |
-| `FLOOR(x, s)` | map | 2 | `s`'s | greatest multiple of `s` that does not exceed `x`, toward −∞; a non-positive `s` is a `TYPE` error |
-| `CEILING(x, s)` | map | 2 | `s`'s | least multiple of `s` that is not less than `x`, toward +∞; a non-positive `s` is a `TYPE` error |
-| `IF(cond, a, b)` | map | 3 | the wider branch's | returns `a` or `b`; a non-boolean `cond` is a `TYPE` error |
-| `EOMONTH(d, months)` | map | 2 | n/a — a date | last day of the month `months` calendar months from `d`; `d`'s day is discarded; a non-whole `months` is a `TYPE` error; a result outside years 1–9999 is a `DATE` error |
+| `FLOOR(x, s)` | map | 2 | the width of `s` | greatest multiple of `s` that does not exceed `x`, toward −∞; a non-positive `s` is a `TYPE` error |
+| `CEILING(x, s)` | map | 2 | the width of `s` | least multiple of `s` that is not less than `x`, toward +∞; a non-positive `s` is a `TYPE` error |
+| `IF(cond, a, b)` | map | 3 | the wider of `a` and `b` | returns `a` or `b`; a non-boolean `cond` is a `TYPE` error |
+| `EOMONTH(d, months)` | map | 2 | not applicable — the result is a date | last day of the month `months` calendar months from `d`; `d`'s day is discarded; a non-whole `months` is a `TYPE` error; a result outside years 1–9999 is a `DATE` error |
 
 Parameters, precision and worked examples for each are in
 [`function-reference.md`](function-reference.md), or `visimark ref NAME`.

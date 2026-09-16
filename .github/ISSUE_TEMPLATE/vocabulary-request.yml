@@ -50,13 +50,15 @@ body:
     attributes:
       label: Precision behaviour
       description: >
-        Whether the result's decimal width follows exactly from its operands,
-        comes from one of its arguments, or does not follow at all — in which
-        case a binding using it must declare `precision N`. See the design doc
-        section 7.
+        Where the result's decimal width comes from. Each option is one variant
+        of `FnPrecision` in `packages/visimark/src/lang/reference.ts`, so an
+        accepted answer is written down as data rather than translated. See the
+        design doc section 7.
       options:
-        - Exact — derives from operands (like + - * MIN MAX SUM COUNT)
-        - Fixed by an argument (like ROUND(x, n), FLOOR(x, s))
+        - The widest operand (like + - * MIN MAX SUM ABS MOD IF)
+        - Always the same width, whatever the operands (like COUNT, which is 0)
+        - The value of an argument (like ROUND(x, places))
+        - The width of an argument (like FLOOR(x, s), CEILING(x, s))
         - Not derivable — a binding using it must declare precision (like / AVG SQRT)
         - Not a number (a date, or a string)
         - Not sure

@@ -1,6 +1,13 @@
 import { MarkupKind, type Hover, type Position } from "vscode-languageserver/node";
 import type { TextDocument } from "vscode-languageserver-textdocument";
-import { dependencies, describeFunction, refText, type Binding, type Expr } from "visimark";
+import {
+  dependencies,
+  describeFunction,
+  precisionPhrase,
+  refText,
+  type Binding,
+  type Expr,
+} from "visimark";
 import type { Analysis } from "./analysis.js";
 
 export function hoverAt(doc: TextDocument, analysis: Analysis, position: Position): Hover | null {
@@ -41,6 +48,8 @@ export function hoverAt(doc: TextDocument, analysis: Analysis, position: Positio
           `${e.name}(${e.params.map((p) => p.name).join(", ")})\n` +
           "```\n\n" +
           `${summary}.\n\n${params}\n\nreturns: ${e.returns}` +
+          `\n\nprecision: ${precisionPhrase(e.precision)}` +
+          (e.rounding ? `\n\nrounding: ${e.rounding}` : "") +
           (errors ? `\n\nerrors:\n${errors}` : ""),
       );
     }

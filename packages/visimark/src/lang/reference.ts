@@ -40,6 +40,59 @@ export interface FnExample {
   given?: string;
 }
 
+/**
+ * Where a call's result gets its decimal width.
+ *
+ * The rule the engine actually applies is the switch in `eval/precision.ts`.
+ * This is that rule as **data**, so the design-doc table, `visimark ref`,
+ * `--json` and the editor hover all state it in the same words, and
+ * `test/lang/reference.test.ts` can hold every variant against the engine
+ * rather than trusting a sentence.
+ *
+ * Typed rather than prose for the same reason `FnError` is: the distinction
+ * between `ROUND`, whose width is the *value* of `places`, and `FLOOR`, whose
+ * width is the *scale* of `s`, is invisible in a cell reading `` `places` ``
+ * against `` `s`'s `` — an apostrophe carrying the whole semantics.
+ */
+export type FnPrecision =
+  /** the widest of the named operands — `SUM`, `MIN`, `MAX`, `ABS`, `MOD`, `IF` */
+  | { from: "operands"; params: readonly string[] }
+  /** the literal *value* of an argument — `ROUND`'s `places` */
+  | { from: "argument-value"; param: string }
+  /** the *width* of an argument — `FLOOR` and `CEILING`'s `s` */
+  | { from: "argument-scale"; param: string }
+  /** the same width whatever the operands — `COUNT` */
+  | { from: "fixed"; width: number }
+  /** nothing bounds the result's scale, so the binding must declare — `AVG`, `SQRT` */
+  | { from: "declared" }
+  /** not a number, so no width applies — `EOMONTH` */
+  | { from: "date" };
+
+/**
+ * The width rule as one noun phrase, so no consumer words it differently.
+ * Plain text with Markdown code spans: a renderer that wants emphasis on the
+ * `declared` case adds its own, which is why none is baked in here.
+ */
+export function precisionPhrase(p: FnPrecision): string {
+  const code = (n: string): string => `\`${n}\``;
+  switch (p.from) {
+    case "operands":
+      return p.params.length === 1
+        ? `the width of ${code(p.params[0]!)}`
+        : `the wider of ${p.params.map(code).join(" and ")}`;
+    case "argument-value":
+      return `the value of ${code(p.param)}`;
+    case "argument-scale":
+      return `the width of ${code(p.param)}`;
+    case "fixed":
+      return `always ${p.width}`;
+    case "declared":
+      return "must be declared";
+    case "date":
+      return "not applicable — the result is a date";
+  }
+}
+
 export interface FnDoc {
   /** one line; this becomes the `Meaning` column of the design-doc table */
   summary: string;
@@ -47,16 +100,16 @@ export interface FnDoc {
   params: readonly FnParam[];
   returns: string;
   /**
-   * The `Precision` cell of the design-doc table: where the result's decimal
-   * width comes from, as a noun phrase (`the column's`, `` `s`'s ``) or
-   * `**must be declared**` where the operation bounds nothing. Required, so a
-   * function cannot be added without stating it — the rule itself lives in
-   * `eval/precision.ts`, and `test/lang/reference.test.ts` holds the two
-   * against each other.
+   * Where the result's width comes from. Required, so a function cannot be
+   * added without stating it — the same discipline `Precision behaviour` asks
+   * of a vocabulary request.
    */
-  precisionRule: string;
-  /** only where the function has rounding behaviour of its own */
-  precision?: string;
+  precision: FnPrecision;
+  /**
+   * Rounding behaviour of the function's own, where it has any — how it breaks
+   * a tie, not how wide its result is. Only `ROUND` has one.
+   */
+  rounding?: string;
   errors: readonly FnError[];
   examples: readonly FnExample[];
   see?: readonly FunctionName[];
@@ -82,7 +135,7 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
     summary: "total of a column; `0` over an empty column",
     params: [{ name: "col", type: "column", note: "the column to total" }],
     returns: "number",
-    precisionRule: "the column's",
+    precision: { from: "operands", params: ["col"] },
     errors: [],
     examples: [
       { expr: "SUM(t.Amount)", is: "60", given: AMOUNTS },
@@ -94,7 +147,7 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
     summary: "least value",
     params: [{ name: "col", type: "column", note: "a column of numbers, or of dates" }],
     returns: "number or date, matching the column",
-    precisionRule: "the column's",
+    precision: { from: "operands", params: ["col"] },
     errors: [{ when: "a column mixing numbers and dates", code: "TYPE" }],
     examples: [{ expr: "MIN(t.Amount)", is: "10", given: AMOUNTS }],
     see: ["MAX"],
@@ -103,7 +156,7 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
     summary: "greatest value",
     params: [{ name: "col", type: "column", note: "a column of numbers, or of dates" }],
     returns: "number or date, matching the column",
-    precisionRule: "the column's",
+    precision: { from: "operands", params: ["col"] },
     errors: [{ when: "a column mixing numbers and dates", code: "TYPE" }],
     examples: [{ expr: "MAX(t.Amount)", is: "30", given: AMOUNTS }],
     see: ["MIN"],
@@ -112,7 +165,7 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
     summary: "arithmetic mean",
     params: [{ name: "col", type: "column", note: "the column to average" }],
     returns: "number",
-    precisionRule: "**must be declared**",
+    precision: { from: "declared" },
     errors: [{ when: "an empty column", code: "TYPE" }],
     examples: [{ expr: "AVG(t.Amount)", is: "20", given: AMOUNTS }],
     see: ["SUM", "COUNT"],
@@ -121,7 +174,7 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
     summary: "number of rows",
     params: [{ name: "col", type: "column", note: "the column whose rows are counted" }],
     returns: "number",
-    precisionRule: "`0`",
+    precision: { from: "fixed", width: 0 },
     errors: [],
     examples: [{ expr: "COUNT(t.Amount)", is: "3", given: AMOUNTS }],
     see: ["SUM"],
@@ -133,8 +186,8 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
       { name: "places", type: "number", note: "how many decimal places to keep" },
     ],
     returns: "number",
-    precisionRule: "`places`",
-    precision: "Ties round away from zero (half-up), not to even.",
+    precision: { from: "argument-value", param: "places" },
+    rounding: "Ties round away from zero (half-up), not to even.",
     errors: [],
     examples: [
       { expr: "ROUND(2.345, 2)", is: "2.35" },
@@ -147,7 +200,7 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
     summary: "absolute value",
     params: [{ name: "x", type: "number", note: "the value whose sign is discarded" }],
     returns: "number",
-    precisionRule: "`x`'s",
+    precision: { from: "operands", params: ["x"] },
     errors: [],
     examples: [
       { expr: "ABS(-7)", is: "7" },
@@ -161,7 +214,7 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
       { name: "y", type: "number", note: "the divisor" },
     ],
     returns: "number",
-    precisionRule: "the wider operand's",
+    precision: { from: "operands", params: ["x", "y"] },
     errors: [],
     examples: [
       { expr: "MOD(7, 3)", is: "1" },
@@ -173,7 +226,7 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
     summary: "non-negative square root",
     params: [{ name: "x", type: "number", note: "a non-negative number" }],
     returns: "number",
-    precisionRule: "**must be declared**",
+    precision: { from: "declared" },
     errors: [{ when: "a negative operand", code: "TYPE" }],
     examples: [
       { expr: "SQRT(9)", is: "3" },
@@ -187,7 +240,7 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
       { name: "s", type: "number", note: "the positive step to round to" },
     ],
     returns: "number",
-    precisionRule: "`s`'s",
+    precision: { from: "argument-scale", param: "s" },
     errors: [{ when: "a non-positive `s`", code: "TYPE" }],
     examples: [
       { expr: "FLOOR(7, 3)", is: "6" },
@@ -202,7 +255,7 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
       { name: "s", type: "number", note: "the positive step to round to" },
     ],
     returns: "number",
-    precisionRule: "`s`'s",
+    precision: { from: "argument-scale", param: "s" },
     errors: [{ when: "a non-positive `s`", code: "TYPE" }],
     examples: [
       { expr: "CEILING(7, 3)", is: "9" },
@@ -218,7 +271,7 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
       { name: "b", type: "number", note: "the value when it does not" },
     ],
     returns: "whichever of `a` or `b` was selected",
-    precisionRule: "the wider branch's",
+    precision: { from: "operands", params: ["a", "b"] },
     errors: [{ when: "a non-boolean `cond`", code: "TYPE" }],
     examples: [
       { expr: "IF(1 < 2, 10, 20)", is: "10" },
@@ -232,7 +285,7 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
       { name: "months", type: "number", note: "whole number of months to move; may be negative" },
     ],
     returns: "date",
-    precisionRule: "n/a — a date",
+    precision: { from: "date" },
     errors: [
       { when: "a non-whole `months`", code: "TYPE" },
       { when: "a result outside years 1–9999", code: "DATE" },

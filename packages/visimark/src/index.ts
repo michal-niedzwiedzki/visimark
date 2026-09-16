@@ -10,11 +10,13 @@ export type { Expr } from "./lang/ast.js";
 export {
   describeFunction,
   functionNames,
+  precisionPhrase,
   type FnDoc,
   type FnEntry,
   type FnError,
   type FnExample,
   type FnParam,
+  type FnPrecision,
 } from "./lang/reference.js";
 export { infer, type Proposal, type ProposalKind } from "./infer/propose.js";
 export { planInfer, type PlannedInsert } from "./infer/write.js";

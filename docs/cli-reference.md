@@ -30,6 +30,12 @@ and WSL provide it, plain PowerShell does not).
 takes no file and is not part of `explain`. The same entries, generated from
 the same registry, are in [`function-reference.md`](function-reference.md).
 
+Each entry states where the result's width comes from, alongside its shape and
+its errors — the question a `PRECISION` finding raises. `ref ROUND` reports
+`precision  the value of \`places\`` and, separately, how it breaks a tie;
+`ref AVG` reports `must be declared`. Under `--json` the rule is structured
+(`{"from": "argument-scale", "param": "s"}`), not only prose.
+
 `visimark --version` (also `-v` or `version`) prints `visimark <version>` and
 exits `0`. `visimark --help` (also `-h` or `help`) prints the usage summary.
 

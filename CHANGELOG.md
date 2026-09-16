@@ -35,6 +35,14 @@
   proposes the clause where the document's own cells or figures verify one.
 - **`explain` shows each binding's width** and whether it was declared or
   derived.
+- **Precision is a documented property of every builtin**, alongside its shape,
+  its arity and its errors: `visimark ref NAME`, the editor hover and
+  [`function-reference.md`](docs/function-reference.md) all state where a
+  result's width comes from, and `ref --json` carries the rule as data rather
+  than prose. `FnDoc.precision` is a typed rule held against `eval/precision.ts`
+  by a test, so the reference cannot drift from the engine. The tie-breaking
+  note that used to be `FnDoc.precision` is now `FnDoc.rounding` — the two were
+  different questions under one word.
 - **`Precision behaviour` is a required field** on the vocabulary-request
   template, and a judging criterion in the catalogue: every new primitive states
   whether its result's width derives from its operands, comes from an argument,

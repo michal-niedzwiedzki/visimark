@@ -77,3 +77,50 @@ test("an unrecognised flag is ignored, as elsewhere in the CLI", async () => {
   expect(await runCli(["ref", "SUM", "--jsonn"], c.io)).toBe(0);
   expect(c.out()).toContain("SUM(col)");
 });
+
+// A `PRECISION` finding sends the author to `visimark ref` to find out why a
+// width has to be declared. Before precision was a documented property of a
+// function, `ref AVG` answered every question except that one.
+test("ref states where a function's result gets its width", async () => {
+  const c = capture();
+  expect(await runCli(["ref", "AVG"], c.io)).toBe(0);
+  expect(c.out()).toContain("precision  must be declared");
+});
+
+test("ref tells apart a width taken from an argument's value and from its width", async () => {
+  const round = capture();
+  await runCli(["ref", "ROUND"], round.io);
+  expect(round.out()).toContain("precision  the value of `places`");
+
+  const floor = capture();
+  await runCli(["ref", "FLOOR"], floor.io);
+  expect(floor.out()).toContain("precision  the width of `s`");
+});
+
+test("rounding is reported separately from width, and only where it exists", async () => {
+  const round = capture();
+  await runCli(["ref", "ROUND"], round.io);
+  expect(round.out()).toContain("rounding   Ties round away from zero");
+
+  const sum = capture();
+  await runCli(["ref", "SUM"], sum.io);
+  expect(sum.out()).not.toContain("rounding");
+});
+
+test("ref --json carries the precision rule as data, not only as prose", async () => {
+  const c = capture();
+  expect(await runCli(["ref", "FLOOR", "--json"], c.io)).toBe(0);
+  expect(JSON.parse(c.out()).function.precision).toEqual({
+    from: "argument-scale",
+    param: "s",
+    text: "the width of `s`",
+  });
+});
+
+test("every function in ref --json states a precision rule", async () => {
+  const c = capture();
+  expect(await runCli(["ref", "--json"], c.io)).toBe(0);
+  for (const f of JSON.parse(c.out()).functions) {
+    expect([f.name, typeof f.precision?.from]).toEqual([f.name, "string"]);
+  }
+});

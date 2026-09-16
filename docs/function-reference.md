@@ -31,6 +31,8 @@ Total of a column; `0` over an empty column.
 
 **Returns:** number.
 
+**Precision:** the width of `col`.
+
 **Examples**
 
 | Expression | Is |
@@ -51,6 +53,8 @@ Least value.
 | `col` | column | a column of numbers, or of dates |
 
 **Returns:** number or date, matching the column.
+
+**Precision:** the width of `col`.
 
 **Errors**
 
@@ -76,6 +80,8 @@ Greatest value.
 
 **Returns:** number or date, matching the column.
 
+**Precision:** the width of `col`.
+
 **Errors**
 
 - A column mixing numbers and dates — `TYPE`
@@ -100,6 +106,8 @@ Arithmetic mean.
 
 **Returns:** number.
 
+**Precision:** must be declared.
+
 **Errors**
 
 - An empty column — `TYPE`
@@ -123,6 +131,8 @@ Number of rows.
 | `col` | column | the column whose rows are counted |
 
 **Returns:** number.
+
+**Precision:** always 0.
 
 **Examples**
 
@@ -149,7 +159,9 @@ Half-up to `places` decimals.
 
 **Returns:** number.
 
-**Precision:** Ties round away from zero (half-up), not to even.
+**Precision:** the value of `places`.
+
+**Rounding:** Ties round away from zero (half-up), not to even.
 
 **Examples**
 
@@ -173,6 +185,8 @@ Absolute value.
 
 **Returns:** number.
 
+**Precision:** the width of `x`.
+
 **Examples**
 
 | Expression | Is |
@@ -192,6 +206,8 @@ Remainder.
 | `y` | number | the divisor |
 
 **Returns:** number.
+
+**Precision:** the wider of `x` and `y`.
 
 **Examples**
 
@@ -213,6 +229,8 @@ Non-negative square root.
 | `x` | number | a non-negative number |
 
 **Returns:** number.
+
+**Precision:** must be declared.
 
 **Errors**
 
@@ -237,6 +255,8 @@ Greatest multiple of `s` that does not exceed `x`, toward −∞.
 | `s` | number | the positive step to round to |
 
 **Returns:** number.
+
+**Precision:** the width of `s`.
 
 **Errors**
 
@@ -263,6 +283,8 @@ Least multiple of `s` that is not less than `x`, toward +∞.
 | `s` | number | the positive step to round to |
 
 **Returns:** number.
+
+**Precision:** the width of `s`.
 
 **Errors**
 
@@ -291,6 +313,8 @@ Returns `a` or `b`.
 
 **Returns:** whichever of `a` or `b` was selected.
 
+**Precision:** the wider of `a` and `b`.
+
 **Errors**
 
 - A non-boolean `cond` — `TYPE`
@@ -314,6 +338,8 @@ Last day of the month `months` calendar months from `d`; `d`'s day is discarded.
 | `months` | number | whole number of months to move; may be negative |
 
 **Returns:** date.
+
+**Precision:** not applicable — the result is a date.
 
 **Errors**
 

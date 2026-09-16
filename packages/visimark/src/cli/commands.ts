@@ -12,7 +12,12 @@ import { planInfer } from "../infer/write.js";
 import { formatCheck } from "../report/format.js";
 import { explainJson, explainText, explainView } from "../report/explain.js";
 import { formatInfer } from "../report/infer.js";
-import { describeFunction, functionNames, type FnEntry } from "../lang/reference.js";
+import {
+  describeFunction,
+  functionNames,
+  precisionPhrase,
+  type FnEntry,
+} from "../lang/reference.js";
 import { closest } from "../report/levenshtein.js";
 import {
   emitJson,
@@ -503,11 +508,9 @@ export function cmdRef(args: string[], out: Writer, err: Writer): number {
   const pad = Math.max(...entry.params.map((p) => p.name.length), 7);
   for (const p of entry.params) out(`  ${p.name.padEnd(pad)}  ${p.type.padEnd(7)}  ${p.note}`);
   out("");
-  out(`  returns  ${entry.returns}`);
-  if (entry.precision) {
-    out("");
-    out(`  precision  ${entry.precision}`);
-  }
+  out(`  returns    ${entry.returns}`);
+  out(`  precision  ${precisionPhrase(entry.precision)}`);
+  if (entry.rounding) out(`  rounding   ${entry.rounding}`);
   if (entry.errors.length > 0) {
     out("");
     out("  errors");
@@ -547,7 +550,8 @@ function publicFnEntry(e: FnEntry): object {
     summary: e.summary,
     params: e.params.map((p) => ({ name: p.name, type: p.type, note: p.note })),
     returns: e.returns,
-    ...(e.precision ? { precision: e.precision } : {}),
+    precision: { ...e.precision, text: precisionPhrase(e.precision) },
+    ...(e.rounding ? { rounding: e.rounding } : {}),
     errors: e.errors.map((x) => ({ when: x.when, code: x.code })),
     examples: e.examples.map((x) => ({ expr: x.expr, is: x.is })),
     ...(e.see ? { see: [...e.see] } : {}),
