@@ -3,7 +3,7 @@ import { locate } from "../../src/parse/document.js";
 import { build } from "../../src/model/build.js";
 import { check } from "../../src/eval/check.js";
 import { formatCheck } from "../../src/report/format.js";
-import { callProblem, FUNCTIONS, isReduce } from "../../src/eval/functions.js";
+import { callProblem, FUNCTION_TABLE, FUNCTIONS, isReduce } from "../../src/eval/functions.js";
 import type { Finding } from "../../src/model/types.js";
 
 const run = (src: string) => check(build(locate(src)));
@@ -520,4 +520,11 @@ test("CEILING misspelled gets a did-you-mean", () => {
   expect(ts).toHaveLength(1);
   expect(ts[0]!.message).toBe("unknown function `CELING`");
   expect(ts[0]!.suggestion).toBe("CEILING");
+});
+
+test("the function table and the exported map agree", () => {
+  const fromTable = Object.keys(FUNCTION_TABLE).sort();
+  const fromMap = [...FUNCTIONS.keys()].sort();
+  expect(fromMap).toEqual(fromTable);
+  expect(fromTable).toHaveLength(13);
 });
