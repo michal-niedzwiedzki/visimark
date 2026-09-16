@@ -21,9 +21,14 @@ and WSL provide it, plain PowerShell does not).
 | `visimark infer FILE...` | Works out which rules reproduce the numbers a document already has, and proposes them | the files you name | nothing, unless `--write` | never — it is advisory |
 | `visimark eval FILE` | Prints the computed values, so a script can read one out | one file | nothing | never |
 | `visimark explain FILE` | Prints each sheet's inputs, rules, evaluation order, assertions and charts | one file | nothing | never |
+| `visimark ref [NAME]` | Prints the reference entry for a builtin function, or lists all thirteen | nothing — the only command that reads no file | nothing | `NAME` is not a builtin function |
 
 `check` is the one CI runs. The others exist to get a document into a state
 `check` can be strict about, or to explain what it did.
+
+`ref` answers about the language rather than about a document, which is why it
+takes no file and is not part of `explain`. The same entries, generated from
+the same registry, are in [`function-reference.md`](function-reference.md).
 
 `visimark --version` (also `-v` or `version`) prints `visimark <version>` and
 exits `0`. `visimark --help` (also `-h` or `help`) prints the usage summary.
@@ -35,7 +40,7 @@ exits `0`. `visimark --help` (also `-h` or `help`) prints the usage summary.
 | `--fix-dates` | `fmt` | Also rewrites non-ISO dates that have only one reading. `15.10.2026` becomes `2026-10-15`; `11/12/2026` is left alone and still reported, because it is two different dates depending on who wrote it. |
 | `--write` | `infer` | Inserts what it proposed: a `vmark` block after each table, an anchor after each matched figure, or the `no-formulas` marker if there was nothing to derive. It only ever inserts — no existing byte is rewritten. |
 | `--get NAME` | `eval` | Prints one value instead of all of them. Takes `sheet.name` or a bare `name` when it is unambiguous. |
-| `--json` | `check`, `fmt`, `infer`, `eval`, `explain` | Prints one JSON document on stdout instead of the human report. Default text is unchanged. Document quantities are decimal strings. The envelope is specified in [`design/structured-output-json-spec.md`](design/structured-output-json-spec.md). Unrecognised flags stay ignored, so `--jsonn` is not `--json`. |
+| `--json` | `check`, `fmt`, `infer`, `eval`, `explain`, `ref` | Prints one JSON document on stdout instead of the human report. Default text is unchanged. Document quantities are decimal strings. The envelope is specified in [`design/structured-output-json-spec.md`](design/structured-output-json-spec.md). Unrecognised flags stay ignored, so `--jsonn` is not `--json`. |
 | `#sheet` | `explain` | Limits the output to one sheet. Repeatable. |
 
 Unrecognised options are ignored rather than treated as an error, so a

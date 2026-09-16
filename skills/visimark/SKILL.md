@@ -118,7 +118,15 @@ visimark fmt   FILE... [--fix-dates]  # rewrite computed cells and anchors
 visimark infer FILE... [--write]      # propose rules for a document with none
 visimark eval  FILE [--get NAME] [--json]
 visimark explain FILE [#sheet]        # rules and evaluation order
+visimark ref   [NAME] [--json]        # what a builtin function does; reads no file
 ```
+
+**Do not guess a function's behaviour.** `visimark ref NAME` prints its
+signature, parameters, return type, errors and worked examples; bare
+`visimark ref` lists all thirteen; `--json` is the machine-readable form. Every
+example it prints is executed against the evaluator in CI, so what it says is
+what the engine does. The same content is in
+[`docs/function-reference.md`](../../docs/function-reference.md).
 
 `infer` is advisory — it exits `0` whatever it finds — and it only ever
 inserts, so prose, headings, input columns and existing blocks are untouched.
@@ -252,7 +260,9 @@ only a person can answer — do not paper over a `DATE`, `UNIT`, `CYCLE`,
 
 ## Reference
 
-`docs/visimark-design.md` in the repository is the normative spec.
+`docs/visimark-design.md` in the repository is the normative spec, and
+[`docs/function-reference.md`](../../docs/function-reference.md) is the
+generated per-function reference `visimark ref` serves.
 `docs/example-invoice.md` is a complete worked example — a self-computing B2B
 invoice with VAT, a payment schedule, early-payment terms, a currency
 conversion and a reconciliation. `docs/example-invoice-drift.md` is the same
