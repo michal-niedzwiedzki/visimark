@@ -130,15 +130,27 @@ jobs:
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
         run: |
+          # Azure DevOps' Gallery API occasionally leaves a request unanswered
+          # for minutes instead of rejecting it — a transient service issue,
+          # not a credential one (a bad token is refused in seconds with
+          # TF400813). https://github.com/microsoft/vsmarketplace/issues/2167.
+          # Retry both calls before treating a timeout as a real failure.
+          retry() { for _ in 1 2 3; do if "$@"; then return 0; fi; echo "::warning::attempt failed, retrying in 30s..." >&2; sleep 30; done; return 1; }
+
           # `vsce show --json` exits 0 whether or not the extension exists (it
-          # prints "undefined" when it doesn't), so a non-zero exit here is a
-          # real error and `bash -e` fails the step on it. On success the parsed
+          # prints "undefined" when it doesn't); a non-zero exit surviving the
+          # retries is a real error, so it fails the step below rather than
+          # falling through to a publish attempt. On success the parsed
           # version list decides: a version not listed means the publish runs.
-          bunx @vscode/vsce show "$EXT_NS.$EXT_NAME" --json >/tmp/marketplace.json 2>/dev/null
+          show_ext() { bunx @vscode/vsce show "$EXT_NS.$EXT_NAME" --json >/tmp/marketplace.json 2>/dev/null; }
+          if ! retry show_ext; then
+            echo "::error::'vsce show' kept failing after retries — see the log above for the cause."
+            exit 1
+          fi
           if node -e 'const fs=require("fs"); let d; try { d = JSON.parse(fs.readFileSync("/tmp/marketplace.json","utf8")) } catch { process.exit(1) } process.exit((d.versions||[]).some(v => v.version === process.env.EXT_VERSION) ? 0 : 1)'; then
             echo "$EXT_NS.$EXT_NAME@$EXT_VERSION is already on the Marketplace; skipping."
           else
-            bunx @vscode/vsce publish --no-dependencies --packagePath visimark.vsix
+            retry bunx @vscode/vsce publish --no-dependencies --packagePath visimark.vsix
           fi
 
       - name: Publish to Open VSX
