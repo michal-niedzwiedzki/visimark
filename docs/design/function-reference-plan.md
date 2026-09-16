@@ -13,11 +13,16 @@
 ## Global Constraints
 
 - **The playground is out of scope for this plan.** Spec §5.1 is deferred to a
-  later change. Nothing here touches
-  `packages/visimark/src/playground/`, `docs/playground.html`, or
-  `docs/vendor/visimark-browser.js`. The browser bundle must be byte-identical
-  when this plan is done, so the `playground-bundle` CI job stays green without
-  a rebuild.
+  later change. No source under `packages/visimark/src/playground/` and no
+  markup in `docs/playground.html` is touched, and `describeFunction` must not
+  reach `window.VisiMark`.
+- **`docs/vendor/visimark-browser.js` must still be rebuilt and committed.**
+  The bundle embeds the engine, so changing `eval/functions.ts` changes it —
+  mostly as minifier renaming. `git status docs/vendor/` staying empty proves
+  nothing, because nothing rebuilt it; the check is
+  `bun run --filter visimark build:playground` followed by `git diff`, with
+  local Bun matching `packageManager` (1.4.2). Confirm the registry did not
+  leak into the bundle by grepping it for entry prose.
 - **`eval/functions.ts` gains no prose.** It keeps `kind` and `arity` only. The
   evaluator must not depend on documentation.
 - **`FnError.when` is a noun phrase**, never a sentence: "a negative operand",
@@ -1294,12 +1299,20 @@ Expected: PASS, three tests.
 Run: `bun test && bun run typecheck && bun run lint && bun run format`
 Expected: PASS, clean.
 
-- [ ] **Step 8: Confirm the browser bundle is untouched**
+- [ ] **Step 8: Rebuild the browser bundle and check what changed**
 
-Run: `git status --porcelain docs/vendor/`
-Expected: no output. If `docs/vendor/` has changed, something imported the
-registry into the playground graph — revert it; the playground is out of scope
-(Global Constraints).
+Run: `bun run --filter visimark build:playground`
+
+Expect a small diff: the bundle embeds the engine, and `eval/functions.ts`
+changed in Task 1. Confirm it is only that, by checking the registry did not
+get pulled in:
+
+```bash
+grep -c "the column to total" docs/vendor/visimark-browser.js   # expect 0
+```
+
+A non-zero count means something imported `lang/reference.ts` into the
+playground graph — find it and remove it. Commit the rebuilt bundle.
 
 - [ ] **Step 9: Commit**
 
@@ -1449,7 +1462,9 @@ Message: `docs: point the CLI reference and the skill at visimark ref`
 5. Hovering `SUM` in `SUM(Net)` shows the reference; hovering `Net` shows the
    binding.
 6. `bun run gen:docs` leaves the working tree clean.
-7. `git status --porcelain docs/vendor/` is empty — the playground is untouched.
+7. `bun run --filter visimark build:playground` leaves the working tree clean
+   once the rebuilt bundle is committed, and the bundle contains no registry
+   prose.
 
 ## Deferred
 
