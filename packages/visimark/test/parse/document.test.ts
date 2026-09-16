@@ -64,9 +64,9 @@ test("binding offsets slice back to the binding text", () => {
     expect(clean.slice(b.start, b.end)).toBe(b.raw);
   }
   expect(lines.bindings.map((b) => b.raw)).toEqual([
-    "Net   = Qty * Rate",
-    "VAT   = Net * vat",
-    "Gross = Net + VAT",
+    "Net               = Qty * Rate",
+    "VAT   precision 2 = Net * vat",
+    "Gross             = Net + VAT",
     "net_total   = SUM(Net)",
     "vat_total   = SUM(VAT)",
     "gross_total = SUM(Gross)",

@@ -177,6 +177,7 @@ export function makeBinding(sheet: InferSheet, text: string): Binding {
     name: parsed.name,
     expr: parsed.expr,
     kind: sheet.index.has(parsed.name) ? "column" : "scalar",
+    ...(parsed.precision === undefined ? {} : { precision: parsed.precision }),
     span: { start: 0, end: text.length },
   };
 }

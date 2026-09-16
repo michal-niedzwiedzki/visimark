@@ -159,10 +159,17 @@ function blockEdit(source: string, sheet: InferSheet, body: string): Edit {
 
 /** `=` aligned within a group, the way a person writing the block would */
 function align(group: Proposal[]): string {
-  const w = Math.max(0, ...group.map((p) => p.name.length));
-  return group
-    .map((p) => `${p.name.padEnd(w)} = ${p.rule.slice(p.rule.indexOf("=") + 2)}`)
-    .join("\n");
+  // Align on the whole head, not just the name: a head may carry a `precision`
+  // clause, and reconstructing it from `p.name` alone would drop the clause the
+  // proposal needs to check clean.
+  const parts = group.map((p) => {
+    const eq = p.rule.indexOf("=");
+    return eq === -1
+      ? { head: p.name, body: p.rule }
+      : { head: p.rule.slice(0, eq).trimEnd(), body: p.rule.slice(eq + 1).trimStart() };
+  });
+  const w = Math.max(0, ...parts.map((x) => x.head.length));
+  return parts.map((x) => `${x.head.padEnd(w)} = ${x.body}`).join("\n");
 }
 
 /**

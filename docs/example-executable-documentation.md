@@ -27,7 +27,7 @@ reserved_capacity = 20%
 
 other_costs = SUM(USD)
 WorkerBudget = total_budget - other_costs
-WorkerBudgetPercentage = WorkerBudget / total_budget
+WorkerBudgetPercentage precision 2 = WorkerBudget / total_budget
 ```
 
 The remaining budget is available for Kubernetes worker nodes.

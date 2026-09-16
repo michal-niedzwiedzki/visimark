@@ -24,7 +24,7 @@ const IMG = "\n![c](charts/c.svg)<!--vmark=order.cost-->\n";
 function runCharts(src: string) {
   const model = build(locate(src));
   const entries: Entry[] = [];
-  const st = newCheckState(model, {}, 2, entries);
+  const st = newCheckState(model, {}, entries);
   for (const id of topoOrder(model).chartIds) st.buildableCharts.add(id);
   const charts = checkCharts(st);
   return { charts, findings: entries.map((e) => e.f) };
@@ -82,7 +82,7 @@ chart b as pie of Price labelled Item
 test("a chart the binding loop could not build is skipped, once per sheet", () => {
   const model = build(locate(doc("chart cost as pie of Price labelled Item", IMG)));
   const entries: Entry[] = [];
-  const st = newCheckState(model, {}, 2, entries);
+  const st = newCheckState(model, {}, entries);
   // buildableCharts deliberately left empty — the upstream-failure handoff
   const charts = checkCharts(st);
   expect(charts[0]!.state).toBe("skipped");

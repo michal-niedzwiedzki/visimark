@@ -25,7 +25,7 @@ scheduled job that edits this table and nothing else.
 runners = 4
 
 total_seconds  = SUM(Seconds)
-avg_per_runner = total_seconds / runners
+avg_per_runner precision 2 = total_seconds / runners
 worst_case     = MAX(Seconds)
 
 assert worst_case <= avg_per_runner * 2

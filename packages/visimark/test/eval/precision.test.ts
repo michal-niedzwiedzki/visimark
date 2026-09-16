@@ -66,9 +66,16 @@ test("mappers that pass their operands' width through", () => {
 
 test("non-numeric constructs have no precision", () => {
   expect(P('"net 30"')).toBeNull();
-  expect(P("2026-09-03")).toBeNull();
-  expect(P("EOMONTH(2026-01-15, 1)")).toBeNull();
   expect(P("two > four")).toBeNull();
+});
+
+test("date arithmetic is closed and typed", () => {
+  // date - date is a whole number of days; date +/- n is another date, which has
+  // no width at all. See the design doc, section 5.
+  expect(P("2026-09-30 - 2026-09-03")).toBe(0);
+  expect(P("2026-09-03 + 7")).toBe("date");
+  expect(P("2026-09-03")).toBe("date");
+  expect(P("EOMONTH(2026-01-15, 1)")).toBe("date");
 });
 
 test("an unresolvable operand makes the whole expression not derivable", () => {
@@ -92,6 +99,6 @@ test("derivation never discards a digit", () => {
   for (const [src, exact] of cases) {
     const p = P(src);
     expect(p).not.toBeNull();
-    expect(exact.toDecimalPlaces(p!, Decimal.ROUND_HALF_UP).equals(exact)).toBe(true);
+    expect(exact.toDecimalPlaces(p as number, Decimal.ROUND_HALF_UP).equals(exact)).toBe(true);
   }
 });

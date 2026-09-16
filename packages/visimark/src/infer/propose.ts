@@ -1,11 +1,11 @@
 import { FUNCTIONS } from "../eval/functions.js";
-import { numericValue } from "../eval/units.js";
+import { cellPrecision, numericValue } from "../eval/units.js";
 import type { AnchorTargetKind, ProseFigure, Span } from "../parse/document.js";
 import { aliasCandidates } from "./aliases.js";
 import { type ColumnCandidate, columnCandidates, crossSheetCandidates } from "./candidates.js";
 import { buildContext, type InferContext, type InferSheet } from "./context.js";
 import { type Ambiguity, select, type Selection } from "./select.js";
-import { type Accepted, verifyScalar } from "./verify.js";
+import { type Accepted, verifyScalar, withPrecision } from "./verify.js";
 
 export type ProposalKind =
   | "column"
@@ -75,8 +75,15 @@ interface ScalarCandidate {
   reduce: string;
   name: string;
   rule: string;
+  /** false when no width follows from the rule — the proposal must declare one */
+  derivable: boolean;
   /** true when this value is already written in prose the way `fmt` writes it */
   writes(figure: string): boolean;
+}
+
+/** the decimals a prose figure shows, which is the width it states */
+function figurePrecision(text: string): number {
+  return cellPrecision(text) ?? 2;
 }
 
 interface ScalarPick {
@@ -87,6 +94,15 @@ interface ScalarPick {
 export function infer(source: string): Proposal[] {
   const ctx = buildContext(source);
   const { picks, ambiguousFigures } = inferScalars(ctx);
+
+  // A reduce that divides — `AVG` — has no derivable width, so the rule as
+  // proposed would be anchored and then reported. The figure it is claiming is
+  // the evidence for a width, so the proposal declares that: inference never
+  // writes a rule `check` rejects.
+  for (const p of picks) {
+    if (p.candidate.derivable) continue;
+    p.candidate.rule = withPrecision(p.candidate.rule, figurePrecision(p.figure.text));
+  }
 
   const scalarAccepted: Accepted[] = picks.map((p) => ({
     sheet: p.candidate.sheet,
@@ -186,7 +202,7 @@ function inferScalars(ctx: InferContext): {
         const rule = `${name} = ${reduce}(${column})`;
         const v = verifyScalar(ctx, sheet, rule, [], column);
         if (!v.usable) continue;
-        all.push({ sheet, column, reduce, name, rule, writes: v.writes });
+        all.push({ sheet, column, reduce, name, rule, derivable: v.derivable, writes: v.writes });
       }
     }
   }

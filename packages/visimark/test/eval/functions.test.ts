@@ -146,7 +146,7 @@ test("a reduce over a column is legal, and a map may consume its result", () => 
 | b   | 150.00 |  0.75 |
 
 \`\`\`vmark #legs
-Share = Net / SUM(Net)
+Share precision 2 = Net / SUM(Net)
 \`\`\`
 `;
   expect(run(src).findings).toEqual([]);
@@ -197,7 +197,7 @@ test("share = Net / Σ(Net) composes exactly like SUM", () => {
 | b   | 150.00 |  0.75 |
 
 \`\`\`vmark #legs
-Share = Net / Σ(Net)
+Share precision 2 = Net / Σ(Net)
 \`\`\`
 `;
   expect(run(src).findings).toEqual([]);
@@ -311,10 +311,10 @@ Roots: **3.00**<!--vmark=r.a-->, **0.00**<!--vmark=r.b-->, **0.50**<!--vmark=r.c
 **1.41**<!--vmark=r.d-->.
 
 \`\`\`vmark #r
-a = SQRT(9)
-b = SQRT(0)
-c = SQRT(0.25)
-d = SQRT(2)
+a precision 2 = SQRT(9)
+b precision 2 = SQRT(0)
+c precision 2 = SQRT(0.25)
+d precision 2 = SQRT(2)
 \`\`\`
 `;
   expect(run(src).findings).toEqual([]);

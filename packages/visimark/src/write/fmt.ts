@@ -1,13 +1,6 @@
 import { locate } from "../parse/document.js";
 import { build } from "../model/build.js";
-import {
-  check,
-  type CheckResult,
-  decimalPlaces,
-  matchesStored,
-  roundValue,
-  showValue,
-} from "../eval/check.js";
+import { check, type CheckResult, matchesStored, roundValue, showValue } from "../eval/check.js";
 import type { DocumentFile } from "../fs/reader.js";
 import type { DocModel, Finding } from "../model/types.js";
 import { applyUnit } from "../eval/units.js";
@@ -104,7 +97,11 @@ export function planFmt(model: DocModel, result: CheckResult, opts: FmtOptions):
     const v = result.values.get(id);
     if (!v) continue;
     const current = source.slice(a.value.start, a.value.end);
-    const prec = decimalPlaces(current, 2);
+    // The anchor is an output: it renders the scalar at the scalar's own
+    // precision. Reading the width back out of `current` is what let a `0`
+    // placeholder in prose round the stored value.
+    const prec = result.scalarPrecision.get(id);
+    if (prec === undefined) continue;
     const unit = result.scalarUnits.get(id) ?? null;
     const rounded = roundValue(v, prec);
     if (!matchesStored(rounded, current, prec)) {

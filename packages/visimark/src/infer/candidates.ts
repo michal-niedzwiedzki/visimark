@@ -106,9 +106,13 @@ function add(
   right: string,
   scalarDep?: string,
 ): void {
-  const rule = `${target} = ${left} ${op} ${right}`;
-  const verdict = verifyColumn(ctx, sheet, rule, accepted);
+  const bare = `${target} = ${left} ${op} ${right}`;
+  const verdict = verifyColumn(ctx, sheet, bare, accepted);
   if (!verdict.usable || verdict.fits === 0) return;
+  // a division has no derivable width, so verification may have had to add a
+  // `precision` clause to reproduce the cells — that amended rule is the one to
+  // propose and write
+  const rule = verdict.ruleUsed ?? bare;
 
   const operands = [left, right].filter((x) => sheet.index.has(x));
   const deps = operands.map((c) => `${sheet.id}.${c}`);

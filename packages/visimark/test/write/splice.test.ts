@@ -29,6 +29,6 @@ test("inferColumnPrecision reads the existing cells", () => {
   const sch = m.sheets.get("schedule")!;
   const daysIdx = sch.columnIndex.get("Days")!;
   const amtIdx = sch.columnIndex.get("Amount")!;
-  expect(inferColumnPrecision(sch.table!, daysIdx, 2)).toBe(0);
-  expect(inferColumnPrecision(sch.table!, amtIdx, 2)).toBe(2);
+  expect(inferColumnPrecision(sch.table!, daysIdx)).toBe(0);
+  expect(inferColumnPrecision(sch.table!, amtIdx)).toBe(2);
 });

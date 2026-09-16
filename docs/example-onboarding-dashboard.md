@@ -27,7 +27,7 @@ chart funnel_shape as bar of Candidates labelled Stage aspect 16:9
 
 Of the **86**<!--vmark=funnel.accepted--> people who accepted an offer,
 **17**<!--vmark=funnel.dropoff--> did not reach the 30-day check-in, for an
-overall retention of **0.80**<!--vmark=funnel.retention--> by day 30.
+overall retention of **0.8023**<!--vmark=funnel.retention--> by day 30.
 
 ![candidates remaining at each onboarding stage](charts/example-onboarding-dashboard-funnel_shape.svg)<!--vmark=funnel.funnel_shape-->
 

@@ -26,7 +26,9 @@ describe("stages 1 and 2 find the rules the services table was built from", () =
 
   test("the algebraic inverses fit too — selection is what rejects them", () => {
     expect(rules).toContain("Net = Gross - VAT");
-    expect(rules).toContain("Qty = Net / Rate");
+    // a division has no derivable width, so the proposal carries the clause it
+    // needs to check clean — inference never proposes a rule `check` rejects
+    expect(rules).toContain("Qty precision 0 = Net / Rate");
   });
 
   test("a multiplier that only satisfies its own row is never generated", () => {

@@ -350,7 +350,7 @@ test("SQRT: a clean brace-length column verifies", () => {
 | B3    |  6000 |   3000 | 6708.20 |
 
 \`\`\`vmark #braces
-Length = SQRT(Width^2 + Height^2)
+Length precision 2 = SQRT(Width^2 + Height^2)
 \`\`\`
 `;
   expect(run(src).findings).toEqual([]);
@@ -365,7 +365,7 @@ test("SQRT: one negative-operand row is a single TYPE finding, no NOTE", () => {
 | c   |   25 |  5.00 |
 
 \`\`\`vmark #bays
-Side = SQRT(Area)
+Side precision 2 = SQRT(Area)
 \`\`\`
 `;
   const r = run(src);
@@ -380,7 +380,7 @@ Side = SQRT(Area)
 test("SQRT: a negative scalar operand is one TYPE finding on the binding", () => {
   const src = `
 \`\`\`vmark #s
-x = SQRT(-1)
+x precision 2 = SQRT(-1)
 \`\`\`
 `;
   const fs = run(src).findings.filter((f) => f.code === "TYPE");

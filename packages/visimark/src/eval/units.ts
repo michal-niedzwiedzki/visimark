@@ -125,6 +125,25 @@ export function numericValue(text: string): Decimal | null {
   return dec.kind === "number" ? new Decimal(dec.num) : null;
 }
 
+/**
+ * A cell's precision: the decimals it *shows*, not the decimals its value
+ * happens to need. `1600.00` is two, though `new Decimal("1600.00")` reports
+ * none — Decimal drops trailing zeros, and a column whose cells read `1600.00`
+ * writes `4800.00`, not `4800`.
+ *
+ * A percent cell is the exception in the other direction: `30%` shows no
+ * decimals but *is* exactly `0.30`, so it carries two. Reading its digits would
+ * give zero and round every figure derived from the column to a whole number.
+ *
+ * `null` where the cell is not a number at all.
+ */
+export function cellPrecision(text: string): number | null {
+  if (numericValue(text) === null) return null;
+  const pm = /^\s*(\d+(?:\.(\d+))?)%\s*$/.exec(text);
+  if (pm) return (pm[2]?.length ?? 0) + 2;
+  return decimalPlaces(text, 0);
+}
+
 /** how many decimals a written cell shows, so a rewrite keeps its shape */
 export function decimalPlaces(text: string, fallback: number): number {
   const dec = parseDecorated(text);

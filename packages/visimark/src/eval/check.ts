@@ -15,7 +15,8 @@ import { describeCallProblem, FUNCTIONS, isReduce } from "./functions.js";
 import { dependencies, refText, resolve, topoOrder } from "./graph.js";
 import { resolveImports } from "../import/resolve.js";
 import type { ImportStatus } from "../model/types.js";
-import { applyUnit, decimalPlaces, parseDecorated, type Unit } from "./units.js";
+import { derivePrecision, type Width } from "./precision.js";
+import { applyUnit, cellPrecision, parseDecorated, type Unit } from "./units.js";
 import { EvalError, num, roundToPlaces, type Value } from "./value.js";
 import { coerceInput, lookupVector, rowLabel, Unevaluable } from "./check-lookup.js";
 import { checkCharts } from "./check-charts.js";
@@ -88,7 +89,7 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
   const ledger = newAssertionLedger(model);
 
   const entries: Entry[] = [];
-  const st = newCheckState(model, opts, docPrecision(model), entries);
+  const st = newCheckState(model, opts, entries);
   // Phases still reach these by their old names. Each is the object living in
   // `st`, not a copy — `CheckResult` hands the same instances to the caller.
   const {
@@ -102,7 +103,6 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
     unitConflicts,
     staleScalars,
     buildableCharts,
-    fallbackPrecision,
   } = st;
   const emit = st.emit;
 
@@ -113,6 +113,18 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
   emitCoverage(model, emit);
 
   inferDecoration(st);
+  // An input column's precision is its cells' — they are the visible values, so
+  // the inference is exact. It has to land before the dependency walk, since a
+  // rule reading the column derives its own width from this.
+  for (const sheet of model.sheets.values()) {
+    const table = sheet.table;
+    if (!table) continue;
+    for (const [name, idx] of sheet.columnIndex) {
+      if (sheet.columns.has(name)) continue; // a rule column takes its own
+      const prec = inferColumnPrecision(table, idx);
+      if (prec !== null) columnPrecision.set(`${sheet.id}.${name}`, prec);
+    }
+  }
 
   const sheetSeen: string[] = [];
 
@@ -286,11 +298,68 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
 
   // ---- helpers bound to the closures above ----
 
+  /**
+   * A binding's write precision: declared on the head, else derived from its own
+   * expression. `null` means neither — the caller emits `PRECISION`, because no
+   * width follows from the formula and only the author can supply one.
+   *
+   * A binding's *cells* and *anchors* are outputs and are never consulted here.
+   * That is the whole point: precision used to come from an anchor's text, which
+   * made prose an input to arithmetic. See
+   * docs/design/declared-precision-spec.md section 3.
+   */
+  function governingPrecision(binding: Binding): number | null {
+    if (binding.precision !== undefined) return binding.precision;
+    const w = derivePrecision(binding.expr, (ref) => refPrecision(binding.sheetId, ref));
+    return typeof w === "number" ? w : null;
+  }
+
+  function refPrecision(fromSheetId: string, ref: Ref): Width {
+    const res = resolve(model, fromSheetId, ref);
+    switch (res.kind) {
+      case "column":
+        return columnPrecision.get(`${res.sheetId}.${res.binding.name}`) ?? null;
+      case "input-column":
+        return (
+          columnPrecision.get(`${res.sheetId}.${res.column}`) ??
+          (isDateColumn(model, res.sheetId, res.column) ? "date" : null)
+        );
+      case "scalar":
+      case "doc-scalar":
+        return (
+          scalarPrecision.get(res.binding.id) ??
+          (values.get(res.binding.id)?.t === "date" ? "date" : null)
+        );
+      default:
+        return null;
+    }
+  }
+
+  /** the `PRECISION` finding: no declared width, and none follows from the formula */
+  function emitNotDerivable(binding: Binding): void {
+    emit(
+      {
+        code: "PRECISION",
+        sheetId: binding.sheetId,
+        name: binding.name,
+        raw: formulaSource(model, binding),
+        span: binding.span,
+      },
+      { sheetId: binding.sheetId },
+    );
+  }
+
   function evalColumn(binding: Binding, sheet: Sheet, table: RawTable): void {
     const colId = `${sheet.id}.${binding.name}`;
     const idx = sheet.columnIndex.get(binding.name)!;
-    const prec = inferColumnPrecision(table, idx, fallbackPrecision);
-    columnPrecision.set(colId, prec);
+    // A rule column's cells are outputs, so they cannot be its precision source.
+    // `null` means no width follows from the formula — but that is only a
+    // problem if the column actually produces numbers. A date or string column
+    // has no width to declare, so the finding waits until a row proves one is
+    // needed.
+    const prec = governingPrecision(binding);
+    if (prec !== null) columnPrecision.set(colId, prec);
+    let needsWidth = false;
     const unit = columnUnits.get(colId) ?? null;
     const suppressed = unitConflicts.has(colId);
     const out: (Value | null)[] = [];
@@ -315,11 +384,17 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
           unevaluable.add(binding.id);
           return;
         }
-        const v = roundValue(v0, prec);
+        if (prec === null && v0.t === "num") needsWidth = true;
+        const v = prec === null ? v0 : roundValue(v0, prec);
         out.push(v);
         const cell = table.rows[r]!.cells[idx];
         const storedText = cell?.text ?? "";
-        if (!suppressed && storedText !== "" && !matchesStored(v, storedText, prec)) {
+        if (
+          !suppressed &&
+          prec !== null &&
+          storedText !== "" &&
+          !matchesStored(v, storedText, prec)
+        ) {
           emit(
             {
               code: "STALE",
@@ -357,6 +432,12 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
     }
 
     cells.set(colId, out);
+
+    if (needsWidth) {
+      emitNotDerivable(binding);
+      unevaluable.add(binding.id);
+      return;
+    }
 
     if (suppressedUpstream > 0) {
       emit(
@@ -398,15 +479,25 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
             })()
           : null;
       scalarUnits.set(binding.id, anchorUnit);
-      // A scalar rounds only where it has a materialised value to match; an
-      // anchor-less constant (e.g. `fx_eur = 4.2650`) keeps full precision.
-      const prec =
-        anchorText !== undefined ? decimalPlaces(anchorText, fallbackPrecision) : undefined;
-      if (prec !== undefined) scalarPrecision.set(binding.id, prec);
-      const v = prec !== undefined ? roundValue(v0, prec) : v0;
+      // The anchor supplies the *unit* and nothing else. Its text used to supply
+      // the precision too, which made a `0` placeholder in prose round the
+      // stored value and move every figure downstream of it.
+      const prec = governingPrecision(binding);
+      if (prec !== null) scalarPrecision.set(binding.id, prec);
+      // A scalar rounds only where it materialises. An unanchored working value
+      // — `Lmax = SQRT(...)`, feeding an anchored `ROUND(Lmax, 2)` — is never
+      // written, so it has no write precision to declare and nothing to
+      // disagree with; it keeps full precision, as it always has. Requiring a
+      // declaration there would round an intermediate for no reader's benefit.
+      if (prec === null && anchorText !== undefined && v0.t === "num") {
+        emitNotDerivable(binding);
+        unevaluable.add(binding.id);
+        return;
+      }
+      const v = prec === null ? v0 : roundValue(v0, prec);
       values.set(binding.id, v);
 
-      if (anchorText !== undefined && prec !== undefined && !matchesStored(v, anchorText, prec)) {
+      if (anchorText !== undefined && prec !== null && !matchesStored(v, anchorText, prec)) {
         staleScalars.add(binding.id);
         if (!isCrossSheetAggregate(model, binding)) {
           emit(
@@ -610,8 +701,8 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
     if (v.t === "bool") return String(v.b);
     const res = resolve(model, node.sheetId, ref);
     const pid = res.kind === "scalar" || res.kind === "doc-scalar" ? res.binding.id : undefined;
-    const prec =
-      pid !== undefined ? (scalarPrecision.get(pid) ?? fallbackPrecision) : fallbackPrecision;
+    // no document default to fall back on: render the value's own scale
+    const prec = (pid !== undefined ? scalarPrecision.get(pid) : undefined) ?? v.d.decimalPlaces();
     return showValue(v, prec);
   }
 
@@ -717,15 +808,21 @@ function orderFindings(entries: Entry[], sheetOrder: string[]): Finding[] {
   return [...sectionA, ...sectionB];
 }
 
-export function inferColumnPrecision(table: RawTable, colIndex: number, fallback: number): number {
+/**
+ * A column's precision read off its own cells — the widest any cell shows.
+ * `null` where there is nothing to read: with the document-scope fallback gone,
+ * an empty column has no width to invent, and the caller reports that.
+ */
+export function inferColumnPrecision(table: RawTable, colIndex: number): number | null {
   let max = -1;
   for (const row of table.rows) {
-    const text = row.cells[colIndex]?.text ?? "";
-    const dec = parseDecorated(text);
-    if (dec.kind !== "number") continue;
-    max = Math.max(max, decimalPlaces(dec.num, fallback));
+    // The decimals the cell shows, with a percent cell counted by its value —
+    // see `cellPrecision`.
+    const p = cellPrecision(row.cells[colIndex]?.text ?? "");
+    if (p === null) continue;
+    max = Math.max(max, p);
   }
-  return max === -1 ? fallback : max;
+  return max === -1 ? null : max;
 }
 
 export function roundValue(v: Value, places: number): Value {
@@ -803,10 +900,33 @@ function emitCoverage(model: DocModel, emit: (f: Finding) => void): void {
   }
 }
 
-function docPrecision(model: DocModel): number {
-  const p = model.docScope.get("precision");
-  if (p && p.expr.type === "num") return Number(p.expr.value);
-  return 2;
+/**
+ * A column that holds dates: at least one cell is an ISO date and none is a
+ * number. A malformed date does not disqualify it — `15.10.2026` is reported as
+ * a `DATE` error in its own right, and a column of dates with one typo in it is
+ * still a column of dates, so a rule reading it still derives `date - date` as
+ * a whole number of days.
+ */
+function isDateColumn(model: DocModel, sheetId: string, name: string): boolean {
+  const sheet = model.sheets.get(sheetId);
+  const table = sheet?.table;
+  const idx = sheet?.columnIndex.get(name);
+  if (!table || idx === undefined) return false;
+  let seenDate = false;
+  for (const row of table.rows) {
+    const t = (row.cells[idx]?.text ?? "").trim();
+    if (t === "") continue;
+    if (cellPrecision(t) !== null) return false; // a number lives here
+    if (ISO_DATE_RE.test(t)) seenDate = true;
+  }
+  return seenDate;
+}
+
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** the binding's expression as written, for a finding that must name it */
+function formulaSource(model: DocModel, binding: Binding): string {
+  return model.source.slice(binding.expr.start, binding.expr.end);
 }
 
 function formulaText(model: DocModel, binding: Binding): string | undefined {

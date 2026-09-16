@@ -11,7 +11,7 @@ width and height alone.
 | B3    |  6000 |   3000 | 6708.20 |
 
 ```vmark #braces
-Length = SQRT(Width^2 + Height^2)
+Length precision 2 = SQRT(Width^2 + Height^2)
 
 longest = MAX(Length)
 ```

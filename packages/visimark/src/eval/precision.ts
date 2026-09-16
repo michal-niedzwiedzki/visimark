@@ -5,7 +5,15 @@ import type { Expr, Ref } from "../lang/ast.js";
  * operand has none the caller can supply — an unresolved name, a string or
  * date column, or a column with no cells to infer from.
  */
-export type PrecisionLookup = (ref: Ref) => number | null;
+export type PrecisionLookup = (ref: Ref) => Width;
+
+/**
+ * A width, or a reason there is none. `"date"` is distinguished from `null`
+ * because date arithmetic is closed and typed: `date - date` is a whole number
+ * of days, so it derives 0, while `date + n` is another date and derives no
+ * width at all (design doc section 5).
+ */
+export type Width = number | "date" | null;
 
 /**
  * A binding's write precision, derived from its own expression.
@@ -26,11 +34,12 @@ export type PrecisionLookup = (ref: Ref) => number | null;
  * be rendered is the working-precision guard's question, in one place, rather
  * than silently every time a product nests.
  */
-export function derivePrecision(expr: Expr, lookup: PrecisionLookup): number | null {
+export function derivePrecision(expr: Expr, lookup: PrecisionLookup): Width {
   switch (expr.type) {
     case "num":
       return decimalsOf(expr.value);
     case "date":
+      return "date";
     case "str":
       return null;
     case "ref":
@@ -45,29 +54,30 @@ export function derivePrecision(expr: Expr, lookup: PrecisionLookup): number | n
   }
 }
 
-function binaryPrecision(
-  op: string,
-  left: Expr,
-  right: Expr,
-  lookup: PrecisionLookup,
-): number | null {
+function binaryPrecision(op: string, left: Expr, right: Expr, lookup: PrecisionLookup): Width {
   switch (op) {
     case "+":
-    case "-":
+    case "-": {
+      const a = derivePrecision(left, lookup);
+      const b = derivePrecision(right, lookup);
+      // date arithmetic, per design doc section 5
+      if (a === "date" && b === "date") return op === "-" ? 0 : null;
+      if (a === "date" || b === "date") return "date";
       // the sum of two scales fits inside the wider of them
-      return widest([derivePrecision(left, lookup), derivePrecision(right, lookup)]);
+      return widest([a, b]);
+    }
     case "*": {
       // a product of p and q decimals has at most p + q
       const a = derivePrecision(left, lookup);
       const b = derivePrecision(right, lookup);
-      return a === null || b === null ? null : a + b;
+      return typeof a === "number" && typeof b === "number" ? a + b : null;
     }
     case "^": {
       // repeated multiplication, so only a non-negative integer exponent bounds it
       const n = integerLiteral(right);
       if (n === null) return null;
       const a = derivePrecision(left, lookup);
-      return a === null ? null : a * n;
+      return typeof a === "number" ? a * n : null;
     }
     default:
       // `/` never terminates in general; comparisons and `and`/`or` are not numeric
@@ -75,8 +85,8 @@ function binaryPrecision(
   }
 }
 
-function callPrecision(name: string, args: Expr[], lookup: PrecisionLookup): number | null {
-  const at = (i: number): number | null => {
+function callPrecision(name: string, args: Expr[], lookup: PrecisionLookup): Width {
+  const at = (i: number): Width => {
     const a = args[i];
     return a === undefined ? null : derivePrecision(a, lookup);
   };
@@ -101,17 +111,19 @@ function callPrecision(name: string, args: Expr[], lookup: PrecisionLookup): num
       return widest([at(0), at(1)]);
     case "IF":
       return widest([at(1), at(2)]);
-    // `AVG` divides; `SQRT` need not terminate; `EOMONTH` yields a date
+    case "EOMONTH":
+      return "date";
+    // `AVG` divides and `SQRT` need not terminate
     default:
       return null;
   }
 }
 
-/** the wider of two precisions, or `null` if either is unknown */
-function widest(ps: (number | null)[]): number | null {
+/** the wider of two precisions, or `null` if either has none */
+function widest(ps: Width[]): Width {
   let max = 0;
   for (const p of ps) {
-    if (p === null) return null;
+    if (typeof p !== "number") return null;
     if (p > max) max = p;
   }
   return max;

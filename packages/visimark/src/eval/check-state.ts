@@ -116,9 +116,6 @@ export interface Entry extends EmitExtra {
 export interface CheckState {
   readonly model: DocModel;
   readonly opts: CheckOptions;
-  /** document-level write precision, the fallback when a column infers none */
-  readonly fallbackPrecision: number;
-
   // --- the accumulators CheckResult is built from ---
   readonly values: Map<string, Value>;
   readonly cells: Map<string, (Value | null)[]>;
@@ -145,17 +142,11 @@ export interface CheckState {
 
 /** the mutable list `emit` appends to, kept out of `CheckState` so no phase can
  *  reorder or rewrite what an earlier phase emitted */
-export function newCheckState(
-  model: DocModel,
-  opts: CheckOptions,
-  fallbackPrecision: number,
-  entries: Entry[],
-): CheckState {
+export function newCheckState(model: DocModel, opts: CheckOptions, entries: Entry[]): CheckState {
   let det = 0;
   return {
     model,
     opts,
-    fallbackPrecision,
     values: new Map(),
     cells: new Map(),
     columnPrecision: new Map(),

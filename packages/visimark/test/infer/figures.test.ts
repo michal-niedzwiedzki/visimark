@@ -50,8 +50,10 @@ describe("a figure states a value only when it is already written as one", () =>
 
 The mean cost is **0.75** across the four items.
 `;
-    // AVG is 0.7525 exactly; the figure states it to two places, as fmt would
-    expect(anchored(doc)).toEqual(["cost_avg = AVG(Cost)"]);
+    // AVG is 0.7525 exactly; the figure states it to two places, as fmt would.
+    // AVG divides, so no width follows from the rule — the figure is the
+    // evidence for one, and the proposal declares it.
+    expect(anchored(doc)).toEqual(["cost_avg precision 2 = AVG(Cost)"]);
   });
 });
 
