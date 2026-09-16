@@ -5,7 +5,7 @@ import type { Proposal } from "../infer/propose.js";
 import { ERROR_CODES, isProblem, type Finding } from "../model/types.js";
 
 export type JsonWriter = (line: string) => void;
-export type CommandName = "check" | "fmt" | "infer" | "eval" | "explain";
+export type CommandName = "check" | "fmt" | "infer" | "eval" | "explain" | "ref";
 
 export function emitJson(out: JsonWriter, doc: object): void {
   out(JSON.stringify(doc, null, 2));

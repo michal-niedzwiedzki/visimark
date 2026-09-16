@@ -1,5 +1,13 @@
 import { pathToFileURL } from "node:url";
-import { cmdCheck, cmdEval, cmdExplain, cmdFmt, cmdInfer, type Writer } from "./commands.js";
+import {
+  cmdCheck,
+  cmdEval,
+  cmdExplain,
+  cmdFmt,
+  cmdInfer,
+  cmdRef,
+  type Writer,
+} from "./commands.js";
 import { readVersion } from "./version.js";
 
 const USAGE = `visimark — spreadsheet mechanics for Markdown
@@ -14,6 +22,8 @@ usage:
   visimark infer FILE... [--write] [--json]
   visimark eval  FILE [--get NAME] [--json]
   visimark explain FILE [#sheet] [--json]
+  visimark ref   [NAME] [--json]        the language's builtin functions;
+                                        reads no file
   visimark --version | -v | version    print the version and exit
 
 exit codes: 0 clean, 1 findings, 2 usage or read failure`;
@@ -39,6 +49,8 @@ export async function runCli(argv: string[], io: CliIO = {}): Promise<number> {
       return cmdEval(rest, out, err);
     case "explain":
       return cmdExplain(rest, out, err);
+    case "ref":
+      return cmdRef(rest, out, err);
     case "-v":
     case "--version":
     case "version":

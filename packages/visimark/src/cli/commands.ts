@@ -12,6 +12,8 @@ import { planInfer } from "../infer/write.js";
 import { formatCheck } from "../report/format.js";
 import { explainJson, explainText, explainView } from "../report/explain.js";
 import { formatInfer } from "../report/infer.js";
+import { describeFunction, functionNames, type FnEntry } from "../lang/reference.js";
+import { closest } from "../report/levenshtein.js";
 import {
   emitJson,
   errorEnvelope,
@@ -448,3 +450,106 @@ export function cmdExplain(args: string[], out: Writer, err: Writer): number {
 }
 
 export type Writer = (line: string) => void;
+
+/**
+ * `ref` is the one command that reads no file: it answers about the language,
+ * not about a document. Its whole body is formatting over `describeFunction`.
+ */
+export function cmdRef(args: string[], out: Writer, err: Writer): number {
+  const { files, flags } = parseArgs(args);
+  const json = flags.has("json");
+  const name = files[0];
+
+  if (name === undefined) {
+    const all = functionNames().map((n) => describeFunction(n)!);
+    if (json) {
+      emitJson(out, {
+        command: "ref",
+        visimark: readVersion(),
+        status: statusFromExit(0),
+        functions: all.map(publicFnEntry),
+      });
+    } else {
+      const w = Math.max(...all.map((e) => signature(e).length));
+      for (const e of all) out(`${signature(e).padEnd(w)}   ${e.kind}, ${plural(e.arity)}`);
+    }
+    return 0;
+  }
+
+  const entry = describeFunction(name);
+  if (!entry) {
+    const guess = closest(name, functionNames(), 3);
+    const msg =
+      `visimark: unknown function \`${name}\`` + (guess ? ` — did you mean \`${guess}\`?` : "");
+    err(msg);
+    if (json) emitJson(out, errorEnvelope("ref", "USAGE", msg));
+    return 2;
+  }
+
+  if (json) {
+    emitJson(out, {
+      command: "ref",
+      visimark: readVersion(),
+      status: statusFromExit(0),
+      function: publicFnEntry(entry),
+    });
+    return 0;
+  }
+
+  out(`${signature(entry)} — ${entry.kind}, ${plural(entry.arity)}`);
+  out("");
+  out(`  ${sentence(entry.summary)}.`);
+  out("");
+  const pad = Math.max(...entry.params.map((p) => p.name.length), 7);
+  for (const p of entry.params) out(`  ${p.name.padEnd(pad)}  ${p.type.padEnd(7)}  ${p.note}`);
+  out("");
+  out(`  returns  ${entry.returns}`);
+  if (entry.precision) {
+    out("");
+    out(`  precision  ${entry.precision}`);
+  }
+  if (entry.errors.length > 0) {
+    out("");
+    out("  errors");
+    const w = Math.max(...entry.errors.map((e) => e.when.length));
+    for (const e of entry.errors) out(`    ${e.when.padEnd(w)}   ${e.code}`);
+  }
+  out("");
+  out("  examples");
+  const exw = Math.max(...entry.examples.map((e) => e.expr.length));
+  for (const e of entry.examples) out(`    ${e.expr.padEnd(exw)}  = ${e.is}`);
+  if (entry.see && entry.see.length > 0) {
+    out("");
+    out(`  see also  ${entry.see.join(", ")}`);
+  }
+  return 0;
+}
+
+function signature(e: FnEntry): string {
+  return `${e.name}(${e.params.map((p) => p.name).join(", ")})`;
+}
+
+/** A summary is written lower-case for the design-doc table; here it opens a line. */
+function sentence(s: string): string {
+  return s.length > 0 ? `${s[0]!.toUpperCase()}${s.slice(1)}` : s;
+}
+
+function plural(n: number): string {
+  return `${n} argument${n === 1 ? "" : "s"}`;
+}
+
+function publicFnEntry(e: FnEntry): object {
+  return {
+    name: e.name,
+    kind: e.kind,
+    arity: e.arity,
+    signature: signature(e),
+    summary: e.summary,
+    params: e.params.map((p) => ({ name: p.name, type: p.type, note: p.note })),
+    returns: e.returns,
+    ...(e.precision ? { precision: e.precision } : {}),
+    errors: e.errors.map((x) => ({ when: x.when, code: x.code })),
+    examples: e.examples.map((x) => ({ expr: x.expr, is: x.is })),
+    ...(e.see ? { see: [...e.see] } : {}),
+  };
+}
