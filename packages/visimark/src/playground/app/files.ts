@@ -23,6 +23,9 @@ export interface FilesPanel {
    *  and re-runs every panel that depends on which file is open. */
   switchTo(name: string): void;
   render(): void;
+  /** Sets the filename shown in the EDITOR head and the editor's accessible
+   *  name — boot's job, since boot does not switch to the first file. */
+  setEditorName(name: string): void;
 }
 
 export function createFilesPanel(
@@ -36,6 +39,18 @@ export function createFilesPanel(
 ): FilesPanel {
   const listEl = byId("file-list");
   const filenameEl = byId("editor-filename");
+
+  /**
+   * CodeMirror 5 hands assistive technology a bare `<textarea>` it creates
+   * itself, and `#editor-ta` in the markup is replaced rather than labelled —
+   * so before review §2.3 the editor was announced with no name at all. The
+   * name has to track the file, which is the same thing `#editor-filename`
+   * shows sighted visitors, so both are set in one place.
+   */
+  function setEditorName(name: string): void {
+    filenameEl.textContent = name;
+    cm.getInputField().setAttribute("aria-label", `Editor: ${name}`);
+  }
 
   function render(): void {
     listEl.innerHTML = "";
@@ -53,7 +68,7 @@ export function createFilesPanel(
     if (name === store.current()) return;
     store.switchTo(name);
     cm.setValue(store.text(name) ?? "");
-    filenameEl.textContent = name;
+    setEditorName(name);
     render();
     inferPanel.reset();
     quest().render(name);
@@ -77,5 +92,5 @@ export function createFilesPanel(
     switchTo(name);
   });
 
-  return { switchTo, render };
+  return { switchTo, render, setEditorName };
 }
