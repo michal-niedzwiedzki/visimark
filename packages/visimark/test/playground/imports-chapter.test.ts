@@ -16,16 +16,17 @@ import { memoryReader } from "../../src/playground/memory-reader.js";
  * `skipped` and every column the CSV supplies resolved to nothing.
  *
  * These tests hold both halves of the fix. The first two run the real chapter
- * and the real CSV through `memoryReader` — the same port `playground.html`
- * builds — and pin what the panel must say. The third reads
- * `docs/playground.html` itself, because the engine half can be perfectly
- * correct while the page forgets to hand it the file, which is exactly the bug
- * that shipped.
+ * and the real CSV through `memoryReader` — the same port the playground
+ * builds — and pin what the panel must say. The third reads the playground
+ * application's own source, because the engine half can be perfectly correct
+ * while the page forgets to hand it the file, which is exactly the bug that
+ * shipped.
  *
  * **If one of these fails, the playground's imports chapter is broken again.**
- * The wiring lives in `docs/playground.html` (`TUTORIAL_DATA`, `READER_FS`,
- * `optsFor`) and `src/playground/memory-reader.ts`. Fix the wiring; deleting
- * the check just puts the spurious error back in front of every visitor.
+ * The wiring lives in `src/playground/app/` (`TUTORIAL_DATA` in `sources.ts`,
+ * `READER_FS` and `optsFor` in `store.ts`) and `src/playground/memory-reader.ts`.
+ * Fix the wiring; deleting the check just puts the spurious error back in
+ * front of every visitor.
  */
 
 const tutorial = join(import.meta.dir, "../../../../docs/playground/tutorial");
@@ -98,30 +99,45 @@ test("the reader re-reads the store, so an edit is visible without rebuilding it
   ).toBe("stale");
 });
 
-test("docs/playground.html loads the CSV and hands the engine a reader for it", () => {
+test("the playground app loads the CSV and hands the engine a reader for it", () => {
   // The engine half above passes even when the page forgets the file — which
-  // is precisely how the bug shipped. This end reads the page.
+  // is precisely how the bug shipped. This end reads the application source.
+  //
+  // It used to read docs/playground.html, where this wiring was 1,535 lines of
+  // inline <script>. Review §2.4 moved that to src/playground/app/, so the
+  // needles moved with it; the page itself is now checked only for loading the
+  // bundle that carries them.
+  const app = (name: string) =>
+    readFileSync(join(import.meta.dir, "../../src/playground/app", name), "utf8");
+  const sources = app("sources.ts");
+  const store = app("store.ts");
+  const pipeline = app("pipeline.ts");
   const html = readFileSync(join(import.meta.dir, "../../../../docs/playground.html"), "utf8");
+
   const missing = [
+    // the page loads the application at all
+    ["docs/playground.html", html, 'src="./vendor/visimark-playground.js"'],
     // the CSV is fetched into the in-memory store. Matched on the declaration
     // itself, not on the bare filename: the name also appears in READER_FS
     // below, so a looser needle stayed green when TUTORIAL_DATA was emptied —
     // the page would fetch nothing and the reader would serve null.
-    'var TUTORIAL_DATA = ["13-imports.csv"];',
+    ["sources.ts", sources, 'export const TUTORIAL_DATA = ["13-imports.csv"];'],
     // ...and mapped into the synthetic directory the reader serves
-    '"/tutorial/13-imports.csv": "13-imports.csv"',
-    '"/tutorial/13-imports.md": "13-imports.md"',
+    ["store.ts", store, '"/tutorial/13-imports.csv": "13-imports.csv"'],
+    ["store.ts", store, '"/tutorial/13-imports.md": "13-imports.md"'],
     // ...through the port, not a hand-rolled copy of it
-    "VM.memoryReader(",
+    ["store.ts", store, "VM.memoryReader("],
     // ...and the check panel is actually given the result
-    "optsFor(current)",
-  ].filter((needle) => !html.includes(needle));
+    ["pipeline.ts", pipeline, "store.optsFor(current)"],
+  ]
+    .filter(([, haystack, needle]) => !(haystack as string).includes(needle as string))
+    .map(([file, , needle]) => `${file as string}: ${needle as string}`);
 
   expect(
     missing,
-    `docs/playground.html no longer contains ${missing.join(", ")} — the imports chapter is ` +
-      "back to checking with no reader, which reports UNDEF on every column the CSV supplies " +
-      "(review §4.3). Restore the wiring in playground.html rather than deleting this check.",
+    `the playground application no longer contains ${missing.join(", ")} — the imports chapter ` +
+      "is back to checking with no reader, which reports UNDEF on every column the CSV supplies " +
+      "(review §4.3). Restore the wiring in src/playground/app/ rather than deleting this check.",
   ).toEqual([]);
 });
 
