@@ -19,6 +19,7 @@ import type { BadgeBoard } from "./badges.js";
 import { byId, hideInstant, makeStatusFlasher, revealFadeIn } from "./dom.js";
 import { CHECKS, PARAMETRIC_CHECKS } from "./checks.js";
 import { copyText } from "./clipboard.js";
+import { prefersReducedMotion } from "./motion.js";
 
 /** Turns one JSON step descriptor into the internal step shape the engine
  *  runs on. Throws on anything scenarios.json is not allowed to say. */
@@ -140,6 +141,10 @@ export function createQuest(deps: QuestDeps): Quest {
    */
   function fireBadgeConfetti(): void {
     if (typeof confetti !== "function") return;
+    // 150 particles crossing the screen three times is exactly what
+    // prefers-reduced-motion is about. The badge is still awarded and still
+    // revealed — only the fireworks are skipped.
+    if (prefersReducedMotion()) return;
     const rect = panelEl.getBoundingClientRect();
     const defaults = {
       spread: 360,
@@ -185,6 +190,7 @@ export function createQuest(deps: QuestDeps): Quest {
     clearRevealTimers();
     const badge = deps.badges.forFile(state.name);
     const isNewBadge = Boolean(badge) && !deps.badges.earned(state.name);
+    const confettiFired = isNewBadge && !prefersReducedMotion();
     if (isNewBadge) fireBadgeConfetti();
     scheduleReveal(
       () => {
@@ -192,7 +198,9 @@ export function createQuest(deps: QuestDeps): Quest {
         deps.badges.award(state.name);
         revealReward();
       },
-      isNewBadge ? CONFETTI_SETTLE_MS : 0,
+      // Nothing to wait for if no stars were fired — holding the reveal back
+      // 1.4s for a burst that never happened is just a delay.
+      confettiFired ? CONFETTI_SETTLE_MS : 0,
     );
   }
 

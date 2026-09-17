@@ -184,7 +184,7 @@ async function boot(): Promise<void> {
     inferPanel.bodyEl,
   );
 
-  byId("editor-filename").textContent = initial;
+  filesPanel.setEditorName(initial);
   filesPanel.render();
   quest().render(initial);
   renderReference(VM);

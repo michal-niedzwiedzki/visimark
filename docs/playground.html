@@ -300,6 +300,41 @@
         color: #79c0ff;
       }
 
+      /* ---- prefers-reduced-motion ----------------------------------------
+         Eight transitions and a full-screen confetti burst, none of which a
+         visitor who has asked their OS for less movement should get (review
+         §2.3). The transitions are collapsed rather than removed so that
+         anything keyed to `transitionend` still fires; the confetti is a
+         <canvas> painted by JavaScript and can only be suppressed there — see
+         prefersReducedMotion() in src/playground/app/motion.ts. */
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          transition-duration: 0.01ms !important;
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          scroll-behavior: auto !important;
+        }
+      }
+
+      /* A tab panel is focusable so its scrollable content can be reached and
+         scrolled from the keyboard; the focus ring on the panel itself would
+         otherwise appear on every tab switch, which is noise rather than
+         information. :focus-visible keeps it for keyboard users who tabbed
+         into it deliberately. */
+      .diag-view:focus {
+        outline: none;
+      }
+      .diag-view:focus-visible {
+        outline: 2px solid #79c0ff;
+        outline-offset: -2px;
+      }
+      .diag-tab:focus-visible {
+        outline: 2px solid #79c0ff;
+        outline-offset: -2px;
+      }
+
       /* ---- Generic panel chrome ---- */
       .panel {
         display: flex;
@@ -1238,22 +1273,52 @@
 
           <div class="diagnostic-area">
             <section class="panel terminal-panel">
-              <div class="panel-head">
-                <button class="diag-tab active" data-group="term" data-tab="terminal" type="button">
+              <div class="panel-head" role="tablist" aria-label="Terminal, build and reference">
+                <button
+                  class="diag-tab active"
+                  data-group="term"
+                  data-tab="terminal"
+                  type="button"
+                  role="tab"
+                  id="tab-term-terminal"
+                  aria-controls="panel-term-terminal"
+                  aria-selected="true"
+                  tabindex="0"
+                >
                   <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
                     <path
                       d="M128,128a8,8,0,0,1-3,6.25l-40,32a8,8,0,1,1-10-12.5L107.19,128,75,102.25a8,8,0,1,1,10-12.5l40,32A8,8,0,0,1,128,128Zm48,24H136a8,8,0,0,0,0,16h40a8,8,0,0,0,0-16Zm56-96V200a16,16,0,0,1-16,16H40a16,16,0,0,1-16-16V56A16,16,0,0,1,40,40H216A16,16,0,0,1,232,56ZM216,200V56H40V200H216Z"
                     /></svg
                   >Terminal
                 </button>
-                <button class="diag-tab" data-group="term" data-tab="build" type="button">
+                <button
+                  class="diag-tab"
+                  data-group="term"
+                  data-tab="build"
+                  type="button"
+                  role="tab"
+                  id="tab-term-build"
+                  aria-controls="panel-term-build"
+                  aria-selected="false"
+                  tabindex="-1"
+                >
                   <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
                     <path
                       d="M251.34,112,183.88,44.08a96.1,96.1,0,0,0-135.77,0l-.09.09L34.25,58.4A8,8,0,0,0,45.74,69.53L59.47,55.35a79.92,79.92,0,0,1,18.71-13.9L124.68,88l-96,96a16,16,0,0,0,0,22.63l20.69,20.69a16,16,0,0,0,22.63,0l96-96,14.34,14.34h0L200,163.3a16,16,0,0,0,22.63,0l28.69-28.69A16,16,0,0,0,251.34,112ZM60.68,216,40,195.31l68-68L128.68,148ZM162.34,114.32,140,136.67,119.31,116l22.35-22.35a8,8,0,0,0,0-11.32L94.32,35a80,80,0,0,1,78.23,20.41l44.22,44.51L188,128.66l-14.34-14.34A8,8,0,0,0,162.34,114.32Zm49,37.66-12-12L228,111.25l12,12Z"
                     /></svg
                   >Build
                 </button>
-                <button class="diag-tab" data-group="term" data-tab="reference" type="button">
+                <button
+                  class="diag-tab"
+                  data-group="term"
+                  data-tab="reference"
+                  type="button"
+                  role="tab"
+                  id="tab-term-reference"
+                  aria-controls="panel-term-reference"
+                  aria-selected="false"
+                  tabindex="-1"
+                >
                   <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
                     <path
                       d="M224,48H72A32,32,0,0,0,40,80V224a8,8,0,0,0,8,8H192a8,8,0,0,0,0-16H56a16,16,0,0,1,16-16H224a8,8,0,0,0,8-8V56A8,8,0,0,0,224,48Zm-8,136H72a31.82,31.82,0,0,0-16,4.29V80A16,16,0,0,1,72,64H216Z"
@@ -1262,11 +1327,27 @@
                 </button>
               </div>
 
-              <div class="diag-view active" data-group="term" data-view="terminal">
+              <div
+                class="diag-view active"
+                data-group="term"
+                data-view="terminal"
+                role="tabpanel"
+                id="panel-term-terminal"
+                aria-labelledby="tab-term-terminal"
+                tabindex="0"
+              >
                 <div class="diag-scroll"><pre id="terminal-body"></pre></div>
               </div>
 
-              <div class="diag-view" data-group="term" data-view="build">
+              <div
+                class="diag-view"
+                data-group="term"
+                data-view="build"
+                role="tabpanel"
+                id="panel-term-build"
+                aria-labelledby="tab-term-build"
+                tabindex="0"
+              >
                 <div class="diag-scroll">
                   <div id="build-body">
                     Run a check across every file in FILES — the same
@@ -1289,7 +1370,15 @@
                 </div>
               </div>
 
-              <div class="diag-view" data-group="term" data-view="reference">
+              <div
+                class="diag-view"
+                data-group="term"
+                data-view="reference"
+                role="tabpanel"
+                id="panel-term-reference"
+                aria-labelledby="tab-term-reference"
+                tabindex="0"
+              >
                 <div class="diag-scroll">
                   <table class="reference-table">
                     <thead>
@@ -1305,12 +1394,17 @@
             </section>
 
             <section class="panel diagnostics">
-              <div class="panel-head">
+              <div class="panel-head" role="tablist" aria-label="Document diagnostics">
                 <button
                   class="diag-tab active"
                   data-group="diag"
                   data-tab="reasoning"
                   type="button"
+                  role="tab"
+                  id="tab-diag-reasoning"
+                  aria-controls="panel-diag-reasoning"
+                  aria-selected="true"
+                  tabindex="0"
                 >
                   <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
                     <path
@@ -1318,14 +1412,34 @@
                     /></svg
                   >Reasoning
                 </button>
-                <button class="diag-tab" data-group="diag" data-tab="knowledge" type="button">
+                <button
+                  class="diag-tab"
+                  data-group="diag"
+                  data-tab="knowledge"
+                  type="button"
+                  role="tab"
+                  id="tab-diag-knowledge"
+                  aria-controls="panel-diag-knowledge"
+                  aria-selected="false"
+                  tabindex="-1"
+                >
                   <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
                     <path
                       d="M232,48H160a40,40,0,0,0-32,16A40,40,0,0,0,96,48H24a8,8,0,0,0-8,8V200a8,8,0,0,0,8,8H96a24,24,0,0,1,24,24,8,8,0,0,0,16,0,24,24,0,0,1,24-24h72a8,8,0,0,0,8-8V56A8,8,0,0,0,232,48ZM96,192H32V64H96a24,24,0,0,1,24,24V200A39.81,39.81,0,0,0,96,192Zm128,0H160a39.81,39.81,0,0,0-24,8V88a24,24,0,0,1,24-24h64ZM160,88h40a8,8,0,0,1,0,16H160a8,8,0,0,1,0-16Zm48,40a8,8,0,0,1-8,8H160a8,8,0,0,1,0-16h40A8,8,0,0,1,208,128Zm0,32a8,8,0,0,1-8,8H160a8,8,0,0,1,0-16h40A8,8,0,0,1,208,160Z"
                     /></svg
                   >Knowledge
                 </button>
-                <button class="diag-tab" data-group="diag" data-tab="infer" type="button">
+                <button
+                  class="diag-tab"
+                  data-group="diag"
+                  data-tab="infer"
+                  type="button"
+                  role="tab"
+                  id="tab-diag-infer"
+                  aria-controls="panel-diag-infer"
+                  aria-selected="false"
+                  tabindex="-1"
+                >
                   <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
                     <path
                       d="M174.63,81.37a80,80,0,1,0-93.26,93.26,80,80,0,1,0,93.26-93.26ZM224,160c0,1.52-.07,3-.18,4.51l-50-50A80,80,0,0,0,176,98,64.11,64.11,0,0,1,224,160Zm-13.47,39.21L157.91,146.6a80.5,80.5,0,0,0,9.93-15.44L219.7,183A64,64,0,0,1,210.53,199.21ZM183,219.7l-51.86-51.86a80.5,80.5,0,0,0,15.44-9.93l52.61,52.62A64,64,0,0,1,183,219.7ZM45.47,56.79,98.09,109.4a80.5,80.5,0,0,0-9.93,15.44L36.3,73A64,64,0,0,1,45.47,56.79ZM73,36.3l51.86,51.86a80.5,80.5,0,0,0-15.44,9.93L56.79,45.47A64,64,0,0,1,73,36.3ZM160,96a64.07,64.07,0,0,1-64,64A64.07,64.07,0,0,1,160,96Zm-2-16a80,80,0,0,0-16.49,2.13l-50-50C93,32.07,94.48,32,96,32A64.11,64.11,0,0,1,158,80.05ZM32,96c0-1.52.07-3,.18-4.51l50,50A80,80,0,0,0,80.05,158,64.11,64.11,0,0,1,32,96ZM98,176a80,80,0,0,0,16.49-2.13l50,50c-1.49.11-3,.18-4.51.18A64.11,64.11,0,0,1,98,176Z"
@@ -1334,7 +1448,15 @@
                 </button>
               </div>
 
-              <div class="diag-view active" data-group="diag" data-view="reasoning">
+              <div
+                class="diag-view active"
+                data-group="diag"
+                data-view="reasoning"
+                role="tabpanel"
+                id="panel-diag-reasoning"
+                aria-labelledby="tab-diag-reasoning"
+                tabindex="0"
+              >
                 <div class="diag-scroll"><pre id="reasoning-body"></pre></div>
                 <div class="action-bar">
                   <span class="action-status" id="reasoning-status"></span>
@@ -1348,7 +1470,15 @@
                 </div>
               </div>
 
-              <div class="diag-view" data-group="diag" data-view="knowledge">
+              <div
+                class="diag-view"
+                data-group="diag"
+                data-view="knowledge"
+                role="tabpanel"
+                id="panel-diag-knowledge"
+                aria-labelledby="tab-diag-knowledge"
+                tabindex="0"
+              >
                 <div class="diag-scroll"><pre id="knowledge-body"></pre></div>
                 <div class="action-bar">
                   <span class="action-status" id="knowledge-status"></span>
@@ -1382,7 +1512,15 @@
                 </div>
               </div>
 
-              <div class="diag-view" data-group="diag" data-view="infer">
+              <div
+                class="diag-view"
+                data-group="diag"
+                data-view="infer"
+                role="tabpanel"
+                id="panel-diag-infer"
+                aria-labelledby="tab-diag-infer"
+                tabindex="0"
+              >
                 <div class="diag-scroll">
                   <pre id="infer-body">
 Click Infer only to see what VisiMark would propose for this
