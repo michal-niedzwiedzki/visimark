@@ -32,7 +32,12 @@
 // --format iife` has no notion of a UMD-style global export, so this file
 // assigns itself to `window.VisiMark` as its last statement (see bottom).
 import { applyEdits } from "../write/splice.js";
-import { check as checkDoc, type CheckOptions } from "../eval/check.js";
+import {
+  check as checkDoc,
+  type AssertionResult,
+  type ChartResult,
+  type CheckOptions,
+} from "../eval/check.js";
 import { topoOrder } from "../eval/graph.js";
 import type { Value } from "../eval/value.js";
 import { infer } from "../infer/propose.js";
@@ -73,6 +78,14 @@ function showValue(v: Value): string {
   return v.s;
 }
 
+export interface PgEvalResult {
+  /** every value and cell column the document computed, keyed as
+   *  `name` (document scope) or `sheetId.name`, rendered for display */
+  [key: string]: unknown;
+  assertions: AssertionResult[];
+  charts: ChartResult[];
+}
+
 /**
  * Mirrors `cmdEval FILE --json` — the JSON object `visimark eval --json` prints.
  *
@@ -82,7 +95,7 @@ function showValue(v: Value): string {
  * §4.3 is about. The KNOWLEDGE panel and the quest engine both read this, so
  * they need the reader as much as the check panel does.
  */
-function pgEval(source: string, opts: BrowserCheckOptions = {}): unknown {
+function pgEval(source: string, opts: BrowserCheckOptions = {}): PgEvalResult {
   const model = build(locate(source));
   const result = check(model, opts);
 
@@ -175,9 +188,20 @@ const api = {
   precisionPhrase,
 };
 
+/**
+ * The shape `window.VisiMark` carries.
+ *
+ * Exported so the playground *application* bundle (./app/, a second
+ * `bun build` target) can type its calls against this one without importing
+ * any of it: the app reaches the engine through the global this file assigns,
+ * and a `import type` of this alias compiles away to nothing, so the engine is
+ * not duplicated into the second bundle.
+ */
+export type VisiMarkApi = typeof api;
+
 declare global {
   interface Window {
-    VisiMark: typeof api;
+    VisiMark: VisiMarkApi;
   }
 }
 (globalThis as { VisiMark?: typeof api }).VisiMark = api;
