@@ -53,21 +53,49 @@ Object.assign(FILE_SOURCES, {
 
 export const SCENARIOS_PATH = "playground/scenarios.json";
 
-export async function loadFiles(): Promise<Record<string, string>> {
+/** One document that could not be fetched, and why. */
+export interface FailedFile {
+  name: string;
+  path: string;
+  reason: string;
+}
+
+export interface LoadedFiles {
+  files: Record<string, string>;
+  failed: FailedFile[];
+}
+
+/**
+ * Fetches every document, and reports the ones that did not arrive rather than
+ * rejecting on the first of them (review §2.1).
+ *
+ * A missing example is not the same failure as a missing `demo.md`: the first
+ * costs one entry in the FILES list, the second leaves nothing to edit. Both
+ * used to be the same unhandled rejection, which is why the page died silently
+ * on either. The caller decides which is fatal — see main.ts.
+ */
+export async function loadFiles(): Promise<LoadedFiles> {
   const names = Object.keys(FILE_SOURCES);
-  const texts = await Promise.all(
-    names.map(async (name) => {
+  const results = await Promise.all(
+    names.map(async (name): Promise<{ name: string; text: string } | FailedFile> => {
       const path = FILE_SOURCES[name]!;
-      const res = await fetch(path);
-      if (!res.ok) throw new Error(`${path}: HTTP ${res.status}`);
-      return res.text();
+      try {
+        const res = await fetch(path);
+        if (!res.ok) return { name, path, reason: `HTTP ${res.status}` };
+        return { name, text: await res.text() };
+      } catch (e) {
+        return { name, path, reason: (e as Error).message };
+      }
     }),
   );
+
   const files: Record<string, string> = {};
-  names.forEach((name, i) => {
-    files[name] = texts[i]!;
-  });
-  return files;
+  const failed: FailedFile[] = [];
+  for (const result of results) {
+    if ("text" in result) files[result.name] = result.text;
+    else failed.push(result);
+  }
+  return { files, failed };
 }
 
 export async function loadScenarios(): Promise<Scenarios> {

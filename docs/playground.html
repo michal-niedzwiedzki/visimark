@@ -152,6 +152,65 @@
         white-space: nowrap;
       }
 
+      /* ---- Boot overlay ----
+         Covers the whole page from first paint until the application has
+         loaded its 22 documents, and stays — with a different message — if any
+         of that fails. Before review §2.1 a single 404 left the visitor with
+         the fully-styled dark shell, an empty file list, an empty editor and
+         no message at all.
+
+         Its resting content is the "still loading" copy written straight into
+         the markup below, which is the one failure the application itself
+         cannot report: if docs/vendor/visimark-playground.js does not load,
+         nothing runs to replace this, so the static text has to say so. */
+      .boot-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background: #1b1b1b;
+      }
+      .boot-overlay[hidden] {
+        display: none;
+      }
+      .boot-box {
+        max-width: 620px;
+        text-align: left;
+      }
+      .boot-title {
+        margin: 0 0 10px;
+        font-size: 18px;
+        font-weight: 700;
+      }
+      .boot-overlay.failed .boot-title {
+        color: #ff7b72;
+      }
+      .boot-message {
+        margin: 0;
+        color: rgba(244, 244, 244, 0.75);
+        font-size: 14px;
+      }
+      .boot-message + .boot-message {
+        margin-top: 10px;
+      }
+      .boot-detail {
+        margin: 14px 0 0;
+        padding: 10px 12px;
+        max-height: 240px;
+        overflow: auto;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.05);
+        color: rgba(244, 244, 244, 0.85);
+        font-size: 13px;
+        white-space: pre-wrap;
+      }
+      .boot-detail:empty {
+        display: none;
+      }
+
       /* ---- Generic panel chrome ---- */
       .panel {
         display: flex;
@@ -975,6 +1034,24 @@
     </style>
   </head>
   <body>
+    <!-- Shown until the application says otherwise. The copy here is the
+         "the bundle itself never loaded" case: nothing else can report it,
+         because reporting it is the job of the code that failed to arrive. -->
+    <div class="boot-overlay" id="boot-overlay">
+      <div class="boot-box">
+        <p class="boot-title" id="boot-title">Loading the playground…</p>
+        <p class="boot-message" id="boot-message">
+          Fetching the tutorial documents and the VisiMark engine.
+        </p>
+        <p class="boot-message" id="boot-hint">
+          If this message stays put, <code>vendor/visimark-playground.js</code> did not load. The
+          playground has to be served over http(s) — run <code>bun run serve</code> and open
+          <code>http://localhost:8080/playground.html</code> rather than opening this file from
+          disk.
+        </p>
+        <pre class="boot-detail" id="boot-detail"></pre>
+      </div>
+    </div>
     <div class="playground">
       <header class="topbar">
         <div class="topbar-side">

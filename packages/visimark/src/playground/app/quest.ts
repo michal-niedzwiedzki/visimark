@@ -69,6 +69,13 @@ const CONFETTI_SETTLE_MS = 1400;
 
 export interface QuestDeps {
   scenarios: Scenarios;
+  /**
+   * False when scenarios.json could not be fetched. The panel then says so
+   * rather than hiding, which would look identical to a file that simply has
+   * no scenario — and leave the visitor wondering where the tutorial went
+   * (review §2.1: a partial boot has to admit which part is missing).
+   */
+  scenariosAvailable: boolean;
   badges: BadgeBoard;
   /** Mirrors `visimark check FILE`'s STALE findings for the current document. */
   hasStale(source: string): boolean;
@@ -285,6 +292,18 @@ export function createQuest(deps: QuestDeps): Quest {
   return {
     render(name) {
       const s = deps.scenarios[name];
+      if (!s && !deps.scenariosAvailable) {
+        panelEl.hidden = false;
+        bodyEl.textContent = "";
+        const notice = document.createElement("p");
+        notice.textContent =
+          "The tutorial track could not be loaded — playground/scenarios.json did not " +
+          "arrive, so this file has no scenario, quest or badge. The editor and every " +
+          "panel below it still work.";
+        bodyEl.appendChild(notice);
+        startQuest(name, []);
+        return;
+      }
       panelEl.hidden = !s;
       if (!s) {
         // No scenario data for this file (e.g. one just created via + New) —
