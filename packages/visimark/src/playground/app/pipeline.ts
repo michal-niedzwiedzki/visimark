@@ -14,7 +14,66 @@ import type { Quest } from "./quest.js";
 import type { Terminal } from "./terminal.js";
 import { byId } from "./dom.js";
 
+/**
+ * How long typing has to stop before the pipeline runs — and the floor for it
+ * (review §2.10).
+ *
+ * The review asked for this to be measured before anything was moved off the
+ * main thread, and warned against assuming which phase dominates. Measured in
+ * Chromium against a generated table, with the whole pass run from the page:
+ *
+ * | rows | source | fmt | pgEval | pgExplain | marked | innerHTML | pass |
+ * |---:|---:|---:|---:|---:|---:|---:|---:|
+ * | 50 | 2 KB | 3 | 3 | 5 | 0.3 | 2 | **12 ms** |
+ * | 100 | 3 KB | 6 | 5 | 5 | 0.4 | 3 | **20 ms** |
+ * | 500 | 16 KB | 50 | 45 | 47 | 1.6 | 13 | **155 ms** |
+ * | 1000 | 31 KB | 224 | 215 | 201 | 2.7 | 23 | **666 ms** |
+ * | 2000 | 64 KB | 613 | 808 | 791 | 4.9 | 46 | **2,262 ms** |
+ *
+ * Two things fall out of that, and both contradict a guess the review was
+ * careful not to make.
+ *
+ * **Rendering is not the problem.** `marked.parse` never reaches 5 ms and
+ * the preview write never reaches 50; together they are under 3% of the pass
+ * at every size. Chart rendering does not appear because these documents
+ * carry none, and a chart is bounded by its series, not by the table.
+ *
+ * **The cost is spread evenly across the three engine calls, and each is
+ * superlinear** — doubling the rows roughly quadruples the pass. `fmt`,
+ * `pgEval` and `pgExplain` each locate, build and check the whole document
+ * from scratch, so the page pays for three full passes over the same text (a
+ * fourth when a quest is watching for STALE findings). That is a real finding
+ * and it is *not* fixed here: sharing one build across the three is an engine
+ * and API change, which is the "belongs in a different review" case §2.10
+ * names. See docs/design/playground-pipeline-cost-plan.md.
+ *
+ * What ships here is the cheap half. A pass is timed, and the next debounce
+ * is at least as long as the last pass took, so a document heavy enough to
+ * lock the tab does it once per pause rather than continuously — the page
+ * stays usable while typing instead of fighting itself. For everything the
+ * playground actually holds (largest bundled document: 8 KB, 14 table rows)
+ * this never leaves the 500 ms floor.
+ */
 const EDIT_DEBOUNCE = 500;
+
+/** The pass cost past which the debounce stretches, and past which the page
+ *  says out loud what it is doing rather than just feeling slow. */
+const SLOW_PASS = 250;
+
+/** Never wait longer than this, however expensive the document: past a few
+ *  seconds the page stops looking busy and starts looking broken. */
+const MAX_DEBOUNCE = 3000;
+
+/**
+ * How long to wait after the next keystroke, given what the last pass cost.
+ *
+ * A document heavy enough to lock the tab then locks it once per typing pause
+ * instead of continuously, so the page stays usable while someone types in it
+ * rather than fighting them for the thread.
+ */
+export function nextDebounce(lastPassMs: number): number {
+  return Math.min(Math.max(EDIT_DEBOUNCE, lastPassMs), MAX_DEBOUNCE);
+}
 
 export function pluralize(n: number, w: string): string {
   return `${n} ${w}${n === 1 ? "" : "s"}`;
@@ -95,6 +154,10 @@ export function createPipeline(
 
   let editTimer: ReturnType<typeof setTimeout> | null = null;
   const settled: (() => void)[] = [];
+  /** How long the last full pass took, which is what the next wait is sized
+   *  against (review §2.10). */
+  let lastPass = 0;
+  let saidItIsSlow = false;
 
   function setStatus(ok: boolean, note?: string): void {
     flagEl.className = `flag${ok ? "" : " fail"}`;
@@ -217,6 +280,24 @@ export function createPipeline(
   }
 
   function onInactivity(): void {
+    const started = performance.now();
+    runPass();
+    lastPass = performance.now() - started;
+    if (lastPass > SLOW_PASS && !saidItIsSlow) {
+      saidItIsSlow = true;
+      // Said once, not once per pass: the point is to explain the lag, and
+      // repeating it every keystroke-settle would itself become the noise.
+      terminal.line(
+        `playground: this document takes ${Math.round(lastPass)}ms to check, so the live ` +
+          "update now waits that long after you stop typing — see §2.10 in " +
+          "docs/design/playground-pipeline-cost-plan.md",
+        "err",
+      );
+      terminal.trim();
+    }
+  }
+
+  function runPass(): void {
     terminal.clear();
     const result = runFmt();
     if (result?.changed) {
@@ -247,7 +328,7 @@ export function createPipeline(
     if (change.origin === "setValue") return;
     store.setText(store.current(), cm.getValue());
     if (editTimer !== null) clearTimeout(editTimer);
-    editTimer = setTimeout(onInactivity, EDIT_DEBOUNCE);
+    editTimer = setTimeout(onInactivity, nextDebounce(lastPass));
   });
 
   // Lockstep scroll: PREVIEW tracks EDITOR (and vice versa) by scroll
