@@ -48,8 +48,15 @@
       .playground {
         display: flex;
         flex-direction: column;
-        height: 100vh;
-        width: 100vw;
+        /* dvh, not vh: on mobile Safari and Chrome `100vh` is the viewport
+           with the browser chrome *retracted*, so the bottom action bars sit
+           under the toolbar until you scroll — and this page deliberately
+           cannot scroll. See the .small-screen block further down for what
+           actually happens below 900px. */
+        height: 100dvh;
+        /* not 100vw: that is the viewport including the scrollbar gutter,
+           which overflows the document by the scrollbar's width. */
+        width: 100%;
       }
 
       /* ---- Top bar (5%) ---- */
@@ -209,6 +216,88 @@
       }
       .boot-detail:empty {
         display: none;
+      }
+
+      /* ---- Below 900px ----------------------------------------------------
+         The playground is a five-panel IDE: FILES, EDITOR and PREVIEW side by
+         side over TERMINAL and DIAGNOSTICS, with SCENARIO alongside. There is
+         no honest way to be that on a phone — at 390px each column is a
+         sliver, and nothing scrolls because `overflow: hidden` above is what
+         makes the panel layout work at all (review §2.2).
+
+         So below 900px the page says so and points at the tutorial, which is
+         ordinary prose and reads fine on a phone. That is a deliberate answer
+         to "what is the playground on a phone", not a `flex-wrap` accident.
+
+         The breakpoint is paired with `matchMedia("(min-width: 900px)")` in
+         src/playground/app/main.ts, which is what stops the application
+         fetching 22 documents for a page nobody can see — and what boots it if
+         a desktop window is dragged back open. Change one and change the
+         other. */
+      .small-screen {
+        display: none;
+      }
+      @media (max-width: 899px) {
+        html,
+        body {
+          /* the interstitial is a normal document and scrolls like one */
+          height: auto;
+          overflow: auto;
+        }
+        .playground,
+        .boot-overlay {
+          display: none;
+        }
+        .small-screen {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          min-height: 100dvh;
+          justify-content: center;
+          /* a 16px gutter, and never under the browser's own chrome */
+          padding: calc(24px + env(safe-area-inset-top)) 16px
+            calc(24px + env(safe-area-inset-bottom));
+        }
+      }
+      .small-screen-brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .small-screen-brand img {
+        width: 32px;
+        height: 32px;
+      }
+      .small-screen-brand h1 {
+        margin: 0;
+        font-size: 20px;
+      }
+      .small-screen h2 {
+        margin: 0;
+        font-size: 18px;
+      }
+      .small-screen p {
+        margin: 0;
+        color: rgba(244, 244, 244, 0.75);
+        font-size: 15px;
+      }
+      .small-screen-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 4px;
+      }
+      .small-screen-links a {
+        padding: 10px 14px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 6px;
+        color: #f4f4f4;
+        font-size: 15px;
+        text-decoration: none;
+      }
+      .small-screen-links a.primary {
+        border-color: #79c0ff;
+        color: #79c0ff;
       }
 
       /* ---- Generic panel chrome ---- */
@@ -1034,6 +1123,31 @@
     </style>
   </head>
   <body>
+    <!-- Shown instead of the playground below 900px — see the .small-screen
+         block in the stylesheet above for why this is an interstitial rather
+         than a stacked layout. -->
+    <main class="small-screen">
+      <div class="small-screen-brand">
+        <img src="visimark.webp" alt="" />
+        <h1>VisiMark</h1>
+      </div>
+      <h2>The playground needs a wider screen</h2>
+      <p>
+        It is a five-panel editor — files, source, preview, terminal and diagnostics, all visible at
+        once — and there is no honest way to be that on a phone. Open this page on a screen at least
+        900 pixels wide and it will load.
+      </p>
+      <p>
+        The tutorial covers the same ground in prose, with every example worked through, and reads
+        fine here.
+      </p>
+      <div class="small-screen-links">
+        <a class="primary" href="tutorial.html">Read the tutorial</a>
+        <a href="index.html">VisiMark home</a>
+        <a href="https://github.com/michal-niedzwiedzki/visimark" rel="noopener">GitHub</a>
+      </div>
+    </main>
+
     <!-- Shown until the application says otherwise. The copy here is the
          "the bundle itself never loaded" case: nothing else can report it,
          because reporting it is the job of the code that failed to arrive. -->
