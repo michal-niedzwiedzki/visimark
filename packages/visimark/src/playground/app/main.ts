@@ -22,10 +22,26 @@
  * before the quest engine (it supplies the STALE check the quest engine reads)
  * and the quest engine is built before the panels that signal it. The `quest`
  * accessor is how the pipeline reaches forward across that one cycle.
+ *
+ * **Every failure between here and first render has a message** (review §2.1).
+ * The rule for which ones are fatal: a partial boot is offered whenever what
+ * is missing costs a feature, and refused when it costs the editor. So a
+ * missing example document drops one row from FILES and says so in TERMINAL;
+ * a missing scenarios.json costs the tutorial track and says so in the
+ * SCENARIO panel; a missing engine, a missing CodeMirror or a missing starting
+ * document leaves nothing to work in, and stops with a named overlay.
  */
 
 import type { Quest } from "./quest.js";
+import type { FailedFile } from "./sources.js";
+import type { Scenarios } from "./types.js";
 import { TUTORIAL_CHAPTERS, loadFiles, loadScenarios } from "./sources.js";
+import {
+  FILE_PROTOCOL_DETAIL,
+  FILE_PROTOCOL_MESSAGE,
+  createBootOverlay,
+  isFileProtocol,
+} from "./boot.js";
 import { byId, makeStatusFlasher } from "./dom.js";
 import { createStore } from "./store.js";
 import { createTerminal } from "./terminal.js";
@@ -41,11 +57,43 @@ import { createKnowledgePanel } from "./knowledge.js";
 import { renderReference } from "./reference.js";
 import { wireCopyButton } from "./clipboard.js";
 
+/** Names the CDN libraries the page cannot run without, so a blocked or
+ *  failed `<script src>` is reported as itself rather than as a
+ *  `ReferenceError` from the middle of the wiring. */
+function missingGlobals(): string[] {
+  const missing: string[] = [];
+  if (typeof window.VisiMark === "undefined") missing.push("vendor/visimark-browser.js");
+  if (typeof CodeMirror === "undefined") missing.push("CodeMirror (cdnjs.cloudflare.com)");
+  if (typeof marked === "undefined") missing.push("marked (cdnjs.cloudflare.com)");
+  return missing;
+}
+
+function describeFailures(failed: FailedFile[]): string {
+  return failed.map((f) => `${f.path}: ${f.reason}`).join("\n");
+}
+
 async function boot(): Promise<void> {
+  const overlay = createBootOverlay();
+
+  if (isFileProtocol()) {
+    overlay.fail("The playground needs a web server", FILE_PROTOCOL_MESSAGE, FILE_PROTOCOL_DETAIL);
+    return;
+  }
+
+  const absent = missingGlobals();
+  if (absent.length > 0) {
+    overlay.fail(
+      "The playground could not load its libraries",
+      "These scripts did not arrive. Check the browser console for a network or " +
+        "content-blocker error, and that docs/vendor/ was built " +
+        "(`bun run --filter visimark build:playground`).",
+      absent.join("\n"),
+    );
+    return;
+  }
   const VM = window.VisiMark;
 
-  const files = await loadFiles();
-  const scenarios = await loadScenarios();
+  const { files, failed } = await loadFiles();
 
   // Lets a link point straight at a specific file (e.g. a tutorial chapter) —
   // falls back to demo.md when the param is absent or names a file that
@@ -53,6 +101,30 @@ async function boot(): Promise<void> {
   const requested = new URLSearchParams(window.location.search).get("file");
   const initial =
     requested && Object.prototype.hasOwnProperty.call(files, requested) ? requested : "demo.md";
+
+  if (!Object.prototype.hasOwnProperty.call(files, initial)) {
+    overlay.fail(
+      "The playground could not load its documents",
+      Object.keys(files).length === 0
+        ? "None of the tutorial documents arrived. The server is reachable — this page " +
+            "loaded — so the docs/playground/ directory is most likely missing or not being served."
+        : `The starting document (${initial}) did not arrive, so there is nothing to open.`,
+      describeFailures(failed),
+    );
+    return;
+  }
+
+  // Past this point the page can work, so nothing below is fatal on its own.
+  let scenarios: Scenarios = {};
+  let scenariosAvailable = true;
+  let scenariosError = "";
+  try {
+    scenarios = await loadScenarios();
+  } catch (e) {
+    scenariosAvailable = false;
+    // loadScenarios already names the path in its message.
+    scenariosError = (e as Error).message;
+  }
 
   const cm = CodeMirror.fromTextArea(byId<HTMLTextAreaElement>("editor-ta"), {
     mode: "gfm",
@@ -80,6 +152,7 @@ async function boot(): Promise<void> {
 
   questRef = createQuest({
     scenarios,
+    scenariosAvailable,
     badges,
     hasStale: (source) => pipeline.hasStaleFindings(source),
     documentText: () => cm.getValue(),
@@ -108,8 +181,36 @@ async function boot(): Promise<void> {
   filesPanel.render();
   quest().render(initial);
   renderReference(VM);
+
+  // TERMINAL is the page's existing place for "a command had something to say"
+  // — the non-fatal boot failures belong there, above the first `visimark fmt`
+  // line, rather than in a banner of their own.
+  for (const f of failed) {
+    terminal.line(
+      `playground: ${f.path} did not load (${f.reason}) — ${f.name} is not in FILES`,
+      "err",
+    );
+  }
+  if (!scenariosAvailable) {
+    terminal.line(`playground: ${scenariosError} — no scenarios, quests or badges`, "err");
+  }
+
   pipeline.runFmt();
   pipeline.refreshDerived();
+  overlay.dismiss();
 }
 
-void boot();
+/**
+ * The one place a boot failure can still reach. Anything thrown by the wiring
+ * above is a bug rather than a missing resource, so it says so, and says where
+ * to look — but it says it on the page instead of rejecting into the void the
+ * way this file's predecessor did.
+ */
+void boot().catch((e: unknown) => {
+  createBootOverlay().fail(
+    "The playground failed to start",
+    "This is a bug in the playground itself rather than a missing file. The browser " +
+      "console has the stack trace.",
+    (e as Error)?.stack ?? String(e),
+  );
+});
