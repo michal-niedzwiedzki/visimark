@@ -3,16 +3,17 @@
   "displayName": "VisiMark",
   "version": "0.1.4",
   "private": true,
-  "description": "Spreadsheet mechanics for Markdown: every computed number carries the formula that produced it.",
+  "description": "The numbers in your Markdown, checked on every commit: every computed number carries the formula that produced it.",
   "categories": [
     "Formatters",
     "Linters"
   ],
   "keywords": [
+    "ai-agent",
+    "budget",
     "formula",
     "invoice",
-    "markdown",
-    "spreadsheet"
+    "markdown"
   ],
   "license": "MIT",
   "author": {
