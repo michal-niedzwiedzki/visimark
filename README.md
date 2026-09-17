@@ -124,6 +124,18 @@ Four ideas, and that is the whole format:
   invisible in every target renderer, so the prose reads normally while the
   number stays machine-checkable.
 
+## The tutorial
+
+[`docs/tutorial.md`](docs/tutorial.md) is the end-to-end tutorial: twenty-eight
+short chapters from a plain Markdown table to a checked document, a CI job and a
+script reading values back out. It teaches the language in dependency order, every
+finding `check` can report, and the one habit that keeps a green check meaningful.
+Every transcript in it is real.
+
+There is a side-by-side reader for it at
+[`docs/tutorial.html`](https://michal-niedzwiedzki.github.io/visimark/tutorial.html),
+which shows each block's Markdown source next to its rendering, in lockstep.
+
 ## Worked examples
 
 [`docs/example-invoice.md`](docs/example-invoice.md) is a complete B2B invoice
