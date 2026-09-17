@@ -40,8 +40,12 @@ test("the interstitial scrolls, unlike the playground it replaces", () => {
 
 test("nothing boots until the viewport is wide enough", () => {
   expect(main).toContain("await whenWideEnough();");
-  // ...and it is awaited before anything is fetched
-  expect(main.indexOf("await whenWideEnough();")).toBeLessThan(main.indexOf("await loadFiles()"));
+  // ...and it is awaited before anything is fetched. Review §2.5 gave
+  // loadFiles an argument, so this matches the call rather than the old
+  // no-arg spelling — and still fails if the fetch moves above the gate.
+  const fetchAt = main.indexOf("await loadFiles(");
+  expect(fetchAt).toBeGreaterThan(-1);
+  expect(main.indexOf("await whenWideEnough();")).toBeLessThan(fetchAt);
 });
 
 test("100vh is gone — it is the viewport with the mobile toolbar retracted", () => {

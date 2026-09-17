@@ -72,6 +72,10 @@ export interface Pipeline {
   hasStaleFindings(source: string): boolean;
   /** Cancels a debounced refresh that has not fired yet. */
   cancelPendingRefresh(): void;
+  /** Registers a callback for the end of each typing-settle pass — where the
+   *  visitor's buffer is saved (review §2.7), and so the moment anything
+   *  showing "this file has been edited" has to catch up. */
+  onSettled(fn: () => void): void;
   knowledgeText(): string;
 }
 
@@ -90,6 +94,7 @@ export function createPipeline(
   const metaEl = byId("build-meta");
 
   let editTimer: ReturnType<typeof setTimeout> | null = null;
+  const settled: (() => void)[] = [];
 
   function setStatus(ok: boolean, note?: string): void {
     flagEl.className = `flag${ok ? "" : " fail"}`;
@@ -231,6 +236,11 @@ export function createPipeline(
     if (result && result.unfixable.length === 0) quest().signal("action:fmt-clean");
     if (result && result.unfixable.length > 0) quest().signal("action:fmt-failing");
     refreshDerived();
+    // The typing has stopped, so this is where the work is written through to
+    // localStorage (review §2.7) rather than on every keystroke — the same
+    // 500 ms settle the rest of this pass rides on.
+    store.persist(store.current());
+    for (const fn of settled) fn();
   }
 
   cm.on("change", (_instance, change) => {
@@ -285,6 +295,9 @@ export function createPipeline(
     },
     cancelPendingRefresh() {
       if (editTimer !== null) clearTimeout(editTimer);
+    },
+    onSettled(fn) {
+      settled.push(fn);
     },
     knowledgeText: () => knowledgeEl.textContent ?? "",
   };

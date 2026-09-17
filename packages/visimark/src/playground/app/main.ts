@@ -32,10 +32,18 @@
  * document leaves nothing to work in, and stops with a named overlay.
  */
 
+import type { FileStore } from "./store.js";
+import type { Terminal } from "./terminal.js";
 import type { Quest } from "./quest.js";
 import type { FailedFile } from "./sources.js";
 import type { Scenarios } from "./types.js";
-import { TUTORIAL_CHAPTERS, loadFiles, loadScenarios } from "./sources.js";
+import {
+  DATA_DEPENDENCIES,
+  FILE_SOURCES,
+  TUTORIAL_CHAPTERS,
+  loadFiles,
+  loadScenarios,
+} from "./sources.js";
 import {
   FILE_PROTOCOL_DETAIL,
   FILE_PROTOCOL_MESSAGE,
@@ -44,7 +52,10 @@ import {
   whenWideEnough,
 } from "./boot.js";
 import { byId, makeStatusFlasher } from "./dom.js";
+import type { BufferStore } from "./buffers.js";
+import { createBufferStore } from "./buffers.js";
 import { createStore } from "./store.js";
+import { fileFromUrl, onUrlFileChange, writeFileToUrl } from "./url.js";
 import { createTerminal } from "./terminal.js";
 import { createPipeline } from "./pipeline.js";
 import { createBadgeBoard } from "./badges.js";
@@ -100,22 +111,27 @@ async function boot(): Promise<void> {
   }
   const VM = window.VisiMark;
 
-  const { files, failed } = await loadFiles();
-
   // Lets a link point straight at a specific file (e.g. a tutorial chapter) —
-  // falls back to demo.md when the param is absent or names a file that
-  // doesn't exist.
-  const requested = new URLSearchParams(window.location.search).get("file");
+  // falls back to demo.md when the param is absent or names a file the
+  // catalogue does not have. Resolved against FILE_SOURCES rather than against
+  // what has been fetched, because at this point nothing has been fetched:
+  // review §2.5 stopped boot pulling all twenty documents to display one.
+  const requested = fileFromUrl();
   const initial =
-    requested && Object.prototype.hasOwnProperty.call(files, requested) ? requested : "demo.md";
+    requested && Object.prototype.hasOwnProperty.call(FILE_SOURCES, requested)
+      ? requested
+      : "demo.md";
+
+  // Just the starting document, and whatever its reader needs beside it —
+  // one round trip for the page to become usable instead of twenty-one.
+  const { files, failed } = await loadFiles([initial, ...(DATA_DEPENDENCIES[initial] ?? [])]);
 
   if (!Object.prototype.hasOwnProperty.call(files, initial)) {
     overlay.fail(
       "The playground could not load its documents",
-      Object.keys(files).length === 0
-        ? "None of the tutorial documents arrived. The server is reachable — this page " +
-            "loaded — so the docs/playground/ directory is most likely missing or not being served."
-        : `The starting document (${initial}) did not arrive, so there is nothing to open.`,
+      `The starting document (${initial}) did not arrive, so there is nothing to open. ` +
+        "The server is reachable — this page loaded — so the docs/playground/ directory " +
+        "is most likely missing or not being served.",
       describeFailures(failed),
     );
     return;
@@ -140,9 +156,12 @@ async function boot(): Promise<void> {
     viewportMargin: Infinity,
     theme: "default",
   });
-  cm.setValue(files[initial] ?? "");
 
-  const store = createStore(VM, cm, files, initial);
+  // The store, not boot, puts the first document into the editor: it is the
+  // thing that knows whether the visitor has a saved copy of it from a
+  // previous session (review §2.7).
+  const buffers = createBufferStore(VM.sha256Hex);
+  const store = createStore(VM, cm, buffers, files, initial);
   const terminal = createTerminal();
 
   let questRef: Quest | null = null;
@@ -184,10 +203,22 @@ async function boot(): Promise<void> {
     inferPanel.bodyEl,
   );
 
+  pipeline.onSettled(() => {
+    filesPanel.refreshDirty();
+  });
+
   filesPanel.setEditorName(initial);
   filesPanel.render();
   quest().render(initial);
   renderReference(VM);
+
+  // The address bar names what is on screen from the first paint, not only
+  // after the first file switch (review §2.8) — so a link copied straight off
+  // a fresh load is already the link to this chapter.
+  writeFileToUrl(initial);
+  onUrlFileChange((name) => {
+    void filesPanel.switchTo(name);
+  });
 
   // TERMINAL is the page's existing place for "a command had something to say"
   // — the non-fatal boot failures belong there, above the first `visimark fmt`
@@ -201,10 +232,62 @@ async function boot(): Promise<void> {
   if (!scenariosAvailable) {
     terminal.line(`playground: ${scenariosError} — no scenarios, quests or badges`, "err");
   }
+  reportDiscarded(buffers, terminal);
 
   pipeline.runFmt();
   pipeline.refreshDerived();
   overlay.dismiss();
+
+  // Everything else, once the page is interactive and the browser is idle.
+  // This is what keeps §2.5 from trading one problem for another: the first
+  // paint is gated on one document, and by the time anyone reaches for BUILD
+  // or a second chapter the rest has usually arrived anyway, with no spinner
+  // and nothing blocked on it.
+  prefetchRest(store, buffers, terminal);
+}
+
+/**
+ * Says so when a saved copy is thrown away because the document it was edited
+ * from has changed since (review §2.7).
+ *
+ * Silence here would be the playground doing the exact thing it exists to
+ * catch: replacing someone's content without saying that it no longer matches
+ * its source.
+ */
+function reportDiscarded(buffers: BufferStore, terminal: Terminal): void {
+  const discarded = buffers.discarded();
+  if (discarded.length === 0) return;
+  terminal.line(
+    `playground: ${discarded.join(", ")} changed in this release — your saved edits to ` +
+      `${discarded.length === 1 ? "it were" : "them were"} discarded`,
+    "err",
+  );
+  terminal.trim();
+}
+
+/**
+ * Fetches the remaining documents off the critical path.
+ *
+ * `requestIdleCallback` is not in Safari before 17, so a timeout stands in —
+ * the deadline does not need to be precise, only after first paint.
+ */
+function prefetchRest(store: FileStore, buffers: BufferStore, terminal: Terminal): void {
+  const start = (): void => {
+    void store.ensureAll().then((failed) => {
+      for (const f of failed) {
+        terminal.line(`playground: ${f.path} did not load (${f.reason})`, "err");
+      }
+      if (failed.length > 0) terminal.trim();
+      // Most documents are checked against their saved copy here rather than
+      // at boot, so this is where most of the discards surface.
+      reportDiscarded(buffers, terminal);
+    });
+  };
+  if (typeof window.requestIdleCallback === "function") {
+    window.requestIdleCallback(start, { timeout: 4000 });
+  } else {
+    window.setTimeout(start, 1500);
+  }
 }
 
 /**

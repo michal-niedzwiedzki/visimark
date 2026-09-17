@@ -34,7 +34,7 @@ describe("loadFiles", () => {
     delete everything["example-charts.md"];
     stubFetch(everything);
 
-    const { files, failed } = await loadFiles();
+    const { files, failed } = await loadFiles(Object.keys(FILE_SOURCES));
 
     expect(failed.map((f) => f.name)).toEqual(["example-charts.md"]);
     expect(failed[0]!.reason).toBe("HTTP 404");
@@ -47,7 +47,7 @@ describe("loadFiles", () => {
   test("a network error is reported, not thrown", async () => {
     globalThis.fetch = (() => Promise.reject(new Error("NetworkError"))) as unknown as typeof fetch;
 
-    const { files, failed } = await loadFiles();
+    const { files, failed } = await loadFiles(Object.keys(FILE_SOURCES));
 
     expect(Object.keys(files)).toHaveLength(0);
     expect(failed).toHaveLength(Object.keys(FILE_SOURCES).length);
@@ -56,7 +56,7 @@ describe("loadFiles", () => {
 
   test("every failure names the path that was actually requested", async () => {
     stubFetch({});
-    const { failed } = await loadFiles();
+    const { failed } = await loadFiles(Object.keys(FILE_SOURCES));
     const imports = failed.find((f) => f.name === "13-imports.csv");
     expect(imports?.path).toBe("playground/tutorial/13-imports.csv");
   });

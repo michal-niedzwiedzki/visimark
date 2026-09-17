@@ -2,6 +2,16 @@
  * The BUILD tab: `visimark check` run across every file in FILES, the way a CI
  * job would check a whole repository — button-activated rather than on every
  * keystroke, since it is every open document, not just the current one.
+ *
+ * **It loads before it builds** (review §2.5). Since documents are fetched on
+ * demand, "every file in FILES" and "every file in memory" stopped being the
+ * same set, and §2.5 asked which one BUILD means. It means the first: the
+ * panel's own copy promises "the same `visimark check` a CI pipeline would
+ * run", and a CI pipeline does not skip the files it has not opened yet. So
+ * the button fetches whatever is still missing and only then checks — slow
+ * once, on the first press, and honest. Building only what happened to be
+ * loaded would have been faster and would have quietly made the result depend
+ * on which chapters the visitor had clicked.
  */
 
 import type { VisiMarkApi } from "../browser-entry.js";
@@ -79,15 +89,27 @@ export function createBuildPanel(
     return wrap;
   }
 
-  btn.addEventListener("click", () => {
+  btn.addEventListener("click", () => void run());
+
+  async function run(): Promise<void> {
     store.flush();
     btn.disabled = true;
     statusEl.textContent = "running…";
     bodyEl.innerHTML = "";
+
+    // First press of the session usually fetches the nineteen documents boot
+    // no longer does. Afterwards this resolves immediately.
+    const failed = await store.ensureAll();
+    for (const f of failed) {
+      terminal.line(`playground: ${f.path} did not load (${f.reason}) — not checked`, "err");
+    }
+
     // Data files (13-imports.csv) are in the store for the engine to read, not
     // for `visimark check` to run over — a CSV is not a VisiMark document and
-    // the CLI would refuse it.
-    const documents = store.names().filter((name) => /\.md$/i.test(name));
+    // the CLI would refuse it. A document that did not arrive is skipped
+    // rather than reported as failing, since "could not be fetched" is not a
+    // finding about the document.
+    const documents = store.names().filter((name) => /\.md$/i.test(name) && store.loaded(name));
     terminal.cmd(`visimark check ${documents.join(" ")}`);
 
     let passed = 0;
@@ -109,5 +131,5 @@ export function createBuildPanel(
     if (checkOne(current, store.text(current) ?? "").ok) {
       quest().signal(`action:build-pass:${current}`);
     }
-  });
+  }
 }
