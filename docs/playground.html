@@ -742,14 +742,12 @@
         background: #0c2f4f;
         border-right: 1px solid rgba(255, 255, 255, 0.08);
       }
-      .terminal-panel .panel-body {
-        padding: 10px 12px;
-      }
       .diagnostics {
         flex: 1 1 53%;
         background: #0c2f4f;
       }
-      .diagnostics > .panel-head {
+      .diagnostics > .panel-head,
+      .terminal-panel > .panel-head {
         justify-content: flex-start;
         padding: 0 6px;
         gap: 2px;
@@ -789,8 +787,7 @@
         overflow: auto;
         padding: 10px 12px;
       }
-      .diag-view pre,
-      .terminal-panel pre {
+      .diag-view pre {
         margin: 0;
         white-space: pre-wrap;
         word-break: break-word;
@@ -938,6 +935,43 @@
         color: #b9b9b9;
         font-size: 0.72rem;
       }
+
+      /* REFERENCE — alphabetic table of every builtin mapper/aggregate */
+      .reference-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.78rem;
+      }
+      .reference-table th {
+        text-align: left;
+        color: #9fb6c9;
+        font-size: 0.7rem;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        padding: 4px 10px 8px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+      }
+      .reference-table td {
+        vertical-align: top;
+        padding: 10px 10px 10px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        color: #cfe3f0;
+      }
+      .reference-table td.ref-name {
+        white-space: nowrap;
+        font-weight: 700;
+        color: #79c0ff;
+      }
+      .reference-table .ref-kind {
+        font-weight: 700;
+      }
+      .reference-table .ref-line {
+        margin: 3px 0;
+      }
+      .reference-table .ref-errors {
+        margin-top: 4px;
+      }
     </style>
   </head>
   <body>
@@ -1014,15 +1048,69 @@
           <div class="diagnostic-area">
             <section class="panel terminal-panel">
               <div class="panel-head">
-                <span
-                  ><svg class="ico" viewBox="0 0 256 256" fill="currentColor">
+                <button class="diag-tab active" data-group="term" data-tab="terminal" type="button">
+                  <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
                     <path
                       d="M128,128a8,8,0,0,1-3,6.25l-40,32a8,8,0,1,1-10-12.5L107.19,128,75,102.25a8,8,0,1,1,10-12.5l40,32A8,8,0,0,1,128,128Zm48,24H136a8,8,0,0,0,0,16h40a8,8,0,0,0,0-16Zm56-96V200a16,16,0,0,1-16,16H40a16,16,0,0,1-16-16V56A16,16,0,0,1,40,40H216A16,16,0,0,1,232,56ZM216,200V56H40V200H216Z"
                     /></svg
-                  >Terminal</span
-                >
+                  >Terminal
+                </button>
+                <button class="diag-tab" data-group="term" data-tab="build" type="button">
+                  <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
+                    <path
+                      d="M251.34,112,183.88,44.08a96.1,96.1,0,0,0-135.77,0l-.09.09L34.25,58.4A8,8,0,0,0,45.74,69.53L59.47,55.35a79.92,79.92,0,0,1,18.71-13.9L124.68,88l-96,96a16,16,0,0,0,0,22.63l20.69,20.69a16,16,0,0,0,22.63,0l96-96,14.34,14.34h0L200,163.3a16,16,0,0,0,22.63,0l28.69-28.69A16,16,0,0,0,251.34,112ZM60.68,216,40,195.31l68-68L128.68,148ZM162.34,114.32,140,136.67,119.31,116l22.35-22.35a8,8,0,0,0,0-11.32L94.32,35a80,80,0,0,1,78.23,20.41l44.22,44.51L188,128.66l-14.34-14.34A8,8,0,0,0,162.34,114.32Zm49,37.66-12-12L228,111.25l12,12Z"
+                    /></svg
+                  >Build
+                </button>
+                <button class="diag-tab" data-group="term" data-tab="reference" type="button">
+                  <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
+                    <path
+                      d="M224,48H72A32,32,0,0,0,40,80V224a8,8,0,0,0,8,8H192a8,8,0,0,0,0-16H56a16,16,0,0,1,16-16H224a8,8,0,0,0,8-8V56A8,8,0,0,0,224,48Zm-8,136H72a31.82,31.82,0,0,0-16,4.29V80A16,16,0,0,1,72,64H216Z"
+                    /></svg
+                  >Reference
+                </button>
               </div>
-              <div class="panel-body"><pre id="terminal-body"></pre></div>
+
+              <div class="diag-view active" data-group="term" data-view="terminal">
+                <div class="diag-scroll"><pre id="terminal-body"></pre></div>
+              </div>
+
+              <div class="diag-view" data-group="term" data-view="build">
+                <div class="diag-scroll">
+                  <div id="build-body">
+                    Run a check across every file in FILES — the same
+                    <span class="mono">visimark check</span> a CI pipeline would run on the whole
+                    repository.
+                  </div>
+                </div>
+                <div class="action-bar">
+                  <span class="flag pending" id="build-flag"></span>
+                  <span id="build-label">BUILD NOT RUN</span>
+                  <span class="meta" id="build-meta"></span>
+                  <span class="action-status" id="build-status"></span>
+                  <button class="action-btn" id="build-btn" type="button">
+                    <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
+                      <path
+                        d="M251.34,112,183.88,44.08a96.1,96.1,0,0,0-135.77,0l-.09.09L34.25,58.4A8,8,0,0,0,45.74,69.53L59.47,55.35a79.92,79.92,0,0,1,18.71-13.9L124.68,88l-96,96a16,16,0,0,0,0,22.63l20.69,20.69a16,16,0,0,0,22.63,0l96-96,14.34,14.34h0L200,163.3a16,16,0,0,0,22.63,0l28.69-28.69A16,16,0,0,0,251.34,112ZM60.68,216,40,195.31l68-68L128.68,148ZM162.34,114.32,140,136.67,119.31,116l22.35-22.35a8,8,0,0,0,0-11.32L94.32,35a80,80,0,0,1,78.23,20.41l44.22,44.51L188,128.66l-14.34-14.34A8,8,0,0,0,162.34,114.32Zm49,37.66-12-12L228,111.25l12,12Z"
+                      /></svg
+                    >Run Build
+                  </button>
+                </div>
+              </div>
+
+              <div class="diag-view" data-group="term" data-view="reference">
+                <div class="diag-scroll">
+                  <table class="reference-table">
+                    <thead>
+                      <tr>
+                        <th>Function</th>
+                        <th>Description</th>
+                      </tr>
+                    </thead>
+                    <tbody id="reference-body"></tbody>
+                  </table>
+                </div>
+              </div>
             </section>
 
             <section class="panel diagnostics">
@@ -1052,13 +1140,6 @@
                       d="M174.63,81.37a80,80,0,1,0-93.26,93.26,80,80,0,1,0,93.26-93.26ZM224,160c0,1.52-.07,3-.18,4.51l-50-50A80,80,0,0,0,176,98,64.11,64.11,0,0,1,224,160Zm-13.47,39.21L157.91,146.6a80.5,80.5,0,0,0,9.93-15.44L219.7,183A64,64,0,0,1,210.53,199.21ZM183,219.7l-51.86-51.86a80.5,80.5,0,0,0,15.44-9.93l52.61,52.62A64,64,0,0,1,183,219.7ZM45.47,56.79,98.09,109.4a80.5,80.5,0,0,0-9.93,15.44L36.3,73A64,64,0,0,1,45.47,56.79ZM73,36.3l51.86,51.86a80.5,80.5,0,0,0-15.44,9.93L56.79,45.47A64,64,0,0,1,73,36.3ZM160,96a64.07,64.07,0,0,1-64,64A64.07,64.07,0,0,1,160,96Zm-2-16a80,80,0,0,0-16.49,2.13l-50-50C93,32.07,94.48,32,96,32A64.11,64.11,0,0,1,158,80.05ZM32,96c0-1.52.07-3,.18-4.51l50,50A80,80,0,0,0,80.05,158,64.11,64.11,0,0,1,32,96ZM98,176a80,80,0,0,0,16.49-2.13l50,50c-1.49.11-3,.18-4.51.18A64.11,64.11,0,0,1,98,176Z"
                     /></svg
                   >Inference
-                </button>
-                <button class="diag-tab" data-group="diag" data-tab="build" type="button">
-                  <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
-                    <path
-                      d="M251.34,112,183.88,44.08a96.1,96.1,0,0,0-135.77,0l-.09.09L34.25,58.4A8,8,0,0,0,45.74,69.53L59.47,55.35a79.92,79.92,0,0,1,18.71-13.9L124.68,88l-96,96a16,16,0,0,0,0,22.63l20.69,20.69a16,16,0,0,0,22.63,0l96-96,14.34,14.34h0L200,163.3a16,16,0,0,0,22.63,0l28.69-28.69A16,16,0,0,0,251.34,112ZM60.68,216,40,195.31l68-68L128.68,148ZM162.34,114.32,140,136.67,119.31,116l22.35-22.35a8,8,0,0,0,0-11.32L94.32,35a80,80,0,0,1,78.23,20.41l44.22,44.51L188,128.66l-14.34-14.34A8,8,0,0,0,162.34,114.32Zm49,37.66-12-12L228,111.25l12,12Z"
-                    /></svg
-                  >Build
                 </button>
               </div>
 
@@ -1140,29 +1221,6 @@ applies those proposals to the document.</pre>
                         d="M240,136v64a16,16,0,0,1-16,16H32a16,16,0,0,1-16-16V136a16,16,0,0,1,16-16H72a8,8,0,0,1,0,16H32v64H224V136H184a8,8,0,0,1,0-16h40A16,16,0,0,1,240,136Zm-117.66-2.34a8,8,0,0,0,11.32,0l48-48a8,8,0,0,0-11.32-11.32L136,108.69V24a8,8,0,0,0-16,0v84.69L85.66,74.34A8,8,0,0,0,74.34,85.66ZM200,168a12,12,0,1,0-12,12A12,12,0,0,0,200,168Z"
                       /></svg
                     >Infer and write
-                  </button>
-                </div>
-              </div>
-
-              <div class="diag-view" data-group="diag" data-view="build">
-                <div class="diag-scroll">
-                  <div id="build-body">
-                    Run a check across every file in FILES — the same
-                    <span class="mono">visimark check</span> a CI pipeline would run on the whole
-                    repository.
-                  </div>
-                </div>
-                <div class="action-bar">
-                  <span class="flag pending" id="build-flag"></span>
-                  <span id="build-label">BUILD NOT RUN</span>
-                  <span class="meta" id="build-meta"></span>
-                  <span class="action-status" id="build-status"></span>
-                  <button class="action-btn" id="build-btn" type="button">
-                    <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
-                      <path
-                        d="M251.34,112,183.88,44.08a96.1,96.1,0,0,0-135.77,0l-.09.09L34.25,58.4A8,8,0,0,0,45.74,69.53L59.47,55.35a79.92,79.92,0,0,1,18.71-13.9L124.68,88l-96,96a16,16,0,0,0,0,22.63l20.69,20.69a16,16,0,0,0,22.63,0l96-96,14.34,14.34h0L200,163.3a16,16,0,0,0,22.63,0l28.69-28.69A16,16,0,0,0,251.34,112ZM60.68,216,40,195.31l68-68L128.68,148ZM162.34,114.32,140,136.67,119.31,116l22.35-22.35a8,8,0,0,0,0-11.32L94.32,35a80,80,0,0,1,78.23,20.41l44.22,44.51L188,128.66l-14.34-14.34A8,8,0,0,0,162.34,114.32Zm49,37.66-12-12L228,111.25l12,12Z"
-                      /></svg
-                    >Run Build
                   </button>
                 </div>
               </div>
@@ -1440,6 +1498,87 @@ applies those proposals to the document.</pre>
         var TERM_MAX_LINES = 400;
         function trimTerminal() {
           while (termEl.childNodes.length > TERM_MAX_LINES) termEl.removeChild(termEl.firstChild);
+        }
+
+        // ---- reference tab -----------------------------------------------------
+        // Static, document-independent: every builtin mapper/aggregate,
+        // alphabetically, rendered from the same describeFunction/precisionPhrase
+        // data the language server's hover and `visimark ref` read — never
+        // hand-copied, so it can't drift from what the engine actually does.
+        function escapeHtml(s) {
+          return s
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;");
+        }
+        function refInline(s) {
+          return escapeHtml(s).replace(/`([^`]+)`/g, "<code>$1</code>");
+        }
+        function refCapitalize(s) {
+          return s.length > 0 ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+        }
+        function renderReference() {
+          var tbody = document.getElementById("reference-body");
+          var names = VM.functionNames().slice().sort();
+          names.forEach(function (name) {
+            var e = VM.describeFunction(name);
+            var sig = e.name + "(" + e.params.map(function (p) { return p.name; }).join(", ") + ")";
+            var kind = e.kind === "reduce" ? "Aggregate" : "Mapper";
+
+            var lines = [];
+            lines.push(
+              '<div class="ref-line"><span class="ref-kind">' +
+                kind +
+                "</span> — " +
+                refInline(refCapitalize(e.summary)) +
+                ".</div>",
+            );
+            e.params.forEach(function (p) {
+              lines.push(
+                '<div class="ref-line">— <code>' +
+                  escapeHtml(p.name) +
+                  "</code> (" +
+                  escapeHtml(p.type) +
+                  ") — " +
+                  refInline(p.note) +
+                  "</div>",
+              );
+            });
+            lines.push('<div class="ref-line">returns: ' + refInline(e.returns) + "</div>");
+            lines.push(
+              '<div class="ref-line">precision: ' +
+                refInline(VM.precisionPhrase(e.precision)) +
+                "</div>",
+            );
+            if (e.rounding) {
+              lines.push('<div class="ref-line">rounding: ' + refInline(e.rounding) + "</div>");
+            }
+            if (e.errors.length > 0) {
+              var errLines = e.errors
+                .map(function (x) {
+                  return (
+                    '<div class="ref-line">— ' +
+                    refInline(x.when) +
+                    " → <code>" +
+                    escapeHtml(x.code) +
+                    "</code></div>"
+                  );
+                })
+                .join("");
+              lines.push('<div class="ref-errors">errors:' + errLines + "</div>");
+            }
+
+            var row = document.createElement("tr");
+            var nameCell = document.createElement("td");
+            nameCell.className = "ref-name";
+            nameCell.innerHTML = "<code>" + escapeHtml(sig) + "</code>";
+            var descCell = document.createElement("td");
+            descCell.innerHTML = lines.join("");
+            row.appendChild(nameCell);
+            row.appendChild(descCell);
+            tbody.appendChild(row);
+          });
         }
 
         // ---- files panel -----------------------------------------------------
@@ -2720,6 +2859,7 @@ applies those proposals to the document.</pre>
         document.getElementById("editor-filename").textContent = current;
         renderFileList();
         renderScenario(current);
+        renderReference();
         runFmt();
         refreshDerived();
       })();

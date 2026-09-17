@@ -39,6 +39,7 @@ import { infer } from "../infer/propose.js";
 import { planInfer } from "../infer/write.js";
 import { build } from "../model/build.js";
 import type { DocModel } from "../model/types.js";
+import { describeFunction, functionNames, precisionPhrase } from "../lang/reference.js";
 import { locate } from "../parse/document.js";
 import { formatCheck } from "../report/format.js";
 import { formatInfer } from "../report/infer.js";
@@ -169,6 +170,9 @@ const api = {
   pgExplain,
   memoryReader,
   sha256Hex,
+  describeFunction,
+  functionNames,
+  precisionPhrase,
 };
 
 declare global {
