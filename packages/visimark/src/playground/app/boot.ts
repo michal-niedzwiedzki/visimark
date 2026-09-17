@@ -67,3 +67,37 @@ export const FILE_PROTOCOL_MESSAGE =
 
 export const FILE_PROTOCOL_DETAIL =
   "bun run serve\n\nthen open http://localhost:8080/playground.html";
+
+/**
+ * The width at which the playground becomes the playground.
+ *
+ * Paired with `@media (max-width: 899px)` in docs/playground.html, which is
+ * what actually swaps the five-panel layout for the interstitial. This query
+ * is the other half: below it there is nothing on screen to fill, so the
+ * application does not fetch 22 documents, does not build a CodeMirror
+ * instance, and does not run the engine (review §2.2).
+ */
+const WIDE_ENOUGH = "(min-width: 900px)";
+
+export function isWideEnough(): boolean {
+  return window.matchMedia(WIDE_ENOUGH).matches;
+}
+
+/**
+ * Resolves as soon as the viewport is wide enough — immediately on a desktop,
+ * and on the first resize past the breakpoint if a window was dragged narrow.
+ * Without this, widening a narrow window would reveal a playground that had
+ * never booted, which is worse than the interstitial it replaced.
+ */
+export function whenWideEnough(): Promise<void> {
+  const query = window.matchMedia(WIDE_ENOUGH);
+  if (query.matches) return Promise.resolve();
+  return new Promise((resolve) => {
+    const onChange = (e: MediaQueryListEvent): void => {
+      if (!e.matches) return;
+      query.removeEventListener("change", onChange);
+      resolve();
+    };
+    query.addEventListener("change", onChange);
+  });
+}

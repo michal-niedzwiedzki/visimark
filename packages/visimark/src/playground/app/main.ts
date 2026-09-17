@@ -41,6 +41,7 @@ import {
   FILE_PROTOCOL_MESSAGE,
   createBootOverlay,
   isFileProtocol,
+  whenWideEnough,
 } from "./boot.js";
 import { byId, makeStatusFlasher } from "./dom.js";
 import { createStore } from "./store.js";
@@ -73,6 +74,12 @@ function describeFailures(failed: FailedFile[]): string {
 }
 
 async function boot(): Promise<void> {
+  // Below 900px the page shows an interstitial instead of the playground (see
+  // the .small-screen rules in docs/playground.html). Nothing here has
+  // anything to render into, so nothing here runs — until the viewport gets
+  // wide enough, which is how a dragged-open desktop window still works.
+  await whenWideEnough();
+
   const overlay = createBootOverlay();
 
   if (isFileProtocol()) {

@@ -1,0 +1,51 @@
+// The two halves of review §2.2 have to agree with each other.
+//
+// Below 900px docs/playground.html swaps the five-panel layout for an
+// interstitial, and src/playground/app/main.ts declines to boot — no fetches,
+// no CodeMirror, no engine — until the viewport is wide enough. The breakpoint
+// is therefore written twice, in two languages, and nothing but this test
+// notices if one of them moves.
+
+import { expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
+const page = readFileSync(join(import.meta.dir, "../../../../docs/playground.html"), "utf8");
+const appDir = join(import.meta.dir, "../../src/playground/app");
+const bootModule = readFileSync(join(appDir, "boot.ts"), "utf8");
+const main = readFileSync(join(appDir, "main.ts"), "utf8");
+
+test("the CSS breakpoint and the JS breakpoint are the same 900px", () => {
+  expect(page).toContain("@media (max-width: 899px)");
+  expect(bootModule).toContain('"(min-width: 900px)"');
+});
+
+test("below the breakpoint the playground is replaced, not merely narrowed", () => {
+  // both the panel layout and the boot overlay go; the interstitial arrives
+  const smallScreenBlock = page.slice(page.indexOf("@media (max-width: 899px)"));
+  expect(smallScreenBlock).toContain(
+    ".playground,\n        .boot-overlay {\n          display: none;",
+  );
+  expect(smallScreenBlock).toContain(".small-screen {\n          display: flex;");
+  // and the interstitial itself exists, with somewhere to go
+  expect(page).toContain('<main class="small-screen">');
+  expect(page).toContain('href="tutorial.html"');
+});
+
+test("the interstitial scrolls, unlike the playground it replaces", () => {
+  // `html, body { overflow: hidden }` is what makes the panel layout work and
+  // what makes a phone-width page a dead end; the media query undoes it
+  expect(page).toContain("height: auto;\n          overflow: auto;");
+});
+
+test("nothing boots until the viewport is wide enough", () => {
+  expect(main).toContain("await whenWideEnough();");
+  // ...and it is awaited before anything is fetched
+  expect(main.indexOf("await whenWideEnough();")).toBeLessThan(main.indexOf("await loadFiles()"));
+});
+
+test("100vh is gone — it is the viewport with the mobile toolbar retracted", () => {
+  // the comment above the rule still says "100vh", which is the point of it
+  expect(page).not.toContain("height: 100vh");
+  expect(page).toContain("height: 100dvh;");
+});
