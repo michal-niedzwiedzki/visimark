@@ -3,6 +3,53 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!--
+      Review §2.6. GitHub Pages serves docs/ verbatim and cannot send headers,
+      so a <meta> policy is the only content-security control available here —
+      and it has to come before the first subresource, which is why it sits
+      directly under <meta charset>.
+
+      Every origin below is one this page actually uses, and no others:
+      cdnjs for CodeMirror and marked, jsdelivr for canvas-confetti, Google
+      Fonts split across its stylesheet and font hosts. Each of those tags
+      already carries integrity + crossorigin + referrerpolicy; this is the
+      second lock on the same door — integrity says "this exact file", the
+      policy says "and nowhere else at all".
+
+      script-src does NOT carry 'unsafe-inline', and that is the whole reason
+      this is worth having: review §2.4 moved 1,535 lines of inline <script>
+      out to vendor/visimark-playground.js, so there is no inline script left
+      to grant. A CSP that still needed it would buy almost nothing.
+
+      style-src does still carry it: this page's 950 lines of CSS are inline,
+      and CodeMirror sets element styles as it lays out the editor. An
+      inline-style injection is a defacement, not code execution, so the
+      trade is a different order of magnitude from the script one.
+
+      img-src grants `data:` for the chart SVGs the PREVIEW panel substitutes
+      in (see svgDataUri in src/playground/app/pipeline.ts, review §2.12) —
+      `data:` and `blob:` are separate grants, so that decision and this line
+      move together. connect-src is 'self' because every fetch() is a sibling
+      document. default-src 'none' makes each of those an allowlist rather
+      than a relaxation of a permissive default, so anything this page grows
+      later fails closed and loudly.
+
+      frame-ancestors is absent because a <meta> policy cannot carry it; on
+      Pages there is nowhere to put it.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none';
+               script-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net;
+               style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com;
+               font-src https://fonts.gstatic.com;
+               img-src 'self' data:;
+               connect-src 'self';
+               base-uri 'none';
+               form-action 'none'"
+    />
+
     <title>VisiMark Playground</title>
     <link rel="icon" type="image/webp" href="visimark.webp" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />

@@ -20,6 +20,45 @@ export function pluralize(n: number, w: string): string {
   return `${n} ${w}${n === 1 ? "" : "s"}`;
 }
 
+/**
+ * A rendered chart SVG, as something an `<img src>` will accept.
+ *
+ * This used to be `btoa(unescape(encodeURIComponent(svg)))` (review §2.12).
+ * `unescape` is Annex B legacy and base64 costs a third of the payload, so the
+ * replacement percent-encodes instead — but **only the characters that have
+ * to be**, which is the part worth spelling out, because plain
+ * `encodeURIComponent(svg)` is *worse* than the base64 it replaces. An SVG is
+ * mostly `<`, `>`, `"`, `/` and spaces; escaping all of them costs three bytes
+ * each. Measured on 12-charts.md's `order-spend.svg` (2,770 bytes raw):
+ *
+ * | encoding | data URI length |
+ * |---|---|
+ * | `btoa(unescape(…))`, before | 3,720 |
+ * | `encodeURIComponent(svg)` | 4,167 |
+ * | only what must be escaped | **2,829** |
+ *
+ * What must be escaped: `%` (or an existing escape is re-read), `#` (or the
+ * rest of the document becomes a fragment identifier), and anything outside
+ * printable ASCII — control characters because the URL parser strips ASCII
+ * newlines and tabs out of a URL, which would silently run two words of a
+ * chart label together, and non-ASCII because a data URI has no charset
+ * parameter to interpret those bytes with. Everything else survives verbatim.
+ *
+ * **Not a `blob:` URL**, which would be smaller still. Every blob URL has to
+ * be handed back with `URL.revokeObjectURL`, and this runs from
+ * `refreshDerived()` on a 500ms typing debounce over a document that can hold
+ * several charts — so a missed revoke is a leak that grows while you type,
+ * not a theoretical one. A data URI is owned by the `<img>` and dies with it.
+ *
+ * The scheme is granted by `img-src 'self' data:` in playground.html's CSP
+ * (review §2.6); `data:` and `blob:` are separate grants, so the two decisions
+ * have to move together.
+ */
+export function svgDataUri(svg: string): string {
+  const escaped = svg.replace(/[%#]|[^\x20-\x7E]/gu, (ch) => encodeURIComponent(ch));
+  return `data:image/svg+xml,${escaped}`;
+}
+
 export interface Pipeline {
   /** Mirrors `visimark fmt FILE` — prints outcome to TERMINAL. Does not touch
    *  the editor buffer itself; callers that want the corrected text apply
@@ -120,7 +159,7 @@ export function createPipeline(
     previewEl.querySelectorAll<HTMLImageElement>("img[src]").forEach((img) => {
       const svg = svgByPath[img.getAttribute("src") ?? ""];
       if (!svg) return;
-      img.src = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`;
+      img.src = svgDataUri(svg);
     });
   }
 
@@ -148,6 +187,23 @@ export function createPipeline(
     }
 
     try {
+      // **The preview is not a trust boundary, and here is the condition on
+      // which that stops being true** (review §2.6).
+      //
+      // `source` is the CodeMirror buffer. Everything that can reach it today
+      // is either the visitor's own typing or a document committed to this
+      // repository and fetched from this origin — so unsanitized Markdown
+      // here is self-XSS at worst, and sanitizing would cost the preview the
+      // inline HTML that Markdown legitimately allows.
+      //
+      // It becomes a real boundary the moment a document reaches this buffer
+      // from anywhere the visitor is not: a document in the URL, an import
+      // from a gist, a paste target, a shared workspace, anything at all
+      // authored by one person and rendered for another. Note that `?file=`
+      // (review §2.8) is *not* that — it selects from FILE_SOURCES by name
+      // and cannot carry content. If you are adding the feature that changes
+      // this, the sanitizer goes in on the same commit, and the CSP above
+      // stops being the only control.
       previewEl.innerHTML = marked.parse(source);
       embedCharts(evalResult?.charts);
     } catch (e) {
