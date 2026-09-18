@@ -1,0 +1,15 @@
+// The playground *application* (src/playground/app/) is the only browser UI in
+// this repository: it touches `document`, `window`, `localStorage` and the DOM
+// event model, none of which exist in the engine's ES2023-plus-Node world.
+//
+// It gets its own program rather than DOM being added to tsconfig.base.json,
+// so that the engine and the CLI keep failing the typecheck if they ever
+// reach for a browser global — the property that made the node:fs port
+// (src/fs/reader.ts) worth building in the first place.
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM", "DOM.Iterable"]
+  },
+  "include": ["src/playground/app", "test/playground/app"]
+}

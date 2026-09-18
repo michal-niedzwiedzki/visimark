@@ -3,8 +3,104 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!--
+      Review §2.6. GitHub Pages serves docs/ verbatim and cannot send headers,
+      so a <meta> policy is the only content-security control available here —
+      and it has to come before the first subresource, which is why it sits
+      directly under <meta charset>.
+
+      Every origin below is one this page actually uses, and no others:
+      cdnjs for CodeMirror and marked, jsdelivr for canvas-confetti, Google
+      Fonts split across its stylesheet and font hosts. Each of those tags
+      already carries integrity + crossorigin + referrerpolicy; this is the
+      second lock on the same door — integrity says "this exact file", the
+      policy says "and nowhere else at all".
+
+      script-src does NOT carry 'unsafe-inline', and that is the whole reason
+      this is worth having: review §2.4 moved 1,535 lines of inline <script>
+      out to vendor/visimark-playground.js, so there is no inline script left
+      to grant. A CSP that still needed it would buy almost nothing.
+
+      style-src does still carry it: this page's 950 lines of CSS are inline,
+      and CodeMirror sets element styles as it lays out the editor. An
+      inline-style injection is a defacement, not code execution, so the
+      trade is a different order of magnitude from the script one.
+
+      img-src grants `data:` for the chart SVGs the PREVIEW panel substitutes
+      in (see svgDataUri in src/playground/app/pipeline.ts, review §2.12) —
+      `data:` and `blob:` are separate grants, so that decision and this line
+      move together. connect-src is 'self' because every fetch() is a sibling
+      document. default-src 'none' makes each of those an allowlist rather
+      than a relaxation of a permissive default, so anything this page grows
+      later fails closed and loudly.
+
+      frame-ancestors is absent because a <meta> policy cannot carry it; on
+      Pages there is nowhere to put it.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none';
+               script-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net;
+               style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com;
+               font-src https://fonts.gstatic.com;
+               img-src 'self' data:;
+               connect-src 'self';
+               base-uri 'none';
+               form-action 'none'"
+    />
+
+    <!-- Review §2.9 — the card a pasted link renders as. The wording, the
+         image and the reasoning are all in index.html's copy of this block;
+         only the page-specific title, description and URL differ here. -->
+    <meta
+      name="description"
+      content="Try VisiMark in your browser — nothing is uploaded, the whole engine runs on this page. Edit a document and watch fmt, the preview and the extracted knowledge move together."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="VisiMark" />
+    <meta property="og:title" content="The VisiMark playground" />
+    <meta
+      property="og:description"
+      content="Try VisiMark in your browser — nothing is uploaded, the whole engine runs on this page. Edit a document and watch fmt, the preview and the extracted knowledge move together."
+    />
+    <meta
+      property="og:url"
+      content="https://michal-niedzwiedzki.github.io/visimark/playground.html"
+    />
+    <meta
+      property="og:image"
+      content="https://michal-niedzwiedzki.github.io/visimark/og-card.png"
+    />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="VisiMark: a vmark block computing grand_total = SUM(Total), and the prose value it keeps in step"
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+
     <title>VisiMark Playground</title>
     <link rel="icon" type="image/webp" href="visimark.webp" />
+
+    <!--
+      The two local bundles are the largest things on the critical path (the
+      engine alone is 288 KB) and the last to be discovered, because their
+      <script> tags are at the end of <body>. Preloading starts them with the
+      stylesheets instead of after them.
+
+      Measured while doing review §2.5: with the twenty document fetches off
+      the critical path, what remains between navigation and first render is
+      almost entirely these two files — so this is the line that actually
+      moves time-to-interactive, which is what §2.5 suspected when it said a
+      preload "is cheaper than any of this and may be enough".
+
+      Not the starting document: it is ~4 KB next to 288, and `?file=` means
+      the guess is wrong for anyone arriving on a tutorial link.
+    -->
+    <link rel="preload" as="script" href="./vendor/visimark-browser.js" />
+    <link rel="preload" as="script" href="./vendor/visimark-playground.js" />
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -48,8 +144,15 @@
       .playground {
         display: flex;
         flex-direction: column;
-        height: 100vh;
-        width: 100vw;
+        /* dvh, not vh: on mobile Safari and Chrome `100vh` is the viewport
+           with the browser chrome *retracted*, so the bottom action bars sit
+           under the toolbar until you scroll — and this page deliberately
+           cannot scroll. See the .small-screen block further down for what
+           actually happens below 900px. */
+        height: 100dvh;
+        /* not 100vw: that is the viewport including the scrollbar gutter,
+           which overflows the document by the scrollbar's width. */
+        width: 100%;
       }
 
       /* ---- Top bar (5%) ---- */
@@ -150,6 +253,182 @@
         border-radius: 999px;
         padding: 4px 12px;
         white-space: nowrap;
+      }
+
+      /* ---- Boot overlay ----
+         Covers the whole page from first paint until the application has
+         loaded its 22 documents, and stays — with a different message — if any
+         of that fails. Before review §2.1 a single 404 left the visitor with
+         the fully-styled dark shell, an empty file list, an empty editor and
+         no message at all.
+
+         Its resting content is the "still loading" copy written straight into
+         the markup below, which is the one failure the application itself
+         cannot report: if docs/vendor/visimark-playground.js does not load,
+         nothing runs to replace this, so the static text has to say so. */
+      .boot-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background: #1b1b1b;
+      }
+      .boot-overlay[hidden] {
+        display: none;
+      }
+      .boot-box {
+        max-width: 620px;
+        text-align: left;
+      }
+      .boot-title {
+        margin: 0 0 10px;
+        font-size: 18px;
+        font-weight: 700;
+      }
+      .boot-overlay.failed .boot-title {
+        color: #ff7b72;
+      }
+      .boot-message {
+        margin: 0;
+        color: rgba(244, 244, 244, 0.75);
+        font-size: 14px;
+      }
+      .boot-message + .boot-message {
+        margin-top: 10px;
+      }
+      .boot-detail {
+        margin: 14px 0 0;
+        padding: 10px 12px;
+        max-height: 240px;
+        overflow: auto;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.05);
+        color: rgba(244, 244, 244, 0.85);
+        font-size: 13px;
+        white-space: pre-wrap;
+      }
+      .boot-detail:empty {
+        display: none;
+      }
+
+      /* ---- Below 900px ----------------------------------------------------
+         The playground is a five-panel IDE: FILES, EDITOR and PREVIEW side by
+         side over TERMINAL and DIAGNOSTICS, with SCENARIO alongside. There is
+         no honest way to be that on a phone — at 390px each column is a
+         sliver, and nothing scrolls because `overflow: hidden` above is what
+         makes the panel layout work at all (review §2.2).
+
+         So below 900px the page says so and points at the tutorial, which is
+         ordinary prose and reads fine on a phone. That is a deliberate answer
+         to "what is the playground on a phone", not a `flex-wrap` accident.
+
+         The breakpoint is paired with `matchMedia("(min-width: 900px)")` in
+         src/playground/app/main.ts, which is what stops the application
+         fetching 22 documents for a page nobody can see — and what boots it if
+         a desktop window is dragged back open. Change one and change the
+         other. */
+      .small-screen {
+        display: none;
+      }
+      @media (max-width: 899px) {
+        html,
+        body {
+          /* the interstitial is a normal document and scrolls like one */
+          height: auto;
+          overflow: auto;
+        }
+        .playground,
+        .boot-overlay {
+          display: none;
+        }
+        .small-screen {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          min-height: 100dvh;
+          justify-content: center;
+          /* a 16px gutter, and never under the browser's own chrome */
+          padding: calc(24px + env(safe-area-inset-top)) 16px
+            calc(24px + env(safe-area-inset-bottom));
+        }
+      }
+      .small-screen-brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .small-screen-brand img {
+        width: 32px;
+        height: 32px;
+      }
+      .small-screen-brand h1 {
+        margin: 0;
+        font-size: 20px;
+      }
+      .small-screen h2 {
+        margin: 0;
+        font-size: 18px;
+      }
+      .small-screen p {
+        margin: 0;
+        color: rgba(244, 244, 244, 0.75);
+        font-size: 15px;
+      }
+      .small-screen-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 4px;
+      }
+      .small-screen-links a {
+        padding: 10px 14px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 6px;
+        color: #f4f4f4;
+        font-size: 15px;
+        text-decoration: none;
+      }
+      .small-screen-links a.primary {
+        border-color: #79c0ff;
+        color: #79c0ff;
+      }
+
+      /* ---- prefers-reduced-motion ----------------------------------------
+         Eight transitions and a full-screen confetti burst, none of which a
+         visitor who has asked their OS for less movement should get (review
+         §2.3). The transitions are collapsed rather than removed so that
+         anything keyed to `transitionend` still fires; the confetti is a
+         <canvas> painted by JavaScript and can only be suppressed there — see
+         prefersReducedMotion() in src/playground/app/motion.ts. */
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          transition-duration: 0.01ms !important;
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          scroll-behavior: auto !important;
+        }
+      }
+
+      /* A tab panel is focusable so its scrollable content can be reached and
+         scrolled from the keyboard; the focus ring on the panel itself would
+         otherwise appear on every tab switch, which is noise rather than
+         information. :focus-visible keeps it for keyboard users who tabbed
+         into it deliberately. */
+      .diag-view:focus {
+        outline: none;
+      }
+      .diag-view:focus-visible {
+        outline: 2px solid #79c0ff;
+        outline-offset: -2px;
+      }
+      .diag-tab:focus-visible {
+        outline: 2px solid #79c0ff;
+        outline-offset: -2px;
       }
 
       /* ---- Generic panel chrome ---- */
@@ -280,6 +559,52 @@
       .new-file-btn:hover {
         border-color: #ff453a;
         color: #ff453a;
+      }
+      /* Review §2.7: a document the visitor has changed. The edit survives a
+         reload, so the page has to say which documents are carrying one —
+         otherwise "reset everything" is a button whose effect you only learn
+         by pressing it. A dot rather than a colour change, because .active
+         already owns colour here. */
+      .file-btn.edited::after {
+        content: "•";
+        margin-left: 6px;
+        color: #ffb454;
+        font-weight: 700;
+      }
+      .file-btn.active.edited::after {
+        color: #ffffff;
+      }
+      .reset-all-btn {
+        margin-top: 6px;
+        border: none;
+        border-radius: 6px;
+        background: transparent;
+        color: #8b8b8b;
+        font: inherit;
+        font-size: 0.72rem;
+        padding: 5px 9px;
+        text-align: left;
+        cursor: pointer;
+      }
+      .reset-all-btn:hover {
+        color: #ff453a;
+      }
+      .revert-file-btn {
+        margin-left: auto;
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        border-radius: 5px;
+        background: transparent;
+        color: #ffb454;
+        font: inherit;
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        padding: 2px 8px;
+        cursor: pointer;
+      }
+      .revert-file-btn:hover {
+        border-color: #ffb454;
+        background: rgba(255, 180, 84, 0.12);
       }
 
       /* EDITOR — 35%, black @ 90% opacity */
@@ -742,14 +1067,12 @@
         background: #0c2f4f;
         border-right: 1px solid rgba(255, 255, 255, 0.08);
       }
-      .terminal-panel .panel-body {
-        padding: 10px 12px;
-      }
       .diagnostics {
         flex: 1 1 53%;
         background: #0c2f4f;
       }
-      .diagnostics > .panel-head {
+      .diagnostics > .panel-head,
+      .terminal-panel > .panel-head {
         justify-content: flex-start;
         padding: 0 6px;
         gap: 2px;
@@ -789,8 +1112,7 @@
         overflow: auto;
         padding: 10px 12px;
       }
-      .diag-view pre,
-      .terminal-panel pre {
+      .diag-view pre {
         margin: 0;
         white-space: pre-wrap;
         word-break: break-word;
@@ -938,9 +1260,89 @@
         color: #b9b9b9;
         font-size: 0.72rem;
       }
+
+      /* REFERENCE — alphabetic table of every builtin mapper/aggregate */
+      .reference-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.78rem;
+      }
+      .reference-table th {
+        text-align: left;
+        color: #9fb6c9;
+        font-size: 0.7rem;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        padding: 4px 10px 8px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+      }
+      .reference-table td {
+        vertical-align: top;
+        padding: 10px 10px 10px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        color: #cfe3f0;
+      }
+      .reference-table td.ref-name {
+        white-space: nowrap;
+        font-weight: 700;
+        color: #79c0ff;
+      }
+      .reference-table .ref-kind {
+        font-weight: 700;
+      }
+      .reference-table .ref-line {
+        margin: 3px 0;
+      }
+      .reference-table .ref-errors {
+        margin-top: 4px;
+      }
     </style>
   </head>
   <body>
+    <!-- Shown instead of the playground below 900px — see the .small-screen
+         block in the stylesheet above for why this is an interstitial rather
+         than a stacked layout. -->
+    <main class="small-screen">
+      <div class="small-screen-brand">
+        <img src="visimark.webp" alt="" />
+        <h1>VisiMark</h1>
+      </div>
+      <h2>The playground needs a wider screen</h2>
+      <p>
+        It is a five-panel editor — files, source, preview, terminal and diagnostics, all visible at
+        once — and there is no honest way to be that on a phone. Open this page on a screen at least
+        900 pixels wide and it will load.
+      </p>
+      <p>
+        The tutorial covers the same ground in prose, with every example worked through, and reads
+        fine here.
+      </p>
+      <div class="small-screen-links">
+        <a class="primary" href="tutorial.html">Read the tutorial</a>
+        <a href="index.html">VisiMark home</a>
+        <a href="https://github.com/michal-niedzwiedzki/visimark" rel="noopener">GitHub</a>
+      </div>
+    </main>
+
+    <!-- Shown until the application says otherwise. The copy here is the
+         "the bundle itself never loaded" case: nothing else can report it,
+         because reporting it is the job of the code that failed to arrive. -->
+    <div class="boot-overlay" id="boot-overlay">
+      <div class="boot-box">
+        <p class="boot-title" id="boot-title">Loading the playground…</p>
+        <p class="boot-message" id="boot-message">
+          Fetching the tutorial documents and the VisiMark engine.
+        </p>
+        <p class="boot-message" id="boot-hint">
+          If this message stays put, <code>vendor/visimark-playground.js</code> did not load. The
+          playground has to be served over http(s) — run <code>bun run serve</code> and open
+          <code>http://localhost:8080/playground.html</code> rather than opening this file from
+          disk.
+        </p>
+        <pre class="boot-detail" id="boot-detail"></pre>
+      </div>
+    </div>
     <div class="playground">
       <header class="topbar">
         <div class="topbar-side">
@@ -976,6 +1378,13 @@
               <div class="panel-body">
                 <div id="file-list"></div>
                 <button class="new-file-btn" id="new-file-btn" type="button">+ New</button>
+                <!-- Review §2.7: edits now survive a reload, so there has to
+                     be a way back to the documents this page shipped with.
+                     Files the visitor created are left alone — see
+                     src/playground/app/files.ts. -->
+                <button class="reset-all-btn" id="reset-all-btn" type="button">
+                  Reset all documents
+                </button>
               </div>
             </section>
 
@@ -993,6 +1402,12 @@
                   id="editor-filename"
                   style="font-weight: 400; opacity: 0.7"
                 ></span>
+                <!-- Shown only while the open document differs from the one
+                     this page shipped with (review §2.7), so its presence is
+                     also how the visitor knows an edit is being kept. -->
+                <button class="revert-file-btn" id="revert-file-btn" type="button" hidden>
+                  Revert
+                </button>
               </div>
               <div class="panel-body"><textarea id="editor-ta"></textarea></div>
             </section>
@@ -1013,25 +1428,138 @@
 
           <div class="diagnostic-area">
             <section class="panel terminal-panel">
-              <div class="panel-head">
-                <span
-                  ><svg class="ico" viewBox="0 0 256 256" fill="currentColor">
+              <div class="panel-head" role="tablist" aria-label="Terminal, build and reference">
+                <button
+                  class="diag-tab active"
+                  data-group="term"
+                  data-tab="terminal"
+                  type="button"
+                  role="tab"
+                  id="tab-term-terminal"
+                  aria-controls="panel-term-terminal"
+                  aria-selected="true"
+                  tabindex="0"
+                >
+                  <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
                     <path
                       d="M128,128a8,8,0,0,1-3,6.25l-40,32a8,8,0,1,1-10-12.5L107.19,128,75,102.25a8,8,0,1,1,10-12.5l40,32A8,8,0,0,1,128,128Zm48,24H136a8,8,0,0,0,0,16h40a8,8,0,0,0,0-16Zm56-96V200a16,16,0,0,1-16,16H40a16,16,0,0,1-16-16V56A16,16,0,0,1,40,40H216A16,16,0,0,1,232,56ZM216,200V56H40V200H216Z"
                     /></svg
-                  >Terminal</span
+                  >Terminal
+                </button>
+                <button
+                  class="diag-tab"
+                  data-group="term"
+                  data-tab="build"
+                  type="button"
+                  role="tab"
+                  id="tab-term-build"
+                  aria-controls="panel-term-build"
+                  aria-selected="false"
+                  tabindex="-1"
                 >
+                  <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
+                    <path
+                      d="M251.34,112,183.88,44.08a96.1,96.1,0,0,0-135.77,0l-.09.09L34.25,58.4A8,8,0,0,0,45.74,69.53L59.47,55.35a79.92,79.92,0,0,1,18.71-13.9L124.68,88l-96,96a16,16,0,0,0,0,22.63l20.69,20.69a16,16,0,0,0,22.63,0l96-96,14.34,14.34h0L200,163.3a16,16,0,0,0,22.63,0l28.69-28.69A16,16,0,0,0,251.34,112ZM60.68,216,40,195.31l68-68L128.68,148ZM162.34,114.32,140,136.67,119.31,116l22.35-22.35a8,8,0,0,0,0-11.32L94.32,35a80,80,0,0,1,78.23,20.41l44.22,44.51L188,128.66l-14.34-14.34A8,8,0,0,0,162.34,114.32Zm49,37.66-12-12L228,111.25l12,12Z"
+                    /></svg
+                  >Build
+                </button>
+                <button
+                  class="diag-tab"
+                  data-group="term"
+                  data-tab="reference"
+                  type="button"
+                  role="tab"
+                  id="tab-term-reference"
+                  aria-controls="panel-term-reference"
+                  aria-selected="false"
+                  tabindex="-1"
+                >
+                  <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
+                    <path
+                      d="M224,48H72A32,32,0,0,0,40,80V224a8,8,0,0,0,8,8H192a8,8,0,0,0,0-16H56a16,16,0,0,1,16-16H224a8,8,0,0,0,8-8V56A8,8,0,0,0,224,48Zm-8,136H72a31.82,31.82,0,0,0-16,4.29V80A16,16,0,0,1,72,64H216Z"
+                    /></svg
+                  >Reference
+                </button>
               </div>
-              <div class="panel-body"><pre id="terminal-body"></pre></div>
+
+              <div
+                class="diag-view active"
+                data-group="term"
+                data-view="terminal"
+                role="tabpanel"
+                id="panel-term-terminal"
+                aria-labelledby="tab-term-terminal"
+                tabindex="0"
+              >
+                <div class="diag-scroll"><pre id="terminal-body"></pre></div>
+              </div>
+
+              <div
+                class="diag-view"
+                data-group="term"
+                data-view="build"
+                role="tabpanel"
+                id="panel-term-build"
+                aria-labelledby="tab-term-build"
+                tabindex="0"
+              >
+                <div class="diag-scroll">
+                  <div id="build-body">
+                    Run a check across every file in FILES — the same
+                    <span class="mono">visimark check</span> a CI pipeline would run on the whole
+                    repository.
+                  </div>
+                </div>
+                <div class="action-bar">
+                  <span class="flag pending" id="build-flag"></span>
+                  <span id="build-label">BUILD NOT RUN</span>
+                  <span class="meta" id="build-meta"></span>
+                  <span class="action-status" id="build-status"></span>
+                  <button class="action-btn" id="build-btn" type="button">
+                    <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
+                      <path
+                        d="M251.34,112,183.88,44.08a96.1,96.1,0,0,0-135.77,0l-.09.09L34.25,58.4A8,8,0,0,0,45.74,69.53L59.47,55.35a79.92,79.92,0,0,1,18.71-13.9L124.68,88l-96,96a16,16,0,0,0,0,22.63l20.69,20.69a16,16,0,0,0,22.63,0l96-96,14.34,14.34h0L200,163.3a16,16,0,0,0,22.63,0l28.69-28.69A16,16,0,0,0,251.34,112ZM60.68,216,40,195.31l68-68L128.68,148ZM162.34,114.32,140,136.67,119.31,116l22.35-22.35a8,8,0,0,0,0-11.32L94.32,35a80,80,0,0,1,78.23,20.41l44.22,44.51L188,128.66l-14.34-14.34A8,8,0,0,0,162.34,114.32Zm49,37.66-12-12L228,111.25l12,12Z"
+                      /></svg
+                    >Run Build
+                  </button>
+                </div>
+              </div>
+
+              <div
+                class="diag-view"
+                data-group="term"
+                data-view="reference"
+                role="tabpanel"
+                id="panel-term-reference"
+                aria-labelledby="tab-term-reference"
+                tabindex="0"
+              >
+                <div class="diag-scroll">
+                  <table class="reference-table">
+                    <thead>
+                      <tr>
+                        <th>Function</th>
+                        <th>Description</th>
+                      </tr>
+                    </thead>
+                    <tbody id="reference-body"></tbody>
+                  </table>
+                </div>
+              </div>
             </section>
 
             <section class="panel diagnostics">
-              <div class="panel-head">
+              <div class="panel-head" role="tablist" aria-label="Document diagnostics">
                 <button
                   class="diag-tab active"
                   data-group="diag"
                   data-tab="reasoning"
                   type="button"
+                  role="tab"
+                  id="tab-diag-reasoning"
+                  aria-controls="panel-diag-reasoning"
+                  aria-selected="true"
+                  tabindex="0"
                 >
                   <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
                     <path
@@ -1039,30 +1567,51 @@
                     /></svg
                   >Reasoning
                 </button>
-                <button class="diag-tab" data-group="diag" data-tab="knowledge" type="button">
+                <button
+                  class="diag-tab"
+                  data-group="diag"
+                  data-tab="knowledge"
+                  type="button"
+                  role="tab"
+                  id="tab-diag-knowledge"
+                  aria-controls="panel-diag-knowledge"
+                  aria-selected="false"
+                  tabindex="-1"
+                >
                   <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
                     <path
                       d="M232,48H160a40,40,0,0,0-32,16A40,40,0,0,0,96,48H24a8,8,0,0,0-8,8V200a8,8,0,0,0,8,8H96a24,24,0,0,1,24,24,8,8,0,0,0,16,0,24,24,0,0,1,24-24h72a8,8,0,0,0,8-8V56A8,8,0,0,0,232,48ZM96,192H32V64H96a24,24,0,0,1,24,24V200A39.81,39.81,0,0,0,96,192Zm128,0H160a39.81,39.81,0,0,0-24,8V88a24,24,0,0,1,24-24h64ZM160,88h40a8,8,0,0,1,0,16H160a8,8,0,0,1,0-16Zm48,40a8,8,0,0,1-8,8H160a8,8,0,0,1,0-16h40A8,8,0,0,1,208,128Zm0,32a8,8,0,0,1-8,8H160a8,8,0,0,1,0-16h40A8,8,0,0,1,208,160Z"
                     /></svg
                   >Knowledge
                 </button>
-                <button class="diag-tab" data-group="diag" data-tab="infer" type="button">
+                <button
+                  class="diag-tab"
+                  data-group="diag"
+                  data-tab="infer"
+                  type="button"
+                  role="tab"
+                  id="tab-diag-infer"
+                  aria-controls="panel-diag-infer"
+                  aria-selected="false"
+                  tabindex="-1"
+                >
                   <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
                     <path
                       d="M174.63,81.37a80,80,0,1,0-93.26,93.26,80,80,0,1,0,93.26-93.26ZM224,160c0,1.52-.07,3-.18,4.51l-50-50A80,80,0,0,0,176,98,64.11,64.11,0,0,1,224,160Zm-13.47,39.21L157.91,146.6a80.5,80.5,0,0,0,9.93-15.44L219.7,183A64,64,0,0,1,210.53,199.21ZM183,219.7l-51.86-51.86a80.5,80.5,0,0,0,15.44-9.93l52.61,52.62A64,64,0,0,1,183,219.7ZM45.47,56.79,98.09,109.4a80.5,80.5,0,0,0-9.93,15.44L36.3,73A64,64,0,0,1,45.47,56.79ZM73,36.3l51.86,51.86a80.5,80.5,0,0,0-15.44,9.93L56.79,45.47A64,64,0,0,1,73,36.3ZM160,96a64.07,64.07,0,0,1-64,64A64.07,64.07,0,0,1,160,96Zm-2-16a80,80,0,0,0-16.49,2.13l-50-50C93,32.07,94.48,32,96,32A64.11,64.11,0,0,1,158,80.05ZM32,96c0-1.52.07-3,.18-4.51l50,50A80,80,0,0,0,80.05,158,64.11,64.11,0,0,1,32,96ZM98,176a80,80,0,0,0,16.49-2.13l50,50c-1.49.11-3,.18-4.51.18A64.11,64.11,0,0,1,98,176Z"
                     /></svg
                   >Inference
                 </button>
-                <button class="diag-tab" data-group="diag" data-tab="build" type="button">
-                  <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
-                    <path
-                      d="M251.34,112,183.88,44.08a96.1,96.1,0,0,0-135.77,0l-.09.09L34.25,58.4A8,8,0,0,0,45.74,69.53L59.47,55.35a79.92,79.92,0,0,1,18.71-13.9L124.68,88l-96,96a16,16,0,0,0,0,22.63l20.69,20.69a16,16,0,0,0,22.63,0l96-96,14.34,14.34h0L200,163.3a16,16,0,0,0,22.63,0l28.69-28.69A16,16,0,0,0,251.34,112ZM60.68,216,40,195.31l68-68L128.68,148ZM162.34,114.32,140,136.67,119.31,116l22.35-22.35a8,8,0,0,0,0-11.32L94.32,35a80,80,0,0,1,78.23,20.41l44.22,44.51L188,128.66l-14.34-14.34A8,8,0,0,0,162.34,114.32Zm49,37.66-12-12L228,111.25l12,12Z"
-                    /></svg
-                  >Build
-                </button>
               </div>
 
-              <div class="diag-view active" data-group="diag" data-view="reasoning">
+              <div
+                class="diag-view active"
+                data-group="diag"
+                data-view="reasoning"
+                role="tabpanel"
+                id="panel-diag-reasoning"
+                aria-labelledby="tab-diag-reasoning"
+                tabindex="0"
+              >
                 <div class="diag-scroll"><pre id="reasoning-body"></pre></div>
                 <div class="action-bar">
                   <span class="action-status" id="reasoning-status"></span>
@@ -1076,7 +1625,15 @@
                 </div>
               </div>
 
-              <div class="diag-view" data-group="diag" data-view="knowledge">
+              <div
+                class="diag-view"
+                data-group="diag"
+                data-view="knowledge"
+                role="tabpanel"
+                id="panel-diag-knowledge"
+                aria-labelledby="tab-diag-knowledge"
+                tabindex="0"
+              >
                 <div class="diag-scroll"><pre id="knowledge-body"></pre></div>
                 <div class="action-bar">
                   <span class="action-status" id="knowledge-status"></span>
@@ -1110,7 +1667,15 @@
                 </div>
               </div>
 
-              <div class="diag-view" data-group="diag" data-view="infer">
+              <div
+                class="diag-view"
+                data-group="diag"
+                data-view="infer"
+                role="tabpanel"
+                id="panel-diag-infer"
+                aria-labelledby="tab-diag-infer"
+                tabindex="0"
+              >
                 <div class="diag-scroll">
                   <pre id="infer-body">
 Click Infer only to see what VisiMark would propose for this
@@ -1140,29 +1705,6 @@ applies those proposals to the document.</pre>
                         d="M240,136v64a16,16,0,0,1-16,16H32a16,16,0,0,1-16-16V136a16,16,0,0,1,16-16H72a8,8,0,0,1,0,16H32v64H224V136H184a8,8,0,0,1,0-16h40A16,16,0,0,1,240,136Zm-117.66-2.34a8,8,0,0,0,11.32,0l48-48a8,8,0,0,0-11.32-11.32L136,108.69V24a8,8,0,0,0-16,0v84.69L85.66,74.34A8,8,0,0,0,74.34,85.66ZM200,168a12,12,0,1,0-12,12A12,12,0,0,0,200,168Z"
                       /></svg
                     >Infer and write
-                  </button>
-                </div>
-              </div>
-
-              <div class="diag-view" data-group="diag" data-view="build">
-                <div class="diag-scroll">
-                  <div id="build-body">
-                    Run a check across every file in FILES — the same
-                    <span class="mono">visimark check</span> a CI pipeline would run on the whole
-                    repository.
-                  </div>
-                </div>
-                <div class="action-bar">
-                  <span class="flag pending" id="build-flag"></span>
-                  <span id="build-label">BUILD NOT RUN</span>
-                  <span class="meta" id="build-meta"></span>
-                  <span class="action-status" id="build-status"></span>
-                  <button class="action-btn" id="build-btn" type="button">
-                    <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
-                      <path
-                        d="M251.34,112,183.88,44.08a96.1,96.1,0,0,0-135.77,0l-.09.09L34.25,58.4A8,8,0,0,0,45.74,69.53L59.47,55.35a79.92,79.92,0,0,1,18.71-13.9L124.68,88l-96,96a16,16,0,0,0,0,22.63l20.69,20.69a16,16,0,0,0,22.63,0l96-96,14.34,14.34h0L200,163.3a16,16,0,0,0,22.63,0l28.69-28.69A16,16,0,0,0,251.34,112ZM60.68,216,40,195.31l68-68L128.68,148ZM162.34,114.32,140,136.67,119.31,116l22.35-22.35a8,8,0,0,0,0-11.32L94.32,35a80,80,0,0,1,78.23,20.41l44.22,44.51L188,128.66l-14.34-14.34A8,8,0,0,0,162.34,114.32Zm49,37.66-12-12L228,111.25l12,12Z"
-                      /></svg
-                    >Run Build
                   </button>
                 </div>
               </div>
@@ -1262,1467 +1804,26 @@ applies those proposals to the document.</pre>
       referrerpolicy="no-referrer"
     ></script>
 
-    <!-- A classic script, not a module: visimark-browser.js assigns a plain
-         global instead of `export`ing, so it works as a plain <script src> tag
-         with no bundler. Nothing this page needs is baked into a vendor file
-         any more — the starter documents and the logo are all siblings of this
-         page (see FILE_SOURCES below) and are fetched at runtime, which means
-         playground.html must be served over http(s) (e.g. `bun scripts/serve.mjs`
-         or GitHub Pages) rather than opened directly via file://, since
-         `fetch()` of local files is blocked by CORS there. -->
+    <!-- Two classic scripts, not modules: both bundles assign/read a plain
+         global instead of `export`ing, so they work as plain <script src> tags
+         with no bundler. The order matters — visimark-playground.js reads
+         `window.VisiMark` at boot, which visimark-browser.js assigns.
+
+         visimark-browser.js is the engine (packages/visimark/src/playground/
+         browser-entry.ts). visimark-playground.js is this page's application
+         (packages/visimark/src/playground/app/), which lived here as 1,535
+         lines of inline <script> until review §2.4: inline, no linter,
+         typechecker, formatter or test in the repository could see it. Both
+         are committed build artifacts produced by
+         `bun run --filter visimark build:playground`, and the `playground-bundle`
+         CI job fails on either drifting from its source.
+
+         The starter documents and the logo are siblings of this page (see
+         FILE_SOURCES in src/playground/app/sources.ts) and are fetched at
+         runtime, which means playground.html must be served over http(s)
+         (e.g. `bun run serve` or GitHub Pages) rather than opened directly via
+         file://, since `fetch()` of local files is blocked by CORS there. -->
     <script src="./vendor/visimark-browser.js"></script>
-    <script>
-      (async function () {
-        var VM = window.VisiMark;
-
-        // ---- in-memory file store -------------------------------------------------
-        // Fetched fresh from this page's own directory on every load — docs/
-        // and the playground are now the same tree, so there's nothing to bake
-        // or keep in sync by hand.
-        // The numbered chapters are a tutorial track, one concept per file —
-        // their SCENARIO-panel body/quest comes from scenarios.json below.
-        var TUTORIAL_CHAPTERS = [
-          "01-tables.md",
-          "02-inference.md",
-          "03-sheets.md",
-          "04-anchors.md",
-          "05-mappers.md",
-          "06-aggregates.md",
-          "07-reasoning.md",
-          "08-knowledge.md",
-          "09-units.md",
-          "10-assertions.md",
-          "11-build-automation.md",
-          "12-charts.md",
-          "13-imports.md",
-        ];
-        // Data files a chapter imports, rather than chapters themselves — no
-        // badge, no scenario quest, but fetched into the same store so the
-        // engine can actually read them (see PLAYGROUND FILESYSTEM below).
-        // 13-imports.md declares `from 13-imports.csv ... at sha256:...`; with
-        // the CSV absent the sheet has no table and every imported column
-        // reads UNDEF, which is the spurious failure review §4.3 fixes.
-        var TUTORIAL_DATA = ["13-imports.csv"];
-        var FILE_SOURCES = { "demo.md": "playground/demo.md" };
-        TUTORIAL_CHAPTERS.concat(TUTORIAL_DATA).forEach(function (name) {
-          FILE_SOURCES[name] = "playground/tutorial/" + name;
-        });
-        Object.assign(FILE_SOURCES, {
-          "example-invoice.md": "example-invoice.md",
-          "example-invoice-drift.md": "example-invoice-drift.md",
-          "example-quote-plain.md": "example-quote-plain.md",
-          "example-charts.md": "example-charts.md",
-          "example-executable-documentation.md": "example-executable-documentation.md",
-        });
-        async function loadFiles() {
-          var names = Object.keys(FILE_SOURCES);
-          var texts = await Promise.all(
-            names.map(async function (name) {
-              var res = await fetch(FILE_SOURCES[name]);
-              if (!res.ok) throw new Error(FILE_SOURCES[name] + ": HTTP " + res.status);
-              return res.text();
-            }),
-          );
-          var files = {};
-          names.forEach(function (name, i) {
-            files[name] = texts[i];
-          });
-          return files;
-        }
-        var FILES = await loadFiles();
-        var order = Object.keys(FILES);
-        var contents = Object.assign({}, FILES);
-        // Lets a link point straight at a specific file (e.g. a tutorial
-        // chapter) — falls back to demo.md when the param is absent or
-        // names a file that doesn't exist in FILES.
-        var requestedFile = new URLSearchParams(window.location.search).get("file");
-        var current = Object.prototype.hasOwnProperty.call(FILES, requestedFile)
-          ? requestedFile
-          : "demo.md";
-
-        // ---- scenario data -----------------------------------------------------
-        // Declarative — see normalizeStep() below for the schema and check-name
-        // vocabulary. One file, keyed by filename: playground/scenarios.json,
-        // covering both the numbered tutorial chapters and the showcase
-        // examples.
-        async function loadScenarios() {
-          var res = await fetch("playground/scenarios.json");
-          if (!res.ok) throw new Error("playground/scenarios.json: HTTP " + res.status);
-          var data = await res.json();
-          var scenarios = {};
-          Object.keys(data).forEach(function (name) {
-            if (name !== "//") scenarios[name] = data[name];
-          });
-          return scenarios;
-        }
-        var SCENARIOS = await loadScenarios();
-
-        // ---- CodeMirror editor ------------------------------------------------
-        var cm = CodeMirror.fromTextArea(document.getElementById("editor-ta"), {
-          mode: "gfm",
-          lineNumbers: true,
-          lineWrapping: true,
-          viewportMargin: Infinity,
-          theme: "default",
-        });
-        cm.setValue(contents[current]);
-
-        // ---- the playground filesystem ---------------------------------------
-        // VisiMark's three filesystem-touching phases (the path gate, artifact
-        // staleness, CSV imports) take an injected ReaderPort rather than
-        // importing node:fs — see packages/visimark/src/fs/reader.ts and
-        // docs/design/browser-fs-port-plan.md. This is the browser's
-        // implementation of that port, over the in-memory store above, so
-        // 13-imports.md's declared CSV import resolves for real here:
-        // the header is asserted, the SHA-256 stamp is verified against a
-        // digest computed from the bytes the store is holding *right now*
-        // (VM.sha256Hex, a synchronous SHA-256 — crypto.subtle is async and
-        // the port is not), and grand_total = SUM(Total) actually runs.
-        //
-        // READER_FS maps a synthetic absolute path to a file in the store.
-        // The paths are absolute and share one directory because that is what
-        // fs/gate.ts's containment rules are written against: it resolves the
-        // import against dirname(document path) and refuses anything that
-        // escapes it.
-        //
-        // **Only the files listed here get a reader, and that is deliberate.**
-        // A document handed a ReaderPort also gets its chart artifacts checked
-        // against the filesystem — and this store has no SVGs in it, because
-        // the playground never writes any (`fmt --write` does not run here).
-        // So handing 12-charts.md a reader would replace the `skipped` chart it
-        // correctly reports today with `artifact missing at ...`: a second
-        // spurious failure, in the chapter review §4.3 names as the reference
-        // behaviour. A file the store cannot fully serve is better off with no
-        // reader at all, which is precisely the `doc === undefined` case the
-        // engine already handles by staying quiet.
-        var READER_FS = {
-          "/tutorial/13-imports.md": "13-imports.md",
-          "/tutorial/13-imports.csv": "13-imports.csv",
-        };
-        // The file being edited lives in the CodeMirror buffer, not in
-        // `contents` — it is only flushed back on a file switch. The reader
-        // has to see the buffer, or editing 13-imports.csv would never move
-        // the digest and the STALE demonstration would be fake.
-        function fileText(name) {
-          if (name === current) return cm.getValue();
-          return contents[name];
-        }
-        var playgroundReader = VM.memoryReader(function (path) {
-          var name = READER_FS[path];
-          return name === undefined ? null : fileText(name);
-        });
-        /** The `doc` option for a file the store can serve, else undefined. */
-        function docFor(name) {
-          for (var path in READER_FS) {
-            if (READER_FS[path] === name) return { path: path, reader: playgroundReader };
-          }
-          return undefined;
-        }
-        /** `{ doc }` for VM.check/VM.fmt/pgEval — `{}` when there is no reader. */
-        function optsFor(name) {
-          var doc = docFor(name);
-          return doc ? { doc: doc } : {};
-        }
-
-        // ---- terminal ------------------------------------------------------------
-        var termEl = document.getElementById("terminal-body");
-        function term(line, cls) {
-          var span = document.createElement("span");
-          if (cls) span.className = cls;
-          span.textContent = line + "\n";
-          termEl.appendChild(span);
-          var body = termEl.parentElement;
-          body.scrollTop = body.scrollHeight;
-        }
-        function termCmd(text) {
-          term("$ " + text, "cmd");
-        }
-        var TERM_MAX_LINES = 400;
-        function trimTerminal() {
-          while (termEl.childNodes.length > TERM_MAX_LINES) termEl.removeChild(termEl.firstChild);
-        }
-
-        // ---- files panel -----------------------------------------------------
-        var fileListEl = document.getElementById("file-list");
-        function renderFileList() {
-          fileListEl.innerHTML = "";
-          order.forEach(function (name) {
-            var b = document.createElement("button");
-            b.className = "file-btn" + (name === current ? " active" : "");
-            b.type = "button";
-            b.textContent = name;
-            b.addEventListener("click", function () {
-              selectFile(name);
-            });
-            fileListEl.appendChild(b);
-          });
-        }
-
-        function selectFile(name) {
-          if (name === current) return;
-          contents[current] = cm.getValue();
-          current = name;
-          cm.setValue(contents[name]);
-          document.getElementById("editor-filename").textContent = current;
-          renderFileList();
-          inferEl.textContent = INFER_PLACEHOLDER;
-          renderScenario(current);
-          selectTab("diag", "reasoning");
-          runFmt();
-          refreshDerived();
-          trimTerminal();
-        }
-
-        document.getElementById("new-file-btn").addEventListener("click", function () {
-          var name = window.prompt("New file name", "untitled.md");
-          if (!name) return;
-          name = name.trim();
-          if (!name) return;
-          if (!/\.md$/i.test(name)) name += ".md";
-          if (Object.prototype.hasOwnProperty.call(contents, name)) {
-            window.alert(name + " already exists.");
-            return;
-          }
-          contents[current] = cm.getValue();
-          contents[name] = "# Untitled\n\nWrite your VisiMark document here.\n";
-          order.push(name);
-          current = name;
-          cm.setValue(contents[name]);
-          document.getElementById("editor-filename").textContent = current;
-          renderFileList();
-          inferEl.textContent = INFER_PLACEHOLDER;
-          renderScenario(current);
-          selectTab("diag", "reasoning");
-          runFmt();
-          refreshDerived();
-        });
-
-        // ---- pipeline: fmt -> terminal, eval/explain -> knowledge/reasoning ----
-        var knowledgeEl = document.getElementById("knowledge-body");
-        var reasoningEl = document.getElementById("reasoning-body");
-        var inferEl = document.getElementById("infer-body");
-        var previewEl = document.getElementById("preview-body");
-        var flagEl = document.getElementById("build-flag");
-        var labelEl = document.getElementById("build-label");
-        var metaEl = document.getElementById("build-meta");
-        var INFER_PLACEHOLDER = inferEl.textContent;
-
-        // ---- Scenario: what to look at, per file --------------------------------
-        // The panel whose job is pointing at the other panels — each file here
-        // demonstrates something different, and a first-time viewer has no way
-        // to know that from raw JSON/terminal output alone. Below the framing
-        // paragraph, a short quest checklist turns that guidance into
-        // something to actually do — each step is detected for real (a tab
-        // click, an Infer/Build run, or a genuine change in what `eval`
-        // reports), not just marked done on a timer.
-        var scenarioBodyEl = document.getElementById("scenario-body");
-        var scenarioPanelEl = document.getElementById("scenario-panel");
-
-        // ---- quest step schema --------------------------------------------
-        // Scenario data (playground/scenarios.json, fetched above) is plain
-        // JSON: no functions, so no scenario can carry code. A quest is a list
-        // of step descriptors with a "kind":
-        //   "tab"    { group, tab }        — done when that diag tab is opened
-        //   "action" { action }            — done when questSignal(action) fires
-        //                                     (an Infer/Build run — see the
-        //                                     questSignal call sites below)
-        //   "eval"   { check }             — re-checked every time
-        //                                     refreshDerived() computes a fresh
-        //                                     pgEval() result, against the
-        //                                     snapshot taken when the file was
-        //                                     loaded (questState.baselineEvalJson).
-        //                                     `check` names a predicate in
-        //                                     CHECKS below — the fixed,
-        //                                     reviewed vocabulary scenario data
-        //                                     is allowed to reach for. One
-        //                                     check, "column-added", also
-        //                                     reads a sibling `column` field
-        //                                     — the column name to watch for
-        //                                     (pgEval keys cells "sheetId.
-        //                                     columnName", so this matches
-        //                                     either the bare name or that
-        //                                     suffix) — since "did column X
-        //                                     appear" can't be a fixed
-        //                                     predicate with no name to check.
-        //   "text"   { contains }          — done as soon as the current
-        //                                     document text contains this
-        //                                     exact substring (e.g. a value
-        //                                     the visitor is asked to type
-        //                                     in by hand, with no formula to
-        //                                     do it for them).
-        //   "manual" {}                    — nothing to detect; the visitor
-        //                                     ticks it themselves by clicking it.
-        // Every kind may set an explicit "id" (stable across re-renders); it
-        // defaults to a value derived from the step's position and kind.
-        //
-        // A step is never completed by clicking it — only "manual" steps can
-        // be, since nothing else can complete them — but any completed step
-        // can be clicked to reset it, so a visitor can repeat the action and
-        // watch it get detected again rather than being stuck with it checked
-        // off forever. See startQuest()'s click handler.
-        //
-        // Every CHECKS predicate takes the same ctx: { evalResult, baselineJson,
-        // hasStale, baselineHasStale, sourceChanged } — see questCheckEval.
-        function evalChanged(ctx) {
-          return JSON.stringify(ctx.evalResult) !== ctx.baselineJson;
-        }
-        // For a document with no vmark rules (a plain table, e.g. 01-tables.md)
-        // pgEval's result never changes no matter what you type — there's no
-        // formula for it to recompute. "value-changed" is blind to that case;
-        // this checks the raw source text directly instead.
-        function sourceChanged(ctx) {
-          return ctx.sourceChanged;
-        }
-        function chartsPresent(ctx) {
-          return (ctx.evalResult.charts || []).some(function (c) {
-            return !!c.svg;
-          });
-        }
-        function chartsRegenerated(ctx) {
-          return chartsPresent(ctx) && evalChanged(ctx);
-        }
-        // `pgEval`'s computed values are always fresh — a STALE cell is a
-        // mismatch between a formula's result and the literal text already
-        // sitting in the document, which eval never exposes. Detecting "the
-        // drift got fixed" needs check()'s findings directly, not eval's.
-        function staleFixed(ctx) {
-          return ctx.baselineHasStale && !ctx.hasStale;
-        }
-        function assertionsFailing(ctx) {
-          return (ctx.evalResult.assertions || []).some(function (a) {
-            return a.holds === false;
-          });
-        }
-        function assertionsPassing(ctx) {
-          var list = ctx.evalResult.assertions || [];
-          return (
-            list.length > 0 &&
-            list.every(function (a) {
-              return a.holds === true;
-            })
-          );
-        }
-        // pgEval flattens each sheet's columns/scalars into top-level keys
-        // named "sheetId.columnName" (see VisiMark.pgEval) — a bare `column`
-        // name is matched against either the whole key or that suffix, so
-        // scenario data doesn't need to know the sheet id.
-        function hasColumn(evalResult, column) {
-          var suffix = "." + column;
-          return Object.keys(evalResult).some(function (key) {
-            return key === column || key.slice(-suffix.length) === suffix;
-          });
-        }
-        function columnAdded(ctx, column) {
-          var baseline = JSON.parse(ctx.baselineJson);
-          return !hasColumn(baseline, column) && hasColumn(ctx.evalResult, column);
-        }
-        var CHECKS = {
-          "value-changed": evalChanged,
-          "source-changed": sourceChanged,
-          "charts-regenerated": chartsRegenerated,
-          "stale-fixed": staleFixed,
-          "assertion-failing": assertionsFailing,
-          "assertion-passing": assertionsPassing,
-          "column-added": columnAdded,
-        };
-
-        /** Turns one JSON step descriptor into the internal step shape the
-         *  quest engine below runs on. */
-        function normalizeStep(raw, index) {
-          if (raw.kind === "tab") {
-            var tabAction = "tab:" + raw.group + ":" + raw.tab;
-            return { id: raw.id || tabAction, text: raw.text, action: tabAction };
-          }
-          if (raw.kind === "action") {
-            return { id: raw.id || raw.action, text: raw.text, action: raw.action };
-          }
-          if (raw.kind === "eval") {
-            var check = CHECKS[raw.check];
-            if (!check) throw new Error('scenarios.json: unknown check "' + raw.check + '"');
-            var evalCheck =
-              raw.check === "column-added"
-                ? function (ctx) {
-                    return check(ctx, raw.column);
-                  }
-                : check;
-            return { id: raw.id || "eval:" + index, text: raw.text, evalCheck: evalCheck };
-          }
-          if (raw.kind === "text") {
-            return { id: raw.id || "text:" + index, text: raw.text, textContains: raw.contains };
-          }
-          if (raw.kind === "manual") {
-            return { id: raw.id || "manual:" + index, text: raw.text, manual: true };
-          }
-          throw new Error('scenarios.json: unknown step kind "' + raw.kind + '"');
-        }
-        function normalizeQuest(quest) {
-          return (quest || []).map(normalizeStep);
-        }
-
-        // ---- badges ------------------------------------------------------------
-        // One badge per tutorial chapter, awarded the moment every quest step
-        // for that chapter is checked off. Name, icon key and (first-person,
-        // share-ready) skill text live in scenarios.json's per-chapter
-        // "badge" field — this dict only supplies the artwork an icon key
-        // points at. Earned badges persist in localStorage, so revisiting a
-        // chapter in a later session still shows the badge it already
-        // unlocked. Icons are inline Phosphor Icons (phosphoricons.com, MIT)
-        // — "propeller hat", "pillow" and "hacksaw" have no Phosphor
-        // equivalent, so those three badges use the closest available icon
-        // (beanie / bed / wrench) instead.
-        var BADGE_ICONS = {
-          beanie:
-            '<svg viewBox="0 0 256 256" fill="currentColor"><path d="M224,162.16V144a96.18,96.18,0,0,0-72.34-93,28,28,0,1,0-47.32,0A96.18,96.18,0,0,0,32,144v18.16A16,16,0,0,0,24,176v32a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V176A16,16,0,0,0,224,162.16ZM116,36a12,12,0,1,1,12,12A12,12,0,0,1,116,36Zm12,28a80.09,80.09,0,0,1,80,80v16H48V144A80.09,80.09,0,0,1,128,64Zm-8,112v32H80V176Zm16,0h40v32H136Zm-96,0H64v32H40Zm176,32H192V176h24v32Z"/></svg>',
-          plugs:
-            '<svg viewBox="0 0 256 256" fill="currentColor"><path d="M237.66,18.34a8,8,0,0,0-11.32,0l-52.4,52.41-5.37-5.38a32.05,32.05,0,0,0-45.26,0L100,88.69l-6.34-6.35A8,8,0,0,0,82.34,93.66L88.69,100,65.37,123.31a32,32,0,0,0,0,45.26l5.38,5.37-52.41,52.4a8,8,0,0,0,11.32,11.32l52.4-52.41,5.37,5.38a32,32,0,0,0,45.26,0L156,167.31l6.34,6.35a8,8,0,0,0,11.32-11.32L167.31,156l23.32-23.31a32,32,0,0,0,0-45.26l-5.38-5.37,52.41-52.4A8,8,0,0,0,237.66,18.34Zm-116.29,161a16,16,0,0,1-22.62,0L76.69,157.25a16,16,0,0,1,0-22.62L100,111.31,144.69,156Zm57.94-57.94L156,144.69,111.31,100l23.32-23.31a16,16,0,0,1,22.62,0l22.06,22A16,16,0,0,1,179.31,121.37ZM88.57,35A8,8,0,0,1,103.43,29l8,20A8,8,0,0,1,96.57,55ZM24.57,93A8,8,0,0,1,35,88.57l20,8A8,8,0,0,1,49,111.43l-20-8A8,8,0,0,1,24.57,93ZM231.43,163a8,8,0,0,1-10.4,4.46l-20-8A8,8,0,1,1,207,144.57l20,8A8,8,0,0,1,231.43,163Zm-64,58.06A8,8,0,0,1,152.57,227l-8-20A8,8,0,0,1,159.43,201Z"/></svg>',
-          bed: '<svg viewBox="0 0 256 256" fill="currentColor"><path d="M216,72H32V48a8,8,0,0,0-16,0V208a8,8,0,0,0,16,0V176H240v32a8,8,0,0,0,16,0V112A40,40,0,0,0,216,72ZM32,88h72v72H32Zm88,72V88h96a24,24,0,0,1,24,24v48Z"/></svg>',
-          anchor:
-            '<svg viewBox="0 0 256 256" fill="currentColor"><path d="M216,136a8,8,0,0,0-8,8c0,24.69-13.77,29.64-38.1,36.28-11.36,3.1-24.12,6.6-33.9,14.34V128h32a8,8,0,0,0,0-16H136V87a32,32,0,1,0-16,0v25H88a8,8,0,0,0,0,16h32v66.62c-9.78-7.74-22.54-11.24-33.9-14.34C61.77,173.64,48,168.69,48,144a8,8,0,0,0-16,0c0,38.11,27.67,45.66,49.9,51.72C106.23,202.36,120,207.31,120,232a8,8,0,0,0,16,0c0-24.69,13.77-29.64,38.1-36.28C196.33,189.66,224,182.11,224,144A8,8,0,0,0,216,136ZM112,56a16,16,0,1,1,16,16A16,16,0,0,1,112,56Z"/></svg>',
-          wrench:
-            '<svg viewBox="0 0 256 256" fill="currentColor"><path d="M226.76,69a8,8,0,0,0-12.84-2.88l-40.3,37.19-17.23-3.7-3.7-17.23,37.19-40.3A8,8,0,0,0,187,29.24,72,72,0,0,0,88,96,72.34,72.34,0,0,0,94,124.94L33.79,177c-.15.12-.29.26-.43.39a32,32,0,0,0,45.26,45.26c.13-.13.27-.28.39-.42L131.06,162A72,72,0,0,0,232,96,71.56,71.56,0,0,0,226.76,69ZM160,152a56.14,56.14,0,0,1-27.07-7,8,8,0,0,0-9.92,1.77L67.11,211.51a16,16,0,0,1-22.62-22.62L109.18,133a8,8,0,0,0,1.77-9.93,56,56,0,0,1,58.36-82.31l-31.2,33.81a8,8,0,0,0-1.94,7.1L141.83,108a8,8,0,0,0,6.14,6.14l26.35,5.66a8,8,0,0,0,7.1-1.94l33.81-31.2A56.06,56.06,0,0,1,160,152Z"/></svg>',
-          hammer:
-            '<svg viewBox="0 0 256 256" fill="currentColor"><path d="M251.34,112,183.88,44.08a96.1,96.1,0,0,0-135.77,0l-.09.09L34.25,58.4A8,8,0,0,0,45.74,69.53L59.47,55.35a79.92,79.92,0,0,1,18.71-13.9L124.68,88l-96,96a16,16,0,0,0,0,22.63l20.69,20.69a16,16,0,0,0,22.63,0l96-96,14.34,14.34h0L200,163.3a16,16,0,0,0,22.63,0l28.69-28.69A16,16,0,0,0,251.34,112ZM60.68,216,40,195.31l68-68L128.68,148ZM162.34,114.32,140,136.67,119.31,116l22.35-22.35a8,8,0,0,0,0-11.32L94.32,35a80,80,0,0,1,78.23,20.41l44.22,44.51L188,128.66l-14.34-14.34A8,8,0,0,0,162.34,114.32Zm49,37.66-12-12L228,111.25l12,12Z"/></svg>',
-          magnifier:
-            '<svg viewBox="0 0 256 256" fill="currentColor"><path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z"/></svg>',
-          wand: '<svg viewBox="0 0 256 256" fill="currentColor"><path d="M48,64a8,8,0,0,1,8-8H72V40a8,8,0,0,1,16,0V56h16a8,8,0,0,1,0,16H88V88a8,8,0,0,1-16,0V72H56A8,8,0,0,1,48,64ZM184,192h-8v-8a8,8,0,0,0-16,0v8h-8a8,8,0,0,0,0,16h8v8a8,8,0,0,0,16,0v-8h8a8,8,0,0,0,0-16Zm56-48H224V128a8,8,0,0,0-16,0v16H192a8,8,0,0,0,0,16h16v16a8,8,0,0,0,16,0V160h16a8,8,0,0,0,0-16ZM219.31,80,80,219.31a16,16,0,0,1-22.62,0L36.68,198.63a16,16,0,0,1,0-22.63L176,36.69a16,16,0,0,1,22.63,0l20.68,20.68A16,16,0,0,1,219.31,80Zm-54.63,32L144,91.31l-96,96L68.68,208ZM208,68.69,187.31,48l-32,32L176,100.69Z"/></svg>',
-          gradcap:
-            '<svg viewBox="0 0 256 256" fill="currentColor"><path d="M251.76,88.94l-120-64a8,8,0,0,0-7.52,0l-120,64a8,8,0,0,0,0,14.12L32,117.87v48.42a15.91,15.91,0,0,0,4.06,10.65C49.16,191.53,78.51,216,128,216a130,130,0,0,0,48-8.76V240a8,8,0,0,0,16,0V199.51a115.63,115.63,0,0,0,27.94-22.57A15.91,15.91,0,0,0,224,166.29V117.87l27.76-14.81a8,8,0,0,0,0-14.12ZM128,200c-43.27,0-68.72-21.14-80-33.71V126.4l76.24,40.66a8,8,0,0,0,7.52,0L176,143.47v46.34C163.4,195.69,147.52,200,128,200Zm80-33.75a97.83,97.83,0,0,1-16,14.25V134.93l16-8.53ZM188,118.94l-.22-.13-56-29.87a8,8,0,0,0-7.52,14.12L171,128l-43,22.93L25,96,128,41.07,231,96Z"/></svg>',
-          bomb: '<svg viewBox="0 0 256 256" fill="currentColor"><path d="M248,32h0a8,8,0,0,0-8,8,52.66,52.66,0,0,1-3.57,17.39C232.38,67.22,225.7,72,216,72c-11.06,0-18.85-9.76-29.49-24.65C176,32.66,164.12,16,144,16c-16.39,0-29,8.89-35.43,25a66.07,66.07,0,0,0-3.9,15H88A16,16,0,0,0,72,72v9.59A88,88,0,0,0,112,248h1.59A88,88,0,0,0,152,81.59V72a16,16,0,0,0-16-16H120.88a46.76,46.76,0,0,1,2.69-9.37C127.62,36.78,134.3,32,144,32c11.06,0,18.85,9.76,29.49,24.65C184,71.34,195.88,88,216,88c16.39,0,29-8.89,35.43-25A68.69,68.69,0,0,0,256,40,8,8,0,0,0,248,32ZM140.8,94a72,72,0,1,1-57.6,0A8,8,0,0,0,88,86.66V72h48V86.66A8,8,0,0,0,140.8,94ZM111.89,209.32A8,8,0,0,1,104,216a8.52,8.52,0,0,1-1.33-.11,57.5,57.5,0,0,1-46.57-46.57,8,8,0,1,1,15.78-2.64,41.29,41.29,0,0,0,33.43,33.43A8,8,0,0,1,111.89,209.32Z"/></svg>',
-          megaphone:
-            '<svg viewBox="0 0 256 256" fill="currentColor"><path d="M248,120a48.05,48.05,0,0,0-48-48H160.2c-2.91-.17-53.62-3.74-101.91-44.24A16,16,0,0,0,32,40V200a16,16,0,0,0,26.29,12.25c37.77-31.68,77-40.76,93.71-43.3v31.72A16,16,0,0,0,159.12,214l11,7.33A16,16,0,0,0,194.5,212l11.77-44.36A48.07,48.07,0,0,0,248,120ZM48,199.93V40h0c42.81,35.91,86.63,45,104,47.24v65.48C134.65,155,90.84,164.07,48,199.93Zm131,8,0,.11-11-7.33V168h21.6ZM200,152H168V88h32a32,32,0,1,1,0,64Z"/></svg>',
-          paintbrush:
-            '<svg viewBox="0 0 256 256" fill="currentColor"><path d="M232,32a8,8,0,0,0-8-8c-44.08,0-89.31,49.71-114.43,82.63A60,60,0,0,0,32,164c0,30.88-19.54,44.73-20.47,45.37A8,8,0,0,0,16,224H92a60,60,0,0,0,57.37-77.57C182.3,121.31,232,76.08,232,32ZM92,208H34.63C41.38,198.41,48,183.92,48,164a44,44,0,1,1,44,44Zm32.42-94.45q5.14-6.66,10.09-12.55A76.23,76.23,0,0,1,155,121.49q-5.9,4.94-12.55,10.09A60.54,60.54,0,0,0,124.42,113.55Zm42.7-2.68a92.57,92.57,0,0,0-22-22c31.78-34.53,55.75-45,69.9-47.91C212.17,55.12,201.65,79.09,167.12,110.87Z"/></svg>',
-          stamp:
-            '<svg viewBox="0 0 256 256" fill="currentColor"><path d="M240,208H229.75A44.05,44.05,0,0,0,192,144h-4a35.91,35.91,0,0,0,4-16,36,36,0,0,0-64.86-21.34A59.81,59.81,0,0,0,100,96a60.09,60.09,0,0,0-59.75,64A44.05,44.05,0,0,0,16,204a4,4,0,0,0,0,4H240a8,8,0,0,0,0-16ZM168,144a8,8,0,0,1,8-8h16a28,28,0,0,1,27.71,24H140.7A43.86,43.86,0,0,1,168,144Zm-68-32a44,44,0,0,1,25.16,7.93A8,8,0,0,0,137,116.4a20,20,0,1,1,18.32,27.6H49A44.05,44.05,0,0,1,100,112ZM32.4,208A28,28,0,0,1,60,184a8,8,0,0,0,4.62-1.47A59.87,59.87,0,0,0,88,192a8,8,0,0,0,0-16,44.08,44.08,0,0,1-15.36-2.75A44.24,44.24,0,0,1,88.68,160h95.4A28,28,0,0,1,213.6,208Z"/></svg>',
-        };
-        // Built from each chapter's scenarios.json "badge" field rather than
-        // a hardcoded list — scenarios.json is the single source of truth
-        // for scenario, quest, reward and badge data; this file only renders
-        // it. A chapter with no "badge" field (there should be none among
-        // TUTORIAL_CHAPTERS) is simply awarded no badge.
-        var BADGES_BY_CHAPTER = {};
-        TUTORIAL_CHAPTERS.forEach(function (name, i) {
-          var badge = SCENARIOS[name] && SCENARIOS[name].badge;
-          if (badge) BADGES_BY_CHAPTER[name] = Object.assign({ id: "badge-" + (i + 1) }, badge);
-        });
-
-        var BADGES_STORAGE_KEY = "visimark-playground-badges";
-        function loadEarnedBadges() {
-          try {
-            return JSON.parse(window.localStorage.getItem(BADGES_STORAGE_KEY) || "{}");
-          } catch (e) {
-            return {};
-          }
-        }
-        function saveEarnedBadges() {
-          try {
-            window.localStorage.setItem(BADGES_STORAGE_KEY, JSON.stringify(earnedBadges));
-          } catch (e) {
-            // Private browsing / storage disabled — the badge still shows for
-            // the rest of this session, it just won't survive a reload.
-          }
-        }
-        var earnedBadges = loadEarnedBadges();
-
-        var SHARE_URL = "https://michal-niedzwiedzki.github.io/visimark/";
-        // The skill line is already written first-person and ready to post
-        // as-is (see each chapter's "badge" field in scenarios.json), so it
-        // — not a generic "I just earned a badge" line — is what pre-fills
-        // the share composer's text.
-        function badgeShareText(badge) {
-          return badge.skill;
-        }
-        // X's tweet intent is the only one of these that still accepts
-        // prefilled text — Facebook's sharer.php and LinkedIn's
-        // share-offsite both dropped that years ago (an anti-spam change),
-        // and Instagram never had a web share-intent to begin with. Those
-        // three all get the clipboard-handoff treatment below instead (see
-        // shareViaClipboard()).
-        function buildShareLink(badge) {
-          var encodedUrl = encodeURIComponent(SHARE_URL);
-          var encodedText = encodeURIComponent(badgeShareText(badge));
-          return "https://twitter.com/intent/tweet?text=" + encodedText + "&url=" + encodedUrl;
-        }
-
-        var badgeAwardEl = document.getElementById("badge-award");
-        var badgeIconEl = document.getElementById("badge-award-icon");
-        var badgeNameEl = document.getElementById("badge-award-name");
-        var badgeSkillEl = document.getElementById("badge-award-skill");
-        var badgeStatusEl = document.getElementById("badge-share-status");
-        var shareFbEl = document.getElementById("share-fb");
-        var shareXEl = document.getElementById("share-x");
-        var shareLiEl = document.getElementById("share-li");
-        var shareIgEl = document.getElementById("share-ig");
-
-        /** Un-hides `el` with no transition — the resting state for content
-         *  that reflects persisted or already-known state (an earned badge
-         *  reopened from localStorage), where a fade would just be noise. */
-        function showInstant(el) {
-          el.hidden = false;
-          el.classList.add("show");
-        }
-        /** Hides `el` and resets it back to revealFadeIn()'s starting point,
-         *  so the next reveal fades in again instead of just appearing. */
-        function hideInstant(el) {
-          el.hidden = true;
-          el.classList.remove("show");
-        }
-        /** Fades `el` in on its own — the completion-sequence moment (see
-         *  revealCompletion() below), as opposed to showInstant()'s "this
-         *  was already true" render. Un-hiding and adding `.show` in the
-         *  same tick would collapse into one paint with no transition to
-         *  animate, since the element has no rendered opacity:0 frame to
-         *  transition *from* yet — forcing a reflow between the two commits
-         *  that frame before the class change asks the browser to animate
-         *  away from it. */
-        function revealFadeIn(el) {
-          el.hidden = false;
-          el.classList.remove("show");
-          void el.offsetWidth;
-          requestAnimationFrame(function () {
-            el.classList.add("show");
-          });
-        }
-
-        /** Renders (or hides, passing null) the badge earned for the current
-         *  scenario — called both right after a badge is newly awarded and
-         *  whenever a scenario with an already-earned badge is opened. Always
-         *  instant: the fade for a *newly* earned badge is driven separately
-         *  by revealCompletion(), which fills the badge via maybeAwardBadge()
-         *  and reveals it on its own schedule. */
-        function renderBadgeAward(badge) {
-          badgeStatusEl.hidden = true;
-          if (!badge) {
-            hideInstant(badgeAwardEl);
-            return;
-          }
-          fillBadgeAward(badge);
-          showInstant(badgeAwardEl);
-        }
-
-        function fillBadgeAward(badge) {
-          badgeIconEl.innerHTML = BADGE_ICONS[badge.icon] || "";
-          badgeNameEl.textContent = badge.name;
-          badgeSkillEl.textContent = badge.skill;
-          shareXEl.href = buildShareLink(badge);
-        }
-
-        // Facebook, Instagram and LinkedIn all get the same handoff: copy
-        // the caption to the clipboard, then open the destination for a
-        // manual paste — Instagram because it never had a prefill option,
-        // Facebook and LinkedIn because their prefill params are dead (see
-        // buildShareLink()'s comment above). copyText() (defined further
-        // down) carries its own execCommand fallback for contexts where
-        // navigator.clipboard doesn't exist.
-        function shareViaClipboard(shareUrl, pastePrompt) {
-          var badge = BADGES_BY_CHAPTER[questState.name];
-          if (!badge) return;
-          var caption = badgeShareText(badge) + " " + SHARE_URL;
-          badgeStatusEl.hidden = false;
-          copyText(caption).then(
-            function () {
-              badgeStatusEl.textContent = "Caption copied — paste it into your " + pastePrompt;
-            },
-            function () {
-              badgeStatusEl.textContent = caption;
-            },
-          );
-          window.open(shareUrl, "_blank", "noopener");
-        }
-
-        shareFbEl.addEventListener("click", function () {
-          shareViaClipboard(
-            "https://www.facebook.com/sharer/sharer.php?u=" + encodeURIComponent(SHARE_URL),
-            "Facebook post.",
-          );
-        });
-        shareLiEl.addEventListener("click", function () {
-          shareViaClipboard(
-            "https://www.linkedin.com/sharing/share-offsite/?url=" + encodeURIComponent(SHARE_URL),
-            "LinkedIn post.",
-          );
-        });
-        shareIgEl.addEventListener("click", function () {
-          shareViaClipboard("https://www.instagram.com/", "Instagram post.");
-        });
-
-        /** The canvas-confetti "stars" preset (kirilv.com/canvas-confetti/#stars),
-         *  fired across the whole screen when a badge is newly earned. */
-        function fireBadgeConfetti() {
-          if (typeof confetti !== "function") return;
-          // confetti's canvas covers the whole viewport and its `origin` is
-          // normalized to that (0,0 top-left, 1,1 bottom-right) — the
-          // default {x:0.5, y:0.5} bursts from screen center. Aim it at the
-          // SCENARIO panel instead, where the badge that was just earned
-          // actually appears.
-          var rect = scenarioPanelEl.getBoundingClientRect();
-          var origin = {
-            x: (rect.left + rect.width / 2) / window.innerWidth,
-            y: (rect.top + rect.height / 2) / window.innerHeight,
-          };
-          var defaults = {
-            spread: 360,
-            ticks: 50,
-            gravity: 0,
-            decay: 0.94,
-            startVelocity: 30,
-            origin: origin,
-            colors: ["FFE400", "FFBD00", "E89400", "FFCA6C", "FDFFB8"],
-          };
-          function shoot() {
-            confetti(
-              Object.assign({}, defaults, { particleCount: 40, scalar: 1.2, shapes: ["star"] }),
-            );
-            confetti(
-              Object.assign({}, defaults, { particleCount: 10, scalar: 0.75, shapes: ["circle"] }),
-            );
-          }
-          shoot();
-          setTimeout(shoot, 100);
-          setTimeout(shoot, 200);
-        }
-
-        /** Awards `name`'s badge exactly once — a no-op for non-tutorial
-         *  scenarios (no BADGES_BY_CHAPTER entry) and for a badge already
-         *  earned in this or an earlier session, in which case it is already
-         *  showing (see startQuest()) and needs no reveal here. Confetti is
-         *  the caller's job (see revealCompletion()), not this function's —
-         *  it needs to fire before the reveal, not alongside it. */
-        function maybeAwardBadge(name) {
-          var badge = BADGES_BY_CHAPTER[name];
-          if (!badge || earnedBadges[name]) return;
-          earnedBadges[name] = true;
-          saveEarnedBadges();
-          fillBadgeAward(badge);
-          revealFadeIn(badgeAwardEl);
-        }
-
-        // ---- quest engine ----------------------------------------------------
-        var questState = {
-          name: null,
-          steps: [],
-          done: {},
-          baselineEvalJson: null,
-          baselineSource: null,
-        };
-        var questListEl = document.getElementById("quest-list");
-        var questCompleteEl = document.getElementById("quest-complete");
-
-        function renderScenario(name) {
-          var s = SCENARIOS[name];
-          scenarioPanelEl.hidden = !s;
-          if (!s) {
-            // No scenario data for this file (e.g. one just created via
-            // + New) — hide the whole panel rather than showing a generic
-            // placeholder. Still reset the quest engine so a stale badge
-            // from the previously-open file can't linger, invisible, behind
-            // the hidden panel.
-            scenarioBodyEl.innerHTML = "";
-            startQuest(name, []);
-            return;
-          }
-          scenarioBodyEl.innerHTML = "";
-          var body = document.createElement("p");
-          body.textContent = s.body;
-          scenarioBodyEl.appendChild(body);
-          startQuest(name, normalizeQuest(s.quest));
-        }
-
-        function startQuest(name, steps) {
-          questState = {
-            name: name,
-            steps: steps || [],
-            done: {},
-            baselineEvalJson: null,
-            baselineHasStale: false,
-            baselineSource: null,
-          };
-          questListEl.innerHTML = "";
-          clearRevealTimers();
-          hideInstant(questCompleteEl);
-          hideInstant(rewardBoxEl);
-          currentReward = null;
-          renderBadgeAward(earnedBadges[name] ? BADGES_BY_CHAPTER[name] : null);
-          questState.steps.forEach(function (step, i) {
-            var li = document.createElement("li");
-            li.className = "quest-step";
-            li.dataset.id = step.id;
-            var check = document.createElement("span");
-            check.className = "quest-check";
-            check.textContent = "✓";
-            var text = document.createElement("span");
-            text.className = "quest-text";
-            text.textContent = step.text;
-            li.appendChild(check);
-            li.appendChild(text);
-            if (step.manual) li.classList.add("manual");
-            // A step is never completed by clicking it — only by actually
-            // doing the thing it describes (a tab click, an Infer/Build run,
-            // a real change `eval` picks up). Clicking only ever *un*-completes
-            // a step already done, so a visitor can reset one and repeat the
-            // action to watch it get detected again. "manual" steps are the
-            // one exception: nothing else can ever complete them, since
-            // there's nothing about them for VisiMark to detect.
-            li.addEventListener("click", function () {
-              if (questState.done[step.id]) questUnmarkDone(step.id);
-              else if (step.manual) questMarkDone(step.id);
-            });
-            questListEl.appendChild(li);
-            // Reveal each "Try this" step 0.5s apart, first one included,
-            // instead of the whole checklist appearing at once —
-            // clearRevealTimers() above cancels any reveal still in flight
-            // from a scenario this one is replacing.
-            scheduleReveal(
-              function () {
-                li.classList.add("show");
-              },
-              (i + 1) * 500,
-            );
-          });
-        }
-
-        function questMarkDone(id) {
-          if (questState.done[id]) return;
-          questState.done[id] = true;
-          var li = questListEl.querySelector('[data-id="' + id + '"]');
-          if (li) {
-            li.classList.add("done", "pop");
-            setTimeout(function () {
-              li.classList.remove("pop");
-            }, 400);
-          }
-          var allDone = questState.steps.every(function (step) {
-            return questState.done[step.id];
-          });
-          if (allDone && questState.steps.length > 0) {
-            revealCompletion();
-          }
-        }
-
-        function questUnmarkDone(id) {
-          if (!questState.done[id]) return;
-          questState.done[id] = false;
-          var li = questListEl.querySelector('[data-id="' + id + '"]');
-          if (li) li.classList.remove("done");
-          // Undoing a step retracts "Nice work" and the reward (and any
-          // reveal still in flight) — the badge, once shown, stays: it is
-          // permanently earned, not a reflection of the checklist's current
-          // state, the same policy startQuest() applies on revisit.
-          clearRevealTimers();
-          hideInstant(questCompleteEl);
-          hideInstant(rewardBoxEl);
-        }
-
-        var revealTimers = [];
-        function clearRevealTimers() {
-          revealTimers.forEach(clearTimeout);
-          revealTimers = [];
-        }
-        function scheduleReveal(fn, delay) {
-          revealTimers.push(setTimeout(fn, delay));
-        }
-
-        // Roughly how long fireBadgeConfetti()'s "stars" burst takes to
-        // settle — three shoots at 0/100/200ms, each 40+10 particles with
-        // ticks:50 decaying at 0.94, fully faded by about 1.4s after the
-        // first shoot.
-        var CONFETTI_SETTLE_MS = 1400;
-
-        /** The completion sequence for a scenario whose quest just went from
-         *  "not all done" to "all done". A first-time badge fires confetti
-         *  immediately and holds "Nice work", the badge and the reward back
-         *  until the stars settle, so the reveal lands together right as the
-         *  screen clears; a repeat completion (badge already earned, no
-         *  confetti to wait for) reveals all three at once, right away. */
-        function revealCompletion() {
-          clearRevealTimers();
-          var badge = BADGES_BY_CHAPTER[questState.name];
-          var isNewBadge = badge && !earnedBadges[questState.name];
-          if (isNewBadge) fireBadgeConfetti();
-          scheduleReveal(
-            function () {
-              revealFadeIn(questCompleteEl);
-              maybeAwardBadge(questState.name);
-              revealReward();
-            },
-            isNewBadge ? CONFETTI_SETTLE_MS : 0,
-          );
-        }
-
-        function revealReward() {
-          var s = SCENARIOS[questState.name];
-          if (!s || !s.reward) return;
-          fillReward(s.reward);
-          revealFadeIn(rewardBoxEl);
-        }
-
-        /** Finds the first not-yet-done step, or null once every step is
-         *  done — the one step questSignal() and questCheckEval() are
-         *  allowed to test and complete on a given call, so steps are always
-         *  worked through in order and a later one can never complete while
-         *  an earlier one is still outstanding. */
-        function firstIncompleteStep() {
-          for (var i = 0; i < questState.steps.length; i++) {
-            if (!questState.done[questState.steps[i].id]) return questState.steps[i];
-          }
-          return null;
-        }
-
-        /** UI-event steps: tab clicks, Infer/Build runs. */
-        function questSignal(action) {
-          var step = firstIncompleteStep();
-          if (step && step.action === action) questMarkDone(step.id);
-        }
-
-        /** Mirrors `visimark check FILE`'s STALE findings — cheap enough to
-         *  run a second time per keystroke-settle for a hand-typed document. */
-        function hasStaleFindings(source) {
-          try {
-            var findings = VM.check(VM.build(VM.locate(source)), optsFor(current)).findings;
-            return findings.some(function (f) {
-              return f.code === "STALE";
-            });
-          } catch (e) {
-            return false;
-          }
-        }
-
-        /** Eval-driven steps: re-checked against the file's baseline snapshot
-         *  on every fresh pgEval() result — the first call after a file loads
-         *  only captures that baseline, it can't complete a step against
-         *  itself. Tests only the first not-yet-done step (see
-         *  firstIncompleteStep()) — a single edit can easily satisfy several
-         *  steps' conditions at once (e.g. pasting in a whole finished
-         *  example), and steps complete one at a time, in order, rather than
-         *  the whole list jumping to done together. */
-        function questCheckEval(evalResult, source) {
-          var hasStale = hasStaleFindings(source);
-          var isBaseline = questState.baselineEvalJson === null;
-          var ctx = isBaseline
-            ? null
-            : {
-                evalResult: evalResult,
-                baselineJson: questState.baselineEvalJson,
-                hasStale: hasStale,
-                baselineHasStale: questState.baselineHasStale,
-                sourceChanged: source !== questState.baselineSource,
-              };
-          var step = firstIncompleteStep();
-          if (step) {
-            // "text" steps don't need a baseline — they're just a substring
-            // check against whatever's in the document right now. evalCheck
-            // steps can't complete on the call that establishes the
-            // baseline, since there's nothing yet to compare against.
-            var textMatch = step.textContains && source.indexOf(step.textContains) !== -1;
-            var evalMatch = ctx && step.evalCheck && step.evalCheck(ctx);
-            if (textMatch || evalMatch) questMarkDone(step.id);
-          }
-          if (isBaseline) {
-            questState.baselineEvalJson = JSON.stringify(evalResult);
-            questState.baselineHasStale = hasStale;
-            questState.baselineSource = source;
-          }
-        }
-
-        // ---- tab strip: Reasoning/Knowledge/Inference/Build (Terminal is its
-        // own always-visible panel now, not part of this group) ------------
-        var diagTabs = document.querySelectorAll(".diag-tab");
-        diagTabs.forEach(function (tab) {
-          tab.addEventListener("click", function () {
-            selectTab(tab.dataset.group, tab.dataset.tab);
-            questSignal("tab:" + tab.dataset.group + ":" + tab.dataset.tab);
-          });
-        });
-        function selectTab(group, name) {
-          document
-            .querySelectorAll('.diag-tab[data-group="' + group + '"]')
-            .forEach(function (tab) {
-              tab.classList.toggle("active", tab.dataset.tab === name);
-            });
-          document
-            .querySelectorAll('.diag-view[data-group="' + group + '"]')
-            .forEach(function (view) {
-              view.classList.toggle("active", view.dataset.view === name);
-            });
-        }
-
-        function setStatus(ok, note) {
-          flagEl.className = "flag" + (ok ? "" : " fail");
-          labelEl.textContent = ok ? "BUILD PASSING" : "BUILD FAILING";
-          metaEl.textContent = note || "";
-        }
-
-        // Lockstep scroll: PREVIEW tracks EDITOR (and vice versa) by scroll
-        // fraction, the same trick index.html's renderDemo() uses for its
-        // source/preview panes — CodeMirror just has its own scroll API instead
-        // of a plain scrollable element.
-        var syncingScroll = null;
-        function syncFromEditor() {
-          if (syncingScroll && syncingScroll !== "editor") return;
-          syncingScroll = "editor";
-          var info = cm.getScrollInfo();
-          var range = info.height - info.clientHeight;
-          var ratio = range > 0 ? info.top / range : 0;
-          previewEl.scrollTop = ratio * (previewEl.scrollHeight - previewEl.clientHeight);
-          requestAnimationFrame(function () {
-            syncingScroll = null;
-          });
-        }
-        function syncFromPreview() {
-          if (syncingScroll && syncingScroll !== "preview") return;
-          syncingScroll = "preview";
-          var range = previewEl.scrollHeight - previewEl.clientHeight;
-          var ratio = range > 0 ? previewEl.scrollTop / range : 0;
-          var info = cm.getScrollInfo();
-          cm.scrollTo(null, ratio * (info.height - info.clientHeight));
-          requestAnimationFrame(function () {
-            syncingScroll = null;
-          });
-        }
-        cm.on("scroll", syncFromEditor);
-        previewEl.addEventListener("scroll", syncFromPreview);
-
-        function pluralize(n, w) {
-          return n + " " + w + (n === 1 ? "" : "s");
-        }
-
-        function clearTerminal() {
-          termEl.textContent = "";
-        }
-
-        /** Mirrors `visimark fmt FILE` — prints outcome to TERMINAL. Does not
-         *  touch the editor buffer itself; callers that want the corrected
-         *  text apply `result.output` back to the editor. */
-        function runFmt() {
-          var source = cm.getValue();
-          termCmd("visimark fmt " + current);
-          var result;
-          try {
-            // the reader too: `fmt` re-checks, and without it an imported
-            // sheet's columns all read UNDEF and the STATUS bar goes red on a
-            // document the CLI passes clean (review §4.3)
-            result = VM.fmt(source, optsFor(current));
-          } catch (e) {
-            term("visimark: " + e.message, "err");
-            setStatus(false, "fmt crashed");
-            trimTerminal();
-            return null;
-          }
-          if (result.changed || result.artifacts.length > 0) {
-            var bits = [];
-            if (result.cellsUpdated) bits.push(pluralize(result.cellsUpdated, "cell"));
-            if (result.anchorsUpdated) bits.push(pluralize(result.anchorsUpdated, "anchor"));
-            if (result.datesFixed) bits.push(pluralize(result.datesFixed, "date"));
-            if (result.artifacts.length) bits.push(pluralize(result.artifacts.length, "artifact"));
-            term(current + ": updated " + bits.join(", "));
-          } else {
-            term(current + ": unchanged");
-          }
-          if (result.unfixable && result.unfixable.length > 0) {
-            term(VM.formatCheck(current, result.unfixable), "err");
-          }
-          setStatus(result.unfixable.length === 0);
-          trimTerminal();
-          return result;
-        }
-
-        /** Mirrors `visimark eval FILE --json`, `visimark explain FILE`, and the
-         *  Markdown preview — all read from the *current* editor buffer.
-         *
-         *  There is no filesystem to render chart artifacts onto (`fmt --write`
-         *  never runs, see runFmt()'s doc comment), so a chart's SVG never
-         *  lands at the `![...](path)` its anchor names. `pgEval`'s `charts[]`
-         *  carries the rendered SVG in memory regardless — check() always
-         *  builds it, it just can't compare it to a file without a reader
-         *  (`CheckOptions.doc`, which this build has no way to supply) —
-         *  so PREVIEW substitutes it into the matching <img> by hand. */
-        function refreshDerived() {
-          var source = cm.getValue();
-          var evalResult = null;
-
-          try {
-            evalResult = VM.pgEval(source, optsFor(current));
-            knowledgeEl.textContent = JSON.stringify(evalResult, redactSvg, 2);
-            var failed = (evalResult.assertions || []).filter(function (a) {
-              return a.holds === false;
-            });
-            if (failed.length > 0) {
-              setStatus(false, pluralize(failed.length, "assertion") + " failing");
-            }
-            questCheckEval(evalResult, source);
-          } catch (e) {
-            knowledgeEl.textContent = "error: " + e.message;
-          }
-
-          try {
-            reasoningEl.textContent = VM.pgExplain(source, optsFor(current)).join("\n");
-          } catch (e) {
-            reasoningEl.textContent = "error: " + e.message;
-          }
-
-          try {
-            previewEl.innerHTML = marked.parse(source);
-            embedCharts(evalResult && evalResult.charts);
-          } catch (e) {
-            previewEl.textContent = "error: " + e.message;
-          }
-        }
-
-        // KNOWLEDGE is `eval --json` verbatim, but a chart's `svg` field is
-        // itself the full rendered SVG document — shown for real in PREVIEW, it
-        // would just be noise duplicated as an escaped JSON string here.
-        function redactSvg(key, value) {
-          if (key === "svg" && typeof value === "string") {
-            return "<" + value.length + " bytes, rendered in Preview>";
-          }
-          return value;
-        }
-
-        // ---- KNOWLEDGE action bar: copy, and hand off to an AI agent ----------
-        var knowledgeStatusEl = document.getElementById("knowledge-status");
-        var knowledgeCopyBtn = document.getElementById("knowledge-copy-btn");
-        var knowledgeAgentBtn = document.getElementById("knowledge-agent-btn");
-        var knowledgeAgentHostEl = document.getElementById("knowledge-agent-host");
-        var agentPopoverEl = document.getElementById("agent-popover");
-
-        /** Returns a flasher bound to `el`: call it with text to show next to
-         *  a button for a few seconds, then clear — the same transient-
-         *  feedback shape as `badgeStatusEl` above, parameterized so
-         *  KNOWLEDGE's and the reward's status lines don't share a timer. */
-        function makeStatusFlasher(el) {
-          var timer = null;
-          return function (text) {
-            el.textContent = text;
-            clearTimeout(timer);
-            timer = setTimeout(function () {
-              el.textContent = "";
-            }, 3000);
-          };
-        }
-        var flashKnowledgeStatus = makeStatusFlasher(knowledgeStatusEl);
-
-        /** `navigator.clipboard` only exists in a secure context (https, or
-         *  localhost during local dev) — this playground is often opened
-         *  straight off disk (`file://`) or from a plain http mirror, where
-         *  the API is simply undefined and every copy silently does
-         *  nothing. `execCommand("copy")` is deprecated but still broadly
-         *  supported, needs no permission prompt, and works in exactly the
-         *  contexts the modern API refuses — so it is the fallback, not an
-         *  afterthought, and the one every copy button here goes through. */
-        function copyTextFallback(text) {
-          return new Promise(function (resolve, reject) {
-            var ta = document.createElement("textarea");
-            ta.value = text;
-            // Off-screen rather than hidden: execCommand("copy") only ever
-            // copies an actual, rendered selection.
-            ta.style.position = "fixed";
-            ta.style.top = "0";
-            ta.style.left = "-9999px";
-            ta.setAttribute("readonly", "");
-            document.body.appendChild(ta);
-            ta.select();
-            ta.setSelectionRange(0, text.length);
-            var ok = false;
-            try {
-              ok = document.execCommand("copy");
-            } catch (e) {
-              ok = false;
-            }
-            document.body.removeChild(ta);
-            if (ok) resolve();
-            else reject(new Error("execCommand(copy) failed"));
-          });
-        }
-
-        function copyText(text) {
-          if (navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext) {
-            return navigator.clipboard.writeText(text).catch(function () {
-              return copyTextFallback(text);
-            });
-          }
-          return copyTextFallback(text);
-        }
-
-        knowledgeCopyBtn.addEventListener("click", function () {
-          copyText(knowledgeEl.textContent)
-            .then(function () {
-              flashKnowledgeStatus("Copied!");
-            })
-            .catch(function () {
-              flashKnowledgeStatus(
-                "Couldn't reach the clipboard — select and copy the JSON by hand.",
-              );
-            });
-        });
-
-        // ---- REASONING and INFERENCE action bars: copy only, no agent hand-off ----
-        function wireCopyButton(btnEl, statusEl, sourceEl) {
-          var flash = makeStatusFlasher(statusEl);
-          btnEl.addEventListener("click", function () {
-            copyText(sourceEl.textContent)
-              .then(function () {
-                flash("Copied!");
-              })
-              .catch(function () {
-                flash("Couldn't reach the clipboard — select and copy the text by hand.");
-              });
-          });
-        }
-        wireCopyButton(
-          document.getElementById("reasoning-copy-btn"),
-          document.getElementById("reasoning-status"),
-          reasoningEl,
-        );
-        wireCopyButton(
-          document.getElementById("infer-copy-btn"),
-          document.getElementById("infer-status"),
-          inferEl,
-        );
-
-        // Each agent's chat UI is a moving target and none of these publish a
-        // stable prefill contract, so the `q` query param is a best effort,
-        // not a promise: the click handler below copies the prompt first
-        // regardless, and the status line says so either way.
-        var AI_AGENTS = {
-          chatgpt: { label: "ChatGPT", url: "https://chatgpt.com/?q=" },
-          claude: { label: "Claude", url: "https://claude.ai/new?q=" },
-          gemini: { label: "Gemini", url: "https://gemini.google.com/app?q=" },
-          grok: { label: "Grok", url: "https://grok.com/?q=" },
-          perplexity: { label: "Perplexity", url: "https://www.perplexity.ai/search?q=" },
-        };
-
-        function knowledgePrompt() {
-          return (
-            "I used VisiMark to extract those figures from a Markdown document. " +
-            "Can you guess what it is without looking?\n" +
-            knowledgeEl.textContent
-          );
-        }
-
-        // The popover is a single DOM node shared by every "feed to an AI
-        // agent" trigger (KNOWLEDGE's own button, and an "agent"-kind
-        // reward). Opening it reparents it under whichever host triggered
-        // it and remembers that trigger's prompt/status-flasher pair, so
-        // the option list itself stays written once.
-        var activeAgentPromptFn = null;
-        var activeAgentStatusFlasher = null;
-
-        function closeAgentPopover() {
-          agentPopoverEl.hidden = true;
-          activeAgentPromptFn = null;
-          activeAgentStatusFlasher = null;
-        }
-
-        function toggleAgentPopover(hostEl, promptFn, statusFlasher) {
-          if (!agentPopoverEl.hidden && agentPopoverEl.parentElement === hostEl) {
-            closeAgentPopover();
-            return;
-          }
-          if (agentPopoverEl.parentElement !== hostEl) hostEl.appendChild(agentPopoverEl);
-          activeAgentPromptFn = promptFn;
-          activeAgentStatusFlasher = statusFlasher;
-          agentPopoverEl.hidden = false;
-        }
-
-        knowledgeAgentBtn.addEventListener("click", function (e) {
-          e.stopPropagation();
-          toggleAgentPopover(knowledgeAgentHostEl, knowledgePrompt, flashKnowledgeStatus);
-        });
-
-        agentPopoverEl.addEventListener("click", function (e) {
-          var btn = e.target.closest(".agent-option");
-          if (!btn) return;
-          var agent = AI_AGENTS[btn.dataset.agent];
-          var promptFn = activeAgentPromptFn;
-          var flash = activeAgentStatusFlasher || flashKnowledgeStatus;
-          closeAgentPopover();
-          if (!agent || !promptFn) return;
-          var prompt = promptFn();
-          copyText(prompt).then(
-            function () {
-              flash("Prompt copied — paste it if " + agent.label + " opens empty.");
-            },
-            function () {
-              flash(
-                "Opening " +
-                  agent.label +
-                  " — paste the prompt yourself, the clipboard didn't cooperate.",
-              );
-            },
-          );
-          window.open(agent.url + encodeURIComponent(prompt), "_blank", "noopener");
-        });
-
-        document.addEventListener("click", function (e) {
-          if (!agentPopoverEl.hidden && !e.target.closest(".agent-popover-host")) {
-            closeAgentPopover();
-          }
-        });
-        document.addEventListener("keydown", function (e) {
-          if (e.key === "Escape") closeAgentPopover();
-        });
-
-        // ---- reward: the last step of a scenario's completion sequence -------
-        var rewardBoxEl = document.getElementById("reward-box");
-        var rewardCtaEl = document.getElementById("reward-cta");
-        var rewardCtaHostEl = document.getElementById("reward-cta-host");
-        var rewardStatusEl = document.getElementById("reward-status");
-        var flashRewardStatus = makeStatusFlasher(rewardStatusEl);
-        var currentReward = null;
-
-        function fillReward(reward) {
-          currentReward = reward;
-          rewardCtaEl.textContent = reward.text;
-        }
-
-        // Substitutes the current KNOWLEDGE JSON into the reward's own
-        // prompt template — same shape as knowledgePrompt(), but the wording
-        // is per-scenario data rather than a hardcoded string.
-        function rewardAgentPrompt() {
-          var template = (currentReward && currentReward.prompt) || "";
-          return template.replace("{json}", knowledgeEl.textContent);
-        }
-
-        rewardCtaEl.addEventListener("click", function (e) {
-          if (!currentReward) return;
-          if (currentReward.kind === "link") {
-            window.open(currentReward.link, "_blank", "noopener");
-          } else if (currentReward.kind === "gist") {
-            // No API token lives in this static page, so there is no way to
-            // actually create the gist — copy the document and hand the
-            // visitor off to a blank one to paste it into, the same
-            // best-effort handoff Instagram sharing uses above.
-            copyText(cm.getValue()).then(
-              function () {
-                flashRewardStatus("Document copied — paste it into your new Gist.");
-              },
-              function () {
-                flashRewardStatus("Couldn't reach the clipboard — copy the document by hand.");
-              },
-            );
-            window.open("https://gist.github.com/", "_blank", "noopener");
-          } else if (currentReward.kind === "agent") {
-            e.stopPropagation();
-            toggleAgentPopover(rewardCtaHostEl, rewardAgentPrompt, flashRewardStatus);
-          }
-        });
-
-        function embedCharts(charts) {
-          if (!charts || charts.length === 0) return;
-          var svgByPath = {};
-          charts.forEach(function (c) {
-            if (c.path && c.svg) svgByPath[c.path] = c.svg;
-          });
-          previewEl.querySelectorAll("img[src]").forEach(function (img) {
-            var svg = svgByPath[img.getAttribute("src")];
-            if (!svg) return;
-            img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg)));
-          });
-        }
-
-        // ---- debounced pipeline on typing --------------------------------------
-        // On 0.5s of inactivity: clear TERMINAL, re-run `fmt`, fold its output
-        // back into the editor, and refresh PREVIEW (plus KNOWLEDGE/REASONING,
-        // which read from the same buffer) from the corrected text.
-        var editTimer = null;
-        var EDIT_DEBOUNCE = 500;
-
-        cm.on("change", function (instance, changeObj) {
-          if (changeObj.origin === "setValue") return;
-          contents[current] = cm.getValue();
-          clearTimeout(editTimer);
-          editTimer = setTimeout(onInactivity, EDIT_DEBOUNCE);
-        });
-
-        function onInactivity() {
-          clearTerminal();
-          var result = runFmt();
-          if (result && result.changed) {
-            var cursor = cm.getCursor();
-            cm.setValue(result.output);
-            cm.setCursor(cursor);
-            contents[current] = result.output;
-            // A cell or anchor got rewritten — the visitor typed over a
-            // derived value and fmt just overwrote it back. By the time
-            // refreshDerived() below re-checks for STALE findings, this is
-            // already fixed (fmt just fixed it), so that's the one place to
-            // catch "you edited a derived value and got overwritten" as it
-            // happens rather than after the fact.
-            if (result.cellsUpdated || result.anchorsUpdated) {
-              questSignal("action:fmt-corrected");
-            }
-          }
-          if (result && result.unfixable.length === 0) {
-            questSignal("action:fmt-clean");
-          }
-          if (result && result.unfixable.length > 0) {
-            questSignal("action:fmt-failing");
-          }
-          refreshDerived();
-        }
-
-        // ---- Infer -------------------------------------------------------------
-        // What `infer` sees, in its own tab — the adoption story: drop in a
-        // plain, unannotated .md and see the rules/scalars VisiMark would add
-        // before committing to anything. "Infer only" mirrors plain
-        // `visimark infer FILE` (proposals shown, document untouched);
-        // "Infer and write" mirrors `visimark infer FILE --write` (proposals
-        // applied back into the editor). TERMINAL only gets the action's
-        // one-line outcome, same as every other command.
-        document.getElementById("infer-btn").addEventListener("click", function () {
-          runInfer(false);
-        });
-        document.getElementById("infer-write-btn").addEventListener("click", function () {
-          runInfer(true);
-        });
-
-        function runInfer(write) {
-          var source = cm.getValue();
-          questSignal("action:infer-run");
-          termCmd("visimark infer " + current + (write ? " --write" : ""));
-          var proposals;
-          try {
-            proposals = VM.infer(source);
-          } catch (e) {
-            inferEl.textContent = "error: " + e.message;
-            term("visimark: " + e.message, "err");
-            trimTerminal();
-            return;
-          }
-          inferEl.textContent = VM.formatInfer(current, source, proposals);
-          if (!write) {
-            trimTerminal();
-            return;
-          }
-          questSignal("action:infer-write");
-          var edits = VM.planInfer(source, proposals);
-          if (edits.length === 0) {
-            term(current + ": nothing to write");
-          } else {
-            var updated = VM.applyEdits(source, edits);
-            var cursor = cm.getCursor();
-            cm.setValue(updated);
-            cm.setCursor(cursor);
-            contents[current] = updated;
-            var blocks = edits.filter(function (e) {
-              return e.kind === "block";
-            }).length;
-            var anchors = edits.filter(function (e) {
-              return e.kind === "anchor";
-            }).length;
-            var bits = [];
-            if (blocks) bits.push(pluralize(blocks, "block"));
-            if (anchors) bits.push(pluralize(anchors, "anchor"));
-            term(current + ": wrote " + bits.join(", "));
-          }
-          trimTerminal();
-          clearTimeout(editTimer);
-          runFmt();
-          refreshDerived();
-        }
-
-        // ---- Build ---------------------------------------------------------------
-        // `visimark check` run across every file in FILES, the way a CI job
-        // would check a whole repository — button-activated (see runBuild)
-        // rather than on every keystroke, since it's every open document, not
-        // just the current one.
-        var buildBtn = document.getElementById("build-btn");
-        var buildStatusEl = document.getElementById("build-status");
-        var buildBodyEl = document.getElementById("build-body");
-
-        buildBtn.addEventListener("click", runBuild);
-
-        function runBuild() {
-          contents[current] = cm.getValue();
-          buildBtn.disabled = true;
-          buildStatusEl.textContent = "running…";
-          buildBodyEl.innerHTML = "";
-          // Data files (13-imports.csv) are in the store for the engine to
-          // read, not for `visimark check` to run over — a CSV is not a
-          // VisiMark document and the CLI would refuse it.
-          var documents = order.filter(function (name) {
-            return /\.md$/i.test(name);
-          });
-          termCmd("visimark check " + documents.join(" "));
-
-          var passed = 0;
-          documents.forEach(function (name) {
-            var outcome = checkOne(name, contents[name]);
-            if (outcome.ok) passed++;
-            buildBodyEl.appendChild(buildRow(name, outcome));
-          });
-
-          var summary = passed + "/" + documents.length + " files passing";
-          buildStatusEl.textContent = summary;
-          term("visimark check: " + summary);
-          trimTerminal();
-          setStatus(passed === documents.length, passed === documents.length ? "" : summary);
-          buildBtn.disabled = false;
-          questSignal("action:build-run");
-          if (checkOne(current, contents[current]).ok) {
-            questSignal("action:build-pass:" + current);
-          }
-        }
-
-        /** Mirrors `visimark check FILE` — findings plus, since `check` alone
-         *  doesn't fail the exit code on a false assertion (see cmdEval's
-         *  separate reportFailures), a failed assertion also counts here. */
-        function checkOne(name, source) {
-          try {
-            var result = VM.check(VM.build(VM.locate(source)), optsFor(name));
-            var failedAssertions = result.assertions.filter(function (a) {
-              return a.holds === false;
-            });
-            if (result.exitCode === 0 && failedAssertions.length === 0) {
-              return { ok: true, note: "clean" };
-            }
-            var bits = [];
-            if (result.findings.length) bits.push(pluralize(result.findings.length, "finding"));
-            if (failedAssertions.length) {
-              bits.push(pluralize(failedAssertions.length, "failed assertion"));
-            }
-            return {
-              ok: false,
-              note: bits.join(", "),
-              detail: VM.formatCheck(name, result.findings),
-            };
-          } catch (e) {
-            return { ok: false, note: "crashed", detail: e.message };
-          }
-        }
-
-        function buildRow(name, outcome) {
-          var wrap = document.createDocumentFragment();
-          var row = document.createElement("div");
-          row.className = "build-row";
-          var dot = document.createElement("span");
-          dot.className = "flag" + (outcome.ok ? "" : " fail");
-          var fileEl = document.createElement("span");
-          fileEl.className = "build-file";
-          fileEl.textContent = name;
-          var noteEl = document.createElement("span");
-          noteEl.className = "build-note";
-          noteEl.textContent = "— " + outcome.note;
-          row.appendChild(dot);
-          row.appendChild(fileEl);
-          row.appendChild(noteEl);
-          wrap.appendChild(row);
-          if (!outcome.ok && outcome.detail) {
-            var detail = document.createElement("pre");
-            detail.className = "build-detail";
-            detail.textContent = outcome.detail;
-            wrap.appendChild(detail);
-          }
-          return wrap;
-        }
-
-        // ---- boot ------------------------------------------------------------
-        document.getElementById("editor-filename").textContent = current;
-        renderFileList();
-        renderScenario(current);
-        runFmt();
-        refreshDerived();
-      })();
-    </script>
+    <script src="./vendor/visimark-playground.js"></script>
   </body>
 </html>

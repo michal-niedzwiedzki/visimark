@@ -7,5 +7,8 @@
     "rootDir": "src",
     "outDir": "dist"
   },
-  "include": ["src"]
+  "include": ["src"],
+  // Browser-only UI: not part of the published package, and needs the DOM lib
+  // (see tsconfig.app.json).
+  "exclude": ["src/playground/app"]
 }
