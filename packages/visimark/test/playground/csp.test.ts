@@ -12,6 +12,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { withoutComments } from "../support/markup.js";
 
 const page = readFileSync(join(import.meta.dir, "../../../../docs/playground.html"), "utf8");
 const appDir = join(import.meta.dir, "../../src/playground/app");
@@ -25,7 +26,7 @@ const pipeline = pipelineSource.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*
 /** The page with its comments removed — several of them quote markup that is
  *  being discussed rather than emitted, including the `<script>` §2.4 took
  *  out. */
-const markup = page.replace(/<!--[\s\S]*?-->/g, "");
+const markup = withoutComments(page);
 
 const policy = /http-equiv="Content-Security-Policy"\s+content="([^"]*)"/
   .exec(page)?.[1]

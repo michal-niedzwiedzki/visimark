@@ -14,6 +14,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { withoutComments } from "./support/markup.js";
 
 const root = join(import.meta.dir, "../../..");
 const docs = join(root, "docs");
@@ -37,7 +38,7 @@ const PAGES = ["index.html", "playground.html", "tutorial.html", "preview.html"]
  * oxfmt wraps a <meta> whose content is long enough onto three lines.
  */
 function meta(page: string, key: string): string | undefined {
-  const markup = read(page).replace(/<!--[\s\S]*?-->/g, "");
+  const markup = withoutComments(read(page));
   const tag = new RegExp(`<meta\\s+(?:property|name)="${key}"\\s+content="([^"]*)"`);
   return tag.exec(markup)?.[1];
 }
