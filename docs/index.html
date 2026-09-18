@@ -3,6 +3,53 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!--
+      Review §2.9. Four badge-share buttons opened Facebook, LinkedIn,
+      Instagram and X with this site's URL, and the site had no og: tags at
+      all — so the feature's own success case rendered as a bare blue link on
+      every one of them.
+
+      The wording has one source of truth: packages/visimark/package.json's
+      `description`, which is also what npm and the VS Code Marketplace show,
+      and whose first clause is index.html's subtitle. og:image is
+      docs/og-card.png, generated from that same field by
+      `bun scripts/gen-og-image.mjs`.
+
+      Every URL here is absolute. A relative og:image resolves against the
+      scraper, not the page, so it silently fetches nothing — the same class
+      of bug as the vsix-readme-image-urls note.
+
+      One card for the whole site rather than one per page image, and
+      deliberately no per-badge card: the share button knows which badge was
+      earned, but a card per badge means a static page per badge for the
+      scrapers to read, which is thirteen pages of build machinery for a
+      thumbnail. That is scope creep, and this is it being declined rather
+      than left open.
+    -->
+    <meta
+      name="description"
+      content="The numbers in your Markdown, checked on every commit: every computed number carries the formula that produced it, and a machine can prove the two still agree."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="VisiMark" />
+    <meta property="og:title" content="VisiMark" />
+    <meta
+      property="og:description"
+      content="The numbers in your Markdown, checked on every commit: every computed number carries the formula that produced it, and a machine can prove the two still agree."
+    />
+    <meta property="og:url" content="https://michal-niedzwiedzki.github.io/visimark/" />
+    <meta
+      property="og:image"
+      content="https://michal-niedzwiedzki.github.io/visimark/og-card.png"
+    />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="VisiMark: a vmark block computing grand_total = SUM(Total), and the prose value it keeps in step"
+    />
+    <meta name="twitter:card" content="summary_large_image" />
     <title>VisiMark</title>
     <link rel="icon" type="image/webp" href="visimark.webp" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
