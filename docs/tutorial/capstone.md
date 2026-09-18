@@ -11,7 +11,7 @@ person: every derived cell and every bold figure in the prose was written by
 
 ## Scope and price
 
-| Stage            | Effort (person-days) |    Rate |      Net |     VAT |    Gross |
+| Stage            | Effort (man-days)    |    Rate |      Net |     VAT |    Gross |
 |------------------|---------------------:|--------:|---------:|--------:|---------:|
 | Discovery        |                    6 |  900.00 |  5400.00 | 1242.00 |  6642.00 |
 | Schema mapping   |                   14 |  850.00 | 11900.00 | 2737.00 | 14637.00 |
@@ -19,7 +19,7 @@ person: every derived cell and every bold figure in the prose was written by
 | Cutover support  |                    4 | 1100.00 |  4400.00 | 1012.00 |  5412.00 |
 
 ```vmark #lines
-"Effort (person-days)" is days
+"Effort (man-days)" is days
 
 vat_rate = 23%
 
@@ -34,7 +34,7 @@ gross_total  = SUM(Gross)
 day_rate_avg precision 2 = net_total / effort_total
 ```
 
-The engagement is **33**<!--vmark=lines.effort_total--> person-days at an
+The engagement is **33**<!--vmark=lines.effort_total--> man-days at an
 average of **889.39**<!--vmark=lines.day_rate_avg--> PLN per day. Net of tax it
 comes to **29350.00**<!--vmark=lines.net_total--> PLN. VAT at 23% adds
 **6750.50**<!--vmark=lines.vat_total--> PLN, giving a total of

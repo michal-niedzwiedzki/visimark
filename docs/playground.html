@@ -196,7 +196,9 @@
         white-space: nowrap;
       }
       .topbar .tagline {
-        margin: 0;
+        /* On top of .topbar-side's gap: the page name and the site links are
+           two different things and should not read as one run of text. */
+        margin: 0 1.25rem 0 0;
         font-family: "Caveat", "Bradley Hand", "Comic Sans MS", cursive;
         font-size: 1.4rem;
         font-weight: 700;
@@ -204,11 +206,13 @@
         white-space: nowrap;
         text-overflow: ellipsis;
       }
-      /* The nav is centred in the bar, not merely pushed along by a spacer:
-         the two side groups each take an equal share of the leftover width, so
-         the nav sits on the bar's midpoint whatever the brand and the badge
-         happen to measure. `min-width: 0` lets a side group shrink rather than
-         shove the nav off-centre when the window gets narrow. */
+      /* The nav sits in the left group, immediately after the brand, the same
+         way tutorial.html and ci.html place theirs — the three pages read as
+         one site, so the site links belong in the same spot on each. The two
+         side groups still take an equal share of the leftover width, which is
+         what keeps the badge pinned right. `min-width: 0` lets a side group
+         shrink rather than push the badge off the bar when the window gets
+         narrow. */
       .topbar .topbar-side {
         flex: 1 1 0;
         min-width: 0;
@@ -253,6 +257,15 @@
         border-radius: 999px;
         padding: 4px 12px;
         white-space: nowrap;
+      }
+      /* The bar is only ever shown at 900px and up, and just fits there once
+         the brand, the site links and the badge are all on it. The badge is
+         the one item that is decoration rather than navigation, so it is what
+         gives way first. */
+      @media (max-width: 1100px) {
+        .topbar .badge {
+          display: none;
+        }
       }
 
       /* ---- Boot overlay ----
@@ -1351,12 +1364,13 @@
             <h1>VisiMark</h1>
           </a>
           <p class="tagline">Playground</p>
+          <nav class="nav" aria-label="Site">
+            <a href="index.html">Home</a>
+            <a href="tutorial.html">Tutorial</a>
+            <a href="ci.html">Continuous integration</a>
+            <a href="https://github.com/michal-niedzwiedzki/visimark" rel="noopener">GitHub</a>
+          </nav>
         </div>
-        <nav class="nav" aria-label="Site">
-          <a href="index.html">Home</a>
-          <a href="tutorial.html">Tutorial</a>
-          <a href="https://github.com/michal-niedzwiedzki/visimark" rel="noopener">GitHub</a>
-        </nav>
         <div class="topbar-side topbar-side-end">
           <span class="badge">running fully in your browser</span>
         </div>

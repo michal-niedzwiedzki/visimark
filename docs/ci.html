@@ -6,19 +6,16 @@
 
     <meta
       name="description"
-      content="From a plain Markdown table to a checked document and back out to CI, one concept at a time — tables, inference, anchors, aggregates, assertions, charts and imports."
+      content="Make a build read your Markdown documents on every commit, and stop a merge when the arithmetic in them stops adding up — the GitHub Action, globs, annotations, pinning and rollout."
     />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="VisiMark" />
-    <meta property="og:title" content="The VisiMark tutorial" />
+    <meta property="og:title" content="Protect your Markdown numbers with CI" />
     <meta
       property="og:description"
-      content="From a plain Markdown table to a checked document and back out to CI, one concept at a time — tables, inference, anchors, aggregates, assertions, charts and imports."
+      content="Make a build read your Markdown documents on every commit, and stop a merge when the arithmetic in them stops adding up — the GitHub Action, globs, annotations, pinning and rollout."
     />
-    <meta
-      property="og:url"
-      content="https://michal-niedzwiedzki.github.io/visimark/tutorial.html"
-    />
+    <meta property="og:url" content="https://michal-niedzwiedzki.github.io/visimark/ci.html" />
     <meta
       property="og:image"
       content="https://michal-niedzwiedzki.github.io/visimark/og-card.png"
@@ -30,24 +27,19 @@
       content="VisiMark: a vmark block computing grand_total = SUM(Total), and the prose value it keeps in step"
     />
     <meta name="twitter:card" content="summary_large_image" />
-    <title>The VisiMark tutorial</title>
+    <title>Protect your Markdown numbers with CI</title>
     <link rel="icon" type="image/webp" href="visimark.webp" />
 
     <!--
       A viewer, not a document.
 
-      Every word of the tutorial lives in tutorial.md. This page fetches that
-      file, splits it into top-level blocks, and lays each block out as one
-      grid row: source on the left, rendering on the right.
+      Every word lives in ci.md. This page fetches that file and renders it as
+      one column. Unlike tutorial.html there is no source/rendering split: the
+      CI guide's code blocks are YAML, shell and console transcripts, and the
+      Markdown behind them is not the thing a reader is here to study.
 
-      Why paired grid rows rather than two scrolling panes with synced scroll
-      positions: a grid row is as tall as its taller half, so block n on the
-      left is always level with block n on the right. There is one scrollbar,
-      no scroll listener, and nothing to drift. Lockstep is a consequence of
-      the layout instead of a thing JavaScript has to maintain.
-
-      Delete this file and a complete tutorial is still there in tutorial.md,
-      rendering on GitHub. That is the point.
+      Delete this file and the whole guide is still there in ci.md, rendering
+      on GitHub. That is the point.
 
       Needs to be served over http(s) — `bun run serve`, or GitHub Pages —
       because fetch() of a local file is blocked under file://.
@@ -117,9 +109,6 @@
         background: var(--bar);
         border-bottom: 1px solid var(--rule);
       }
-      /* Three groups, with the two sides taking an equal share of the leftover
-         width, so the Table of Contents button sits on the bar's true midpoint
-         whatever the title and the controls happen to measure. */
       .bar-side {
         flex: 1 1 0;
         min-width: 0;
@@ -159,29 +148,7 @@
         color: var(--fg);
         border-bottom-color: var(--accent);
       }
-      .modes button {
-        font: inherit;
-        font-size: 0.85rem;
-        padding: 0.25rem 0.7rem;
-        border: 1px solid var(--rule);
-        background: transparent;
-        color: var(--muted);
-        cursor: pointer;
-      }
-      .modes button:first-child {
-        border-radius: 4px 0 0 4px;
-      }
-      .modes button:last-child {
-        border-radius: 0 4px 4px 0;
-      }
-      .modes button + button {
-        border-left: 0;
-      }
-      .modes button[aria-pressed="true"] {
-        color: var(--bg);
-        background: var(--accent);
-        border-color: var(--accent);
-      }
+
       /* ---- table of contents ---- */
       .toc-btn {
         font: inherit;
@@ -288,93 +255,48 @@
         font-size: 0.9rem;
         color: var(--muted);
       }
-      .toc-list a[data-level="4"] {
+      .toc-list a[data-level="4"],
+      .toc-list a[data-level="5"],
+      .toc-list a[data-level="6"] {
         padding-left: 5.3rem;
         font-size: 0.9rem;
         color: var(--muted);
       }
-      .toc-list a[data-level="5"],
-      .toc-list a[data-level="6"] {
-        padding-left: 6.7rem;
-        font-size: 0.9rem;
-        color: var(--muted);
-      }
 
-      /* ---- the lockstep grid ---- */
+      /* ---- the document ---- */
       main {
-        max-width: 1600px;
+        max-width: 880px;
         margin: 0 auto;
         padding: 1.5rem 1rem 6rem;
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-        column-gap: 1.5rem;
-        row-gap: 0.2rem;
-        align-items: start;
       }
-      body[data-mode="rendered"] main,
-      body[data-mode="source"] main {
-        grid-template-columns: minmax(0, 1fr);
-        max-width: 900px;
-      }
-      body[data-mode="rendered"] .src,
-      body[data-mode="source"] .out {
-        display: none;
-      }
-
-      .src {
-        margin: 0;
-        padding: 0.5rem 0.75rem;
-        overflow-x: auto;
-        background: var(--src-bg);
-        color: var(--src-fg);
-        border-left: 2px solid var(--rule);
-        font:
-          12px/1.55 ui-monospace,
-          SFMono-Regular,
-          Menlo,
-          Consolas,
-          monospace;
-        white-space: pre;
-        tab-size: 2;
-      }
-      .out {
-        min-width: 0;
-        padding: 0 0.25rem;
-      }
-      .out > :first-child {
-        margin-top: 0;
-      }
-      .out > :last-child {
-        margin-bottom: 0;
-      }
-
-      /* ---- rendered markdown ---- */
-      .out h1,
-      .out h2,
-      .out h3 {
+      main h1,
+      main h2,
+      main h3,
+      main h4 {
         line-height: 1.25;
-        margin: 1.6rem 0 0.6rem;
+        margin: 1.8rem 0 0.6rem;
       }
-      .out h1 {
+      main h1 {
         font-size: 1.7rem;
         border-bottom: 2px solid var(--accent);
         padding-bottom: 0.3rem;
+        margin-top: 2.6rem;
       }
-      .out h2 {
+      main h2 {
         font-size: 1.3rem;
       }
-      .out h3 {
+      main h3 {
         font-size: 1.05rem;
       }
-      .out p,
-      .out ul,
-      .out ol {
-        margin: 0.6rem 0;
+      main p,
+      main ul,
+      main ol {
+        margin: 0.7rem 0;
       }
-      .out a {
+      main a {
         color: var(--accent);
       }
-      .out code {
+      main code {
         font:
           0.87em ui-monospace,
           SFMono-Regular,
@@ -385,49 +307,55 @@
         padding: 0.1em 0.35em;
         border-radius: 3px;
       }
-      .out pre {
+      main pre {
         background: var(--src-bg);
         padding: 0.7rem 0.85rem;
         overflow-x: auto;
         border-radius: 4px;
         border-left: 2px solid var(--accent);
       }
-      .out pre code {
+      main pre code {
         background: none;
         padding: 0;
         font-size: 0.8rem;
         line-height: 1.5;
       }
-      .out table {
+      main table {
         border-collapse: collapse;
         width: 100%;
         font-size: 0.9rem;
-        margin: 0.8rem 0;
+        margin: 0.9rem 0;
       }
-      .out th,
-      .out td {
+      main th,
+      main td {
         border: 1px solid var(--rule);
-        padding: 0.3rem 0.5rem;
+        padding: 0.35rem 0.55rem;
         text-align: left;
+        vertical-align: top;
       }
-      .out th {
+      main th {
         background: var(--src-bg);
       }
-      .out blockquote {
+      main blockquote {
         margin: 0.8rem 0;
         padding-left: 0.9rem;
         border-left: 3px solid var(--rule);
         color: var(--muted);
       }
-      .out hr {
+      main hr {
         border: 0;
         border-top: 1px solid var(--rule);
-        margin: 2rem 0;
+        margin: 2.5rem 0;
+      }
+      /* The checklist in the last chapter is a task list, and a bullet in
+         front of a checkbox is one marker too many. */
+      main li:has(> input[type="checkbox"]) {
+        list-style: none;
+        margin-left: -1.2rem;
       }
 
       .note {
-        grid-column: 1 / -1;
-        padding: 2rem;
+        padding: 2rem 0;
         color: var(--muted);
       }
       .note code {
@@ -441,27 +369,17 @@
           height: 85%;
         }
       }
-
-      @media (max-width: 900px) {
-        main {
-          grid-template-columns: minmax(0, 1fr);
-          max-width: 900px;
-        }
-        body[data-mode="split"] .src {
-          display: none;
-        }
-      }
     </style>
   </head>
 
-  <body data-mode="split">
+  <body>
     <header class="bar">
       <div class="bar-side">
-        <span class="title"><a href="index.html">VisiMark</a> — tutorial</span>
+        <span class="title"><a href="index.html">VisiMark</a> — CI</span>
         <nav class="nav" aria-label="Site">
           <a href="index.html">Home</a>
           <a href="playground.html">Playground</a>
-          <a href="ci.html">Continuous integration</a>
+          <a href="tutorial.html">Tutorial</a>
           <a href="https://github.com/michal-niedzwiedzki/visimark" rel="noopener">GitHub</a>
         </nav>
       </div>
@@ -470,13 +388,7 @@
         Table of Contents
       </button>
 
-      <div class="bar-side bar-side-end">
-        <span class="modes" role="group" aria-label="View mode">
-          <button type="button" data-set="split" aria-pressed="true">Side by side</button>
-          <button type="button" data-set="rendered" aria-pressed="false">Rendered</button>
-          <button type="button" data-set="source" aria-pressed="false">Source</button>
-        </span>
-      </div>
+      <div class="bar-side bar-side-end"></div>
     </header>
 
     <dialog class="toc" id="toc" aria-label="Table of contents">
@@ -490,63 +402,12 @@
     </dialog>
 
     <main id="doc">
-      <p class="note">Loading <code>tutorial.md</code>…</p>
+      <p class="note">Loading <code>ci.md</code>…</p>
     </main>
 
     <script>
       (function () {
-        var SOURCE = "tutorial.md";
-
-        /* Split Markdown into top-level blocks.
-           A block ends at a blank line, except inside a fenced code block —
-           and fences nest here for real, because the tutorial shows ```vmark
-           blocks inside ````markdown examples. A closing fence must use the
-           same character, be at least as long as the opening one, and carry
-           no info string, which is CommonMark's rule. */
-        function splitBlocks(md) {
-          var lines = md.replace(/\r\n?/g, "\n").split("\n");
-          var blocks = [];
-          var cur = [];
-          var fence = null;
-
-          function flush() {
-            if (cur.join("").trim() !== "") blocks.push(cur.join("\n"));
-            cur = [];
-          }
-
-          for (var i = 0; i < lines.length; i++) {
-            var line = lines[i];
-            var m = line.match(/^ {0,3}(`{3,}|~{3,})(.*)$/);
-
-            if (fence) {
-              cur.push(line);
-              if (m && m[1][0] === fence.char && m[1].length >= fence.len && m[2].trim() === "") {
-                fence = null;
-                flush();
-              }
-              continue;
-            }
-            if (m) {
-              flush();
-              fence = { char: m[1][0], len: m[1].length };
-              cur.push(line);
-              continue;
-            }
-            if (line.trim() === "") {
-              flush();
-              continue;
-            }
-            if (/^#{1,6}\s/.test(line)) {
-              flush();
-              cur.push(line);
-              flush();
-              continue;
-            }
-            cur.push(line);
-          }
-          flush();
-          return blocks;
-        }
+        var SOURCE = "ci.md";
 
         function slug(text) {
           return text
@@ -563,35 +424,39 @@
         function render(md) {
           var main = document.getElementById("doc");
           var tocList = document.getElementById("toc-list");
-          main.textContent = "";
 
-          splitBlocks(md).forEach(function (block) {
-            var head = block.match(/^(#{1,6})\s+(.*)$/);
-            var id = null;
-            if (head) {
-              id = slug(head[2]);
+          main.innerHTML = marked.parse(md);
+
+          /* Headings carry no id of their own, so give each one a slug and
+             build the contents list from the same pass. A duplicate heading
+             text gets a numeric suffix rather than a second element sharing
+             an id, which would make one of the two links unreachable. */
+          var seen = Object.create(null);
+          Array.prototype.forEach.call(
+            main.querySelectorAll("h1, h2, h3, h4, h5, h6"),
+            function (h) {
+              var base = slug(h.textContent);
+              var id = base;
+              if (seen[base]) id = base + "-" + seen[base];
+              seen[base] = (seen[base] || 0) + 1;
+              h.id = id;
+
               var link = document.createElement("a");
               link.href = "#" + id;
-              link.dataset.level = String(head[1].length);
-              link.textContent = head[2];
+              link.dataset.level = h.tagName.slice(1);
+              link.textContent = h.textContent;
               tocList.appendChild(link);
-            }
+            },
+          );
 
-            var src = document.createElement("pre");
-            src.className = "src";
-            src.innerHTML = escapeHtml(block);
-
-            var out = document.createElement("div");
-            out.className = "out";
-            out.innerHTML = marked.parse(block);
-            if (id) {
-              var h = out.firstElementChild;
-              if (h) h.id = id;
-            }
-
-            main.appendChild(src);
-            main.appendChild(out);
-          });
+          /* Task-list items come out of marked as disabled checkboxes. They
+             are a printed checklist, not a form, so leave them inert. */
+          Array.prototype.forEach.call(
+            main.querySelectorAll('input[type="checkbox"]'),
+            function (box) {
+              box.disabled = true;
+            },
+          );
 
           if (location.hash) {
             var target = document.getElementById(location.hash.slice(1));
@@ -629,30 +494,6 @@
           }
         });
 
-        Array.prototype.forEach.call(document.querySelectorAll(".modes button"), function (btn) {
-          btn.addEventListener("click", function () {
-            document.body.dataset.mode = btn.dataset.set;
-            Array.prototype.forEach.call(document.querySelectorAll(".modes button"), function (b) {
-              b.setAttribute("aria-pressed", String(b === btn));
-            });
-            try {
-              localStorage.setItem("visimark-tutorial-mode", btn.dataset.set);
-            } catch (_) {
-              /* private mode, blocked storage — the default view is fine */
-            }
-          });
-        });
-
-        try {
-          var saved = localStorage.getItem("visimark-tutorial-mode");
-          if (saved) {
-            var b = document.querySelector('.modes button[data-set="' + saved + '"]');
-            if (b) b.click();
-          }
-        } catch (_) {
-          /* ignore */
-        }
-
         fetch(SOURCE)
           .then(function (r) {
             if (!r.ok) throw new Error(SOURCE + ": HTTP " + r.status);
@@ -667,7 +508,7 @@
               escapeHtml(String(err.message)) +
               ".<br><br>This page has to be served over http(s) — <code>bun run serve</code> from a clone, " +
               "or GitHub Pages. Opening it from <code>file://</code> is blocked by the browser.<br><br>" +
-              "The tutorial itself is plain Markdown and reads fine without this page: " +
+              "The guide itself is plain Markdown and reads fine without this page: " +
               '<a href="' +
               SOURCE +
               '">' +

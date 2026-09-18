@@ -1063,7 +1063,7 @@ A column rule's name is normally the header text itself, so it normally has to
 be a plain identifier. Real headers are not:
 
 ```markdown
-| Stage     | Effort (person-days) |
+| Stage     | Effort (man-days) |
 ```
 
 The wrong fix is to rename the header. That header is human-facing prose,
@@ -1075,7 +1075,7 @@ Two forms handle it, and neither touches the table.
 ### `"Header text" is symbol` — give the column a short name
 
 ```
-"Effort (person-days)" is days
+"Effort (man-days)" is days
 
 Net = days * Rate
 effort_total = SUM(days)
@@ -1646,7 +1646,11 @@ the check runs without you, and other programs read the document.
 ## 22. In CI
 
 The whole point of `check` is that it runs somewhere other than a human's
-judgment. The setup is one line:
+judgment. This chapter is the short version;
+[`ci.md`](ci.md) is the long one, and covers annotations, pinning, other CI
+systems and how to roll this out on a repository that already has documents.
+
+The setup is one line:
 
 ```bash
 npx visimark check docs/*.md
@@ -1985,7 +1989,7 @@ Follow along. Every command is shown.
 The header is written for the reader, not for the tool. Do not rename it.
 
 ```markdown
-| Stage            | Effort (person-days) |    Rate |   Net |   VAT | Gross |
+| Stage            | Effort (man-days)    |    Rate |   Net |   VAT | Gross |
 |------------------|---------------------:|--------:|------:|------:|------:|
 | Discovery        |                    6 |  900.00 |  0.00 |  0.00 |  0.00 |
 | Schema mapping   |                   14 |  850.00 |  0.00 |  0.00 |  0.00 |
@@ -2000,7 +2004,7 @@ table still lines up after `fmt`.
 
 ````markdown
 ```vmark #lines
-"Effort (person-days)" is days
+"Effort (man-days)" is days
 
 vat_rate = 23%
 
@@ -2027,7 +2031,7 @@ Four decisions are visible here, and each one is a chapter you have read:
 ### Step 3 — the prose, with anchors
 
 ```markdown
-The engagement is **0**<!--vmark=lines.effort_total--> person-days at an
+The engagement is **0**<!--vmark=lines.effort_total--> man-days at an
 average of **0.00**<!--vmark=lines.day_rate_avg--> PLN per day. Net of tax it
 comes to **0.00**<!--vmark=lines.net_total--> PLN. VAT at 23% adds
 **0.00**<!--vmark=lines.vat_total--> PLN, giving a total of
@@ -2216,6 +2220,7 @@ the decision on it. The review process is
 
 | Document | What it answers |
 |---|---|
+| [`ci.md`](ci.md) | Protect your Markdown numbers with CI — the Action, globs, annotations, pinning and rollout |
 | [`cli-reference.md`](cli-reference.md) | Every command, option, exit code and finding, in tables |
 | [`function-reference.md`](function-reference.md) | What each of the thirteen builtins does, with examples that run in CI |
 | [`visimark-design.md`](visimark-design.md) | The normative specification, the deferred work, and the known tensions |
