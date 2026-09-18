@@ -343,7 +343,7 @@ Total: **35.00**<span class="c">&lt;!--vmark=order.total--&gt;</span>
       <section class="tryout-grid">
         <article class="tryout-item">
           <div class="tryout-top">
-            <div class="tryout-image" role="img" aria-label="Playground preview placeholder"></div>
+            <img class="tryout-image" src="playground.webp" alt="The VisiMark Playground" />
             <div class="tryout-body">
               <h3>Playground</h3>
               <ul>
@@ -360,11 +360,7 @@ Total: **35.00**<span class="c">&lt;!--vmark=order.total--&gt;</span>
 
         <article class="tryout-item">
           <div class="tryout-top">
-            <div
-              class="tryout-image"
-              role="img"
-              aria-label="VS Code extension preview placeholder"
-            ></div>
+            <img class="tryout-image" src="vscode.webp" alt="The VisiMark VS Code extension" />
             <div class="tryout-body">
               <h3>VS Code extension</h3>
               <ul>
@@ -787,16 +783,19 @@ Process completed with exit code 1</pre>
           </p>
           <div class="renderer-row">
             <div class="renderer-card">
+              <img class="renderer-image" src="github.webp" alt="GitHub rendering" />
               <h4>GitHub</h4>
               <p><span class="verdict">&#10003; pass</span> &mdash; anchors stripped from output</p>
             </div>
             <div class="renderer-card">
+              <img class="renderer-image" src="vscode.webp" alt="VS Code preview rendering" />
               <h4>VS Code preview</h4>
               <p>
                 <span class="verdict">&#10003; pass</span> &mdash; anchors pass through as a comment
               </p>
             </div>
             <div class="renderer-card">
+              <img class="renderer-image" src="html.webp" alt="pandoc HTML5 output rendering" />
               <h4>pandoc &rarr; html5</h4>
               <p>
                 <span class="verdict">&#10003; pass</span> &mdash; anchors pass through as a comment
@@ -902,7 +901,7 @@ Process completed with exit code 1</pre>
         <article class="feature feature--sm" id="feature-tools">
           <div class="feature-head">
             <h3>Power tools</h3>
-            <p class="feature-statement">Eight ways in, one engine</p>
+            <p class="feature-statement">Twelve ways in, one engine</p>
           </div>
           <p>
             More to explore &mdash; each is one command, documented in full in the
@@ -926,18 +925,23 @@ Process completed with exit code 1</pre>
             </div>
             <div class="power-card">
               <h4><code>infer</code></h4>
-              <p>Discover formulas from existing tables.</p>
+              <p>Discover formulas in existing tables for instant onboarding.</p>
               <p class="feature-statement">&rarr; To power up your MDs.</p>
             </div>
             <div class="power-card">
               <h4><code>eval</code></h4>
-              <p>Inspect calculated values programmatically, including as JSON.</p>
+              <p>Export facts and calculations to your programmatic pipeline.</p>
               <p class="feature-statement">&rarr; For your AI agent.</p>
             </div>
             <div class="power-card">
               <h4><code>explain</code></h4>
               <p>Understand a sheet's inputs, rules and evaluation order.</p>
-              <p class="feature-statement">&rarr; As a cheat sheet.</p>
+              <p class="feature-statement">&rarr; Your document guidance.</p>
+            </div>
+            <div class="power-card">
+              <h4><code>ref</code></h4>
+              <p>Language reference at your fingertips, also on hover in your editor.</p>
+              <p class="feature-statement">&rarr; Instant reference.</p>
             </div>
             <div class="power-card">
               <h4><code>chart</code></h4>
@@ -945,14 +949,9 @@ Process completed with exit code 1</pre>
               <p class="feature-statement">&rarr; To manage artifacts.</p>
             </div>
             <div class="power-card">
-              <h4>Assertions</h4>
-              <p><code>assert</code> states an invariant a stray formula could still satisfy.</p>
-              <p class="feature-statement">&rarr; For your CI build.</p>
-            </div>
-            <div class="power-card">
-              <h4>VS Code extension</h4>
-              <p>The same engine, as live diagnostics, quick fixes and hover.</p>
-              <p class="feature-statement">&rarr; Power up your editor.</p>
+              <h4><code>--json</code> everywhere</h4>
+              <p>Make everything machine readable.</p>
+              <p class="feature-statement">&rarr; For your workflow.</p>
             </div>
           </div>
         </article>
@@ -1330,16 +1329,27 @@ $ cp -r skills/visimark ~/.claude/skills/visimark</pre>
 
           <article class="featured-item">
             <div class="feature-head">
-              <h3>Anchors</h3>
+              <h3>CSV imports</h3>
             </div>
             <p>
-              A comment anchor binds a printed number to a name, so a sentence stays plain prose
-              while the value stays machine-checkable:
+              Keep bulky rows out of the document. A <code>from</code> clause on the fence line
+              points at a CSV in the same directory, and its header row supplies the column names:
             </p>
-            <pre>Invoice total: **28659.00**<span class="c">&lt;!--vmark=lines.gross_total--&gt;</span></pre>
+            <pre><span class="c">```</span><span class="k">vmark #sales from sales.csv</span>
+total = SUM(Amount)
+<span class="c">```</span>
+
+Total: **1240.00**<span class="c">&lt;!--vmark=sales.total--&gt;</span></pre>
+            <p style="margin-top: 14px">Where <code>sales.csv</code> is an ordinary file:</p>
+            <pre><span class="csv-c1">Region</span>,<span class="csv-c2">Amount</span>
+<span class="csv-c1">North</span>,<span class="csv-c2">420.00</span>
+<span class="csv-c1">South</span>,<span class="csv-c2">310.00</span>
+<span class="csv-c1">West</span>,<span class="csv-c2">510.00</span></pre>
             <p style="margin-top: 14px">
-              The HTML comment is invisible in every renderer that permits raw HTML &mdash; GitHub,
-              VS Code, pandoc &mdash; so a reader just sees the bold number.
+              Run <code>fmt</code> once and it pins the file's bytes with
+              <code>at sha256:&hellip;</code> on the fence line; from then on
+              <code>check</code> reports <code>STALE</code> if the CSV changes underneath the
+              document.
             </p>
           </article>
 
@@ -1368,19 +1378,16 @@ variance  = lines.gross_total - scheduled
 
           <article class="featured-item">
             <div class="feature-head">
-              <h3>VS Code extension</h3>
+              <h3>Anchors</h3>
             </div>
             <p>
-              One language server wraps the same engine, so the editor disagrees with you as you
-              type rather than at commit time &mdash; live diagnostics, quick fixes, inlay hints,
-              CodeLens and hover, with <code>fmt</code> behind the editor's own format-on-save.
+              A comment anchor binds a printed number to a name, so a sentence stays plain prose
+              while the value stays machine-checkable:
             </p>
-            <pre><span class="del">STALE</span>   lines.Net &middot; On-call support
-        3120.00 &ne; 5200.00     Qty * Rate
-        <span class="c">Quick fix: update the value to 5200.00</span></pre>
+            <pre>Invoice total: **28659.00**<span class="c">&lt;!--vmark=lines.gross_total--&gt;</span></pre>
             <p style="margin-top: 14px">
-              Not on a marketplace yet &mdash; build and install it from a clone with
-              <code>bun run vscode-install</code>, then reload the window.
+              The HTML comment is invisible in every renderer that permits raw HTML &mdash; GitHub,
+              VS Code, pandoc &mdash; so a reader just sees the bold number.
             </p>
           </article>
         </div>
@@ -1393,12 +1400,6 @@ variance  = lines.gross_total - scheduled
           enforceable &mdash; while keeping the document as plain Markdown.
         </p>
       </div>
-
-      <footer class="footer">
-        <a href="https://github.com/michal-niedzwiedzki/visimark"
-          >Try VisiMark documentation &rarr;</a
-        >
-      </footer>
     </div>
 
     <script
