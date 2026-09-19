@@ -48,6 +48,7 @@ import { describeFunction, functionNames, precisionPhrase } from "../lang/refere
 import { locate } from "../parse/document.js";
 import { formatCheck } from "../report/format.js";
 import { formatInfer } from "../report/infer.js";
+import { nonParams, paramLines, params } from "../report/params.js";
 import { fmt as fmtDoc, type FmtOptions, type FmtResult } from "../write/fmt.js";
 import { memoryReader } from "./memory-reader.js";
 import { sha256Hex } from "./sha256.js";
@@ -124,7 +125,11 @@ function pgExplain(source: string, opts: BrowserCheckOptions = {}): string[] {
 
   if (model.docScope.size > 0) {
     out.push("document scope");
-    for (const b of model.docScope.values()) out.push(`  ${b.name} = ${slice(model, b)}`);
+    for (const b of nonParams(model.docScope.values())) {
+      out.push(`  ${b.name} = ${slice(model, b)}`);
+    }
+    const docParams = params(model.docScope.values());
+    if (docParams.length > 0) out.push("  params:", ...paramLines(docParams, "    "));
     out.push("");
   }
 
@@ -140,10 +145,13 @@ function pgExplain(source: string, opts: BrowserCheckOptions = {}): string[] {
       out.push("  rules:");
       for (const b of sheet.columns.values()) out.push(`    ${b.name} = ${slice(model, b)}`);
     }
-    if (sheet.scalars.size > 0) {
+    const scalars = nonParams(sheet.scalars.values());
+    if (scalars.length > 0) {
       out.push("  scalars:");
-      for (const b of sheet.scalars.values()) out.push(`    ${b.name} = ${slice(model, b)}`);
+      for (const b of scalars) out.push(`    ${b.name} = ${slice(model, b)}`);
     }
+    const sheetParams = params(sheet.scalars.values());
+    if (sheetParams.length > 0) out.push("  params:", ...paramLines(sheetParams, "    "));
     const localOrder = order
       .filter((b) => b.sheetId === sid && !assertionIds.has(b.id) && !chartIds.has(b.id))
       .map((b) => b.name);

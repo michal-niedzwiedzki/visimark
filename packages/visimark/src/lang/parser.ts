@@ -294,6 +294,10 @@ export interface Binding {
   quoted: boolean;
   /** declared write precision, from a `precision N` clause on the head */
   precision?: number;
+  /** set on a `param NAME precision N = default LITERAL` statement: the default
+   *  literal as written, and whether it was a percent literal. See
+   *  docs/design/scenario-params-spec.md. */
+  param?: { text: string; percent: boolean };
 }
 
 const LEADING_NAME_RE = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=/;
@@ -365,6 +369,14 @@ function parseStatementInner(line: string): Binding | Assertion | ChartDecl | Al
     const at = toks.find((t) => t.kind === "is")!;
     throw new LangError("`is` is a keyword", at.start, at.end);
   }
+  // `param` is contextual: the keyword only as the first token and followed by
+  // a name, so `param = 5` and `param precision 2 = …` stay ordinary bindings.
+  if (first?.kind === "ident" && first.value === "param") {
+    const second = toks[toks.indexOf(first) + 1];
+    if (second?.kind === "ident" || second?.kind === "string") {
+      return parseParam(line, toks, first, second);
+    }
+  }
   // A `precision` clause belongs on the binding head, where `parseBindingInner`
   // takes it from. Anywhere to the right of `=` it is a keyword inside an
   // expression, which is never legal.
@@ -401,6 +413,75 @@ function parseBindingInner(line: string): Binding {
     nameEnd: nameTok.end,
     quoted: nameTok.kind === "string",
     ...(precision === undefined ? {} : { precision }),
+  };
+}
+
+export const PARAM_DEFAULT_MESSAGE = "a param default must be a number literal";
+
+/**
+ * `param NAME [precision N] = default LITERAL` — see
+ * docs/design/scenario-params-spec.md §2. A missing `precision` clause is not
+ * a parse error: the binding is returned without one and `check` reports
+ * `PRECISION`, as it does for any binding whose width is required.
+ */
+function parseParam(line: string, toks: Token[], kw: Token, nameTok: Token): Binding {
+  try {
+    return parseParamInner(line, toks, kw, nameTok);
+  } catch (e) {
+    // `LEADING_NAME_RE` cannot see past the `param` keyword, so name the
+    // binding here or its findings would print as a bare `sheet.`
+    if (e instanceof LangError && e.bindingName === undefined) e.bindingName = nameTok.value;
+    throw e;
+  }
+}
+
+function parseParamInner(line: string, toks: Token[], kw: Token, nameTok: Token): Binding {
+  if (nameTok.kind === "string") {
+    throw new LangError(
+      "a param name must be an identifier, not a quoted header",
+      nameTok.start,
+      nameTok.end,
+    );
+  }
+  const eqIndex = toks.findIndex((t) => t.kind === "op" && t.value === "=");
+  if (eqIndex === -1) {
+    throw new LangError("binding has no `=`", kw.start, line.length);
+  }
+  const head = toks.slice(toks.indexOf(nameTok), eqIndex);
+  const { nameToks, precision } = takePrecisionClause(head);
+  if (nameToks.length !== 1) {
+    const extra = nameToks[1] ?? nameToks[0]!;
+    throw new LangError(`unexpected ${extra.kind}`, extra.start, extra.end);
+  }
+  const dflt = toks[eqIndex + 1]!;
+  if (dflt.kind !== "ident" || dflt.value !== "default") {
+    throw new LangError("expected `default` after `=` in a param", dflt.start, dflt.end);
+  }
+  let i = eqIndex + 2;
+  let negative = false;
+  const litStart = toks[i]!.start;
+  if (toks[i]?.kind === "op" && toks[i]!.value === "-") {
+    negative = true;
+    i++;
+  }
+  const lit = toks[i]!;
+  if ((lit.kind !== "number" && lit.kind !== "percent") || toks[i + 1]?.kind !== "eof") {
+    const at = toks[eqIndex + 2]!;
+    throw new LangError(PARAM_DEFAULT_MESSAGE, at.start, Math.max(line.length, at.end));
+  }
+  const percent = lit.kind === "percent";
+  // the written digits are kept, as `nud` keeps them for any number literal;
+  // a percent folds exactly as it does there
+  const magnitude = percent ? new Decimal(lit.value).div(100).toString() : lit.value;
+  const value = negative ? `-${magnitude}` : magnitude;
+  return {
+    name: nameTok.value,
+    expr: { type: "num", value, start: litStart, end: lit.end },
+    nameStart: nameTok.start,
+    nameEnd: nameTok.end,
+    quoted: false,
+    ...(precision === undefined ? {} : { precision }),
+    param: { text: line.slice(litStart, lit.end), percent },
   };
 }
 

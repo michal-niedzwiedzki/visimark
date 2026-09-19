@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+### Added
+
+- **Scenario parameters: `param` and `eval --scenario`.** A `vmark` block may
+  declare `param tax precision 3 = default 19%`, a numeric scalar that is
+  exactly `tax precision 3 = 19%` in every command except one.
+  `visimark eval --scenario FILE` (or `-` for stdin) evaluates the document
+  with the values in a flat JSON object such as `{ "tax": "12.5%" }` in place
+  of the defaults, and writes nothing. Keys must name declared params, values
+  must be JSON strings that fit the declared precision, and a percent param
+  takes only a percent. Any fault is exit `2` with JSON error code `SCENARIO`.
+  The output quotes the scenario beside the values, and a false `assert` says
+  whether it holds on the defaults. `check`, `fmt`, `infer`, `explain` and
+  `ref` refuse `--scenario` rather than ignore it. `param` and `default` are
+  contextual, so no word becomes reserved and `param = 5` still binds a
+  scalar. `explain` lists params apart from scalars. See
+  [`docs/design/scenario-params-spec.md`](docs/design/scenario-params-spec.md)
+  and [#119](https://github.com/michal-niedzwiedzki/visimark/issues/119).
+
 ## 0.1.5 - 2026-09-17
 
 ### Changed

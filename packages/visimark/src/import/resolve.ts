@@ -213,6 +213,18 @@ export function resolveImports(
       const shadow = sheet.scalars.get(name);
       if (!shadow) continue;
       sheet.scalars.delete(name);
+      if (shadow.param !== undefined) {
+        // a param is never a column, imported or not — the same DUP as a param
+        // named like an inline header (scenario-params-spec.md §4)
+        findings.push({
+          code: "DUP",
+          sheetId: sheet.id,
+          name,
+          span: shadow.span,
+          sourceOffset: shadow.span.start,
+        });
+        continue;
+      }
       findings.push({
         code: "IMPORT",
         sheetId: sheet.id,

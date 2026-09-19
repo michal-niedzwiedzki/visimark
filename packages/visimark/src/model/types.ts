@@ -105,6 +105,11 @@ export interface Binding {
   /** declared write precision from a `precision N` clause on the head; absent
    *  means derive it from the expression (declared-precision-spec.md §3) */
   precision?: number;
+  /** set on a `param` statement: the default literal as written, and whether it
+   *  is a percent. The binding's `expr` is that default's literal, so every
+   *  command but `eval --scenario` treats it as the constant binding it is.
+   *  See docs/design/scenario-params-spec.md. */
+  param?: { text: string; percent: boolean };
   /** absolute source span of the binding line */
   span: { start: number; end: number };
   parseError?: LangError;

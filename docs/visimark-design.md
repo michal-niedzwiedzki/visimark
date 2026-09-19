@@ -47,6 +47,10 @@ committed beside the Markdown and verified like any other derived value
    writes it. Two people checking out the same commit get the same answer,
    and a reviewer reading the diff sees every input to it — including a
    declared local one ([§19](#19-declared-local-data-imports)).
+   A scenario supplied to `eval` is an argument to that evaluation, not part
+   of the document's meaning: `check`, `fmt` and `infer` never accept one,
+   and `eval` reports the scenario it used alongside the values it produced
+   ([§20](#20-scenario-parameters)).
 
 **The consequence is that VisiMark will not have a plugin architecture**, and
 this is a deliberate refusal rather than an unbuilt feature. A registry of
@@ -184,6 +188,15 @@ which is then a column rule for that header exactly as `"Header text" = expr`
 would be. The alias creates no second column and no second node in the
 dependency graph; it is a second key resolving to the same column data
 ([§6](#6-name-resolution-and-scoping)).
+
+**`param` — scenario parameter.** `param tax precision 3 = default 19%`
+declares a numeric scalar that `eval --scenario` may vary. Everywhere else it
+is exactly the binding `tax precision 3 = 19%`. `param` and `default` are
+**contextual** words, not reserved ones, like `as`, `of`, `labelled` and
+`aspect` inside a `chart` statement: `param` is the keyword only as the first
+token followed by a name, and `default` only right after that statement's `=`,
+so `param = 5` and `default = 3` stay ordinary bindings
+([§20](#20-scenario-parameters)).
 
 **Literals.**
 
@@ -421,7 +434,10 @@ argument, and `ABS`, `MOD` and `IF` pass theirs through. **Division, `AVG` and
 to is a `PRECISION` error ([§10](#10-error-taxonomy)).
 
 One invariant holds the design together: **a derived precision never discards a
-digit.** Only a declared one can, and only because the author asked. So
+digit.** Only a declared one can, and only because the author asked — with
+one exception: a `param` default is the value a reader sees in the document,
+so a default wider than its declared width is a `PRECISION` error rather than
+a rounding ([§20](#20-scenario-parameters)). So
 `Days` still writes `7` rather than `7.00` — its operands are whole — and `Net`
 still writes `5200.00`, while a money product that derives four decimals and is
 meant to keep two says so in one clause.
@@ -609,7 +625,7 @@ must be able to verify a document without an editor.
 visimark check FILE... [--json]     read-only; exit 1 if any finding
 visimark fmt   FILE... [--fix-dates] [--json]
 visimark infer FILE... [--write] [--json]
-visimark eval  FILE [--get NAME] [--json]
+visimark eval  FILE [--scenario FILE|-] [--get NAME] [--json]
 visimark explain FILE [#sheet] [--json]
 ```
 
@@ -619,6 +635,10 @@ evaluation, writes, or exit codes. The shape is
 [`structured-output-json-spec.md`](design/structured-output-json-spec.md).
 `eval --json` is that envelope (`values`, `assertions`, `charts`), not a flat
 map of binding names.
+
+`--scenario` is valid only with `eval`: every other command refuses it with
+exit `2` rather than ignoring it, because a scenario must never reach a
+writer ([§20](#20-scenario-parameters)).
 
 Exit codes: `0` clean, `1` findings, `2` usage or parse failure. `eval` also
 exits `1` if an `assert` statement is false ([§17](#17-assertions)) — the
@@ -750,6 +770,11 @@ columns whose cells cannot be inferred from; anything resembling dimensional
 analysis, where `N` divided by `m` yields `N/m`. The v1 rule is deliberately
 flat: a unit is a display decoration on one column, inferred from that column's
 own cells, and it does not compute.
+
+Beyond scalar scenario parameters: table overrides, required params,
+non-numeric params, named scenarios inside a document, and per-param
+overrides on the command line are deferred in
+[`scenario-params-spec.md` §7](design/scenario-params-spec.md#7-non-goals).
 
 The editor plugins are specified separately in
 [`visimark-editor-plugins-design.md`](visimark-editor-plugins-design.md).
@@ -1090,5 +1115,39 @@ shows toward `chart` and `assert`.
 computed columns on an imported sheet in any form; a performance budget or
 caching strategy for a very large import — `check` re-reads and re-hashes the
 file on every run in v1.
+
+## 20. Scenario parameters
+
+A document computes one answer from one set of numbers; a scenario asks what
+it would come to with some of them changed, without editing the document.
+[`design/scenario-params-spec.md`](design/scenario-params-spec.md) is the
+full specification. The motivating document is
+[`example-agent-budget.md`](example-agent-budget.md).
+
+**The defaults are the document; a scenario is a view of it.**
+
+- **Declaring.** `param NAME precision N = default LITERAL` in a `vmark` block
+  declares a numeric scalar of its sheet (or of document scope). `NAME` is an
+  identifier, `precision` is required, and `LITERAL` is a number literal
+  (optionally negative, optionally a percent). The default must fit the
+  declared width ([§7](#7-numeric-semantics)). A param named like a column
+  header of its sheet is `DUP`.
+- **Everywhere but `eval --scenario`** — `check`, `fmt`, `infer`, `explain`,
+  a plain `eval` — a param is the constant binding its default declares.
+  Stored numbers, anchors and artifacts are always the defaults'. The tool
+  owns nothing new ([§9](#9-write-back)).
+- **`eval --scenario FILE|-`** evaluates the same graph with the scenario's
+  values in place of the defaults. The file is a flat JSON object; every key
+  must name a declared param and every value must be a JSON *string* holding
+  a number literal that fits the param's width. A param whose default is a
+  percent takes only a percent. Any fault is a usage error (exit `2`, JSON
+  error code `SCENARIO`) and nothing is evaluated.
+- **Output** quotes the scenario separately: a `scenario:` block after the
+  values, or a `scenario` key under `--json`, listing every param with its
+  value, default and source. Assertions run under the scenario and a false one
+  exits `1`; each also says whether it holds on the defaults. Chart entries
+  omit their on-disk `state`.
+- **`explain`** lists each sheet's params, with width and default, apart from
+  its scalars.
 
 <!--vmark:no-formulas-->

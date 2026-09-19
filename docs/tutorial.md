@@ -635,6 +635,41 @@ signal.
 This is also the second reason for chapter 5's habit: change an input, and the
 column that never updates is the column that was never wired up.
 
+### What-if runs: `param`
+
+Sometimes you want to ask *what would this come to if the tax rate were 12.5%?*
+without editing the document. Editing it means `fmt` rewrites every figure
+downstream, and you get a diff for a question you never meant to commit.
+
+Declare the knob as a `param` instead of a plain scalar:
+
+````markdown
+```vmark #order
+param vat precision 3 = default 19%
+gross precision 2 = SUM(Net) * (1 + vat)
+```
+````
+
+Everywhere except one command, `vat` is exactly `vat precision 3 = 19%`:
+`check`, `fmt` and plain `eval` all see the default. The `precision` clause is
+required, because a value arriving from outside has no width the document
+could derive.
+
+The one exception is `eval --scenario`. Write the other value in a JSON file,
+as a string:
+
+```console
+$ cat cheaper.json
+{ "vat": "12.5%" }
+$ visimark eval --scenario cheaper.json order.md
+```
+
+`eval` prints the values computed with 12.5%, then a `scenario:` block listing
+each param, its value and its default. It writes nothing. A misspelled key, a
+value wider than the declared precision, a JSON number such as `12.5`, or a
+bare `"12.5"` for a percent param is refused with exit `2`, so a what-if cannot
+quietly run with the wrong input. Every other command refuses `--scenario`.
+
 ## 9. Anchors: a number inside a sentence
 
 A total is useless if a reader has to run a tool to see it. An **anchor** puts
