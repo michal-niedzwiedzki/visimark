@@ -187,15 +187,12 @@ function renderGroup(f: Finding): string[] {
           (f.raw
             ? `\`${f.raw}\` has no derivable precision`
             : "no precision declared and none follows from the formula"));
-      return [
-        head,
-        ...(f.message
-          ? []
-          : [
-              " ".repeat(prefix("PRECISION").length) +
-                `declare the width: \`${f.name ?? "name"} precision N = …\``,
-            ]),
-      ];
+      const hint = f.message
+        ? f.suggestion
+          ? `write \`${f.suggestion}\``
+          : undefined
+        : `declare the width: \`${f.name ?? "name"} precision N = …\``;
+      return [head, ...(hint ? [" ".repeat(prefix("PRECISION").length) + hint] : [])];
     }
     case "ANCHOR":
       return [

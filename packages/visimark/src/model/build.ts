@@ -305,6 +305,20 @@ export function build(doc: LocatedDoc): DocModel {
         continue;
       }
 
+      // A param is never a column: one named like a header of this sheet is a
+      // DUP on the param, whatever the order of table and block. The column
+      // keeps its data and its rule. See docs/design/scenario-params-spec.md §4.
+      const headerClash = parsed.param !== undefined ? firstHeaderSeen.get(parsed.name) : undefined;
+      if (headerClash) {
+        findings.push({
+          code: "DUP",
+          sheetId,
+          name: parsed.name,
+          span: parsed.span,
+          relatedSpan: headerClash,
+        });
+        continue;
+      }
       const first = sheet.columns.get(parsed.name) ?? sheet.scalars.get(parsed.name);
       if (first) {
         findings.push({
@@ -346,6 +360,24 @@ export function build(doc: LocatedDoc): DocModel {
         sheet.inputColumns.add(name);
         sheet.columnIndex.set(name, idx);
       }
+    }
+  }
+
+  // A param named like a header that a *different* block of its sheet brings
+  // in is caught here, after every block has contributed its table: the same
+  // DUP the in-block check reports, whatever the order.
+  for (const sheet of sheets.values()) {
+    for (const [name, b] of sheet.scalars) {
+      if (b.param === undefined || !sheet.columnIndex.has(name)) continue;
+      const header = sheet.table?.headers.find((h) => h.text === name);
+      sheet.scalars.delete(name);
+      findings.push({
+        code: "DUP",
+        sheetId: sheet.id,
+        name,
+        span: b.span,
+        ...(header ? { relatedSpan: { start: header.start, end: header.end } } : {}),
+      });
     }
   }
 
@@ -461,6 +493,7 @@ function parseOne(
         expr: s.expr,
         kind: "scalar",
         ...(s.precision === undefined ? {} : { precision: s.precision }),
+        ...(s.param === undefined ? {} : { param: s.param }),
         span: { start: rb.start, end: rb.end },
       },
     };

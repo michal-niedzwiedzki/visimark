@@ -2,6 +2,7 @@ import type { ChartResult, CheckResult } from "../eval/check.js";
 import { topoOrder } from "../eval/graph.js";
 import type { Binding, DocModel, ImportStatus } from "../model/types.js";
 import { readVersion } from "../cli/version.js";
+import { nonParams, paramLines, params } from "./params.js";
 
 /**
  * The model slice both renderings read. Deriving it once matters: the text and
@@ -74,6 +75,11 @@ function bindingLines(view: ExplainView, sheetId: string, bs: Binding[]): string
   return rows.map((r) => `    ${r.prec ? `${r.text.padEnd(w)}   ${r.prec}` : r.text}`);
 }
 
+/** the JSON form of one `param` */
+function paramJson(b: Binding): { name: string; precision: number | null; default: string } {
+  return { name: b.name, precision: b.precision ?? null, default: b.param!.text };
+}
+
 /** the bindings of one sheet in evaluation order, with assertions and charts dropped */
 function localOrder(view: ExplainView, sid: string): string[] {
   return view.order
@@ -87,8 +93,13 @@ export function explainText(view: ExplainView): string {
 
   if (model.docScope.size > 0) {
     lines.push("document scope");
-    for (const b of model.docScope.values()) {
+    for (const b of nonParams(model.docScope.values())) {
       lines.push(`  ${b.name} = ${slice(model, b)}`);
+    }
+    const docParams = params(model.docScope.values());
+    if (docParams.length > 0) {
+      lines.push("  params:");
+      lines.push(...paramLines(docParams, "    "));
     }
     lines.push("");
   }
@@ -117,9 +128,15 @@ export function explainText(view: ExplainView): string {
       lines.push("  rules:");
       lines.push(...bindingLines(view, sid, [...sheet.columns.values()]));
     }
-    if (sheet.scalars.size > 0) {
+    const scalars = nonParams(sheet.scalars.values());
+    if (scalars.length > 0) {
       lines.push("  scalars:");
-      lines.push(...bindingLines(view, sid, [...sheet.scalars.values()]));
+      lines.push(...bindingLines(view, sid, scalars));
+    }
+    const sheetParams = params(sheet.scalars.values());
+    if (sheetParams.length > 0) {
+      lines.push("  params:");
+      lines.push(...paramLines(sheetParams, "    "));
     }
     const order = localOrder(view, sid);
     if (order.length > 0) lines.push(`  order:   ${order.join(" → ")}`);
@@ -159,10 +176,13 @@ export function explainJson(view: ExplainView, file: string): object {
     visimark: readVersion(),
     status: "ok",
     file,
-    documentScope: [...model.docScope.values()].map((b) => ({
+    documentScope: nonParams(model.docScope.values()).map((b) => ({
       name: b.name,
       rule: slice(model, b),
     })),
+    ...(params(model.docScope.values()).length > 0
+      ? { documentScopeParams: params(model.docScope.values()).map(paramJson) }
+      : {}),
     sheets: view.sheets.map((sid) => {
       const sheet = model.sheets.get(sid)!;
       const importSt = view.importState.get(sid);
@@ -188,11 +208,14 @@ export function explainJson(view: ExplainView, file: string): object {
           rule: slice(model, b),
           ...precisionJson(view, b, `${sid}.${b.name}`),
         })),
-        scalars: [...sheet.scalars.values()].map((b) => ({
+        scalars: nonParams(sheet.scalars.values()).map((b) => ({
           name: b.name,
           rule: slice(model, b),
           ...precisionJson(view, b, `${sid}.${b.name}`),
         })),
+        ...(params(sheet.scalars.values()).length > 0
+          ? { params: params(sheet.scalars.values()).map(paramJson) }
+          : {}),
         order: localOrder(view, sid),
         assertions: sheet.assertions.map((a) => a.source.replace(/^assert\s+/, "")),
         charts: sheet.charts.map((c) => {

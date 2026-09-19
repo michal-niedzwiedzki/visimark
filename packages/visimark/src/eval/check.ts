@@ -342,6 +342,47 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
     }
   }
 
+  /**
+   * A `param` must declare its width, and its default must fit it: a value
+   * arriving from outside has no width the document can derive, and a default
+   * the declaration would round is not the value the reader sees. Emits the
+   * `PRECISION` finding and returns false otherwise. See
+   * docs/design/scenario-params-spec.md §3.1 and §4.1.
+   */
+  function paramWidthOk(binding: Binding): boolean {
+    const param = binding.param!;
+    if (binding.precision === undefined) {
+      emit(
+        {
+          code: "PRECISION",
+          sheetId: binding.sheetId,
+          name: binding.name,
+          message: `param ${binding.name} declares no width`,
+          suggestion: `param ${binding.name} precision N = default …`,
+          span: binding.span,
+        },
+        { sheetId: binding.sheetId },
+      );
+      return false;
+    }
+    const value = binding.expr.type === "num" ? new Decimal(binding.expr.value) : null;
+    const places = value?.decimalPlaces() ?? 0;
+    if (places > binding.precision) {
+      emit(
+        {
+          code: "PRECISION",
+          sheetId: binding.sheetId,
+          name: binding.name,
+          message: `default ${param.text} has ${places} decimal${places === 1 ? "" : "s"}; param ${binding.name} declares ${binding.precision}`,
+          span: binding.span,
+        },
+        { sheetId: binding.sheetId },
+      );
+      return false;
+    }
+    return true;
+  }
+
   /** the `PRECISION` finding: no declared width, and none follows from the formula */
   function emitNotDerivable(binding: Binding): void {
     emit(
@@ -485,6 +526,10 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
   }
 
   function evalScalar(binding: Binding): void {
+    if (binding.param !== undefined && !paramWidthOk(binding)) {
+      unevaluable.add(binding.id);
+      return;
+    }
     try {
       const v0 = evalExpr(binding.expr, scalarEnv(binding));
       if (v0.t === "bool") {

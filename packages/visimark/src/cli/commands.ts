@@ -30,7 +30,17 @@ import {
   publicFinding,
   publicProposal,
   statusFromExit,
+  type CommandName,
+  type OnDefaults,
 } from "../report/json.js";
+import {
+  applyScenario,
+  listParams,
+  parseScenarioJson,
+  resolveScenario,
+  ScenarioError,
+  type ParamInfo,
+} from "../eval/scenario.js";
 import { readVersion } from "./version.js";
 import { fmt } from "../write/fmt.js";
 import { applyEdits } from "../write/splice.js";
@@ -51,6 +61,12 @@ function parseArgs(args: string[]): Parsed {
     const a = args[i]!;
     if (a === "--get") {
       options.set("get", args[++i] ?? "");
+    } else if (a === "--scenario") {
+      // a value option; `-` is stdin. A missing value, or another option in
+      // its place, is recorded as empty so the command can say so.
+      const v = args[i + 1];
+      if (v === undefined || v.startsWith("--")) options.set("scenario", "");
+      else options.set("scenario", args[++i]!);
     } else if (a.startsWith("--")) {
       flags.add(a.slice(2));
     } else if (a.startsWith("#")) {
@@ -66,6 +82,23 @@ function read(path: string): string {
   return readFileSync(path, "utf8");
 }
 
+const SCENARIO_ONLY_EVAL = "visimark: --scenario is only valid with eval";
+
+/**
+ * `--scenario` on any command but `eval` is refused, not ignored: a scenario
+ * must never reach a writer, and a read-only command that silently dropped it
+ * would let its author believe one had been handled
+ * (docs/design/scenario-params-spec.md §5.3). Returns true when it refused.
+ */
+function refuseScenario(command: CommandName, parsed: Parsed, out: Writer, err: Writer): boolean {
+  if (!parsed.options.has("scenario")) return false;
+  err(SCENARIO_ONLY_EVAL);
+  if (parsed.flags.has("json")) {
+    emitJson(out, errorEnvelope(command, "SCENARIO", SCENARIO_ONLY_EVAL));
+  }
+  return true;
+}
+
 function showValue(v: Value): string {
   if (v.t === "num") return v.d.toString();
   if (v.t === "date") return v.iso;
@@ -74,7 +107,9 @@ function showValue(v: Value): string {
 }
 
 export function cmdCheck(args: string[], out: Writer, err: Writer): number {
-  const { files, flags } = parseArgs(args);
+  const parsed = parseArgs(args);
+  if (refuseScenario("check", parsed, out, err)) return 2;
+  const { files, flags } = parsed;
   const json = flags.has("json");
   if (files.length === 0) {
     const msg = "usage: visimark check FILE...";
@@ -126,7 +161,9 @@ export function cmdCheck(args: string[], out: Writer, err: Writer): number {
 }
 
 export function cmdFmt(args: string[], out: Writer, err: Writer): number {
-  const { files, flags } = parseArgs(args);
+  const parsed = parseArgs(args);
+  if (refuseScenario("fmt", parsed, out, err)) return 2;
+  const { files, flags } = parsed;
   const json = flags.has("json");
   if (files.length === 0) {
     const msg = "usage: visimark fmt FILE... [--fix-dates]";
@@ -245,7 +282,9 @@ export function cmdFmt(args: string[], out: Writer, err: Writer): number {
  * failure, it is a document, and all CI pressure stays in `check`.
  */
 export function cmdInfer(args: string[], out: Writer, err: Writer): number {
-  const { files, flags } = parseArgs(args);
+  const parsed = parseArgs(args);
+  if (refuseScenario("infer", parsed, out, err)) return 2;
+  const { files, flags } = parsed;
   const json = flags.has("json");
   const write = flags.has("write");
   if (files.length === 0) {
@@ -327,7 +366,7 @@ export function cmdEval(args: string[], out: Writer, err: Writer): number {
   const json = flags.has("json");
   const path = files[0];
   if (!path) {
-    const msg = "usage: visimark eval FILE [--get NAME] [--json]";
+    const msg = "usage: visimark eval FILE [--scenario FILE|-] [--get NAME] [--json]";
     err(msg);
     if (json) emitJson(out, errorEnvelope("eval", "USAGE", msg));
     return 2;
@@ -342,6 +381,35 @@ export function cmdEval(args: string[], out: Writer, err: Writer): number {
     return 2;
   }
   const model = build(locate(source));
+
+  // A scenario is checked in full before anything is evaluated: a fault is a
+  // usage error, and no values are printed (scenario-params-spec.md §4.2).
+  const scenarioFile = options.get("scenario");
+  let scenario: { file: string; params: ParamInfo[]; supplied: Set<string> } | null = null;
+  if (scenarioFile !== undefined) {
+    try {
+      if (scenarioFile === "") {
+        throw new ScenarioError("visimark: --scenario needs a file, or - for stdin");
+      }
+      let text: string;
+      try {
+        text = scenarioFile === "-" ? readFileSync(0, "utf8") : read(scenarioFile);
+      } catch {
+        throw new ScenarioError(`visimark: cannot read scenario ${scenarioFile}`);
+      }
+      const resolved = resolveScenario(model, parseScenarioJson(text, scenarioFile));
+      // listed before the values change, so each carries its default
+      const params = listParams(model);
+      applyScenario(model, resolved);
+      scenario = { file: scenarioFile, params, supplied: new Set(resolved.keys()) };
+    } catch (e) {
+      if (!(e instanceof ScenarioError)) throw e;
+      err(e.message);
+      if (json) emitJson(out, errorEnvelope("eval", "SCENARIO", e.message));
+      return 2;
+    }
+  }
+
   const result = check(model);
 
   const all = new Map<string, string>();
@@ -351,16 +419,44 @@ export function cmdEval(args: string[], out: Writer, err: Writer): number {
   }
   const values = evalValues(result);
 
+  // Under a scenario, each failed assertion also says how it fares on the
+  // defaults — "these assumptions break it" vs "it was already broken". That
+  // takes a second evaluation, of a fresh model, since `eval` does not assume
+  // `check` passed. Assertions come back in document order from both.
+  let onDefaults: (OnDefaults | undefined)[] | undefined;
+  if (scenario && result.assertions.some((a) => a.holds === false)) {
+    const base = check(build(locate(source)));
+    onDefaults = result.assertions.map((a, i) => {
+      if (a.holds !== false) return undefined;
+      const d = base.assertions[i]?.holds;
+      return d === true ? "pass" : d === false ? "fail" : "unverified";
+    });
+  }
+
   // A false assertion means the document's stated invariants do not hold; `eval`
   // will not hand back values as if it were sound. It prints the failure to
   // stderr and exits 1 — after the requested value, so a pipeline still gets it.
-  const failed = result.assertions.filter((a) => a.holds === false);
+  const failed = result.assertions
+    .map((a, i) => ({ a, onDefault: onDefaults?.[i] }))
+    .filter(({ a }) => a.holds === false);
   const assertExit: 0 | 1 = failed.length > 0 ? 1 : 0;
   const reportFailures = (): void => {
-    for (const a of failed) {
+    for (const { a, onDefault } of failed) {
       err(`  ASSERT  #${a.sheetId}   ${a.source.replace(/^assert\s+/, "")}`);
-      err(`          ${a.substituted}   is false`);
+      err(`          ${a.substituted}   is false${onDefault ? ON_DEFAULTS_TEXT[onDefault] : ""}`);
     }
+  };
+
+  const scenarioJson = (): object => {
+    const params: Record<string, object> = {};
+    for (const p of scenario!.params) {
+      params[p.id] = {
+        value: typeof values[p.id] === "string" ? values[p.id] : null,
+        default: p.defaultValue,
+        source: scenario!.supplied.has(p.id) ? "scenario" : "default",
+      };
+    }
+    return { file: scenario!.file, params };
   };
 
   const emitEval = (selected: typeof values): void => {
@@ -369,9 +465,10 @@ export function cmdEval(args: string[], out: Writer, err: Writer): number {
       visimark: readVersion(),
       status: statusFromExit(assertExit),
       file: path,
+      ...(scenario ? { scenario: scenarioJson() } : {}),
       values: selected,
-      assertions: publicAssertions(result.assertions),
-      charts: publicCharts(result.charts),
+      assertions: publicAssertions(result.assertions, onDefaults),
+      charts: publicCharts(result.charts, scenario === null),
     });
   };
 
@@ -396,9 +493,37 @@ export function cmdEval(args: string[], out: Writer, err: Writer): number {
   else {
     const width = Math.max(...[...all.keys()].map((k) => k.length), 0);
     for (const [k, v] of all) out(`${k.padEnd(width)}  ${v}`);
+    if (scenario) for (const line of scenarioText(scenario, all)) out(line);
     reportFailures();
   }
   return assertExit;
+}
+
+const ON_DEFAULTS_TEXT: Record<OnDefaults, string> = {
+  pass: " under scenario (holds on defaults)",
+  fail: " under scenario (also false on defaults)",
+  unverified: " under scenario (unverified on defaults)",
+};
+
+/** the `scenario:` block that follows the value lines (spec §5.3) */
+function scenarioText(
+  scenario: { file: string; params: ParamInfo[]; supplied: Set<string> },
+  all: Map<string, string>,
+): string[] {
+  const rows = scenario.params.map((p) => ({
+    id: p.id,
+    value: all.get(p.id) ?? "?",
+    supplied: scenario.supplied.has(p.id),
+    dflt: p.defaultValue,
+  }));
+  const idW = Math.max(0, ...rows.map((r) => r.id.length));
+  const valW = Math.max(0, ...rows.map((r) => r.value.length));
+  const lines = [`scenario: ${scenario.file}`];
+  for (const r of rows) {
+    const head = `  ${r.id.padEnd(idW)}  ${r.value.padEnd(valW)}  `;
+    lines.push(r.supplied ? `${head}scenario  (default ${r.dflt})` : `${head}default`);
+  }
+  return lines;
 }
 
 function bareToQualified(model: DocModel, name: string): string {
@@ -411,7 +536,9 @@ function bareToQualified(model: DocModel, name: string): string {
 }
 
 export function cmdExplain(args: string[], out: Writer, err: Writer): number {
-  const { files, flags, sheets } = parseArgs(args);
+  const parsed = parseArgs(args);
+  if (refuseScenario("explain", parsed, out, err)) return 2;
+  const { files, flags, sheets } = parsed;
   const json = flags.has("json");
   const path = files[0];
   if (!path) {
@@ -461,7 +588,9 @@ export type Writer = (line: string) => void;
  * not about a document. Its whole body is formatting over `describeFunction`.
  */
 export function cmdRef(args: string[], out: Writer, err: Writer): number {
-  const { files, flags } = parseArgs(args);
+  const parsed = parseArgs(args);
+  if (refuseScenario("ref", parsed, out, err)) return 2;
+  const { files, flags } = parsed;
   const json = flags.has("json");
   const name = files[0];
 
