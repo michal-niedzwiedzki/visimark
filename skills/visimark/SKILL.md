@@ -116,7 +116,7 @@ visimark check FILE...                # read-only; exit 1 if anything disagrees,
                                        # or if a table has no rules at all
 visimark fmt   FILE... [--fix-dates]  # rewrite computed cells and anchors
 visimark infer FILE... [--write]      # propose rules for a document with none
-visimark eval  FILE [--get NAME] [--json]
+visimark eval  FILE [--scenario FILE|-] [--get NAME] [--json]
 visimark explain FILE [#sheet]        # rules and evaluation order
 visimark ref   [NAME] [--json]        # what a builtin function does; reads no file
 ```
@@ -127,6 +127,14 @@ signature, parameters, return type, errors and worked examples; bare
 example it prints is executed against the evaluator in CI, so what it says is
 what the engine does. The same content is in
 [`docs/function-reference.md`](../../docs/function-reference.md).
+
+**What-if questions: declare a `param`, never edit the document.** A value a
+caller may want to vary — a rate, a cap, a headcount — is written
+`param tax precision 3 = default 19%` (`precision` required, a literal default).
+Every command treats it as its default. `visimark eval --scenario s.json FILE`
+evaluates with `{ "tax": "12.5%" }` instead and writes nothing: keys must name
+declared params, values must be JSON *strings* that fit the precision, and a
+percent param takes a percent. Only `eval` accepts `--scenario`.
 
 `infer` is advisory — it exits `0` whatever it finds — and it only ever
 inserts, so prose, headings, input columns and existing blocks are untouched.

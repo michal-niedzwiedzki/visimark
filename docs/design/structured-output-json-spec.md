@@ -84,7 +84,7 @@ the absolute target `fmt` used internally.
 | `command` | `"check"` \| `"fmt"` \| `"infer"` \| `"eval"` \| `"explain"` | always |
 | `visimark` | string, the package version (`0.1.1`), **not** the `visimark 0.1.1` `--version` line | always |
 | `status` | `"ok"` \| `"problems"` \| `"error"` | always — exit 0 / 1 / 2. Not a boolean `ok`. |
-| `error` | `{ "code": "USAGE" \| "READ" \| "WRITE", "message": string }` | only when `status` is `"error"` |
+| `error` | `{ "code": "USAGE" \| "READ" \| "WRITE" \| "SCENARIO", "message": string }` | only when `status` is `"error"` |
 | command body | see below | always on success and on `problems`; on `error` only what was already produced (a multi-file run that read some files still lists them) |
 
 `status` tracks the process exit code. Advisory findings (`WARN`, `NOTE`) never
@@ -306,6 +306,25 @@ exits 1; `status` is `"ok"` unless a `USAGE`/`READ` error applies.
 key). `assertions` and `charts` still describe the whole document — a false
 assertion anywhere still sets `status` to `"problems"` and exit 1, as today.
 
+**Under `eval --scenario`** ([`scenario-params-spec.md`](scenario-params-spec.md)),
+the envelope gains one key, `scenario`, after `file`:
+
+```json
+"scenario": {
+  "file": "tight.json",
+  "params": {
+    "rates.budget": { "value": "0.4", "default": "2", "source": "scenario" }
+  }
+}
+```
+
+`params` lists every declared param, keyed like `values`; `value` and `default`
+are decimal strings in the same form as `values`, and `source` is `"scenario"`
+or `"default"`. `file` is `-` for stdin. Each `assertions` entry with
+`holds: false` also carries `defaults`: `"pass"`, `"fail"` or `"unverified"`,
+the same assertion on the document's defaults. `charts` entries omit `state`.
+Without `--scenario`, none of these keys appear.
+
 On a false assertion, **do not** also print the `ASSERT` block to stderr in
 `--json` mode. The `assertions` array is the report. Text mode is unchanged
 (value on stdout, `ASSERT` on stderr).
@@ -338,6 +357,13 @@ On a false assertion, **do not** also print the `ASSERT` block to stderr in
 `Σ` / `∑` as written, not rewritten to `SUM`). `assertions` entries are the
 source with the `assert ` prefix stripped, matching the text report.
 `#sheet` arguments still filter `sheets`. `documentScope` is `[]` when empty.
+
+A sheet that declares a `param` carries a `params` array of
+`{ "name", "precision", "default" }` (`default` as written, `precision`
+`null` when the clause is missing), and those params are not repeated in
+`scalars`. Document-scope params appear as a top-level `documentScopeParams`
+array of the same shape, and not in `documentScope`. Both keys are absent when
+there is no param.
 
 ### 3.7 Behaviour table
 
@@ -372,6 +398,7 @@ the envelope `error` object:
 |---|---|---|---|
 | No file given; unknown `eval --get` name; unknown `explain` `#sheet` | `USAGE` | 2 | Same cases as today's usage errors. `message` is the current `visimark: …` / `usage: …` line. That line is **also** written to stderr so a person who typed it still sees it. |
 | Named file cannot be read | `READ` | 2 | Per-file in multi-file commands; whole-command for `eval` / `explain`. |
+| A scenario fault under `eval --scenario`, or `--scenario` on any other command | `SCENARIO` | 2 | Nothing is evaluated and no values are printed. See [`scenario-params-spec.md` §4.2](scenario-params-spec.md#42-scenario-faults). |
 | `fmt` refuses to write a chart artifact | `WRITE` | 2 | Per-file, same shape as `READ`. The target moved between the check and the write, is no longer VisiMark's, or cannot be opened. The document itself is then left unspliced — a partly-applied `fmt` is worse than none. See [`close-toctou-path-gates-plan.md`](close-toctou-path-gates-plan.md). |
 | Unknown command / no command | n/a | 2 | Happens before a document command runs. `--json` is not a command. Human usage text, as today. |
 

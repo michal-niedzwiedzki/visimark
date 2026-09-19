@@ -38,7 +38,7 @@ from the same source.
 
 ### Task 1 — Parse `param`
 
-- [ ] **Files:** `packages/visimark/src/lang/parser.ts`,
+- [x] **Files:** `packages/visimark/src/lang/parser.ts`,
   `packages/visimark/test/lang/parser.test.ts`.
 - **Interfaces:** `Binding` (parser) gains
   `param?: { text: string; percent: boolean }`. `text` is the default literal
@@ -62,7 +62,7 @@ from the same source.
 
 ### Task 2 — Model
 
-- [ ] **Files:** `packages/visimark/src/model/types.ts`,
+- [x] **Files:** `packages/visimark/src/model/types.ts`,
   `packages/visimark/src/model/build.ts`,
   `packages/visimark/src/import/resolve.ts`,
   `packages/visimark/test/model/*` (a new `param.test.ts`).
@@ -80,7 +80,7 @@ from the same source.
 
 ### Task 3 — Check
 
-- [ ] **Files:** `packages/visimark/src/eval/check.ts`,
+- [x] **Files:** `packages/visimark/src/eval/check.ts`,
   `packages/visimark/test/eval/param.test.ts`.
 - **Steps:**
   1. At the top of `evalScalar`, for a `param`: no `precision` → `PRECISION`
@@ -95,7 +95,7 @@ from the same source.
 
 ### Task 4 — Scenario module
 
-- [ ] **Files:** `packages/visimark/src/eval/scenario.ts` (new),
+- [x] **Files:** `packages/visimark/src/eval/scenario.ts` (new),
   `packages/visimark/test/eval/scenario.test.ts`.
 - **Interfaces:**
   - `parseScenarioJson(text: string, file: string): Map<string, ScenarioEntry> | ScenarioError`
@@ -114,7 +114,7 @@ from the same source.
 
 ### Task 5 — CLI
 
-- [ ] **Files:** `packages/visimark/src/cli/commands.ts`,
+- [x] **Files:** `packages/visimark/src/cli/commands.ts`,
   `packages/visimark/src/report/json.ts`,
   `packages/visimark/test/cli/scenario.test.ts` (new),
   `packages/visimark/test/fixtures/scenario/*` (new).
@@ -141,7 +141,7 @@ from the same source.
 
 ### Task 6 — Explain
 
-- [ ] **Files:** `packages/visimark/src/report/explain.ts`,
+- [x] **Files:** `packages/visimark/src/report/explain.ts`,
   `packages/visimark/src/playground/browser-entry.ts` (its copy of the text
   renderer), `packages/visimark/test/report/*`.
 - **Steps:** a `params:` section per sheet after `scalars:`, with params
@@ -151,7 +151,7 @@ from the same source.
 
 ### Task 7 — Motivating document
 
-- [ ] **Files:** `docs/example-agent-budget.md`,
+- [x] **Files:** `docs/example-agent-budget.md`,
   `packages/visimark/test/fixtures/scenario/tight.json` and friends,
   `packages/visimark/test/cli/scenario.test.ts`.
 - **Steps:** `budget = 2.00` → `param budget precision 2 = default 2.00`.
@@ -162,7 +162,7 @@ from the same source.
 
 ### Task 8 — Documentation
 
-- [ ] **Files:** `docs/visimark-design.md`, `docs/cli-reference.md`,
+- [x] **Files:** `docs/visimark-design.md`, `docs/cli-reference.md`,
   `docs/design/structured-output-json-spec.md`, `docs/tutorial.md`,
   `skills/visimark/SKILL.md` (or its reference file), `CHANGELOG.md`,
   `docs/vocabulary-catalogue.md`.

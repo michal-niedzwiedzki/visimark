@@ -169,7 +169,7 @@ only, as `eval --get` addresses it today.
 |---|---|
 | names a declared `param` | applied |
 | names nothing | error, with a did-you-mean over the declared params |
-| names a binding that is not a `param` (a column, a scalar rule) | error: `tax is a rule, not a param` |
+| names a binding that is not a `param` | error: `tax is a rule, not a param` for a scalar, `Price is a column, not a param` for a column |
 | a bare name matching params in two sheets | error naming both `sheet.name` forms |
 | names the same param twice, literally or once bare and once qualified | error |
 
@@ -265,7 +265,7 @@ stdout. Under `--json` the envelope has `status: "error"` and `error.code:
 | the file cannot be read | `visimark: cannot read scenario tight.json` |
 | not JSON, or not a JSON object | `visimark: scenario tight.json is not a JSON object` |
 | unknown key | `visimark: scenario key taxx names no param; did you mean tax?` |
-| key names a non-param | `visimark: scenario key tax is a rule, not a param` |
+| key names a non-param | `visimark: scenario key tax is a rule, not a param` (a scalar) / `visimark: scenario key Price is a column, not a param` (a column) |
 | ambiguous bare key | `visimark: scenario key tax is ambiguous: budget.tax, forecast.tax` |
 | duplicate | `visimark: scenario key tax is given twice` |
 | JSON number | `visimark: scenario value for tax must be a string: write "44"` |
@@ -389,9 +389,11 @@ The default prints as written in the document. A param is listed under
 `params:` and not under `scalars:`; it still appears in `order:`. At document
 scope the same `params:` lines follow the `document scope` bindings.
 `explain --json` carries the same as a per-sheet `params` array of
-`{ "name", "precision", "default" }`, `default` as written, and document-scope
-params as a top-level `documentScopeParams` array of the same shape. Params are
-not repeated in `scalars` or `documentScope`.
+`{ "name", "precision", "default" }`, `default` as written and `precision`
+`null` when the clause is missing, and document-scope params as a top-level
+`documentScopeParams` array of the same shape. Params are not repeated in
+`scalars` or `documentScope`. Both keys are present only when there is a param,
+so `explain --json` on a document without one is unchanged.
 
 **`infer`** treats a param as the constant binding it is on the defaults. It
 never proposes a `param` and never rewrites one.

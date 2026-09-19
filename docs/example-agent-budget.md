@@ -19,11 +19,13 @@ Prices are per million tokens, current as of the session start.
 | claude-haiku-4-5  |      0.80 |       4.00 |
 
 ```vmark #rates
-budget = 2.00
+param budget precision 2 = default 2.00
 ```
 
 The session budget is **$2.00**<!--vmark=rates.budget-->, fixed at session
 start and never edited by the agent — only by the human who opened the task.
+It is declared a `param`: the document's value is the default, and a what-if
+run can supply another without touching the file (see [What-if runs](#what-if-runs)).
 
 ## Calls made this session
 
@@ -81,6 +83,29 @@ the call is never made, and the agent is told why in terms it can act on —
 prompt instruction to "stop around $2": that number lives nowhere a process
 can read it, so nothing outside the model's own judgment enforces it, and a
 long enough context window eventually pushes it out of view entirely.
+
+## What-if runs
+
+Before committing to a plan, the harness may want to know whether the session
+would still fit under a tighter cap. Editing `budget` would break the rule
+above, so it asks with a scenario instead. `tight.json` holds
+`{ "budget": "0.40" }`:
+
+```console
+$ visimark eval --scenario tight.json docs/example-agent-budget.md
+rates.budget     0.4
+calls.spent      0.4266
+calls.remaining  -0.0266
+calls.Cost       0.1268, 0.0196, 0.0543, 0.0279, 0.198
+scenario: tight.json
+  rates.budget  0.4  scenario  (default 2)
+  ASSERT  #calls   spent <= rates.budget
+          0.4266 <= 0.40   is false under scenario (holds on defaults)
+```
+
+It exits `1`: at $0.40 the spend so far already breaks the cap, while the
+real budget still holds. Nothing is written, and `check` still sees only the
+$2.00 in the document. Only `eval` accepts `--scenario`.
 
 ## Why this is a harness artifact, not a spreadsheet
 
