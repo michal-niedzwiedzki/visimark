@@ -354,6 +354,58 @@ test("(-2) ^ 0.5 is a TYPE error, not NaN", () => {
   expect(fs[0]!.message).toBe("result is not a finite decimal");
 });
 
+test("x / 0 is TYPE division by zero", () => {
+  const fs = typeFindings(run(withScalar("100 / 0")).findings);
+  expect(fs).toHaveLength(1);
+  expect(fs[0]!.message).toBe("division by zero");
+});
+
+test("0 / 0 is TYPE division by zero, not NaN", () => {
+  const fs = typeFindings(run(withScalar("0 / 0")).findings);
+  expect(fs).toHaveLength(1);
+  expect(fs[0]!.message).toBe("division by zero");
+});
+
+test("1 / -0 is TYPE division by zero", () => {
+  const fs = typeFindings(run(withScalar("1 / -0")).findings);
+  expect(fs).toHaveLength(1);
+  expect(fs[0]!.message).toBe("division by zero");
+});
+
+test("a tiny non-zero divisor still divides", () => {
+  const src = `
+n is **10000.00**<!--vmark=s.n-->.
+
+\`\`\`vmark #s
+n precision 2 = 1 / 0.0001
+\`\`\`
+`;
+  expect(run(src).findings).toEqual([]);
+});
+
+test("MOD(x, 0) is TYPE division by zero", () => {
+  const fs = typeFindings(run(withScalar("MOD(5, 0)")).findings);
+  expect(fs).toHaveLength(1);
+  expect(fs[0]!.message).toBe("division by zero");
+});
+
+test("MOD(x, -0) is TYPE division by zero", () => {
+  const fs = typeFindings(run(withScalar("MOD(5, -0)")).findings);
+  expect(fs).toHaveLength(1);
+  expect(fs[0]!.message).toBe("division by zero");
+});
+
+test("ordinary MOD is unchanged", () => {
+  const src = `
+n is **1**<!--vmark=s.n-->.
+
+\`\`\`vmark #s
+n = MOD(7, 3)
+\`\`\`
+`;
+  expect(run(src).findings).toEqual([]);
+});
+
 // ---- FLOOR ----------------------------------------------------------
 
 test("FLOOR is a map of arity 2", () => {

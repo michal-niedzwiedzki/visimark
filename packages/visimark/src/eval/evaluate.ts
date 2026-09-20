@@ -59,8 +59,12 @@ function evalBinary(op: string, l: Value, r: Value): Value {
       throw new EvalError("`-` needs two numbers, two dates, or a date and a number");
     case "*":
       return num(asNum(l, "`*`").times(asNum(r, "`*`")));
-    case "/":
-      return num(asNum(l, "`/`").div(asNum(r, "`/`")));
+    case "/": {
+      const left = asNum(l, "`/`");
+      const right = asNum(r, "`/`");
+      if (right.isZero()) throw new EvalError("division by zero");
+      return num(left.div(right));
+    }
     case "^":
       return num(asNum(l, "`^`").pow(asNum(r, "`^`")));
     case "and":
@@ -125,8 +129,12 @@ function evalCall(expr: Extract<Expr, { type: "call" }>, env: EvalEnv): Value {
       return num(roundToPlaces(asNum(vals[0]!, "ROUND"), Number(asNum(vals[1]!, "ROUND"))));
     case "ABS":
       return num(asNum(vals[0]!, "ABS").abs());
-    case "MOD":
-      return num(asNum(vals[0]!, "MOD").mod(asNum(vals[1]!, "MOD")));
+    case "MOD": {
+      const x = asNum(vals[0]!, "MOD");
+      const y = asNum(vals[1]!, "MOD");
+      if (y.isZero()) throw new EvalError("division by zero");
+      return num(x.mod(y));
+    }
     case "SQRT": {
       const x = asNum(vals[0]!, "SQRT");
       if (x.isNegative() && !x.isZero()) throw new EvalError("SQRT of a negative number");
