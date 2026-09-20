@@ -1,0 +1,51 @@
+name: Project direction or outreach
+description: Positioning, the pitch, prioritisation, launches, an integration to chase, an audience to reach
+title: "direction: <one line>"
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **This gets a comment, never a catalogue row.** The register exists to
+        record decisions judged against the design constraints; a positioning
+        or prioritisation argument has no constraint to be judged against, so
+        putting it in the register makes the register worse. This was settled
+        on [#45](https://github.com/michal-niedzwiedzki/visimark/issues/45),
+        which bundled fifteen proposals under one verdict and had to be
+        deferred whole.
+
+        So: **one argument per issue.** If it contains a concrete change to the
+        tool, the site or the docs, split that out onto its own form — it can
+        be decided; the strategy around it cannot.
+  - type: textarea
+    id: claim
+    attributes:
+      label: The claim
+      description: One sentence, falsifiable. "The drift invoice is the strongest asset the project has and nothing on the landing page leads with it."
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: >
+        What you observed, and when. Check it is still true — half of #45's
+        premises had lapsed by the time it was reviewed.
+    validations:
+      required: true
+  - type: textarea
+    id: ask
+    attributes:
+      label: What you want decided
+      description: >
+        The one thing that should be different after this issue closes, and who
+        does it.
+    validations:
+      required: true
+  - type: textarea
+    id: spinoffs
+    attributes:
+      label: Concrete changes this implies
+      description: List them, so they can be filed separately. Link any you have already opened.
+    validations:
+      required: false

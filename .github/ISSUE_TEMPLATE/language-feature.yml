@@ -1,0 +1,132 @@
+name: Language feature
+description: Propose a change to the syntax, the evaluation model, the finding set, or the file format
+title: "feature: <one line>"
+labels: ["enhancement", "language"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A change to what a **document means**: its syntax, how it evaluates,
+        what `check` finds in it, what `fmt` writes back into it.
+
+        Two things that are not this. A single mapper, operator, reducer or
+        sorting rule goes on the
+        [vocabulary request](?template=vocabulary-request.yml) form, one
+        primitive per issue. A change to how the **command** is invoked —
+        options, exit codes, output formats, what a CI job sees — goes on the
+        [tooling or process](?template=tooling-change.yml) form: the CLI is
+        section F, not section E, because it is consumed by build pipelines
+        rather than by documents.
+
+        The decision lands as a row in
+        [catalogue section E](../blob/master/docs/vocabulary-catalogue.md#e-language-features)
+        and is reviewed with [`docs/issue-runbook.md`](../blob/master/docs/issue-runbook.md).
+
+        It is judged against [§1](../blob/master/docs/visimark-design.md#1-purpose)
+        scope, the four
+        [§2](../blob/master/docs/visimark-design.md#2-constraints-that-shaped-the-design)
+        constraints, the shape system where it touches expressions, and
+        diffability ([§9](../blob/master/docs/visimark-design.md#9-write-back)).
+        A `REJECTED` row reopens only with new information.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What changes, in two or three sentences. Lead with the syntax if there is any.
+    validations:
+      required: true
+  - type: textarea
+    id: document
+    attributes:
+      label: The real document that needs it
+      description: >
+        Paste the table and its `vmark` block before and after the change. A
+        proposal with no motivating document is deferred by default.
+      render: markdown
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: What it touches
+      description: Tick everything the change reaches. Each one is a section of the design doc that has to be amended.
+      multiple: true
+      options:
+        - Block syntax (statements inside a vmark block)
+        - Expression syntax
+        - The document model (tables, anchors, sheet ids)
+        - Evaluation and the dependency graph
+        - Numeric semantics or precision
+        - The finding set (check)
+        - Write-back (fmt) and the shape of the diff
+        - Generated artifacts on disk
+        - Nothing observable — a clarification of specified behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: findings
+    attributes:
+      label: Findings and exit codes
+      description: >
+        Does it add a finding, widen an existing one, or turn something that
+        passes today into a failure? Name the code (`STALE`, `TYPE`, `CYCLE`,
+        `ARTIFACT`, …) and the design-doc
+        [§10](../blob/master/docs/visimark-design.md#10-error-taxonomy) row it
+        needs. If a document that passes `check` today would stop passing, say
+        so plainly — that is a breaking change and the decision hinges on it.
+    validations:
+      required: true
+  - type: textarea
+    id: writeback
+    attributes:
+      label: What fmt writes
+      description: >
+        What the tool now owns in the document, and what one changed input
+        looks like in a diff
+        ([§13](../blob/master/docs/visimark-design.md#13-testing) asks for one
+        line). "Nothing — fmt is unaffected" is a complete answer.
+    validations:
+      required: true
+  - type: textarea
+    id: commands
+    attributes:
+      label: How the existing commands report it
+      description: >
+        The CLI surface itself is [section F](?template=tooling-change.yml) —
+        but a new thing in the language has to show up in the commands that
+        already exist, and that is part of this proposal. Walk them: does
+        `infer` need to know about it? What does `explain` say about a value
+        that uses it? Does it appear in `--json`, whose shape is a consumed
+        contract? Does `eval` treat it specially? "No change to any of them"
+        is a complete answer, and a strong sign the feature is well scoped.
+    validations:
+      required: true
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Constraint check
+      description: >
+        Walk the four §2 constraints. Does the value stay document-local — no
+        locale, clock, network, ambient data or config? Is every ambiguity an
+        error rather than a guess? Does it stay readable to someone with no
+        VisiMark installed? Does it avoid a plugin surface?
+    validations:
+      required: true
+  - type: textarea
+    id: forks
+    attributes:
+      label: The forks you left open
+      description: >
+        Every syntax and edge-semantics decision you did not settle — empty
+        input, a zero or negative argument, interaction with `param`, imports,
+        `assert`, charts. The review will hunt for these; listing them yourself
+        is faster.
+    validations:
+      required: false
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Why not existing vocabulary, an input column, or a convention
+      description: Show that today's language, a human-written cell, or a documented habit does not already cover it.
+    validations:
+      required: true
