@@ -242,7 +242,9 @@ number, a date, or a string — nothing else.
 Their precision behaviour: `+` and `-` take the wider operand, `*` sums the two
 scales, `^` multiplies by a non-negative integer exponent, and **`/` bounds
 nothing**, so a binding that divides declares its width
-([§7](#7-numeric-semantics)). `date - date` is a whole number of days and
+([§7](#7-numeric-semantics)). A zero divisor in `/` or `MOD` is a `TYPE` error
+(`division by zero`); a non-finite `Decimal` never becomes a value
+(`result is not a finite decimal`). `date - date` is a whole number of days and
 `date ± n` is another date ([§5](#5-dates)).
 Equality is `==`; `=` is binding only. Two characters are deliberately absent:
 `|` would collide with table syntax, and `%` is postfix-only so that `23%` is
@@ -311,7 +313,7 @@ derivation the engine actually performs.
 | `COUNT(col)` | reduce | 1 | always 0 | number of rows |
 | `ROUND(x, places)` | map | 2 | the value of `places` | half-up to `places` decimals |
 | `ABS(x)` | map | 1 | the width of `x` | absolute value |
-| `MOD(x, y)` | map | 2 | the wider of `x` and `y` | remainder |
+| `MOD(x, y)` | map | 2 | the wider of `x` and `y` | remainder; a zero divisor is a `TYPE` error |
 | `SQRT(x)` | map | 1 | **must be declared** | non-negative square root; a negative operand is a `TYPE` error |
 | `FLOOR(x, s)` | map | 2 | the width of `s` | greatest multiple of `s` that does not exceed `x`, toward −∞; a non-positive `s` is a `TYPE` error |
 | `CEILING(x, s)` | map | 2 | the width of `s` | least multiple of `s` that is not less than `x`, toward +∞; a non-positive `s` is a `TYPE` error |

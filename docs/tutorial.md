@@ -815,7 +815,7 @@ per row, inside a column rule, and turns one value into one value.
 |---|---|
 | `ROUND(x, places)` | Round to `places` decimals. Ties go away from zero. |
 | `ABS(x)` | Drop the sign. |
-| `MOD(x, y)` | Remainder. |
+| `MOD(x, y)` | Remainder. Zero divisor is an error. |
 | `SQRT(x)` | Square root. Negative input is an error. |
 | `FLOOR(x, s)` | Largest multiple of `s` not above `x`. |
 | `CEILING(x, s)` | Smallest multiple of `s` not below `x`. |
@@ -834,7 +834,7 @@ row. This is legal and useful.
 ### Operators
 
 `+` `-` `*` `/` `^`, the comparisons `==` `!=` `<` `<=` `>` `>=`, and the words
-`and`, `or`, `not`.
+`and`, `or`, `not`. Division by zero is an error, not a value.
 
 Two characters are missing on purpose. `|` would collide with table syntax, and
 `%` is postfix only, so that `23%` can never be ambiguous. Use `MOD()` for
