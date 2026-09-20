@@ -125,6 +125,13 @@ describe.each(pages)("%s", (page) => {
     const wantsFonts = /<link\b[^>]*\bhref="https:\/\/fonts\.googleapis\.com\/css2[^"]*"/i.test(
       markup(page),
     );
-    expect(directive(page, "font-src").includes("https://fonts.gstatic.com")).toBe(wantsFonts);
+    // `some(=== …)` rather than `includes(…)`: `directive()` returns the
+    // policy's source list, so this is membership in a list of exact tokens,
+    // and the explicit equality says that rather than leaving it to be read as
+    // a substring test over a URL.
+    const grantsFonts = directive(page, "font-src").some(
+      (src) => src === "https://fonts.gstatic.com",
+    );
+    expect(grantsFonts).toBe(wantsFonts);
   });
 });

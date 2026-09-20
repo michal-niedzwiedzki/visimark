@@ -74,7 +74,7 @@ export function renderDemo(sourceId: string, previewId: string, mdId: string): v
   // from anywhere the reader is not, a sanitizer goes in on that commit. The
   // page's `script-src 'self' https://cdnjs.cloudflare.com` is the second lock
   // — markup from here cannot execute even if it contained a tag.
-  previewEl.innerHTML = marked.parse(raw);
+  previewEl.innerHTML = marked.parse(raw); // lgtm[js/xss-through-dom]
 
   const state: { from: HTMLElement | null } = { from: null };
   link(sourceEl, previewEl, state);
