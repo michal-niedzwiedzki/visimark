@@ -1,6 +1,6 @@
 {
   "name": "visimark",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "The numbers in your Markdown, checked on every commit: every computed number carries the formula that produced it, and a machine can prove the two still agree.",
   "keywords": [
     "ai",

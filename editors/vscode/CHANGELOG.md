@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.1.6 - 2026-09-20
+
+- Division by zero (`/` or `MOD` with a zero divisor) is reported as a `TYPE`
+  diagnostic, "division by zero", instead of an unexplained stale value.
+- Documents that declare `param` scenario parameters no longer raise findings.
+  Scenarios are run from the CLI with `eval --scenario`, not from the editor.
+
 ## 0.1.5 - 2026-09-17
 
 - A binding's head may carry a `precision N` clause, and a value's decimal width
