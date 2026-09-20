@@ -1,0 +1,107 @@
+name: Tooling, CLI, or process change
+description: The command-line surface, CI, releasing, the review workflow, the skill set, the editor extension, repo layout
+title: "chore: <one line>"
+labels: ["enhancement", "tooling"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Everything outside the document: **how `visimark` is invoked and what a
+        machine downstream of it sees**, plus the repo's own machinery. It
+        lands as a row in
+        [catalogue section F](../blob/master/docs/vocabulary-catalogue.md#f-tooling-and-process)
+        — not a change to the language, but still a standing decision worth a
+        citable reason.
+
+        **The CLI surface is section F.** Options, exit codes, output formats,
+        stdout/stderr split, `--json` shape: a CI job consumes them, not a
+        document. If a proposal changes both — a new finding *and* the way it
+        is printed — file the finding on the
+        [language feature](?template=language-feature.yml) form and let this
+        one carry the surface, or say so below and the review will split it.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - The CLI surface (commands, options, exit codes, output formats)
+        - CI and the checks a pull request must pass
+        - Packaging, publishing, releasing
+        - The issue-review workflow, its skills and commands
+        - The VS Code extension and language server
+        - Repo layout, the design docs, the catalogue itself
+        - Developer ergonomics (scripts, lint, formatting, local setup)
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: What changes
+      description: The change, and the smallest version of it that is still worth doing.
+    validations:
+      required: true
+  - type: textarea
+    id: today
+    attributes:
+      label: What happens today
+      description: >
+        The current behaviour, with the file, workflow, or command that
+        produces it. For a CLI change, paste the real session — invocation,
+        stdout, stderr, and `echo $?`.
+      render: console
+    validations:
+      required: true
+  - type: textarea
+    id: after
+    attributes:
+      label: What happens after
+      description: >
+        The same session as it would read once the change lands. For a CLI
+        change this is the acceptance test, so write it exactly: every
+        affected command, its output, and its exit code.
+      render: console
+    validations:
+      required: true
+  - type: textarea
+    id: contract
+    attributes:
+      label: The machine contract
+      description: >
+        Only if this touches the CLI. Which exit codes are involved (`0` clean,
+        `1` findings, `2` usage — say if you are proposing another); what goes
+        to stdout versus stderr; and what happens under `--json`, whose shape
+        is a consumed contract. Say explicitly whether an existing CI job, a
+        script, or the composite Action would behave differently after the
+        change — that is the breaking-change question for section F, the way a
+        changed `check` verdict is for section E.
+    validations:
+      required: false
+  - type: textarea
+    id: cost
+    attributes:
+      label: Cost and blast radius
+      description: >
+        What breaks while it changes hands — a release that must be cut, a
+        cache to invalidate, a contributor's local setup, an installed
+        extension, a pinned Action version. Say if it is reversible.
+    validations:
+      required: true
+  - type: textarea
+    id: docs
+    attributes:
+      label: What documentation it invalidates
+      description: >
+        Name the files that state the current behaviour and would go stale —
+        [`cli-reference.md`](../blob/master/docs/cli-reference.md),
+        [`ci.md`](../blob/master/docs/ci.md), the tutorial, `CONTRIBUTING.md`,
+        the runbook. The implementation plan's final task updates these, so
+        listing them now is the difference between a plan that lands clean and
+        one that leaves drift.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you considered and rejected
+    validations:
+      required: false

@@ -29,10 +29,12 @@ in it, approved, deferred or rejected, with the reasoning attached.
 | What you want to change | Route |
 |---|---|
 | A new function, operator or aggregate | Open a [vocabulary request](https://github.com/michal-niedzwiedzki/visimark/issues/new?template=vocabulary-request.yml) first. One primitive per issue. |
-| Syntax, semantics, the file format, or CLI behaviour | Open a free-form issue first, with a concrete proposal and a motivating document. |
+| Syntax, semantics, the file format, write-back — anything that changes what a **document means** | Open a [language feature](https://github.com/michal-niedzwiedzki/visimark/issues/new?template=language-feature.yml) issue first, with a concrete proposal and a motivating document. |
+| CLI options, exit codes, output formats — anything a **machine** downstream sees | Open a [tooling, CLI or process](https://github.com/michal-niedzwiedzki/visimark/issues/new?template=tooling-change.yml) issue, with the before and after sessions, exit codes included. |
 | A bug — the tool does something it does not claim to do | Pull request, straight away. An issue is welcome but not required. |
-| Documentation: a typo, a wrong statement, a missing explanation | Pull request, straight away. |
-| Editor support, the playground, CI, tooling | Issue first if it changes behaviour; pull request straight away if it is a fix. |
+| Documentation: a typo, a wrong statement, a missing explanation | Pull request, straight away. A larger change to the site, the playground, the tutorial or the examples goes on the [site, playground or docs](https://github.com/michal-niedzwiedzki/visimark/issues/new?template=site-docs.yml) form. |
+| Editor support, the playground, CI, releasing, the repo's own machinery | Issue first if it changes behaviour — the [tooling, CLI or process](https://github.com/michal-niedzwiedzki/visimark/issues/new?template=tooling-change.yml) form; pull request straight away if it is a fix. |
+| Positioning, prioritisation, an audience or an integration to chase | The [project direction](https://github.com/michal-niedzwiedzki/visimark/issues/new?template=direction.yml) form. It gets a comment, never a catalogue row. |
 
 The journey from an issue to a decision is
 [`docs/issue-runbook.md`](docs/issue-runbook.md). The short version: the

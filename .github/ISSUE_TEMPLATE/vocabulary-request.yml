@@ -6,13 +6,23 @@ body:
   - type: markdown
     attributes:
       value: |
-        One primitive per issue. The decision is recorded in [`docs/vocabulary-catalogue.md`](../blob/master/docs/vocabulary-catalogue.md); read its preface first.
+        One primitive per issue. Anything larger — a statement, a syntax form, a
+        CLI change — goes on the [language feature](?template=language-feature.yml)
+        form instead.
+
+        The decision is recorded in [`docs/vocabulary-catalogue.md`](../blob/master/docs/vocabulary-catalogue.md); read its preface first.
         The maintainer reviews it with the process in [`docs/issue-runbook.md`](../blob/master/docs/issue-runbook.md).
+        An accepted primitive is written down as an `FnDoc` in
+        [`packages/visimark/src/lang/reference.ts`](../blob/master/packages/visimark/src/lang/reference.ts),
+        which generates the function reference and the design doc's table — so
+        the fields below are the fields that file requires. Answering them well
+        is most of the implementation.
+
         A request is judged against the design doc's constraints, not against Excel:
 
         - it fits the shape system (mapper is scalar → scalar; reducer is vector → scalar over a bare column reference; no vector → vector);
         - its value is document-local — no locale, clock, network, ambient data, or config;
-        - it adds no ambiguity — no context-dependent coercion;
+        - it adds no ambiguity — no context-dependent coercion, and every input it cannot answer for is a `TYPE` error rather than a sentinel value;
         - its precision behaviour is stated — the result's decimal width either
           derives exactly from its operands, comes from an argument, or requires
           the binding to declare one;
@@ -68,10 +78,50 @@ body:
     id: what
     attributes:
       label: What it does
-      description: One or two sentences, precise enough to implement. Give a worked value.
-      placeholder: "Last day of the month `months` away from `date`. EOMONTH(2026-01-15, 1) -> 2026-02-28."
+      description: One or two sentences, precise enough to implement.
+      placeholder: "Last day of the month `months` away from `date`."
     validations:
       required: true
+  - type: textarea
+    id: examples
+    attributes:
+      label: Worked values
+      description: >
+        Two or three lines, input to output, written exactly as the result would
+        appear in a document — decimal places included, because that is the
+        precision rule being asserted. These become the `examples` of the
+        reference entry and are executed by its tests.
+      placeholder: |
+        EOMONTH(2026-01-15, 1)  -> 2026-02-28
+        EOMONTH(2026-02-29, -1) -> 2026-01-31
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: errors
+    attributes:
+      label: What it refuses
+      description: >
+        Every input for which there is no right answer, and the finding it
+        raises — a negative argument to `SQRT`, a zero divisor, a string where a
+        number is expected. Constraint 3 makes each of these an error, never a
+        sentinel: VisiMark has no `Infinity`, `NaN`, `#VALUE!` or empty result.
+        "Nothing — every well-typed input has an answer" is a complete answer,
+        if it is true.
+      placeholder: "TYPE when `x` is negative — there is no decimal square root."
+    validations:
+      required: true
+  - type: input
+    id: rounding
+    attributes:
+      label: Rounding rule, if it has one
+      description: >
+        How it breaks a tie — not how wide its result is, which the precision
+        field above already settles. Only `ROUND` has one today. Leave empty if
+        the result is exact.
+      placeholder: "half away from zero"
+    validations:
+      required: false
   - type: textarea
     id: document
     attributes:
@@ -89,7 +139,10 @@ body:
       label: Why not existing vocabulary or an input column
       description: >
         Show that a column rule, an existing function, string concatenation, or
-        a human-written input cell does not already cover this.
+        a human-written input cell does not already cover this. Name the
+        functions you checked — the
+        [function reference](../blob/master/docs/function-reference.md) is the
+        full list.
     validations:
       required: true
   - type: textarea
@@ -106,6 +159,6 @@ body:
     id: notes
     attributes:
       label: Anything else
-      description: Prior art, edge cases, naming alternatives.
+      description: Prior art, edge cases, naming alternatives, and the related functions a reader should be pointed at.
     validations:
       required: false

@@ -10,17 +10,28 @@ is historical; the register is not vocabulary-only.
 
 ## Requesting an addition
 
-**A vocabulary primitive** — one mapper, operator, or aggregate per issue — goes
-on the **Vocabulary request** template
-([`.github/ISSUE_TEMPLATE/vocabulary-request.yml`](../.github/ISSUE_TEMPLATE/vocabulary-request.yml)).
+Every request goes on a template in
+[`.github/ISSUE_TEMPLATE/`](../.github/ISSUE_TEMPLATE/). The template picks the
+review track and decides, up front, whether the request earns a row here at all:
 
-**Anything else** — a language feature, a change to the format or the CLI, a
-tooling or workflow change — is a free-form issue. Give it a concrete proposal,
-a motivating document or scenario, and (for a language feature) a sketch of the
-syntax and what a document cannot express or verify without it. An issue too
-thin to assess is sent back for those pieces before review.
+| Template | What it is for | Lands as |
+|----------|----------------|----------|
+| **Vocabulary request** | One mapper, operator, aggregate, or sorting rule per issue | A row in **A–D** |
+| **Language feature** | What a document *means* — syntax, evaluation, the finding set, the format, write-back | A row in **E** |
+| **Tooling, CLI, or process** | What a *machine* sees — the command surface, CI, releasing, the workflow, the extension, repo layout | A row in **F** |
+| **Bug report** | The tool does something it does not claim to do | No row — unless the fix must *decide* unspecified behaviour, which promotes it to **E** or **F** |
+| **Site, playground, or docs** | The landing page, the playground, the tutorial, the examples, the reference docs | No row |
+| **Project direction or outreach** | Positioning, prioritisation, launches, audiences | **No row, ever** — there is no constraint to judge it against |
 
-Either way the process from issue to deciding comment is
+**The line between E and F is who consumes the change.** A document's meaning is
+section E. A command's invocation, exit code, output format and `--json` shape
+are section F, because a CI job depends on them and no document does — which is
+why `--json` ([#60](https://github.com/michal-niedzwiedzki/visimark/issues/60))
+is filed as `tooling`. A proposal that moves both is split into two issues at
+review time rather than decided as one.
+
+An issue too thin to assess is sent back for the missing fields before review.
+The process from issue to deciding comment is
 [`issue-runbook.md`](issue-runbook.md).
 
 A vocabulary request is judged against the design doc's constraints, not against Excel:
@@ -207,9 +218,12 @@ proposal with a `Status`.
 
 ## E. Language features
 
-Changes to the syntax, the evaluation model, the finding set, the format, or the
-CLI surface — anything that is not a single mapper / operator / reducer (those
-are sections A–C) and not a sorting rule (section D). Judged against
+Changes to the syntax, the evaluation model, the finding set, the format, or
+write-back — anything that alters **what a document means**. Not a single mapper
+/ operator / reducer (those are sections A–C) and not a sorting rule (section
+D). **Not the CLI surface**, either: options, exit codes and output formats are
+consumed by build pipelines rather than by documents, so they are section F.
+Judged against
 [§1](visimark-design.md#1-purpose) scope, the four
 [§2](visimark-design.md#2-constraints-that-shaped-the-design) constraints and the
 no-plugin rule, the shape system ([§4](visimark-design.md#4-syntax)) where it
@@ -226,9 +240,16 @@ scenario parameters landed unreleased — see the [Shipped register](#shipped).
 
 ## F. Tooling and process
 
-The review workflow, CI, releasing, the command / skill set, repo layout, the
-structure of the design docs. Not a language change — but still a standing
-decision worth a citable reason.
+The CLI surface — commands, options, exit codes, the stdout/stderr split, the
+`--json` shape — plus CI, releasing, the review workflow, the command / skill
+set, the editor extension, repo layout, and the structure of the design docs.
+Not a change to what a document means, but everything a machine downstream of
+`visimark` depends on, and so still a standing decision worth a citable reason.
+
+A section F row states its **machine contract**: which exit codes are involved,
+what each stream carries, and whether an existing CI job or script behaves
+differently afterwards. That last question is section F's breaking-change test,
+the way "does a document that passes `check` today still pass?" is section E's.
 
 | Change | What it changes | Pros | Cons | Request | Status |
 |--------|-----------------|------|------|---------|--------|

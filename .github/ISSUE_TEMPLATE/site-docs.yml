@@ -1,0 +1,59 @@
+name: Site, playground, or docs change
+description: The landing page, the browser playground, the tutorial, the worked examples, the reference docs
+title: "docs: <one line>"
+labels: ["documentation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This gets a pre-review comment and a recommended action, **not** a
+        catalogue row — nothing here changes what a document means. The
+        exception is a change that reveals a language gap; if that happens the
+        review splits it out into its own
+        [language feature](?template=language-feature.yml) issue.
+
+        `docs/function-reference.md` and the design doc's function table are
+        **generated** from `packages/visimark/src/lang/reference.ts`. A wrong
+        entry there is a bug in that file, not a docs fix — use the
+        [bug report](?template=bug-report.yml) form.
+
+        A typo or a broken link needs no issue. Send the pull request.
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Which surface
+      options:
+        - Landing page (docs/index.html)
+        - Browser playground (docs/playground)
+        - Tutorial (docs/tutorial.md)
+        - Worked examples (docs/example-*.md)
+        - Reference docs (cli-reference, design doc, CONTRIBUTING, runbook)
+        - The VS Code Marketplace / Open VSX listing
+        - README
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What a reader gets wrong today
+      description: >
+        Name the reader and the wrong conclusion they leave with — "someone
+        evaluating VisiMark against a spreadsheet cannot tell that `check` runs
+        in CI". Not "the page could be better".
+    validations:
+      required: true
+  - type: textarea
+    id: change
+    attributes:
+      label: The change
+      description: Concretely. Paste the replacement copy, sketch the section, or link the page it should look like.
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you file
+      options:
+        - label: Every example document in the change passes `visimark check` (the dogfood workflow will run it anyway)
+        - label: It does not claim behaviour the tool does not have yet
+        - label: It works without VisiMark installed — a GitHub reader sees a plain Markdown document
