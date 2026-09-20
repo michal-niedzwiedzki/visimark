@@ -340,6 +340,20 @@ test("SQRT misspelled gets a did-you-mean", () => {
   expect(ts[0]!.suggestion).toBe("SQRT");
 });
 
+// ---- finite numeric values ------------------------------------------
+
+test("0 ^ -1 is a TYPE error, not Infinity", () => {
+  const fs = typeFindings(run(withScalar("0 ^ -1")).findings);
+  expect(fs).toHaveLength(1);
+  expect(fs[0]!.message).toBe("result is not a finite decimal");
+});
+
+test("(-2) ^ 0.5 is a TYPE error, not NaN", () => {
+  const fs = typeFindings(run(withScalar("(-2) ^ 0.5")).findings);
+  expect(fs).toHaveLength(1);
+  expect(fs[0]!.message).toBe("result is not a finite decimal");
+});
+
 // ---- FLOOR ----------------------------------------------------------
 
 test("FLOOR is a map of arity 2", () => {

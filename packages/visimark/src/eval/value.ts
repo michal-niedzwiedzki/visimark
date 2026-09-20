@@ -11,10 +11,11 @@ export type Value =
   | { t: "str"; s: string }
   | { t: "bool"; b: boolean };
 
-export const num = (d: Decimal | number | string): Value => ({
-  t: "num",
-  d: d instanceof Decimal ? d : new Decimal(d),
-});
+export const num = (d: Decimal | number | string): Value => {
+  const dec = d instanceof Decimal ? d : new Decimal(d);
+  if (!dec.isFinite()) throw new EvalError("result is not a finite decimal");
+  return { t: "num", d: dec };
+};
 export const date = (iso: string): Value => ({ t: "date", iso });
 export const str = (s: string): Value => ({ t: "str", s });
 export const bool = (b: boolean): Value => ({ t: "bool", b });
