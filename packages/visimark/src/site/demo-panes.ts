@@ -59,6 +59,21 @@ export function renderDemo(sourceId: string, previewId: string, mdId: string): v
 
   const raw = dedent((mdEl.textContent ?? "").replace(/^\n/, "")).replace(/\s+$/, "");
   sourceEl.textContent = raw;
+  // **Rendering Markdown to HTML is the feature, and `raw` is not input.**
+  // CodeQL reads `textContent` → `innerHTML` as DOM text reinterpreted as
+  // HTML (js/xss-through-dom), which is the right shape to flag and the wrong
+  // conclusion here: `mdId` names a `<script type="text/plain">` block
+  // committed in docs/index.html, so the only way to put content into it is to
+  // have commit access to the page already. Nothing on this page reads a URL,
+  // a form, storage or the network — index.html is the one page of the five
+  // whose CSP grants no `connect-src` at all, precisely because it fetches
+  // nothing.
+  //
+  // It is the same boundary ../playground/app/pipeline.ts states at length for
+  // the PREVIEW panel, and it moves the same way: the day a snippet here comes
+  // from anywhere the reader is not, a sanitizer goes in on that commit. The
+  // page's `script-src 'self' https://cdnjs.cloudflare.com` is the second lock
+  // — markup from here cannot execute even if it contained a tag.
   previewEl.innerHTML = marked.parse(raw);
 
   const state: { from: HTMLElement | null } = { from: null };

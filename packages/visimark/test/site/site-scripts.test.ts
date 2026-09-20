@@ -98,8 +98,14 @@ describe("heading slugs", () => {
 });
 
 describe("escaping", () => {
-  test("covers the three characters that change how markup parses", () => {
-    expect(escapeHtml('<a href="x">&</a>')).toBe('&lt;a href="x"&gt;&amp;&lt;/a&gt;');
+  test("covers the four characters that change how markup parses", () => {
+    expect(escapeHtml('<a href="x">&</a>')).toBe("&lt;a href=&quot;x&quot;&gt;&amp;&lt;/a&gt;");
+  });
+
+  test("escapes the quote, so an attribute cannot be closed from inside it", () => {
+    // The four pages' own copies did not, and moving them here gave the
+    // function callers in attribute position.
+    expect(escapeHtml('" onerror="alert(1)')).not.toContain('"');
   });
 
   test("the load-failure note escapes the path and the reason", () => {

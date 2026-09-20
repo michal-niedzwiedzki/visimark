@@ -84,8 +84,11 @@ describe.each(pages)("%s", (page) => {
     // that no linter, typechecker, formatter or test could see. A `<script>`
     // with a non-JS `type` is a data block — the browser never executes it and
     // CSP never sees it — so index.html's eight Markdown snippets are not this.
-    for (const [tag] of markup(page).matchAll(/<script\b[^>]*>/g)) {
-      const executable = !/\bsrc=/.test(tag) && !/\btype="text\/plain"/.test(tag);
+    // Case-insensitive, because `<SCRIPT>` is a script: HTML tag names are
+    // not case-sensitive, and a gate that only catches the lower-case
+    // spelling is a gate with a documented way round it.
+    for (const [tag] of markup(page).matchAll(/<script\b[^>]*>/gi)) {
+      const executable = !/\bsrc=/i.test(tag) && !/\btype="text\/plain"/i.test(tag);
       expect(executable, `inline <script> in ${page}: ${tag}`).toBe(false);
     }
   });
@@ -114,7 +117,14 @@ describe.each(pages)("%s", (page) => {
   });
 
   test("grants a font host only when it asks a stylesheet for fonts", () => {
-    const wantsFonts = markup(page).includes("https://fonts.googleapis.com/css2");
+    // Matched as a `<link href>` rather than as a substring of the whole page:
+    // "the text appears somewhere" is true of a URL mentioned in a comment, in
+    // a `<a href>` pointing at an unrelated host, or as the tail of an
+    // attacker-shaped origin. What the grant has to track is a stylesheet this
+    // page actually loads.
+    const wantsFonts = /<link\b[^>]*\bhref="https:\/\/fonts\.googleapis\.com\/css2[^"]*"/i.test(
+      markup(page),
+    );
     expect(directive(page, "font-src").includes("https://fonts.gstatic.com")).toBe(wantsFonts);
   });
 });
