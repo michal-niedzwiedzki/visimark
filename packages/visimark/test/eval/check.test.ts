@@ -3,6 +3,7 @@ import { clean, drift } from "../examples.js";
 import { locate } from "../../src/parse/document.js";
 import { build } from "../../src/model/build.js";
 import { check } from "../../src/eval/check.js";
+import { evalValues } from "../../src/report/json.js";
 import type { Finding } from "../../src/model/types.js";
 
 const run = (src: string) => check(build(locate(src)));
@@ -386,6 +387,51 @@ x precision 2 = SQRT(-1)
   const fs = run(src).findings.filter((f) => f.code === "TYPE");
   expect(fs).toHaveLength(1);
   expect(fs[0]!).toMatchObject({ name: "x", message: "SQRT of a negative number" });
+});
+
+test("division by zero: scalar bindings are TYPE, not STALE, no NOTE", () => {
+  const src = `
+Net is 10<!--vmark=s.net-->. Ratio 1<!--vmark=s.r-->.
+
+\`\`\`vmark #s
+z = 0
+net precision 2 = 100 / z
+r precision 2 = 0 / z
+m = MOD(5, z)
+\`\`\`
+`;
+  const r = run(src);
+  expect(r.findings.map((f) => f.code).sort()).toEqual(["TYPE", "TYPE", "TYPE"]);
+  for (const f of r.findings) {
+    expect(f.message).toBe("division by zero");
+  }
+  expect(r.findings.map((f) => f.name).sort()).toEqual(["m", "net", "r"]);
+  const values = evalValues(r);
+  expect(values["s.z"]).toBe("0");
+  expect(values["s.net"]).toBeUndefined();
+  expect(values["s.r"]).toBeUndefined();
+  expect(values["s.m"]).toBeUndefined();
+});
+
+test("division by zero: one zero row is a single TYPE on that row, no NOTE", () => {
+  const src = `
+| Item | Amount | Qty | Ratio |
+|------|-------:|----:|------:|
+| a    |     10 |   2 |  5.00 |
+| b    |     10 |   0 |  0.00 |
+| c    |     10 |   5 |  2.00 |
+
+\`\`\`vmark #t
+Ratio precision 2 = Amount / Qty
+\`\`\`
+`;
+  const r = run(src);
+  expect(r.findings.map((f) => f.code).sort()).toEqual(["TYPE"]);
+  expect(r.findings[0]!).toMatchObject({
+    name: "Ratio",
+    rowLabel: "b",
+    message: "division by zero",
+  });
 });
 
 test("FLOOR: a clean scalar verifies", () => {
