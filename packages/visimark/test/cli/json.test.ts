@@ -170,6 +170,51 @@ test("eval --json column with a null cell", async () => {
   expect(values["t.Net"][1]).toBeNull();
 });
 
+test("eval --json omits division-by-zero bindings and never says Infinity", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "visimark-div0-"));
+  const p = join(dir, "div.md");
+  writeFileSync(
+    p,
+    `Net is 10<!--vmark=s.net-->. Ratio 1<!--vmark=s.r-->.
+
+\`\`\`vmark #s
+z = 0
+net precision 2 = 100 / z
+r precision 2 = 0 / z
+m = MOD(5, z)
+\`\`\`
+`,
+  );
+  const checkCap = capture();
+  expect(await runCli(["check", p], checkCap.io)).toBe(1);
+  const checkText = checkCap.out();
+  expect(checkText).toContain("TYPE");
+  expect(checkText).toContain("division by zero");
+  expect(checkText).not.toContain("STALE");
+  expect(checkText).not.toContain("Infinity");
+  expect(checkText).not.toContain("NaN");
+  expect(checkText).toContain("3 problems (0 stale, 3 errors)");
+
+  const before = readFileSync(p, "utf8");
+  const fmtCap = capture();
+  await runCli(["fmt", p], fmtCap.io);
+  expect(readFileSync(p, "utf8")).toBe(before);
+  expect(fmtCap.out()).toContain("unchanged");
+
+  const evalCap = capture();
+  expect(await runCli(["eval", p, "--json"], evalCap.io)).toBe(0);
+  const raw = evalCap.out();
+  expect(raw).not.toContain("Infinity");
+  expect(raw).not.toContain("NaN");
+  const j = parseOut(evalCap);
+  expect(j.status).toBe("ok");
+  const values = j.values as Record<string, string>;
+  expect(values["s.z"]).toBe("0");
+  expect(values["s.net"]).toBeUndefined();
+  expect(values["s.r"]).toBeUndefined();
+  expect(values["s.m"]).toBeUndefined();
+});
+
 test("fmt --json reports post-write facts and still rewrites the file", async () => {
   const dir = mkdtempSync(join(tmpdir(), "visimark-json-"));
   const p = join(dir, "drift.md");

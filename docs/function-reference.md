@@ -209,6 +209,10 @@ Remainder.
 
 **Precision:** the wider of `x` and `y`.
 
+**Errors**
+
+- A zero divisor — `TYPE`
+
 **Examples**
 
 | Expression | Is |

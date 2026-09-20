@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Fixed
+
+- **Division by zero is a `TYPE` error**, not a value. `/` and `MOD` with a
+  zero divisor (including `-0`) report `division by zero`; a non-finite
+  `Decimal` (`0 ^ -1`, `(-2) ^ 0.5`) reports `result is not a finite
+  decimal`. `check` no longer treats these as `STALE`, and `fmt` does not
+  write `Infinity` or `NaN` into the document. See
+  [`division-by-zero-evaluates-to-infinity-spec.md`](docs/design/division-by-zero-evaluates-to-infinity-spec.md)
+  and [#122](https://github.com/michal-niedzwiedzki/visimark/issues/122).
+
 ### Added
 
 - **Scenario parameters: `param` and `eval --scenario`.** A `vmark` block may

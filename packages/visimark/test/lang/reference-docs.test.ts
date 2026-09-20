@@ -19,4 +19,5 @@ test("the generated Meaning column carries the error clauses", () => {
   const table = renderTable();
   expect(table).toContain("an empty column is a `TYPE` error");
   expect(table).toContain("a negative operand is a `TYPE` error");
+  expect(table).toContain("a zero divisor is a `TYPE` error");
 });

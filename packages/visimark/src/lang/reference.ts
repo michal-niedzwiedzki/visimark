@@ -215,7 +215,7 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
     ],
     returns: "number",
     precision: { from: "operands", params: ["x", "y"] },
-    errors: [],
+    errors: [{ when: "a zero divisor", code: "TYPE" }],
     examples: [
       { expr: "MOD(7, 3)", is: "1" },
       { expr: "MOD(9, 3)", is: "0" },
