@@ -276,3 +276,124 @@ describe("adding a file", () => {
     expect(store.add("scratch.md", "y")).toBe(false);
   });
 });
+
+describe("two callers wanting the same document at once", () => {
+  // Follow-up review §2.8. `fetchMissing` filters against `contents`, which is
+  // only written when a response lands — so a click during the idle-time
+  // prefetch re-requested a document already on its way: 19 prefetch requests,
+  // and the click makes 20. It never corrupted anything, but only because
+  // `text()` prefers the editor buffer and `buffers.restore` replays the edit
+  // — two unstated invariants absorbing a race neither was designed for.
+
+  /** A fetch whose responses are released by hand, so "in flight" is a state
+   *  the test can hold the store in. */
+  function heldFetch(): { release: () => void } {
+    requested = [];
+    const waiting: (() => void)[] = [];
+    globalThis.fetch = ((path: string) => {
+      requested.push(path);
+      return new Promise((resolve) => {
+        waiting.push(() => resolve(new Response(`body of ${path}`)));
+      });
+    }) as unknown as typeof fetch;
+    return {
+      release: () => {
+        for (const w of waiting.splice(0, waiting.length)) w();
+      },
+    };
+  }
+
+  test("share one request", async () => {
+    const held = heldFetch();
+    const store = build({ "demo.md": "# Demo" }, "demo.md");
+    const first = store.ensure("05-mappers.md");
+    const second = store.ensure("05-mappers.md");
+    held.release();
+    await Promise.all([first, second]);
+    expect(requested).toEqual(["playground/tutorial/05-mappers.md"]);
+  });
+
+  test("and both resolve with the document in the store", async () => {
+    const held = heldFetch();
+    const store = build({ "demo.md": "# Demo" }, "demo.md");
+    const first = store.ensure("05-mappers.md");
+    const second = store.ensure("05-mappers.md");
+    held.release();
+    expect(await first).toEqual([]);
+    expect(await second).toEqual([]);
+    expect(store.stored("05-mappers.md")).toBe("body of playground/tutorial/05-mappers.md");
+  });
+
+  test("a click during the prefetch adds no request", async () => {
+    // The scenario as reported: ensureAll() is in the air, the visitor clicks
+    // a chapter, and switchTo calls ensure() for a file already on its way.
+    const held = heldFetch();
+    const store = build({ "demo.md": "# Demo" }, "demo.md");
+    const all = store.ensureAll();
+    const duringPrefetch = requested.length;
+    const click = store.ensure("05-mappers.md");
+    expect(requested).toHaveLength(duringPrefetch);
+    held.release();
+    await Promise.all([all, click]);
+    expect(requested).toHaveLength(Object.keys(FILE_SOURCES).length - 1);
+  });
+
+  test("the prefetch does not re-fetch what a click is already pulling in", async () => {
+    // The same race the other way round.
+    const held = heldFetch();
+    const store = build({ "demo.md": "# Demo" }, "demo.md");
+    const click = store.ensure("05-mappers.md");
+    const all = store.ensureAll();
+    held.release();
+    await Promise.all([click, all]);
+    const mappers = requested.filter((p) => p.endsWith("05-mappers.md"));
+    expect(mappers).toHaveLength(1);
+  });
+
+  test("a late response cannot overwrite an edit made while it was in flight", async () => {
+    // What `receive()`'s at-most-once guard is protecting: the file became
+    // current and was edited between the request going out and landing.
+    const held = heldFetch();
+    const cm = fakeEditor("# Demo");
+    const store = createStore(
+      VM,
+      cm,
+      createBufferStore(digest),
+      { "demo.md": "# Demo", "05-mappers.md": "bundled mappers" },
+      "demo.md",
+    );
+    store.switchTo("05-mappers.md");
+    cm.value = "my edit";
+    store.flush();
+    const pending = store.ensureAll();
+    held.release();
+    await pending;
+    expect(store.stored("05-mappers.md")).toBe("my edit");
+  });
+
+  test("a fetch that settles leaves nothing behind to block the next one", async () => {
+    // The in-flight entry is deleted on settle, including on failure — so a
+    // document that did not arrive can still be asked for again.
+    stubFetch(["playground/tutorial/06-aggregates.md"]);
+    const store = build({ "demo.md": "# Demo" }, "demo.md");
+    expect(await store.ensure("06-aggregates.md")).toHaveLength(1);
+    stubFetch();
+    expect(await store.ensure("06-aggregates.md")).toEqual([]);
+    expect(store.loaded("06-aggregates.md")).toBe(true);
+  });
+});
+
+describe("a file the visitor created, named in the URL", () => {
+  // Follow-up review §2.5: boot resolves `?file=` against FILE_SOURCES *and*
+  // the created names, so the store has to be able to start on one — with
+  // nothing fetched, because there is nothing to fetch it from.
+  test("boots as the current file with its saved text in the editor", () => {
+    const buffers = createBufferStore(digest);
+    buffers.save("scratch.md", "# mine", null);
+    const cm = fakeEditor();
+    const store = createStore(VM, cm, buffers, {}, "scratch.md");
+    expect(store.current()).toBe("scratch.md");
+    expect(cm.value).toBe("# mine");
+    expect(store.names()).toContain("scratch.md");
+  });
+});

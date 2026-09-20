@@ -2,6 +2,42 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+
+    <!--
+      Follow-up review §2.3. The playground carried a `default-src 'none'`
+      allowlist and its four neighbours carried nothing at all, on a site
+      served verbatim by GitHub Pages — which cannot send headers, so a
+      <meta> policy is the only content-security control available, and it
+      has to come before the first subresource.
+
+      `script-src` grants no inline script, which is the whole reason this is
+      worth having: this page's 183 lines of `<script>` moved to
+      packages/visimark/src/site/, where four gates can see them, and are
+      loaded from vendor/ like the playground's. A policy that still needed
+      'unsafe-inline' would buy almost nothing.
+
+      `style-src` does still carry it, for the same reason playground.html's
+      does: this page's CSS is inline. An inline-style injection is a defacement, not code
+      execution, so the trade is a different order of magnitude from the
+      script one.
+
+      `connect-src 'self'` is the one fetch this page makes: tutorial.md, from
+      its own directory. `img-src 'self'` covers the chart the tutorial renders
+      (charts/c-trend.svg), which is likewise a sibling.
+
+      `frame-ancestors` is absent because a <meta> policy cannot carry it; on
+      Pages there is nowhere to put it.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none';
+               script-src 'self' https://cdnjs.cloudflare.com;
+               style-src 'self' 'unsafe-inline';
+               img-src 'self';
+               connect-src 'self';
+               base-uri 'none';
+               form-action 'none'"
+    />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <meta
@@ -493,188 +529,6 @@
       <p class="note">Loading <code>tutorial.md</code>…</p>
     </main>
 
-    <script>
-      (function () {
-        var SOURCE = "tutorial.md";
-
-        /* Split Markdown into top-level blocks.
-           A block ends at a blank line, except inside a fenced code block —
-           and fences nest here for real, because the tutorial shows ```vmark
-           blocks inside ````markdown examples. A closing fence must use the
-           same character, be at least as long as the opening one, and carry
-           no info string, which is CommonMark's rule. */
-        function splitBlocks(md) {
-          var lines = md.replace(/\r\n?/g, "\n").split("\n");
-          var blocks = [];
-          var cur = [];
-          var fence = null;
-
-          function flush() {
-            if (cur.join("").trim() !== "") blocks.push(cur.join("\n"));
-            cur = [];
-          }
-
-          for (var i = 0; i < lines.length; i++) {
-            var line = lines[i];
-            var m = line.match(/^ {0,3}(`{3,}|~{3,})(.*)$/);
-
-            if (fence) {
-              cur.push(line);
-              if (m && m[1][0] === fence.char && m[1].length >= fence.len && m[2].trim() === "") {
-                fence = null;
-                flush();
-              }
-              continue;
-            }
-            if (m) {
-              flush();
-              fence = { char: m[1][0], len: m[1].length };
-              cur.push(line);
-              continue;
-            }
-            if (line.trim() === "") {
-              flush();
-              continue;
-            }
-            if (/^#{1,6}\s/.test(line)) {
-              flush();
-              cur.push(line);
-              flush();
-              continue;
-            }
-            cur.push(line);
-          }
-          flush();
-          return blocks;
-        }
-
-        function slug(text) {
-          return text
-            .toLowerCase()
-            .replace(/[^\w\s-]/g, "")
-            .trim()
-            .replace(/\s+/g, "-");
-        }
-
-        function escapeHtml(s) {
-          return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        }
-
-        function render(md) {
-          var main = document.getElementById("doc");
-          var tocList = document.getElementById("toc-list");
-          main.textContent = "";
-
-          splitBlocks(md).forEach(function (block) {
-            var head = block.match(/^(#{1,6})\s+(.*)$/);
-            var id = null;
-            if (head) {
-              id = slug(head[2]);
-              var link = document.createElement("a");
-              link.href = "#" + id;
-              link.dataset.level = String(head[1].length);
-              link.textContent = head[2];
-              tocList.appendChild(link);
-            }
-
-            var src = document.createElement("pre");
-            src.className = "src";
-            src.innerHTML = escapeHtml(block);
-
-            var out = document.createElement("div");
-            out.className = "out";
-            out.innerHTML = marked.parse(block);
-            if (id) {
-              var h = out.firstElementChild;
-              if (h) h.id = id;
-            }
-
-            main.appendChild(src);
-            main.appendChild(out);
-          });
-
-          if (location.hash) {
-            var target = document.getElementById(location.hash.slice(1));
-            if (target) target.scrollIntoView();
-          }
-        }
-
-        var toc = document.getElementById("toc");
-
-        document.getElementById("toc-btn").addEventListener("click", function () {
-          toc.showModal();
-        });
-        document.getElementById("toc-close").addEventListener("click", function () {
-          toc.close();
-        });
-        /* Clicking the backdrop closes it: a click on the dialog itself lands
-           on .toc-inner, which fills the box, so an event whose target is the
-           dialog came from outside that box. */
-        toc.addEventListener("click", function (e) {
-          if (e.target === toc) toc.close();
-        });
-        /* Close first, then scroll. Letting the hash navigation happen while
-           the dialog is still open scrolls behind it and leaves it covering
-           what the reader just asked to see. */
-        document.getElementById("toc-list").addEventListener("click", function (e) {
-          var link = e.target.closest("a[href^='#']");
-          if (!link) return;
-          e.preventDefault();
-          var id = link.getAttribute("href").slice(1);
-          toc.close();
-          var target = document.getElementById(id);
-          if (target) {
-            target.scrollIntoView({ behavior: "smooth" });
-            history.replaceState(null, "", "#" + id);
-          }
-        });
-
-        Array.prototype.forEach.call(document.querySelectorAll(".modes button"), function (btn) {
-          btn.addEventListener("click", function () {
-            document.body.dataset.mode = btn.dataset.set;
-            Array.prototype.forEach.call(document.querySelectorAll(".modes button"), function (b) {
-              b.setAttribute("aria-pressed", String(b === btn));
-            });
-            try {
-              localStorage.setItem("visimark-tutorial-mode", btn.dataset.set);
-            } catch (_) {
-              /* private mode, blocked storage — the default view is fine */
-            }
-          });
-        });
-
-        try {
-          var saved = localStorage.getItem("visimark-tutorial-mode");
-          if (saved) {
-            var b = document.querySelector('.modes button[data-set="' + saved + '"]');
-            if (b) b.click();
-          }
-        } catch (_) {
-          /* ignore */
-        }
-
-        fetch(SOURCE)
-          .then(function (r) {
-            if (!r.ok) throw new Error(SOURCE + ": HTTP " + r.status);
-            return r.text();
-          })
-          .then(render)
-          .catch(function (err) {
-            document.getElementById("doc").innerHTML =
-              '<p class="note">Could not load <code>' +
-              SOURCE +
-              "</code>: " +
-              escapeHtml(String(err.message)) +
-              ".<br><br>This page has to be served over http(s) — <code>bun run serve</code> from a clone, " +
-              "or GitHub Pages. Opening it from <code>file://</code> is blocked by the browser.<br><br>" +
-              "The tutorial itself is plain Markdown and reads fine without this page: " +
-              '<a href="' +
-              SOURCE +
-              '">' +
-              SOURCE +
-              "</a>.</p>";
-          });
-      })();
-    </script>
+    <script src="vendor/visimark-site-tutorial.js"></script>
   </body>
 </html>

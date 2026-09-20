@@ -8,9 +8,15 @@
 //
 // The tab pattern is deliberately split between markup (structure: roles, ids,
 // aria-controls) and src/playground/app/tabs.ts (state: aria-selected, the
-// roving tabindex), so the pairing is checked here in both directions. The
-// §2.3 "done when" asks for exactly this: a check that keeps it from
-// regressing now that the code is somewhere tooling can see.
+// roving tabindex). **This file is the markup half only.** It asserts on the
+// shipped artifact, which is the thing a screen reader actually sees.
+//
+// The module half used to be here too, as four greps for source text —
+// `expect(tabs).toContain('tab.setAttribute("aria-selected", String(active))')`
+// and friends. Follow-up review §2.7: that passes a behaviour change which
+// keeps the string and fails a rename which keeps the behaviour, which is a
+// change-detector rather than the regression guard §2.3 asked for. It moved to
+// app/tabs.test.ts, where the module is driven instead of read.
 
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
@@ -18,7 +24,6 @@ import { join } from "node:path";
 
 const page = readFileSync(join(import.meta.dir, "../../../../docs/playground.html"), "utf8");
 const appDir = join(import.meta.dir, "../../src/playground/app");
-const tabs = readFileSync(join(appDir, "tabs.ts"), "utf8");
 const files = readFileSync(join(appDir, "files.ts"), "utf8");
 const quest = readFileSync(join(appDir, "quest.ts"), "utf8");
 
@@ -67,20 +72,9 @@ describe("the tab pattern", () => {
     }
   });
 
-  test("selection state travels with the selection, wherever it is changed from", () => {
-    expect(tabs).toContain('tab.setAttribute("aria-selected", String(active))');
-    expect(tabs).toContain("tab.tabIndex = active ? 0 : -1;");
-  });
-
-  test("the strip is arrow-key operable, with Home and End, and wraps", () => {
-    for (const key of ["ArrowRight", "ArrowLeft", "Home", "End"]) {
-      expect(tabs, `no handling for ${key}`).toContain(`e.key === "${key}"`);
-    }
-    expect(tabs).toContain("(here + 1) % siblings.length");
-    expect(tabs).toContain("(here - 1 + siblings.length) % siblings.length");
-    // automatic activation: arrowing selects, and focus follows
-    expect(tabs).toContain("tab.focus();");
-  });
+  // Selection state moving with the selection, arrow-key operation, Home/End,
+  // wrapping and automatic activation are all behaviour, and are driven in
+  // test/playground/app/tabs.test.ts.
 });
 
 describe("the editor's accessible name", () => {

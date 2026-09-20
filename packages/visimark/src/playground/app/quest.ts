@@ -86,6 +86,14 @@ export interface QuestDeps {
   showAgentPopover(host: HTMLElement, promptFn: () => string, flash: (text: string) => void): void;
   /** The KNOWLEDGE panel's current JSON, substituted into an agent reward. */
   knowledgeText(): string;
+  /**
+   * Says, where the page says everything else, that something went wrong.
+   *
+   * A scenario whose steps `normalizeQuest` refuses is the only thing this
+   * carries today, and it is why `render` can no longer throw — see the catch
+   * there for what that failure used to cost.
+   */
+  report(message: string): void;
 }
 
 export interface Quest {
@@ -110,6 +118,19 @@ export function createQuest(deps: QuestDeps): Quest {
   let state = emptyState();
   let revealTimers: ReturnType<typeof setTimeout>[] = [];
   let currentReward: Scenarios[string]["reward"] | null = null;
+  /**
+   * The `<li>` for each step id in the checklist currently on screen.
+   *
+   * `startQuest` creates every one of these and has the `Step` in hand while
+   * it does, so there is nothing a selector could find that this does not
+   * already know — and building one was a bug: `[data-id="' + id + '"]` with
+   * an `id` taken verbatim from scenarios.json throws `SyntaxError` out of a
+   * step completion for any id containing a quote or a `]` (follow-up review
+   * §2.11). `types.ts` documents `RawStep["id"]` as free-form JSON, so the
+   * contract permitted what the selector could not take. Rebuilt per quest,
+   * because the ids are only unique within one.
+   */
+  let stepEls = new Map<string, HTMLLIElement>();
 
   function emptyState() {
     return {
@@ -207,7 +228,7 @@ export function createQuest(deps: QuestDeps): Quest {
   function markDone(id: string): void {
     if (state.done[id]) return;
     state.done[id] = true;
-    const li = listEl.querySelector(`[data-id="${id}"]`);
+    const li = stepEls.get(id);
     if (li) {
       li.classList.add("done", "pop");
       setTimeout(() => li.classList.remove("pop"), 400);
@@ -220,7 +241,7 @@ export function createQuest(deps: QuestDeps): Quest {
   function unmarkDone(id: string): void {
     if (!state.done[id]) return;
     state.done[id] = false;
-    listEl.querySelector(`[data-id="${id}"]`)?.classList.remove("done");
+    stepEls.get(id)?.classList.remove("done");
     // Undoing a step retracts "Nice work" and the reward (and any reveal still
     // in flight) — the badge, once shown, stays: it is permanently earned, not
     // a reflection of the checklist's current state, the same policy a revisit
@@ -241,6 +262,7 @@ export function createQuest(deps: QuestDeps): Quest {
   function startQuest(name: string, steps: Step[]): void {
     state = { ...emptyState(), name, steps };
     listEl.innerHTML = "";
+    stepEls = new Map();
     clearRevealTimers();
     hideInstant(completeEl);
     hideInstant(rewardBoxEl);
@@ -260,6 +282,7 @@ export function createQuest(deps: QuestDeps): Quest {
       li.appendChild(check);
       li.appendChild(text);
       if (step.manual) li.classList.add("manual");
+      stepEls.set(step.id, li);
       li.addEventListener("click", () => {
         if (state.done[step.id]) unmarkDone(step.id);
         else if (step.manual) markDone(step.id);
@@ -327,7 +350,30 @@ export function createQuest(deps: QuestDeps): Quest {
       const body = document.createElement("p");
       body.textContent = s.body;
       bodyEl.appendChild(body);
-      startQuest(name, normalizeQuest(s.quest));
+      let steps: Step[];
+      try {
+        steps = normalizeQuest(s.quest);
+      } catch (e) {
+        // `normalizeStep` throwing is correct — it is how types.ts's
+        // "scenarios.json can name a check, it can never supply one" is
+        // enforced. What was wrong is that nobody treated it as the
+        // per-scenario failure it is: at boot it reached `boot().catch` and
+        // put up the full-page "The playground failed to start" overlay, and
+        // on a file switch it left the editor and the diagnostics disagreeing
+        // about which document was open (follow-up review §2.2). It costs one
+        // chapter's checklist, so it costs one chapter's checklist — and says
+        // so, in the panel and in TERMINAL, the same way a missing
+        // scenarios.json does.
+        const reason = (e as Error).message;
+        const notice = document.createElement("p");
+        notice.textContent =
+          `This chapter's checklist could not be loaded (${reason}), so it has no quest ` +
+          "or badge. The scenario above, the editor and every panel below it still work.";
+        bodyEl.appendChild(notice);
+        deps.report(`${name}: ${reason} — no quest or badge for this chapter`);
+        steps = [];
+      }
+      startQuest(name, steps);
     },
 
     signal(action) {

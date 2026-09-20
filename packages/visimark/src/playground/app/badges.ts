@@ -43,6 +43,12 @@ const BADGE_ICONS: Record<string, string> = {
     '<svg viewBox="0 0 256 256" fill="currentColor"><path d="M240,208H229.75A44.05,44.05,0,0,0,192,144h-4a35.91,35.91,0,0,0,4-16,36,36,0,0,0-64.86-21.34A59.81,59.81,0,0,0,100,96a60.09,60.09,0,0,0-59.75,64A44.05,44.05,0,0,0,16,204a4,4,0,0,0,0,4H240a8,8,0,0,0,0-16ZM168,144a8,8,0,0,1,8-8h16a28,28,0,0,1,27.71,24H140.7A43.86,43.86,0,0,1,168,144Zm-68-32a44,44,0,0,1,25.16,7.93A8,8,0,0,0,137,116.4a20,20,0,1,1,18.32,27.6H49A44.05,44.05,0,0,1,100,112ZM32.4,208A28,28,0,0,1,60,184a8,8,0,0,0,4.62-1.47A59.87,59.87,0,0,0,88,192a8,8,0,0,0,0-16,44.08,44.08,0,0,1-15.36-2.75A44.24,44.24,0,0,1,88.68,160h95.4A28,28,0,0,1,213.6,208Z"/></svg>',
 };
 
+/** The icon keys a scenario's `badge.icon` may name. Exported so the
+ *  scenarios.json gate in test/playground/scenarios-data.test.ts can check a
+ *  typo that `BADGE_ICONS[...] ?? ""` would otherwise render as nothing at
+ *  all, invisibly, until someone earned the badge. */
+export const BADGE_ICON_NAMES: readonly string[] = Object.keys(BADGE_ICONS);
+
 const BADGES_STORAGE_KEY = "visimark-playground-badges";
 
 export const SHARE_URL = "https://michal-niedzwiedzki.github.io/visimark/";
@@ -186,13 +192,45 @@ export function createBadgeBoard(
   };
 }
 
+/**
+ * Reads the earned-badge record out of whatever `localStorage` is holding.
+ *
+ * **Anything at all may be in there, and none of it may reach the boot
+ * chain.** This used to be a bare `JSON.parse(... ?? "{}")` with no shape
+ * check, so a stored `"null"` — or `"[]"`, or `"7"` — made `earnedBadges[name]`
+ * throw a `TypeError` inside `createBadgeBoard`, which review §2.1 placed
+ * *inside* the boot chain: the whole page died on the fatal overlay, for a
+ * record of which badges had already been shown (follow-up review §2.6).
+ *
+ * `buffers.ts` had established the house pattern for exactly this reason —
+ * validate the shape, and discard rather than migrate, because the worst case
+ * is losing scratch state. Badges are cheaper to lose than buffers, so the
+ * same answer applies with less hesitation. Split out from the `localStorage`
+ * read so the parsing can be tested without a browser.
+ */
+export function parseEarned(raw: string | null): Record<string, boolean> {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw ?? "{}");
+  } catch {
+    return {};
+  }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return {};
+  const earned: Record<string, boolean> = {};
+  // Built entry by entry rather than returned as-is: the values have to be
+  // booleans too, or `earned(name)` starts answering with whatever a
+  // hand-edited store put there.
+  for (const [name, value] of Object.entries(parsed)) {
+    if (value === true) earned[name] = true;
+  }
+  return earned;
+}
+
 function loadEarned(): Record<string, boolean> {
   try {
-    return JSON.parse(window.localStorage.getItem(BADGES_STORAGE_KEY) ?? "{}") as Record<
-      string,
-      boolean
-    >;
+    return parseEarned(window.localStorage.getItem(BADGES_STORAGE_KEY));
   } catch {
+    // Reading `localStorage` at all throws when storage is disabled.
     return {};
   }
 }

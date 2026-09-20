@@ -4,8 +4,9 @@
  * `switchTo` used to exist twice — once in `selectFile` and once inline in the
  * "+ New" handler — and the two copies had already diverged over whether the
  * terminal gets trimmed (review §2.11). One function now serves both, and the
- * trim happens on every switch, which is the stricter of the two behaviours
- * and the one the cap exists for.
+ * trim is no longer anyone's to remember: the cap is enforced inside
+ * `Terminal.line` (follow-up review §2.9), so the two copies could not have
+ * diverged over it today.
  *
  * Review §3 called §2.5, §2.7 and §2.8 "one piece of work, not three", because
  * all three rewrite what it means for a file to become current, and this is
@@ -19,6 +20,15 @@
  *   controls that undo that: revert one file, reset everything.
  * - **§2.8** — the address bar is rewritten on the way in, so it never names
  *   a file other than the one on screen.
+ *
+ * **A switch either completes or is abandoned; it never half-happens.** That
+ * was the stated intent below and not what the code did (follow-up review
+ * §2.2): every caller spelled it `void switchTo(name)`, so a throw from any of
+ * the five calls after the store had already moved was swallowed as an
+ * unhandled rejection — leaving the editor showing the new file under the old
+ * file's TERMINAL, REASONING and PREVIEW. The tail below is now a try/finally,
+ * and the diagnostics are refreshed in the `finally`, whatever went wrong
+ * above them.
  */
 
 import type { FileStore } from "./store.js";
@@ -67,6 +77,12 @@ export function createFilesPanel(
    * name has to track the file, which is the same thing `#editor-filename`
    * shows sighted visitors, so both are set in one place.
    */
+  /** Reports a failure the way every other command failure on this page is
+   *  reported. */
+  function report(message: string): void {
+    terminal.line(`playground: ${message}`, "err");
+  }
+
   function setEditorName(name: string): void {
     filenameEl.textContent = name;
     cm.getInputField().setAttribute("aria-label", `Editor: ${name}`);
@@ -104,7 +120,13 @@ export function createFilesPanel(
     refreshDirty();
   }
 
-  async function switchTo(name: string): Promise<void> {
+  /**
+   * The switch proper. Everything from `store.switchTo` on is in a
+   * try/finally: past that line the editor is already showing `name`, so
+   * there is no longer an "abandon" to choose — only finishing, or leaving
+   * the page describing a document it is no longer displaying.
+   */
+  async function open(name: string): Promise<void> {
     if (name === store.current()) return;
     if (!store.loaded(name)) {
       // First opening of this document: it is fetched now rather than at boot
@@ -113,39 +135,48 @@ export function createFilesPanel(
       // left the editor showing the previous file under the new file's name
       // would be worse than not moving.
       const failed = await store.ensure(name);
-      if (!store.loaded(name)) {
-        for (const f of failed) {
-          terminal.line(`playground: ${f.path} did not load (${f.reason})`, "err");
-        }
-        terminal.trim();
-        return;
-      }
-      for (const f of failed) {
-        terminal.line(`playground: ${f.path} did not load (${f.reason})`, "err");
-      }
+      const loaded = store.loaded(name);
+      for (const f of failed) report(`${f.path} did not load (${f.reason})`);
+      if (!loaded) return;
     }
     // The store puts the incoming text into the editor itself — see
     // FileStore.switchTo for the trap that makes asking for it afterwards
     // wrong.
     store.switchTo(name);
-    setEditorName(name);
-    writeFileToUrl(name);
-    render();
-    inferPanel.reset();
-    quest().render(name);
-    tabs.select("diag", "reasoning");
-    pipeline.runFmt();
-    pipeline.refreshDerived();
-    terminal.trim();
+    try {
+      setEditorName(name);
+      writeFileToUrl(name);
+      render();
+      inferPanel.reset();
+      quest().render(name);
+      tabs.select("diag", "reasoning");
+    } catch (e) {
+      report(`${name} opened with errors (${(e as Error).message})`);
+    } finally {
+      // Whatever happened above, TERMINAL, REASONING, KNOWLEDGE and PREVIEW
+      // end up describing the document the editor is now holding.
+      pipeline.runNow();
+    }
+  }
+
+  /**
+   * Every caller writes `void switchTo(name)` — the FILES panel, "+ New", and
+   * `popstate` over in main.ts — so the boundary that turns a rejection into
+   * something a visitor can read belongs here rather than at each of them.
+   */
+  async function switchTo(name: string): Promise<void> {
+    try {
+      await open(name);
+    } catch (e) {
+      report(`could not open ${name} (${(e as Error).message})`);
+    }
   }
 
   /** The shared tail of both reset paths. The store has already put the
    *  restored text into the editor; this is everything downstream of that. */
   function reloadCurrent(): void {
     render();
-    pipeline.runFmt();
-    pipeline.refreshDerived();
-    terminal.trim();
+    pipeline.runNow();
   }
 
   revertBtn.addEventListener("click", () => {

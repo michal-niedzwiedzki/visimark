@@ -44,14 +44,10 @@ export function createInferPanel(
     } catch (e) {
       bodyEl.textContent = `error: ${(e as Error).message}`;
       terminal.line(`visimark: ${(e as Error).message}`, "err");
-      terminal.trim();
       return;
     }
     bodyEl.textContent = VM.formatInfer(current, source, proposals);
-    if (!write) {
-      terminal.trim();
-      return;
-    }
+    if (!write) return;
     quest().signal("action:infer-write");
     const edits = VM.planInfer(source, proposals);
     if (edits.length === 0) {
@@ -62,6 +58,15 @@ export function createInferPanel(
       cm.setValue(updated);
       cm.setCursor(cursor);
       store.setText(current, updated);
+      // `setText` is memory; `persist` is the reload (review §2.7). Every
+      // other writer to the buffer does both — the typing-settle in
+      // ./pipeline.ts, `switchTo` and `add` in ./store.ts — and this was the
+      // one that did not, so an inferred block was the single edit a reload
+      // threw away. `cancelPendingRefresh()` below kills the typing-settle
+      // that would otherwise have caught it, and `cm.setValue` fires `change`
+      // with origin "setValue", which the handler skips, so nothing else was
+      // ever going to save this (follow-up review §2.4).
+      store.persist(current);
       const blocks = edits.filter((e) => e.kind === "block").length;
       const anchors = edits.filter((e) => e.kind === "anchor").length;
       const bits: string[] = [];
@@ -69,10 +74,8 @@ export function createInferPanel(
       if (anchors) bits.push(pluralize(anchors, "anchor"));
       terminal.line(`${current}: wrote ${bits.join(", ")}`);
     }
-    terminal.trim();
     pipeline.cancelPendingRefresh();
-    pipeline.runFmt();
-    pipeline.refreshDerived();
+    pipeline.runNow();
   }
 
   byId("infer-btn").addEventListener("click", () => runInfer(false));

@@ -230,6 +230,7 @@
         "kind": "tab",
         "group": "diag",
         "tab": "reasoning",
+        "id": "tab:diag:reasoning:after-tax",
         "text": "Add tax = ROUND(grand_total * 0.2, 2) and find it appended to Reasoning, after grand_total"
       }
     ],

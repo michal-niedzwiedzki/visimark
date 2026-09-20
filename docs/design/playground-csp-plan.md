@@ -85,11 +85,39 @@ dictionary, and they are untouched.
 
 ## Scope
 
-`docs/playground.html` only. `index.html`, `tutorial.html` and `preview.html`
-all still carry inline `<script>` (five blocks in `index.html` alone), so a
-policy for them would have to grant `'unsafe-inline'` for script — which is
-the weak version §2.6 explicitly argued against shipping. They are the next
-page to extract, not the next page to paper over.
+`docs/playground.html` only, at the time this was written. `index.html`,
+`tutorial.html` and `preview.html` all still carried inline `<script>` (four
+blocks in `index.html` alone), so a policy for them would have had to grant
+`'unsafe-inline'` for script — the weak version §2.6 explicitly argued against
+shipping. They were the next page to extract, not the next page to paper over.
+
+**That is now done.** The follow-up review's §2.3 moved all four pages'
+scripts out and gave each one a policy on the same terms; see
+[`playground-site-modules-plan.md`](playground-site-modules-plan.md) for the
+per-page decision and `test/site/csp.test.ts` for the sweep that now covers
+all five.
+
+## What `img-src` excludes (follow-up review §2.12)
+
+`img-src 'self' data:` is a closed allowlist, and closed is where it stays.
+The case against opening it to `https:` is the stronger one: the playground's
+documents are all local, so nothing that ships needs it, and a remote image in
+a demo editor is a tracking beacon aimed at whoever opens a document someone
+shared with them. No bundled document uses a remote image — checked — so
+nothing regressed when the policy went in.
+
+But the constraint is a property of the *editing surface*, not just of the
+page: a visitor who types `![](https://example.com/logo.png)` is typing
+ordinary Markdown into an editor whose whole point is typing Markdown into it,
+and got a broken image, a console violation and no explanation. So the
+decision is written in the two places it was missing — the CSP comment block
+in `playground.html`, next to the policy that creates it, and the page itself.
+A `securitypolicyviolation` listener (`reportBlockedImages` in
+`src/playground/app/main.ts`) puts one line in TERMINAL the first time an
+image is blocked, which turns a silent failure into the same kind of named,
+explained failure review §2.1 built everywhere else. Once per session, not
+once per image: a document with thirty remote images should not fill TERMINAL
+with thirty copies of one sentence.
 
 ## Verification
 

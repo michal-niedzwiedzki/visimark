@@ -21,7 +21,7 @@
 import type { BrowserCheckOptions, VisiMarkApi } from "../browser-entry.js";
 import type { BufferStore } from "./buffers.js";
 import type { FailedFile } from "./sources.js";
-import { DATA_DEPENDENCIES, FILE_SOURCES, loadFiles } from "./sources.js";
+import { DATA_DEPENDENCIES, FILE_SOURCES, loadFile } from "./sources.js";
 
 /**
  * VisiMark's three filesystem-touching phases (the path gate, artifact
@@ -98,9 +98,15 @@ export interface FileStore {
   /**
    * Fetches `name` and anything its reader will need, unless already held.
    * Resolves to the documents that did not arrive, so a caller can say which.
+   *
+   * **A fetch is at-most-once per document per session** — see `inFlight` in
+   * the implementation. Two callers wanting the same name at the same time
+   * share one request and one response, so neither `ensure` nor `ensureAll`
+   * has to know what the other is doing.
    */
   ensure(name: string): Promise<FailedFile[]>;
-  /** Fetches everything in the catalogue that is not held yet. */
+  /** Fetches everything in the catalogue that is not held yet, joining any
+   *  single-document fetch already outstanding rather than issuing around it. */
   ensureAll(): Promise<FailedFile[]>;
   /**
    * Makes `name` current: flushes and saves the outgoing buffer, then puts
@@ -147,19 +153,8 @@ export function createStore(
   /** The bundled text of every document that has arrived, before the visitor
    *  touched it — the baseline `isDirty`, `revert` and the freshness check in
    *  ./buffers.ts are all measured against. */
-  const originals: Record<string, string> = { ...loaded };
-  const contents: Record<string, string> = { ...loaded };
-
-  // A file the visitor created in an earlier session has no entry in
-  // FILE_SOURCES, so it would vanish from the catalogue the moment it stopped
-  // being restored by accident. Its saved text *is* its text.
-  const created: string[] = [];
-  for (const name of buffers.createdNames()) {
-    const text = buffers.restore(name, null);
-    if (text === undefined) continue;
-    created.push(name);
-    contents[name] = text;
-  }
+  const originals: Record<string, string> = {};
+  const contents: Record<string, string> = {};
 
   let current = initial;
 
@@ -193,22 +188,79 @@ export function createStore(
     buffers.save(name, value, originals[name] ?? null);
   };
 
-  /** Records a freshly fetched document, restoring the visitor's copy of it
-   *  when one survives the freshness check in ./buffers.ts. */
+  /**
+   * Records a freshly fetched document, restoring the visitor's copy of it
+   * when one survives the freshness check in ./buffers.ts.
+   *
+   * **At most once per name.** A second arrival would overwrite `contents`
+   * for a document that may since have become current and been edited, and
+   * re-run the freshness check against it. That never corrupted anything,
+   * but only because two unrelated mechanisms happened to absorb it — `text()`
+   * prefers the editor buffer for the current file, and `buffers.restore`
+   * replays the edit for the rest — neither of which was designed for this
+   * (follow-up review §2.8). `inFlight` below makes a second arrival
+   * impossible; this guard is what says so.
+   */
   const receive = (name: string, bundled: string): void => {
+    if (contents[name] !== undefined) return;
     originals[name] = bundled;
     contents[name] = buffers.restore(name, bundled) ?? bundled;
   };
 
   for (const name of Object.keys(loaded)) receive(name, loaded[name]!);
+
+  // A file the visitor created in an earlier session has no entry in
+  // FILE_SOURCES, so it would vanish from the catalogue the moment it stopped
+  // being restored by accident. Its saved text *is* its text.
+  const created: string[] = [];
+  for (const name of buffers.createdNames()) {
+    const text = buffers.restore(name, null);
+    if (text === undefined) continue;
+    created.push(name);
+    contents[name] = text;
+  }
+
   if (contents[initial] !== undefined) cm.setValue(contents[initial]);
+
+  /**
+   * Requests that have gone out and not yet landed, by name.
+   *
+   * `fetchMissing` filters against `contents`, which is only written when a
+   * response arrives — so without this, clicking a chapter while the idle-time
+   * prefetch is still running fetched it twice (19 prefetch requests, and the
+   * click makes 20 for a document already on its way). Deleted on settle, so
+   * the map holds only what is genuinely outstanding.
+   */
+  const inFlight = new Map<string, Promise<FailedFile[]>>();
+
+  /** One request for one document, shared with anyone who asks for the same
+   *  name while it is in the air. They get the same promise, which is correct
+   *  for both callers: it resolves when the document is in the store. */
+  function fetchOne(name: string): Promise<FailedFile[]> {
+    const existing = inFlight.get(name);
+    if (existing) return existing;
+    const pending = loadFile(name)
+      .then((result) => {
+        if ("text" in result) {
+          receive(name, result.text);
+          return [];
+        }
+        return [result];
+      })
+      .finally(() => {
+        inFlight.delete(name);
+      });
+    inFlight.set(name, pending);
+    return pending;
+  }
 
   async function fetchMissing(names: string[]): Promise<FailedFile[]> {
     const wanted = names.filter((name) => contents[name] === undefined);
     if (wanted.length === 0) return [];
-    const { files, failed } = await loadFiles(wanted);
-    for (const name of Object.keys(files)) receive(name, files[name]!);
-    return failed;
+    // `ensureAll` joins whatever singles are outstanding rather than issuing
+    // around them — one request per document, whoever asked for it first.
+    const failed = await Promise.all(wanted.map(fetchOne));
+    return failed.flat();
   }
 
   function isDirty(name: string): boolean {

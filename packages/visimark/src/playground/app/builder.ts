@@ -89,7 +89,16 @@ export function createBuildPanel(
     return wrap;
   }
 
-  btn.addEventListener("click", () => void run());
+  btn.addEventListener("click", () => {
+    // `void run()` on its own drops any rejection, which is the shape review
+    // §2.2 found in the file switch: the `finally` below makes the button
+    // usable again, but without this the visitor is left with a panel that
+    // said "running…" and then stopped, and nothing anywhere saying why.
+    void run().catch((e: unknown) => {
+      statusEl.textContent = "stopped";
+      terminal.line(`playground: BUILD stopped (${(e as Error).message})`, "err");
+    });
+  });
 
   async function run(): Promise<void> {
     store.flush();
@@ -97,39 +106,51 @@ export function createBuildPanel(
     statusEl.textContent = "running…";
     bodyEl.innerHTML = "";
 
-    // First press of the session usually fetches the nineteen documents boot
-    // no longer does. Afterwards this resolves immediately.
-    const failed = await store.ensureAll();
-    for (const f of failed) {
-      terminal.line(`playground: ${f.path} did not load (${f.reason}) — not checked`, "err");
-    }
+    // A `finally`, because anything thrown between here and the re-enable —
+    // a DOM failure, a `byId` miss after a markup edit — used to leave the
+    // button dead with "running…" beside it and no way back except a reload
+    // (follow-up review §2.10).
+    try {
+      // First press of the session usually fetches the nineteen documents boot
+      // no longer does. Afterwards this resolves immediately.
+      const failed = await store.ensureAll();
+      for (const f of failed) {
+        terminal.line(`playground: ${f.path} did not load (${f.reason}) — not checked`, "err");
+      }
 
-    // Data files (13-imports.csv) are in the store for the engine to read, not
-    // for `visimark check` to run over — a CSV is not a VisiMark document and
-    // the CLI would refuse it. A document that did not arrive is skipped
-    // rather than reported as failing, since "could not be fetched" is not a
-    // finding about the document.
-    const documents = store.names().filter((name) => /\.md$/i.test(name) && store.loaded(name));
-    terminal.cmd(`visimark check ${documents.join(" ")}`);
+      // Data files (13-imports.csv) are in the store for the engine to read,
+      // not for `visimark check` to run over — a CSV is not a VisiMark
+      // document and the CLI would refuse it. A document that did not arrive
+      // is skipped rather than reported as failing, since "could not be
+      // fetched" is not a finding about the document.
+      const documents = store.names().filter((name) => /\.md$/i.test(name) && store.loaded(name));
+      terminal.cmd(`visimark check ${documents.join(" ")}`);
 
-    let passed = 0;
-    for (const name of documents) {
-      const outcome = checkOne(name, store.text(name) ?? "");
-      if (outcome.ok) passed++;
-      bodyEl.appendChild(buildRow(name, outcome));
-    }
+      const outcomes = new Map<string, Outcome>();
+      let passed = 0;
+      for (const name of documents) {
+        const outcome = checkOne(name, store.text(name) ?? "");
+        outcomes.set(name, outcome);
+        if (outcome.ok) passed++;
+        bodyEl.appendChild(buildRow(name, outcome));
+      }
 
-    const summary = `${passed}/${documents.length} files passing`;
-    statusEl.textContent = summary;
-    terminal.line(`visimark check: ${summary}`);
-    terminal.trim();
-    const allPassed = passed === documents.length;
-    pipeline.setStatus(allPassed, allPassed ? "" : summary);
-    btn.disabled = false;
-    quest().signal("action:build-run");
-    const current = store.current();
-    if (checkOne(current, store.text(current) ?? "").ok) {
-      quest().signal(`action:build-pass:${current}`);
+      const summary = `${passed}/${documents.length} files passing`;
+      statusEl.textContent = summary;
+      terminal.line(`visimark check: ${summary}`);
+      const allPassed = passed === documents.length;
+      pipeline.setStatus(allPassed, allPassed ? "" : summary);
+      quest().signal("action:build-run");
+      // The loop above already checked the current file. Running `checkOne`
+      // again purely to decide whether to emit one string is a second full
+      // locate+build+check over what may be the largest document in the
+      // store — 2.2 seconds on the 2,000-row document §2.10 measured, spent
+      // twice. Read the outcome the panel is displaying instead.
+      if (outcomes.get(store.current())?.ok) {
+        quest().signal(`action:build-pass:${store.current()}`);
+      }
+    } finally {
+      btn.disabled = false;
     }
   }
 }

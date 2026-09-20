@@ -22,6 +22,24 @@
  * existed. The address bar is always shareable either way, which is the thing
  * that was actually broken.
  *
+ * **`?file=` can name a file the visitor created, and that link is local.**
+ * The parameter and the FILES catalogue have to agree on what a valid name is,
+ * and for a while they did not: §2.7 restores created files from
+ * `localStorage`, §2.8 writes every current filename here including theirs, and
+ * boot resolved the parameter against the bundled catalogue alone — so the page
+ * wrote `?file=scratch.md` and then served `demo.md` on reload, rewriting the
+ * bar to say so (follow-up review §2.5). Boot now consults both.
+ *
+ * The honest caveat is that such a link only resolves in the browser that
+ * created the file: a created document lives in `localStorage` and travels
+ * nowhere. So the invariant this module keeps is still "the address bar always
+ * names what is on screen", but the converse — that pasting it elsewhere shows
+ * the same thing — holds only for the bundled documents. The alternative was
+ * to refuse to write created names at all, which breaks the visitor's *own*
+ * reload to protect a share that nobody asked for. See
+ * docs/design/playground-file-lifecycle-plan.md for the created-file lifecycle
+ * this belongs to.
+ *
  * **The diagnostic tab is not in the URL.** It is a view of the current
  * document rather than a place, it resets on every file switch already (see
  * ./files.ts), and serialising it would put two knobs in a link where the

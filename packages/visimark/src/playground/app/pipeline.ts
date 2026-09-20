@@ -38,14 +38,16 @@ import { byId } from "./dom.js";
  * at every size. Chart rendering does not appear because these documents
  * carry none, and a chart is bounded by its series, not by the table.
  *
- * **The cost is spread evenly across the three engine calls, and each is
+ * **The cost is spread evenly across the engine calls, and each is
  * superlinear** — doubling the rows roughly quadruples the pass. `fmt`,
  * `pgEval` and `pgExplain` each locate, build and check the whole document
- * from scratch, so the page pays for three full passes over the same text (a
- * fourth when a quest is watching for STALE findings). That is a real finding
- * and it is *not* fixed here: sharing one build across the three is an engine
- * and API change, which is the "belongs in a different review" case §2.10
- * names. See docs/design/playground-pipeline-cost-plan.md.
+ * from scratch, and `hasStaleFindings` adds a *fourth* whenever a quest step
+ * is watching for STALE — which is most of the time anyone is using the page,
+ * so the table above undercounts. That is a real finding and it is *not*
+ * fixed here: sharing one build across the four is an engine and API change,
+ * which is the "belongs in a different review" case §2.10 names. It is now
+ * tracked as a row in docs/vocabulary-catalogue.md §F rather than only as a
+ * design doc; docs/design/playground-pipeline-cost-plan.md keeps the numbers.
  *
  * What ships here is the cheap half. A pass is timed, and the next debounce
  * is at least as long as the last pass took, so a document heavy enough to
@@ -73,6 +75,54 @@ const MAX_DEBOUNCE = 3000;
  */
 export function nextDebounce(lastPassMs: number): number {
   return Math.min(Math.max(EDIT_DEBOUNCE, lastPassMs), MAX_DEBOUNCE);
+}
+
+/**
+ * What the last full pass over each document cost.
+ *
+ * **Keyed by file, and that is the whole point** (follow-up review §2.1). The
+ * cost used to be one number and one "I have said this is slow" boolean, both
+ * living for the lifetime of the pipeline: paste a 2,000-row table into
+ * `demo.md`, open an 8 KB chapter, and the next keystroke there waited 2,262 ms
+ * for a document that checks in twelve. The reverse missed too — switching
+ * *into* a heavy document got one 500 ms pass that locked the tab, which is the
+ * case the debounce was built for.
+ *
+ * A never-yet-measured file starts at 0, so it falls to the `EDIT_DEBOUNCE`
+ * floor. That under-waits exactly once on a heavy document, and only when
+ * nothing has measured it — which `runNow()` now does on every file switch, so
+ * in practice a document is measured before its first keystroke rather than
+ * after it. The alternative, seeding a new file with the last known cost of
+ * *something else*, is the bug this replaces wearing a different hat.
+ */
+export interface PassCosts {
+  /** What a pass over `name` last cost, or 0 for a document never measured. */
+  costOf(name: string): number;
+  /**
+   * Records a measurement, and returns true the first time `name` is slow
+   * enough to be worth explaining to the visitor.
+   *
+   * Once per document rather than once per session: the old one-shot said
+   * "this document" about whichever document happened to be slow first, then
+   * stayed silent while every later one waited three seconds with no
+   * explanation at all. Still once per document, though — repeating it every
+   * keystroke-settle would make the explanation into the noise.
+   */
+  record(name: string, ms: number): boolean;
+}
+
+export function createPassCosts(): PassCosts {
+  const cost = new Map<string, number>();
+  const explained = new Set<string>();
+  return {
+    costOf: (name) => cost.get(name) ?? 0,
+    record(name, ms) {
+      cost.set(name, ms);
+      if (ms <= SLOW_PASS || explained.has(name)) return false;
+      explained.add(name);
+      return true;
+    },
+  };
 }
 
 export function pluralize(n: number, w: string): string {
@@ -119,12 +169,32 @@ export function svgDataUri(svg: string): string {
 }
 
 export interface Pipeline {
-  /** Mirrors `visimark fmt FILE` — prints outcome to TERMINAL. Does not touch
-   *  the editor buffer itself; callers that want the corrected text apply
-   *  `result.output` back to the editor. */
+  /**
+   * Mirrors `visimark fmt FILE` — prints outcome to TERMINAL. Does not touch
+   * the editor buffer itself; callers that want the corrected text apply
+   * `result.output` back to the editor.
+   *
+   * **Only the typing-settle does that, and that is policy rather than an
+   * oversight.** `runPass()` below is the one writer; opening a file runs
+   * `fmt` for its findings and applies nothing. Silently repairing a document
+   * the moment it is opened would destroy the thing
+   * `example-invoice-drift.md` exists to demonstrate — you would never see
+   * the drift, only the page's correction of it. A visitor's own keystroke is
+   * consent to the fix; clicking a filename is not.
+   */
   runFmt(): FmtResult | null;
   /** Re-runs eval/explain/preview from the current buffer. */
   refreshDerived(): void;
+  /**
+   * Runs `fmt` and the derived panels over whatever is current *now*, and
+   * records what the pass cost.
+   *
+   * The pair every non-typing path used to call by hand (a file switch, a
+   * revert, "Infer and write"). Doing the work untimed is what left the
+   * debounce sized from a document the visitor had already left — so the pair
+   * is one call, and the measurement is not something a caller can forget.
+   */
+  runNow(): void;
   /** Sets the BUILD PASSING / BUILD FAILING flag. */
   setStatus(ok: boolean, note?: string): void;
   /** Mirrors `visimark check FILE`'s STALE findings for the current file. */
@@ -154,10 +224,9 @@ export function createPipeline(
 
   let editTimer: ReturnType<typeof setTimeout> | null = null;
   const settled: (() => void)[] = [];
-  /** How long the last full pass took, which is what the next wait is sized
-   *  against (review §2.10). */
-  let lastPass = 0;
-  let saidItIsSlow = false;
+  /** How long a full pass over each document took, which is what that
+   *  document's next wait is sized against (review §2.10, follow-up §2.1). */
+  const costs = createPassCosts();
 
   function setStatus(ok: boolean, note?: string): void {
     flagEl.className = `flag${ok ? "" : " fail"}`;
@@ -178,7 +247,6 @@ export function createPipeline(
     } catch (e) {
       terminal.line(`visimark: ${(e as Error).message}`, "err");
       setStatus(false, "fmt crashed");
-      terminal.trim();
       return null;
     }
     if (result.changed || result.artifacts.length > 0) {
@@ -195,7 +263,6 @@ export function createPipeline(
       terminal.line(VM.formatCheck(current, result.unfixable), "err");
     }
     setStatus(result.unfixable.length === 0);
-    terminal.trim();
     return result;
   }
 
@@ -279,22 +346,26 @@ export function createPipeline(
     }
   }
 
-  function onInactivity(): void {
+  /** Times `run` and files the result under the document it was run over.
+   *  The name is read *before* the work, because a pass that ends on a
+   *  different current file than it started on must not be charged to the
+   *  newcomer. */
+  function measure(run: () => void): void {
+    const name = store.current();
     const started = performance.now();
-    runPass();
-    lastPass = performance.now() - started;
-    if (lastPass > SLOW_PASS && !saidItIsSlow) {
-      saidItIsSlow = true;
-      // Said once, not once per pass: the point is to explain the lag, and
-      // repeating it every keystroke-settle would itself become the noise.
-      terminal.line(
-        `playground: this document takes ${Math.round(lastPass)}ms to check, so the live ` +
-          "update now waits that long after you stop typing — see §2.10 in " +
-          "docs/design/playground-pipeline-cost-plan.md",
-        "err",
-      );
-      terminal.trim();
-    }
+    run();
+    const ms = performance.now() - started;
+    if (!costs.record(name, ms)) return;
+    terminal.line(
+      `playground: ${name} takes ${Math.round(ms)}ms to check, so the live update now ` +
+        "waits that long after you stop typing in it — see §2.10 in " +
+        "docs/design/playground-pipeline-cost-plan.md",
+      "err",
+    );
+  }
+
+  function onInactivity(): void {
+    measure(runPass);
   }
 
   function runPass(): void {
@@ -326,9 +397,12 @@ export function createPipeline(
 
   cm.on("change", (_instance, change) => {
     if (change.origin === "setValue") return;
-    store.setText(store.current(), cm.getValue());
+    const current = store.current();
+    store.setText(current, cm.getValue());
     if (editTimer !== null) clearTimeout(editTimer);
-    editTimer = setTimeout(onInactivity, nextDebounce(lastPass));
+    // Sized from *this* document's last pass, not from whatever was open
+    // before it.
+    editTimer = setTimeout(onInactivity, nextDebounce(costs.costOf(current)));
   });
 
   // Lockstep scroll: PREVIEW tracks EDITOR (and vice versa) by scroll
@@ -362,6 +436,12 @@ export function createPipeline(
   return {
     runFmt,
     refreshDerived,
+    runNow() {
+      measure(() => {
+        runFmt();
+        refreshDerived();
+      });
+    },
     setStatus,
     /** Cheap enough to run a second time per keystroke-settle for a
      *  hand-typed document. */
