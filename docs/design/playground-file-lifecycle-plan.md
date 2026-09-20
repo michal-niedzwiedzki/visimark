@@ -172,6 +172,77 @@ loaded, data dependencies, the switch regression, dirtiness including the
 unloaded case, both reset paths), `url.test.ts` (existing links, replace not
 push, other query keys preserved, no tab in the URL).
 
+---
+
+## Addendum: the life of a file the visitor created
+
+**Source:** `docs/reviews/2026-09-20-playground-followup.md` §2.5 (row 5,
+Medium). The follow-up review found that §2.7 and §2.8 shipped in the same
+commit and did not compose, and that the lifecycle they created between them
+was "distributed across four comments that each explain their own half". This
+is the whole of it in one place.
+
+A created file is made by **+ New**, which takes a name, appends `.md` if it
+is missing, refuses a name `FILE_SOURCES` already owns, and writes the
+template into the store. From that moment:
+
+| | a bundled document | a file the visitor created |
+|---|---|---|
+| in `FILES` | yes, from first paint | yes, once restored at boot |
+| fetched | on first open | never — there is nothing to fetch it from |
+| persisted | when it differs from the bundled text | always |
+| `isDirty` | text ≠ bundled text | **always false** |
+| Revert | restores the bundled text | **does nothing** |
+| Reset all documents | restores it | **leaves it alone** |
+| removable | n/a | **not at all** |
+| nameable in `?file=` | yes, and the link travels | yes, but the link is local |
+
+The four rows in bold are the ones nobody had written down, and three of them
+are deliberate. A created file is all the visitor's own work: there is no
+bundled version of it, so there is nothing for a dirty mark to mean and
+nothing for Revert to do, and "restore the documents this page shipped with"
+is a promise about the bundled documents — quietly deleting someone's scratch
+file under that label would be a different, unasked-for operation.
+
+**Not removable at all is the one that is a consequence rather than a
+decision**, and it stands, for now, on the same reasoning: it is the
+visitor's work, and the page has no other control that destroys content
+without an undo. It is worth a sentence rather than a fix because the cost of
+being wrong is small and visible — a scratch file sits in FILES until site
+data is cleared — where the cost of a delete button that is one mis-click from
+losing an afternoon's work is neither.
+
+### `?file=` and a created file
+
+§2.7 restores created files from `localStorage`; §2.8 writes *every* current
+filename into the address bar, created ones included; and boot resolved
+`?file=` against `FILE_SOURCES` alone — and had to, because it ran before the
+buffer store existed. So the page wrote `?file=scratch.md`, and on reload
+silently served `demo.md` and rewrote the bar, while `scratch.md` sat in the
+FILES panel the whole time.
+
+The review offered three ways out and the third wins: **restore created files
+at boot, and accept that the URL is a local convenience for them.**
+
+- *(a) Teach boot about created files.* Taken. `createBufferStore` moves above
+  the `?file=` resolution — `createdNames()` is a synchronous `localStorage`
+  read, so it costs nothing there — and a created `initial` fetches nothing,
+  because its saved text is its text.
+- *(b) Decline to write a created name into the URL.* Rejected. It breaks the
+  visitor's *own* reload in order to protect a share nobody asked for, and it
+  contradicts the invariant `url.ts` states in its own header.
+- *(c) Both, scoped.* Shipped, with the caveat written down: such a link
+  resolves only in the browser that created the file. The invariant "the
+  address bar always names what is on screen" still holds; what does not hold
+  for a created file is the converse — that pasting the link elsewhere shows
+  the same thing. That sentence is now in `url.ts` rather than implied.
+
+### Verification
+
+`test/playground/app/store.test.ts` covers a store booted on a created file
+with nothing fetched, and `persistence.test.ts` covers **+ New** as one of the
+four writers that must persist.
+
 ## Not in scope
 
 §2.10's main-thread measurement and §2.13's shared chrome — both independent

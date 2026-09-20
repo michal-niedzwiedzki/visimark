@@ -49,26 +49,46 @@ cost is bounded by its series rather than by the table.
 superlinear.** Doubling the rows roughly quadruples the pass: 155 ms → 666 ms
 → 2,262 ms.
 
-**Three passes, one document.** `fmt`, `pgEval` and `pgExplain` each locate,
-build and check the whole text from scratch, so a tick pays for three full
-passes over the same document — a fourth while a quest is watching for STALE
-findings (`hasStaleFindings`). That is the largest single lever available and
-it is roughly a 3× one.
+**Four passes, one document.** `fmt`, `pgEval` and `pgExplain` each locate,
+build and check the whole text from scratch, and `hasStaleFindings` adds a
+fourth on every settle where a quest step is watching for STALE — which is
+every tutorial chapter that has one, i.e. most of the time anyone is actually
+using the page. So a tick pays for four full passes over the same document,
+and the table above only shows three of them: the measured 2,262 ms at 2,000
+rows is the three-call pass, and the quest-watching case is nearer 2.9 s.
+That is the largest single lever available and it is a 3–4× one.
+
+(The follow-up review's §2.13 is exactly this: the published measurement said
+three and the code did four. Corrected here rather than re-measured — the
+fourth call is the same `locate`+`build`+`check` as the third, over the same
+text, so its cost is the `pgExplain` column again.)
 
 ## The decision
 
 §2.10 offered three outcomes and said "accept it, documented" was a legitimate
 one. The measurement splits the answer in two.
 
-**The 3× is real, and it is not fixed here.** Sharing one `build()` across
-`fmt`, `pgEval` and `pgExplain` means a combined entry point in
+**The 3–4× is real, and it is not fixed here.** Sharing one `build()` across
+`fmt`, `pgEval`, `pgExplain` and `check` means a combined entry point in
 `src/playground/browser-entry.ts` and a look at whether `fmt`'s re-check can
 consume a build the caller already has — an engine and API change. §2.10
 anticipated exactly this case: "If the cost is concentrated in one phase, the
 fix is probably in the engine and belongs in a different review." It is not
 concentrated in one phase, but it *is* concentrated in one duplicated
-structure, and that structure is the engine's. Recorded here for whoever
-reviews the engine half, with the numbers to size it.
+structure, and that structure is the engine's.
+
+**And it is now tracked where this repository tracks work**, which is the
+other half of the follow-up review's §2.13: a design doc under a filename
+beginning `playground-` is where an engine-wide API change goes to be
+forgotten. See the *Shared build across the document phases* row in section F
+of [`vocabulary-catalogue.md`](../vocabulary-catalogue.md). This page keeps the
+numbers and stops standing in for the work item.
+
+Two details for whoever picks it up. The measurement counts four passes, not
+three (above). And the natural fix — one `build()` result shared by all four —
+is the same shape as the reader-injection work in
+[`browser-fs-port-plan.md`](browser-fs-port-plan.md): an API that currently
+takes source text and should take a built document.
 
 **No `Worker`.** It would move a cost that, at every size the playground is
 actually used at, is 12–20 ms. The review already named the real obstacle:
@@ -100,7 +120,36 @@ The table above, measured twice with consistent results. The floor behaviour
 is pinned in `test/playground/app/pipeline-cost.test.ts`: the wait never drops
 below 500 ms, tracks the last pass above it, and is capped at 3 s.
 
+## Addendum: the debounce is per file (follow-up review §2.1)
+
+What shipped here was one number and one boolean for the whole session:
+`lastPass`, and a `saidItIsSlow` one-shot. Both outlived the document they
+described.
+
+Paste a 2,000-row table into `demo.md`, then open `01-tables.md` (8 KB): the
+next keystroke waited `nextDebounce(2262)` = 2,262 ms, for a document that
+checks in twelve. The reverse missed too — switching *into* a heavy document
+got one 500 ms pass that locked the tab, which is the exact case this shipped
+for — because `switchTo` ran `runFmt`/`refreshDerived` directly rather than
+through the timed path, so a switch never measured anything. And the one-shot
+message says "this document", then stays silent while the second heavy
+document waits three seconds with no explanation at all.
+
+Both are now keyed to the file. `createPassCosts()` holds a `Map` of measured
+costs and a `Set` of documents already explained; `Pipeline.runNow()` is the
+timed pair every non-typing path calls (a file switch, a revert, "Infer and
+write"), so a document is measured *before* its first keystroke rather than
+after it. A never-measured file starts at the `EDIT_DEBOUNCE` floor — seeding
+it with the last known cost of something else is the bug this replaces wearing
+a different hat.
+
+Pinned in `test/playground/app/pipeline-cost.test.ts`: a heavy document does
+not make a light one wait, a light one does not make a heavy one under-wait, a
+re-measurement replaces the old one, and the slow-document line is said once
+per document rather than once per session.
+
 ## Not in scope
 
-Sharing one build across the three engine calls — see the decision above; it
-is an engine change with a number attached, not a playground one.
+Sharing one build across the four engine calls — see the decision above; it is
+an engine change with a number attached, not a playground one, and it is now a
+catalogue row rather than a paragraph here.

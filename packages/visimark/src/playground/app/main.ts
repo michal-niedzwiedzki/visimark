@@ -28,8 +28,10 @@
  * is missing costs a feature, and refused when it costs the editor. So a
  * missing example document drops one row from FILES and says so in TERMINAL;
  * a missing scenarios.json costs the tutorial track and says so in the
- * SCENARIO panel; a missing engine, a missing CodeMirror or a missing starting
- * document leaves nothing to work in, and stops with a named overlay.
+ * SCENARIO panel; a malformed *step* costs one chapter's checklist and says so
+ * there too (follow-up review §2.2 — it used to cost the whole page); a
+ * missing engine, a missing CodeMirror or a missing starting document leaves
+ * nothing to work in, and stops with a named overlay.
  */
 
 import type { FileStore } from "./store.js";
@@ -111,22 +113,36 @@ async function boot(): Promise<void> {
   }
   const VM = window.VisiMark;
 
+  // Constructed here rather than beside the store below, because resolving
+  // `?file=` needs it: §2.7 restores files the visitor created and §2.8 writes
+  // *every* current filename into the address bar, created ones included — but
+  // boot resolved the parameter against FILE_SOURCES alone, so the page wrote
+  // `?file=scratch.md` and then silently served demo.md on reload, rewriting
+  // the bar on the way (follow-up review §2.5). `createdNames()` is a
+  // synchronous localStorage read, so it costs nothing to ask this early.
+  const buffers = createBufferStore(VM.sha256Hex);
+  const created = new Set(buffers.createdNames());
+
   // Lets a link point straight at a specific file (e.g. a tutorial chapter) —
-  // falls back to demo.md when the param is absent or names a file the
-  // catalogue does not have. Resolved against FILE_SOURCES rather than against
-  // what has been fetched, because at this point nothing has been fetched:
-  // review §2.5 stopped boot pulling all twenty documents to display one.
+  // falls back to demo.md when the param is absent or names a file this
+  // browser has never heard of.
   const requested = fileFromUrl();
   const initial =
-    requested && Object.prototype.hasOwnProperty.call(FILE_SOURCES, requested)
+    requested &&
+    (Object.prototype.hasOwnProperty.call(FILE_SOURCES, requested) || created.has(requested))
       ? requested
       : "demo.md";
 
-  // Just the starting document, and whatever its reader needs beside it —
-  // one round trip for the page to become usable instead of twenty-one.
-  const { files, failed } = await loadFiles([initial, ...(DATA_DEPENDENCIES[initial] ?? [])]);
+  // A file the visitor created has no path to fetch from — its saved text
+  // *is* its text, and the store restores it below. Everything else is one
+  // round trip for the page to become usable instead of twenty-one: just the
+  // starting document and whatever its reader needs beside it.
+  const bundled = Object.prototype.hasOwnProperty.call(FILE_SOURCES, initial);
+  const { files, failed } = await loadFiles(
+    bundled ? [initial, ...(DATA_DEPENDENCIES[initial] ?? [])] : [],
+  );
 
-  if (!Object.prototype.hasOwnProperty.call(files, initial)) {
+  if (bundled && !Object.prototype.hasOwnProperty.call(files, initial)) {
     overlay.fail(
       "The playground could not load its documents",
       `The starting document (${initial}) did not arrive, so there is nothing to open. ` +
@@ -160,7 +176,6 @@ async function boot(): Promise<void> {
   // The store, not boot, puts the first document into the editor: it is the
   // thing that knows whether the visitor has a saved copy of it from a
   // previous session (review §2.7).
-  const buffers = createBufferStore(VM.sha256Hex);
   const store = createStore(VM, cm, buffers, files, initial);
   const terminal = createTerminal();
 
@@ -184,6 +199,7 @@ async function boot(): Promise<void> {
     documentText: () => cm.getValue(),
     showAgentPopover,
     knowledgeText: () => pipeline.knowledgeText(),
+    report: (message) => terminal.line(`playground: ${message}`, "err"),
   });
 
   const tabs = createTabs((action) => quest().signal(action));
@@ -233,6 +249,7 @@ async function boot(): Promise<void> {
     terminal.line(`playground: ${scenariosError} — no scenarios, quests or badges`, "err");
   }
   reportDiscarded(buffers, terminal);
+  reportBlockedImages(terminal);
 
   pipeline.runFmt();
   pipeline.refreshDerived();
@@ -262,7 +279,35 @@ function reportDiscarded(buffers: BufferStore, terminal: Terminal): void {
       `${discarded.length === 1 ? "it were" : "them were"} discarded`,
     "err",
   );
-  terminal.trim();
+}
+
+/**
+ * Says, once, when the page's own CSP blocks something the visitor typed.
+ *
+ * `img-src 'self' data:` is a closed allowlist, and it stays closed — the
+ * playground's documents are all local, and a remote image in a demo editor is
+ * a tracking vector pointed at whoever opens a shared document
+ * (docs/design/playground-csp-plan.md). But that turns ordinary Markdown —
+ * `![](https://example.com/logo.png)`, in an editor whose whole point is
+ * typing Markdown into it — into a broken image, a console violation and no
+ * explanation at all (follow-up review §2.12).
+ *
+ * So the constraint says itself, at the moment it bites, in the panel where
+ * the page says everything else. Once per session: a document with thirty
+ * remote images would otherwise fill TERMINAL with thirty copies of the same
+ * sentence.
+ */
+function reportBlockedImages(terminal: Terminal): void {
+  let said = false;
+  window.addEventListener("securitypolicyviolation", (e) => {
+    if (e.effectiveDirective !== "img-src" || said) return;
+    said = true;
+    terminal.line(
+      "playground: this page blocks remote images, so the preview renders local documents " +
+        "only — the Markdown is fine, the picture just will not load here",
+      "err",
+    );
+  });
 }
 
 /**
@@ -277,7 +322,6 @@ function prefetchRest(store: FileStore, buffers: BufferStore, terminal: Terminal
       for (const f of failed) {
         terminal.line(`playground: ${f.path} did not load (${f.reason})`, "err");
       }
-      if (failed.length > 0) terminal.trim();
       // Most documents are checked against their saved copy here rather than
       // at boot, so this is where most of the discards surface.
       reportDiscarded(buffers, terminal);

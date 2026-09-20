@@ -2,6 +2,41 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+
+    <!--
+      Follow-up review §2.3. The playground carried a `default-src 'none'`
+      allowlist and its four neighbours carried nothing at all, on a site
+      served verbatim by GitHub Pages — which cannot send headers, so a
+      <meta> policy is the only content-security control available, and it
+      has to come before the first subresource.
+
+      `script-src` grants no inline script, which is the whole reason this is
+      worth having: this page's 112 lines of `<script>` moved to
+      packages/visimark/src/site/, where four gates can see them, and are
+      loaded from vendor/ like the playground's. A policy that still needed
+      'unsafe-inline' would buy almost nothing.
+
+      `style-src` does still carry it, for the same reason playground.html's
+      does: this page's CSS is inline. An inline-style injection is a defacement, not code
+      execution, so the trade is a different order of magnitude from the
+      script one.
+
+      `connect-src 'self'` is the one fetch this page makes: ci.md, from its own
+      directory.
+
+      `frame-ancestors` is absent because a <meta> policy cannot carry it; on
+      Pages there is nowhere to put it.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none';
+               script-src 'self' https://cdnjs.cloudflare.com;
+               style-src 'self' 'unsafe-inline';
+               img-src 'self';
+               connect-src 'self';
+               base-uri 'none';
+               form-action 'none'"
+    />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <meta
@@ -405,117 +440,6 @@
       <p class="note">Loading <code>ci.md</code>…</p>
     </main>
 
-    <script>
-      (function () {
-        var SOURCE = "ci.md";
-
-        function slug(text) {
-          return text
-            .toLowerCase()
-            .replace(/[^\w\s-]/g, "")
-            .trim()
-            .replace(/\s+/g, "-");
-        }
-
-        function escapeHtml(s) {
-          return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        }
-
-        function render(md) {
-          var main = document.getElementById("doc");
-          var tocList = document.getElementById("toc-list");
-
-          main.innerHTML = marked.parse(md);
-
-          /* Headings carry no id of their own, so give each one a slug and
-             build the contents list from the same pass. A duplicate heading
-             text gets a numeric suffix rather than a second element sharing
-             an id, which would make one of the two links unreachable. */
-          var seen = Object.create(null);
-          Array.prototype.forEach.call(
-            main.querySelectorAll("h1, h2, h3, h4, h5, h6"),
-            function (h) {
-              var base = slug(h.textContent);
-              var id = base;
-              if (seen[base]) id = base + "-" + seen[base];
-              seen[base] = (seen[base] || 0) + 1;
-              h.id = id;
-
-              var link = document.createElement("a");
-              link.href = "#" + id;
-              link.dataset.level = h.tagName.slice(1);
-              link.textContent = h.textContent;
-              tocList.appendChild(link);
-            },
-          );
-
-          /* Task-list items come out of marked as disabled checkboxes. They
-             are a printed checklist, not a form, so leave them inert. */
-          Array.prototype.forEach.call(
-            main.querySelectorAll('input[type="checkbox"]'),
-            function (box) {
-              box.disabled = true;
-            },
-          );
-
-          if (location.hash) {
-            var target = document.getElementById(location.hash.slice(1));
-            if (target) target.scrollIntoView();
-          }
-        }
-
-        var toc = document.getElementById("toc");
-
-        document.getElementById("toc-btn").addEventListener("click", function () {
-          toc.showModal();
-        });
-        document.getElementById("toc-close").addEventListener("click", function () {
-          toc.close();
-        });
-        /* Clicking the backdrop closes it: a click on the dialog itself lands
-           on .toc-inner, which fills the box, so an event whose target is the
-           dialog came from outside that box. */
-        toc.addEventListener("click", function (e) {
-          if (e.target === toc) toc.close();
-        });
-        /* Close first, then scroll. Letting the hash navigation happen while
-           the dialog is still open scrolls behind it and leaves it covering
-           what the reader just asked to see. */
-        document.getElementById("toc-list").addEventListener("click", function (e) {
-          var link = e.target.closest("a[href^='#']");
-          if (!link) return;
-          e.preventDefault();
-          var id = link.getAttribute("href").slice(1);
-          toc.close();
-          var target = document.getElementById(id);
-          if (target) {
-            target.scrollIntoView({ behavior: "smooth" });
-            history.replaceState(null, "", "#" + id);
-          }
-        });
-
-        fetch(SOURCE)
-          .then(function (r) {
-            if (!r.ok) throw new Error(SOURCE + ": HTTP " + r.status);
-            return r.text();
-          })
-          .then(render)
-          .catch(function (err) {
-            document.getElementById("doc").innerHTML =
-              '<p class="note">Could not load <code>' +
-              SOURCE +
-              "</code>: " +
-              escapeHtml(String(err.message)) +
-              ".<br><br>This page has to be served over http(s) — <code>bun run serve</code> from a clone, " +
-              "or GitHub Pages. Opening it from <code>file://</code> is blocked by the browser.<br><br>" +
-              "The guide itself is plain Markdown and reads fine without this page: " +
-              '<a href="' +
-              SOURCE +
-              '">' +
-              SOURCE +
-              "</a>.</p>";
-          });
-      })();
-    </script>
+    <script src="vendor/visimark-site-ci.js"></script>
   </body>
 </html>

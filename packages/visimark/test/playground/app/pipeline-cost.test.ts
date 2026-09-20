@@ -7,7 +7,7 @@
 // continuous lock into one lock per typing pause.
 
 import { describe, expect, test } from "bun:test";
-import { nextDebounce } from "../../../src/playground/app/pipeline.js";
+import { createPassCosts, nextDebounce } from "../../../src/playground/app/pipeline.js";
 
 describe("how long to wait after a keystroke", () => {
   test("stays at the 500 ms floor for every document the page ships", () => {
@@ -26,5 +26,67 @@ describe("how long to wait after a keystroke", () => {
 
   test("is capped, because past a few seconds the page looks broken", () => {
     expect(nextDebounce(9000)).toBe(3000);
+  });
+});
+
+// Follow-up review §2.1: and which document that last pass was over.
+//
+// `lastPass` and `saidItIsSlow` were one number and one boolean for the whole
+// session. Paste a 2,000-row table into demo.md, open 01-tables.md (8 KB), and
+// the next keystroke there waited `nextDebounce(2262)` = 2,262 ms. The reverse
+// missed too: switching *into* a heavy document got one 500 ms pass that
+// locked the tab, which is the case the debounce was built for. And the
+// one-shot message said "this document" about whichever document happened to
+// be slow first, then stayed silent while every later one waited three
+// seconds with no explanation at all.
+
+describe("whose pass cost it is", () => {
+  test("a document nobody has measured waits the floor", () => {
+    const costs = createPassCosts();
+    expect(nextDebounce(costs.costOf("01-tables.md"))).toBe(500);
+  });
+
+  test("a heavy document does not make a light one wait", () => {
+    const costs = createPassCosts();
+    costs.record("demo.md", 2262);
+    expect(costs.costOf("demo.md")).toBe(2262);
+    expect(nextDebounce(costs.costOf("01-tables.md"))).toBe(500);
+  });
+
+  test("and a light one does not make a heavy one under-wait", () => {
+    // What a file switch now measures before the first keystroke lands.
+    const costs = createPassCosts();
+    costs.record("01-tables.md", 12);
+    costs.record("demo.md", 2262);
+    expect(nextDebounce(costs.costOf("demo.md"))).toBe(2262);
+  });
+
+  test("a re-measurement replaces the old one", () => {
+    const costs = createPassCosts();
+    costs.record("demo.md", 2262);
+    costs.record("demo.md", 40);
+    expect(nextDebounce(costs.costOf("demo.md"))).toBe(500);
+  });
+});
+
+describe("saying out loud that a document is slow", () => {
+  test("is not said for a document that is not", () => {
+    const costs = createPassCosts();
+    expect(costs.record("demo.md", 12)).toBe(false);
+    expect(costs.record("demo.md", 250)).toBe(false);
+  });
+
+  test("is said once per document, not once per pass", () => {
+    const costs = createPassCosts();
+    expect(costs.record("demo.md", 2262)).toBe(true);
+    expect(costs.record("demo.md", 2300)).toBe(false);
+  });
+
+  test("is said again for the *next* slow document", () => {
+    // The session-wide one-shot is why a second heavy document got a 3 s wait
+    // with nothing in TERMINAL to explain it.
+    const costs = createPassCosts();
+    expect(costs.record("demo.md", 2262)).toBe(true);
+    expect(costs.record("scratch.md", 900)).toBe(true);
   });
 });

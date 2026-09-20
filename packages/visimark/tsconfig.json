@@ -2,5 +2,5 @@
   "extends": "../../tsconfig.base.json",
   "include": ["src", "test"],
   // The browser UI needs the DOM lib and is typechecked by tsconfig.app.json.
-  "exclude": ["src/playground/app", "test/playground/app"]
+  "exclude": ["src/playground/app", "src/site", "test/playground/app", "test/site"]
 }

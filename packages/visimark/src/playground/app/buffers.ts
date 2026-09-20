@@ -143,16 +143,48 @@ export function createBufferStore(digest: (text: string) => string): BufferStore
   };
 }
 
+/**
+ * Validates a stored payload, entry by entry.
+ *
+ * The guard here used to stop one level short: `typeof payload.files ===
+ * "object"` admits `null` (rescued by the `?? {}` that followed, so it was
+ * never a live bug) and admits `{"a": 7}`, where `entry.text` is a number that
+ * reaches `cm.setValue`. Neither reproduces today, and both are one loop to
+ * close — so they are closed the same way `badges.ts`'s `parseEarned` closes
+ * its own, and for the same reason: a store that boot depends on may not hand
+ * the boot chain a shape it did not check (follow-up review §2.6).
+ *
+ * Exported for the tests, which is the only place a deliberately malformed
+ * payload comes from.
+ */
+export function parsePayload(raw: string | null): Record<string, StoredBuffer> {
+  let payload: unknown;
+  try {
+    payload = JSON.parse(raw ?? "");
+  } catch {
+    return {};
+  }
+  if (typeof payload !== "object" || payload === null) return {};
+  const { version, files } = payload as { version?: unknown; files?: unknown };
+  if (version !== STORAGE_VERSION) return {};
+  if (typeof files !== "object" || files === null || Array.isArray(files)) return {};
+  const out: Record<string, StoredBuffer> = {};
+  for (const [name, entry] of Object.entries(files as Record<string, unknown>)) {
+    if (typeof entry !== "object" || entry === null) continue;
+    const { base, text } = entry as { base?: unknown; text?: unknown };
+    if (typeof text !== "string") continue;
+    if (base !== null && typeof base !== "string") continue;
+    out[name] = { base, text };
+  }
+  return out;
+}
+
 function load(): Record<string, StoredBuffer> {
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return {};
-    const payload = JSON.parse(raw) as StoredPayload;
-    if (payload.version !== STORAGE_VERSION || typeof payload.files !== "object") return {};
-    return payload.files ?? {};
+    return parsePayload(window.localStorage.getItem(STORAGE_KEY));
   } catch {
-    // Unreadable, disabled, or written by a version that shaped it
-    // differently — start empty rather than refuse to boot.
+    // Reading `localStorage` at all throws when storage is disabled — start
+    // empty rather than refuse to boot.
     return {};
   }
 }

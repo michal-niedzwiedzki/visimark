@@ -30,7 +30,20 @@
       img-src grants `data:` for the chart SVGs the PREVIEW panel substitutes
       in (see svgDataUri in src/playground/app/pipeline.ts, review §2.12) —
       `data:` and `blob:` are separate grants, so that decision and this line
-      move together. connect-src is 'self' because every fetch() is a sibling
+      move together.
+
+      **What img-src excludes is a property of the editing surface**, and the
+      follow-up review's §2.12 is that it was nowhere written down. `'self'
+      data:` means a visitor who types `![](https://example.com/logo.png)` —
+      ordinary Markdown, in an editor whose whole point is typing Markdown
+      into it — gets a broken image. That stays true on purpose: the
+      playground's documents are all local, and a remote image in a demo
+      editor is a tracking beacon pointed at whoever opens a shared document.
+      What changed is that the page now says so at the moment it bites, in
+      TERMINAL (reportBlockedImages in src/playground/app/main.ts), instead of
+      swallowing it into the console.
+
+      connect-src is 'self' because every fetch() is a sibling
       document. default-src 'none' makes each of those an allowlist rather
       than a relaxation of a permissive default, so anything this page grows
       later fails closed and loudly.
