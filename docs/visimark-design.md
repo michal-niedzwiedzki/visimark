@@ -312,11 +312,11 @@ derivation the engine actually performs.
 | `AVG(col)` | reduce | 1 | **must be declared** | arithmetic mean; an empty column is a `TYPE` error |
 | `COUNT(col)` | reduce | 1 | always 0 | number of rows |
 | `ROUND(x, places)` | map | 2 | the value of `places` | half-up to `places` decimals |
-| `ABS(x)` | map | 1 | the width of `x` | absolute value |
+| `ABS(x)` · `\|x\|` | map | 1 | the width of `x` | absolute value |
 | `MOD(x, y)` | map | 2 | the wider of `x` and `y` | remainder; a zero divisor is a `TYPE` error |
-| `SQRT(x)` | map | 1 | **must be declared** | non-negative square root; a negative operand is a `TYPE` error |
-| `FLOOR(x, s)` | map | 2 | the width of `s` | greatest multiple of `s` that does not exceed `x`, toward −∞; a non-positive `s` is a `TYPE` error |
-| `CEILING(x, s)` | map | 2 | the width of `s` | least multiple of `s` that is not less than `x`, toward +∞; a non-positive `s` is a `TYPE` error |
+| `SQRT(x)` · `√(x)` | map | 1 | **must be declared** | non-negative square root; a negative operand is a `TYPE` error |
+| `FLOOR(x, s)` · `⌊x⌋` | map | 2 | the width of `s` | greatest multiple of `s` that does not exceed `x`, toward −∞; a non-positive `s` is a `TYPE` error |
+| `CEILING(x, s)` · `⌈x⌉` | map | 2 | the width of `s` | least multiple of `s` that is not less than `x`, toward +∞; a non-positive `s` is a `TYPE` error |
 | `IF(cond, a, b)` | map | 3 | the wider of `a` and `b` | returns `a` or `b`; a non-boolean `cond` is a `TYPE` error |
 | `EOMONTH(d, months)` | map | 2 | not applicable — the result is a date | last day of the month `months` calendar months from `d`; `d`'s day is discarded; a non-whole `months` is a `TYPE` error; a result outside years 1–9999 is a `DATE` error |
 

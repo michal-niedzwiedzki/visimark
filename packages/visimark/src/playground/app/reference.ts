@@ -37,6 +37,9 @@ export function renderReference(VM: VisiMarkApi): void {
         `<div class="ref-line">— <code>${escapeHtml(p.name)}</code> (${escapeHtml(p.type)}) — ${refInline(p.note)}</div>`,
       );
     }
+    if (e.prose !== undefined) {
+      lines.push(`<div class="ref-line">also written: <code>${escapeHtml(e.prose)}</code></div>`);
+    }
     lines.push(`<div class="ref-line">returns: ${refInline(e.returns)}</div>`);
     lines.push(
       `<div class="ref-line">precision: ${refInline(VM.precisionPhrase(e.precision))}</div>`,

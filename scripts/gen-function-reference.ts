@@ -4,7 +4,7 @@
  * `docs/function-reference.md` is the whole file. The table in
  * `docs/visimark-design.md` section 4 is replaced between HTML-comment
  * markers; everything outside them — the shape prose, the exact-arity
- * paragraph, the `Σ` alias note — is hand-written and untouched.
+ * paragraph, the note on the prose spellings — is hand-written and untouched.
  *
  * Run with `bun run gen:docs`. CI re-runs it and fails on a diff.
  */
@@ -34,6 +34,13 @@ const sentence = (s: string): string => `${s[0]!.toUpperCase()}${s.slice(1)}`;
 const meaning = (e: FnEntry): string =>
   [e.summary, ...e.errors.map((x) => `${x.when} is a \`${x.code}\` error`)].join("; ");
 
+/**
+ * The Function cell: the call, then its prose spelling where it has one. The
+ * bars are escaped because this sits inside a Markdown table cell.
+ */
+const signature = (e: FnEntry): string =>
+  e.prose === undefined ? `\`${sig(e)}\`` : `\`${sig(e)}\` · \`${e.prose.replaceAll("|", "\\|")}\``;
+
 export function renderTable(): string {
   const cell = (e: FnEntry): string => {
     const phrase = precisionPhrase(e.precision);
@@ -41,7 +48,7 @@ export function renderTable(): string {
     return e.precision.from === "declared" ? `**${phrase}**` : phrase;
   };
   const rows = entries().map(
-    (e) => `| \`${sig(e)}\` | ${e.kind} | ${e.arity} | ${cell(e)} | ${meaning(e)} |`,
+    (e) => `| ${signature(e)} | ${e.kind} | ${e.arity} | ${cell(e)} | ${meaning(e)} |`,
   );
   return [
     BEGIN,
@@ -62,6 +69,7 @@ function section(e: FnEntry): string {
   lines.push(`### \`${sig(e)}\``, "");
   lines.push(`${sentence(e.summary)}.`, "");
   lines.push(`**Shape:** ${e.kind}, ${e.arity} argument${e.arity === 1 ? "" : "s"}.`, "");
+  if (e.prose !== undefined) lines.push(`**Also written:** \`${e.prose}\``, "");
   lines.push("| Parameter | Type | Meaning |", "|---|---|---|");
   for (const p of e.params) lines.push(`| \`${p.name}\` | ${p.type} | ${p.note} |`);
   lines.push("", `**Returns:** ${e.returns}.`, "");
