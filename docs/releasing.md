@@ -189,7 +189,7 @@ npm view visimark@X.Y.Z version
 npm view visimark@X.Y.Z dist.attestations            # provenance must be present
 npx @vscode/vsce show visimark-michal-niedzwiedzki.visimark-vscode
 curl -sS -o /dev/null -w '%{http_code}\n' \
-  https://open-vsx.org/api/michal-niedzwiedzki/visimark-vscode/X.Y.Z   # expect 200
+  https://open-vsx.org/api/visimark-michal-niedzwiedzki/visimark-vscode/X.Y.Z   # expect 200
 gh release view vX.Y.Z
 ```
 
@@ -237,6 +237,6 @@ Set as repository secrets (`gh secret set …`):
 |--------|---------|-------|
 | `NPM_TOKEN` | npm publish | Automation token, publish scope. Provenance also needs `id-token: write`, which the workflow already declares. |
 | `VSCE_PAT` | Marketplace publish | Azure DevOps PAT for the `visimark-michal-niedzwiedzki` publisher, Marketplace → Manage scope. |
-| `OVSX_PAT` | Open VSX publish | open-vsx.org access token. The `michal-niedzwiedzki` namespace must exist — `ovsx create-namespace` once, by hand, if the workflow's check ever reports it missing. |
+| `OVSX_PAT` | Open VSX publish | open-vsx.org access token. The namespace is the extension's `publisher`, `visimark-michal-niedzwiedzki`; the workflow creates it on first publish if it is missing. |
 
 <!--vmark:no-formulas-->
