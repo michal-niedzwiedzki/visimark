@@ -255,13 +255,14 @@ A scenario fault is not a finding about the document, so it is not a finding.
 It is a usage error, like `eval --get nope`: exit `2`, a `visimark: …` line on
 stderr naming the key and the reason, and nothing evaluated or printed on
 stdout. Under `--json` the envelope has `status: "error"` and `error.code:
-"SCENARIO"`, a new code beside `USAGE` and `READ`
+"SCENARIO"`, a new code beside `USAGE` and `READ`; a misplaced `--scenario` or
+one with no value is `USAGE`, since it is not a fault in the scenario
 ([structured-output-json-spec §3](structured-output-json-spec.md)). The
 [§10](../visimark-design.md#10-error-taxonomy) finding taxonomy does not change.
 
 | Case | stderr |
 |---|---|
-| `--scenario` with no value | `visimark: --scenario needs a file, or - for stdin` |
+| `--scenario` with no value (an invocation fault: `USAGE`, not `SCENARIO`, since #121) | `visimark: --scenario needs a file, or - for stdin` |
 | the file cannot be read | `visimark: cannot read scenario tight.json` |
 | not JSON, or not a JSON object | `visimark: scenario tight.json is not a JSON object` |
 | unknown key | `visimark: scenario key taxx names no param; did you mean tax?` |
@@ -318,13 +319,13 @@ visimark eval FILE [--scenario FILE|-] [--get NAME] [--json]
 ```
 
 - **`check`, `fmt`, `infer`, `explain`, `ref`** with `--scenario` exit `2`
-  (`visimark: --scenario is only valid with eval`) and read and write nothing.
-  This is a deliberate exception to "unrecognised options are ignored"
-  ([cli-reference](../cli-reference.md#options)): a `fmt --scenario` that
-  ignored the flag would exit `0` and let its author believe a scenario had
-  been handled. [#121](https://github.com/michal-niedzwiedzki/visimark/issues/121)
-  proposes making refusal the general rule; if it lands, this becomes one case
-  of it.
+  (`visimark: --scenario is only valid with eval`) and read and write nothing:
+  a `fmt --scenario` that ignored the flag would exit `0` and let its author
+  believe a scenario had been handled. Since
+  [#121](https://github.com/michal-niedzwiedzki/visimark/issues/121) this is one
+  case of the general rule that every command refuses an option it does not
+  accept ([spec](refuse-unrecognised-and-misplaced-cli-options-spec.md)), and
+  its `--json` error code is `USAGE`, not `SCENARIO`.
 - **`--scenario -`** reads the scenario from stdin. There is no bare-stdin
   form, so a later `eval` reading its document from stdin cannot collide with
   it.
@@ -489,7 +490,7 @@ The scenario files and the expected outputs live as `test/cli` fixtures.
   value rules of [§3.3](#33-the-scenario-file).
 - **Declared bounds on a param.** An `assert` already turns an out-of-range
   scenario into exit `1`. Domain constraints would be a separate feature.
-- **Refusing unknown options in general.** That is
+- **Refusing unknown options in general.** Decided separately in
   [#121](https://github.com/michal-niedzwiedzki/visimark/issues/121).
 - **Moving `assert`, `chart`, `is` and `precision` to contextual keywords.**
   A separate idea. This spec only makes its own two words contextual.

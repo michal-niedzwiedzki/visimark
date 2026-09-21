@@ -1805,9 +1805,9 @@ Every command takes `--json`:
 
 This is what you use to turn findings into PR annotations.
 
-Unrecognised options are ignored rather than rejected, so a workflow that passes
-a flag a future version does not know about still runs. That also means `--jsonn`
-is not `--json` — it is silently nothing. Check your spelling.
+An option a command does not accept is refused, not ignored: `--jsonn` exits `2`
+with a did-you-mean, and so does `--fix-dates` on `check`. Nothing is read or
+written first.
 
 ## 23. Knowledge extraction: a document a machine can read
 

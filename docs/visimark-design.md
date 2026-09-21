@@ -638,9 +638,15 @@ evaluation, writes, or exit codes. The shape is
 `eval --json` is that envelope (`values`, `assertions`, `charts`), not a flat
 map of binding names.
 
-`--scenario` is valid only with `eval`: every other command refuses it with
-exit `2` rather than ignoring it, because a scenario must never reach a
-writer ([§20](#20-scenario-parameters)).
+Every command refuses an option it does not accept, and extra file arguments:
+an unknown option (`--jsonn`) or one that belongs to another command
+(`fmt --write`) is exit `2` with a `visimark: …` line on stderr, before any
+file is read or written, and a `USAGE` envelope under `--json`. This applies
+constraint 3 to invocation: a silently ignored option produces a run that looks
+right and is wrong. `--scenario` is one case of it — valid only with `eval`,
+because a scenario must never reach a writer ([§20](#20-scenario-parameters)).
+The rules are in
+[`refuse-unrecognised-and-misplaced-cli-options-spec.md`](design/refuse-unrecognised-and-misplaced-cli-options-spec.md).
 
 Exit codes: `0` clean, `1` findings, `2` usage or parse failure. `eval` also
 exits `1` if an `assert` statement is false ([§17](#17-assertions)) — the

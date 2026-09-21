@@ -47,14 +47,27 @@ exits `0`. `visimark --help` (also `-h` or `help`) prints the usage summary.
 | `--write` | `infer` | Inserts what it proposed: a `vmark` block after each table, an anchor after each matched figure, or the `no-formulas` marker if there was nothing to derive. It only ever inserts — no existing byte is rewritten. |
 | `--get NAME` | `eval` | Prints one value instead of all of them. Takes `sheet.name` or a bare `name` when it is unambiguous. |
 | `--scenario FILE` | `eval` | Evaluates the document with the `param` values in `FILE` in place of their defaults, and writes nothing. `-` reads the scenario from stdin. `FILE` is a flat JSON object whose keys name declared params (`sheet.name`, or a bare `name` when unambiguous) and whose values are strings holding a number literal, such as `{ "tax": "12.5%" }`. An unknown key, a JSON number, a value wider than the param's `precision`, or a bare value for a percent param is an error. The values are followed by a `scenario:` block listing every param, and a false `assert` says whether it holds on the defaults. Every other command refuses `--scenario` with exit `2`. The rules are in [`design/scenario-params-spec.md`](design/scenario-params-spec.md). |
-| `--json` | `check`, `fmt`, `infer`, `eval`, `explain`, `ref` | Prints one JSON document on stdout instead of the human report. Default text is unchanged. Document quantities are decimal strings. The envelope is specified in [`design/structured-output-json-spec.md`](design/structured-output-json-spec.md). Unrecognised flags stay ignored, so `--jsonn` is not `--json`. |
+| `--json` | `check`, `fmt`, `infer`, `eval`, `explain`, `ref` | Prints one JSON document on stdout instead of the human report. Default text is unchanged. Document quantities are decimal strings. The envelope is specified in [`design/structured-output-json-spec.md`](design/structured-output-json-spec.md). |
 | `#sheet` | `explain` | Limits the output to one sheet. Repeatable. |
 
-Unrecognised options are ignored rather than treated as an error, so a
-workflow that passes an option this version does not know about still runs.
-The one exception is `--scenario`: a known option that only `eval` accepts,
-refused everywhere else, because a scenario that `fmt` silently ignored would
-let its author believe it had been handled.
+Every command refuses an option it does not accept, and refuses extra file
+arguments. An unknown option (``visimark: unknown option --jsonn — did you mean `--json`?``)
+and one that belongs to another command (`visimark: --write is only valid with infer`)
+both exit `2`, before any file is read or written. Under `--json` the refusal is a
+`USAGE` envelope. Each command takes exactly these:
+
+| Command | Options and arguments |
+|---|---|
+| `check` | `FILE...`, `--json` |
+| `fmt` | `FILE...`, `--fix-dates`, `--json` |
+| `infer` | `FILE...`, `--write`, `--json` |
+| `eval` | one `FILE`, `--get NAME`, `--scenario FILE`, `--json` |
+| `explain` | one `FILE`, `#sheet` (repeatable), `--json` |
+| `ref` | at most one `NAME`, `--json` |
+
+Only `--version`, `-v`, `version`, `--help`, `-h` and `help` in the command
+position are handled before this. The rules are in
+[`design/refuse-unrecognised-and-misplaced-cli-options-spec.md`](design/refuse-unrecognised-and-misplaced-cli-options-spec.md).
 
 ## Exit codes
 
@@ -62,7 +75,7 @@ let its author believe it had been handled.
 |---|---|---|
 | `0` | Nothing to fix | No problems were found. Advisory findings (`WARN`, `NOTE`) can still be printed — they are reported, not counted, and never change the exit code. |
 | `1` | The document has problems | At least one stale value or error, from any of the files named. `check` and `fmt` return this; so does `eval` when an `assert` statement is false (the value is still printed first); `infer` and `explain` never do. |
-| `2` | The command could not run | A missing or unreadable file, no file given at all, or an argument that names nothing — an unknown value for `eval --get`, an unknown sheet for `explain`, or a scenario `eval --scenario` cannot apply. `--scenario` on any other command is also `2`. This means "your request did not make sense", not "your document is wrong". |
+| `2` | The command could not run | A missing or unreadable file, no file given at all, or an argument that names nothing — an unknown value for `eval --get`, an unknown sheet for `explain`, or a scenario `eval --scenario` cannot apply — or an option or argument the command does not accept, such as `--scenario` on any command but `eval`. This means "your request did not make sense", not "your document is wrong". |
 
 With several files the codes do not add up, and the worst one wins: a file that
 could not be read outranks a document that was read and found wanting, because

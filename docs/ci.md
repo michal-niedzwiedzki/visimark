@@ -270,7 +270,7 @@ pins the engine it installs. Chapter 12 goes into why that matters.
 |---|---|---|
 | `files` | `**/*.md` | Space-separated glob(s) of Markdown files to check |
 | `command` | `check` | `check` or `fmt` |
-| `args` | *(empty)* | Extra flags, for example `--fix-dates` |
+| `args` | *(empty)* | Extra flags for the command; each must be valid for `command`, for example `--fix-dates` for `fmt` |
 | `version` | the release this Action ref ships | npm version or dist-tag of the engine to install |
 
 There is no strictness dial, no config file and no rule set to choose. Pointing
@@ -732,11 +732,13 @@ treat "no findings printed" as success — check the exit code.
 
 ### About `--jsonn`
 
-Unrecognised options are ignored rather than rejected, so that a workflow
-passing a flag a future version does not know about still runs. The cost is that
-a typo is silent: `--jsonn` is not `--json`, it is nothing. If a step that should
-print JSON prints a human report instead, check the spelling before anything
-else.
+A misspelled or misplaced option is refused, not ignored: `--jsonn` exits `2` with
+``visimark: unknown option --jsonn — did you mean `--json`?``, and `--fix-dates`
+with `check` exits `2` with `--fix-dates is only valid with fmt`. Nothing is read
+or written first. A step that fails this way is wrong about how it calls
+`visimark`; read the message, which names the option. A workflow that passes a
+flag only a newer release knows must pin that release, because an older engine
+now refuses it.
 
 ## 15. A job summary
 
@@ -1176,7 +1178,7 @@ advisory one.
 | `COVERAGE` on a README or changelog | The file has a table and no rules | Chapter 10 — `infer`, or the marker |
 | The workflow runs twice on every PR commit | `on: [push, pull_request]` | Restrict `push` to your default branch |
 | The annotation step runs but the job is green | The check step has `continue-on-error` and nothing re-fails the job | Add the explicit `exit 1` step from chapter 14 |
-| A step prints a human report where JSON was expected | A misspelled flag — unknown options are ignored, not rejected | Check the spelling of `--json` |
+| A step fails with `unknown option` or `is only valid with` | A misspelled option, an option on the wrong command, or one this engine version does not know | Read the message: it names the option and, if misplaced, the command that owns it |
 | `shopt: not found` | The job's shell is `sh`, not bash | Use `bash -lc`, or the `find` form from chapter 21 |
 | `ARTIFACT` or a missing-artifact `STALE` on every run | Chart SVGs are in `.gitignore` | Commit them — chapter 19 |
 | A required check can never be satisfied | The required check only runs on `push` to the default branch | Require the job that runs on `pull_request` |

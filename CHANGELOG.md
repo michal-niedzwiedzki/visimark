@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Changed
+
+- **Breaking:** every command now refuses an option it does not recognise, or
+  one that belongs to another command, with exit `2` and a `visimark: …` line
+  on stderr. Before, the option was ignored and the run reported success. If a
+  job now fails with `unknown option` or `is only valid with`, remove the
+  option or move it to the command that owns it. To use an option a newer
+  release added, pin the engine, and the Action ref, to that release. A
+  misplaced `--scenario`, or `--scenario` with no value, now reports
+  `error.code: "USAGE"` under `--json` instead of `"SCENARIO"`. See
+  [`refuse-unrecognised-and-misplaced-cli-options-spec.md`](docs/design/refuse-unrecognised-and-misplaced-cli-options-spec.md)
+  and [#121](https://github.com/michal-niedzwiedzki/visimark/issues/121).
+
 ## 0.1.6 - 2026-09-20
 
 ### Fixed
