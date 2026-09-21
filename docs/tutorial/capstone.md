@@ -71,7 +71,7 @@ invoiced  = lines.gross_total
 scheduled = schedule.covered
 variance  = scheduled - invoiced
 
-assert ABS(variance) <= 0.05
+assert |variance| <= 0.05
 ```
 
 Scheduled instalments total **36100.51**<!--vmark=recon.scheduled--> PLN against

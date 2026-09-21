@@ -15,7 +15,7 @@ inputs:
     required: false
     default: "check"
   args:
-    description: "Extra flags, e.g. --fix-dates for fmt"
+    description: "Extra flags for the command; each must be valid for it, e.g. --fix-dates for fmt"
     required: false
     default: ""
   # Pinned rather than `latest` so that pinning the Action ref pins the engine

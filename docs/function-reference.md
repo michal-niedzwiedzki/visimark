@@ -179,6 +179,8 @@ Absolute value.
 
 **Shape:** map, 1 argument.
 
+**Also written:** `|x|`
+
 | Parameter | Type | Meaning |
 |---|---|---|
 | `x` | number | the value whose sign is discarded |
@@ -228,6 +230,8 @@ Non-negative square root.
 
 **Shape:** map, 1 argument.
 
+**Also written:** `√(x)`
+
 | Parameter | Type | Meaning |
 |---|---|---|
 | `x` | number | a non-negative number |
@@ -252,6 +256,8 @@ Non-negative square root.
 Greatest multiple of `s` that does not exceed `x`, toward −∞.
 
 **Shape:** map, 2 arguments.
+
+**Also written:** `⌊x⌋`
 
 | Parameter | Type | Meaning |
 |---|---|---|
@@ -280,6 +286,8 @@ Greatest multiple of `s` that does not exceed `x`, toward −∞.
 Least multiple of `s` that is not less than `x`, toward +∞.
 
 **Shape:** map, 2 arguments.
+
+**Also written:** `⌈x⌉`
 
 | Parameter | Type | Meaning |
 |---|---|---|

@@ -9,6 +9,7 @@ import {
   type Ref,
 } from "./ast.js";
 import { lex } from "./lexer.js";
+import { DELIM_OPENER_OF, DELIM_PAIRS } from "./notation.js";
 import { LangError, type Token } from "./token.js";
 
 const LEFT_BP: Record<string, number> = {
@@ -130,7 +131,7 @@ class Parser {
     const t = this.peek();
     if (t.kind !== "eof") {
       throw new LangError(
-        `unexpected ${t.kind === "op" ? `operator \`${t.value}\`` : t.kind}`,
+        `unexpected ${t.kind === "op" ? `operator \`${t.value}\`` : t.kind === "delim" ? `\`${t.value}\`` : t.kind}`,
         t.start,
         t.end,
       );
@@ -211,6 +212,33 @@ class Parser {
         inner.start = t.start;
         inner.end = close.end;
         return inner;
+      }
+      case "delim": {
+        // `|x|`, `⌊x⌋`, `⌈x⌉`: a pair resolved to the call it stands for. A
+        // delimiter in operand position always opens; after an operand it has
+        // no binding power, so the inner expression stops there and the pair's
+        // closer is consumed below. That is what lets `|` nest without lookahead.
+        const pair = DELIM_PAIRS[t.value];
+        if (!pair) {
+          throw new LangError(
+            `\`${t.value}\` has no opening \`${DELIM_OPENER_OF[t.value]}\``,
+            t.start,
+            t.end,
+          );
+        }
+        const inner = this.parseBp(0);
+        const close = this.peek();
+        if (close.kind !== "delim" || close.value !== pair.close) {
+          throw new LangError(`expected \`${pair.close}\``, close.start, close.end);
+        }
+        this.next();
+        const args: Expr[] = [inner];
+        // The notation itself supplies the step, and the closing glyph is the
+        // span it points at, so no finding lands on text the author never wrote.
+        if (pair.step !== undefined) {
+          args.push({ type: "num", value: pair.step, start: close.start, end: close.end });
+        }
+        return { type: "call", name: pair.fn, args, start: t.start, end: close.end };
       }
       case "op":
         if (t.value === "-") {

@@ -84,6 +84,34 @@ Total: **1.00**<!--vmark=order.total-->
   }
 });
 
+test("fmt rewrites a stale cell but never rewrites a prose spelling to its named form", () => {
+  const table = `| Item | Price | Qty |   Gap |
+|------|------:|----:|------:|
+| pen  |  5.00 |   2 |  9.99 |
+`;
+  for (const [prose, named] of [
+    ["|Price - Qty|", "ABS(Price - Qty)"],
+    ["⌊Price⌋", "FLOOR(Price, 1)"],
+    ["⌈Price⌉", "CEILING(Price, 1)"],
+  ] as const) {
+    const src = `${table}
+\`\`\`vmark #order
+Gap precision 2 = ${prose}
+\`\`\`
+`;
+    const once = fmt(src, {});
+    expect(once.changed).toBe(true);
+    // the rule text keeps the author's own spelling, untouched
+    expect(once.output).toContain(`Gap precision 2 = ${prose}`);
+    expect(once.output).not.toContain(named);
+    expect(check(build(locate(once.output))).findings.filter((f) => f.code === "STALE")).toEqual(
+      [],
+    );
+    // idempotent
+    expect(fmt(once.output, {}).output).toBe(once.output);
+  }
+});
+
 function diffLines(a: string, b: string): number {
   const la = a.split("\n");
   const lb = b.split("\n");

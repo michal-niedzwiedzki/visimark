@@ -2,6 +2,35 @@
 
 ## Unreleased
 
+### Changed
+
+- **Breaking:** every command now refuses an option it does not recognise, or
+  one that belongs to another command, with exit `2` and a `visimark: …` line
+  on stderr. Before, the option was ignored and the run reported success. If a
+  job now fails with `unknown option` or `is only valid with`, remove the
+  option or move it to the command that owns it. To use an option a newer
+  release added, pin the engine, and the Action ref, to that release. A
+  misplaced `--scenario`, or `--scenario` with no value, now reports
+  `error.code: "USAGE"` under `--json` instead of `"SCENARIO"`. See
+  [`refuse-unrecognised-and-misplaced-cli-options-spec.md`](docs/design/refuse-unrecognised-and-misplaced-cli-options-spec.md)
+  and [#121](https://github.com/michal-niedzwiedzki/visimark/issues/121).
+
+### Added
+
+- **Prose spellings for four functions** (issue #64) — `|x|` is `ABS(x)`, `⌊x⌋`
+  is `FLOOR(x, 1)`, `⌈x⌉` is `CEILING(x, 1)` and `√(x)` is `SQRT(x)`, so a
+  reconciliation reads `assert |variance| <= 0.05`. Each resolves to the same
+  call before evaluation: no new semantics, no new finding code, and both
+  spellings stay legal. `|x|` nests (`||a - b| - 1|`), and a mismatched pair such
+  as `⌊x⌉` is a `TYPE` error. `fmt` never rewrites one spelling to the other, and
+  `infer` still proposes the code names. The function table and
+  `docs/function-reference.md` list each spelling beside its call, and the
+  tutorial capstone now uses `|variance|`. Editor hover on a call written as a
+  glyph now targets the glyph, which also fixes `Σ(Net)`, whose first characters
+  hovered as `SUM`. See
+  [`prose-notation-for-existing-unary-spec.md`](docs/design/prose-notation-for-existing-unary-spec.md)
+  and [#64](https://github.com/michal-niedzwiedzki/visimark/issues/64).
+
 ## 0.1.6 - 2026-09-20
 
 ### Fixed

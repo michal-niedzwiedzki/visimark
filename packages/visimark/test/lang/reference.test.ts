@@ -8,6 +8,7 @@ import {
   functionNames,
   precisionPhrase,
 } from "../../src/lang/reference.js";
+import { parseExpr } from "../../src/lang/parser.js";
 import { ERROR_CODES } from "../../src/model/types.js";
 
 const names = Object.keys(FUNCTION_TABLE) as (keyof typeof FUNCTION_TABLE)[];
@@ -123,4 +124,35 @@ test("`rounding` is about breaking a tie, not about width", () => {
   // the word `precision`. Only `ROUND` breaks a tie of its own.
   const withRounding = names.filter((n) => FUNCTION_DOCS[n].rounding !== undefined);
   expect(withRounding).toEqual(["ROUND"]);
+});
+
+// --- prose notation for unary vocabulary (#64) ------------------------------
+
+test("exactly ABS, SQRT, FLOOR and CEILING carry a prose spelling", () => {
+  const withProse = functionNames().filter((n) => describeFunction(n)!.prose !== undefined);
+  expect(withProse.sort()).toEqual(["ABS", "CEILING", "FLOOR", "SQRT"]);
+});
+
+test("each prose spelling in the registry parses to the call it is registered under", () => {
+  // Substituting a bare operand for the parameter name keeps the registry from
+  // drifting away from what the parser actually accepts.
+  const strip = (n: unknown): unknown =>
+    Array.isArray(n)
+      ? n.map(strip)
+      : n && typeof n === "object"
+        ? Object.fromEntries(
+            Object.entries(n)
+              .filter(([k]) => k !== "start" && k !== "end")
+              .map(([k, v]) => [k, strip(v)]),
+          )
+        : n;
+  for (const name of functionNames()) {
+    const e = describeFunction(name)!;
+    if (e.prose === undefined) continue;
+    const param = e.params[0]!.name;
+    const written = e.prose.replace(param, "a");
+    // FLOOR and CEILING take a step the notation supplies as `1`
+    const named = `${name}(a${e.params.length === 2 ? ", 1" : ""})`;
+    expect(strip(parseExpr(written))).toEqual(strip(parseExpr(named)));
+  }
 });

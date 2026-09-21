@@ -594,3 +594,88 @@ test("the function table and the exported map agree", () => {
   expect(fromMap).toEqual(fromTable);
   expect(fromTable).toHaveLength(13);
 });
+
+// ---- prose notation for unary vocabulary (#64) ------------------------------
+
+// A finding's `formula` and `raw` echo the spelling the author wrote, like its
+// span, so none of them takes part in the comparison with the named form.
+const withoutSpelling = (fs: Finding[]) =>
+  fs.map(
+    ({ span: _span, sourceOffset: _sourceOffset, formula: _formula, raw: _raw, ...rest }) => rest,
+  );
+
+const PROSE: readonly (readonly [string, string])[] = [
+  ["|Price - Qty|", "ABS(Price - Qty)"],
+  ["||Price - Qty| - 1|", "ABS(ABS(Price - Qty) - 1)"],
+  ["⌊Price⌋", "FLOOR(Price, 1)"],
+  ["⌈Price⌉", "CEILING(Price, 1)"],
+  ["⌊|Price - Qty| * 3⌋", "FLOOR(ABS(Price - Qty) * 3, 1)"],
+  ["√(Qty)", "SQRT(Qty)"],
+];
+
+test("each prose spelling checks exactly like the call it stands for", () => {
+  for (const [prose, named] of PROSE) {
+    const found = run(withColumnRule(prose)).findings;
+    expect(withoutSpelling(found)).toEqual(withoutSpelling(run(withColumnRule(named)).findings));
+    // ...and the finding shows the author's own spelling, untouched
+    const echoed = found.flatMap((f) => [f.formula, f.raw]).filter((x) => x !== undefined);
+    expect(echoed.length).toBeGreaterThan(0);
+    expect(echoed.every((x) => x === prose)).toBe(true);
+  }
+});
+
+test("a column rule in prose notation is a row-wise map", () => {
+  const r = run(withColumnRule("⌊Price⌋"));
+  expect(typeFindings(r.findings)).toEqual([]);
+  expect(r.findings.filter((f) => f.code === "STALE")).toHaveLength(2);
+});
+
+test("function-level failures keep the canonical name and span the whole call", () => {
+  const abs = typeFindings(run(withScalar('|"s"|')).findings);
+  expect(abs[0]!.message).toBe("ABS expects a number");
+  expect(typeFindings(run(withScalar('⌊"s"⌋')).findings)[0]!.message).toBe(
+    "FLOOR expects a number",
+  );
+  expect(typeFindings(run(withScalar("√(0 - 1)")).findings)[0]!.message).toBe(
+    "SQRT of a negative number",
+  );
+});
+
+test("SUM(|Net|) is refused exactly like SUM(ABS(Net))", () => {
+  const prose = typeFindings(run(withScalar("SUM(|Qty|)")).findings);
+  const named = typeFindings(run(withScalar("SUM(ABS(Qty))")).findings);
+  expect(prose).toHaveLength(1);
+  expect(withoutSpelling(prose)).toEqual(withoutSpelling(named));
+});
+
+test("a reduce inside a pair is a scalar", () => {
+  expect(typeFindings(run(withScalar("|SUM(Qty)|")).findings)).toEqual([]);
+});
+
+test("√(x) must declare its width, as SQRT(x) must", () => {
+  for (const rule of ["√(Qty)", "SQRT(Qty)"]) {
+    expect(run(withColumnRule(rule)).findings.map((f) => f.code)).toContain("PRECISION");
+  }
+});
+
+test("a prose spelling works inside an assert", () => {
+  const withAssert = (a: string) => `
+| Leg | Qty |
+|-----|----:|
+| a   |  10 |
+
+\`\`\`vmark #legs
+total = SUM(Qty)
+assert ${a}
+\`\`\`
+`;
+  const codes = (a: string) => run(withAssert(a)).findings.map((f) => f.code);
+  expect(codes("|total - 12| <= 2")).not.toContain("ASSERT");
+  expect(codes("|total - 12| <= 1")).toContain("ASSERT");
+});
+
+test("did-you-mean never suggests a prose spelling", () => {
+  const ts = typeFindings(run(withColumnRule("ABSS(Qty)")).findings);
+  expect(ts[0]!.suggestion).toBe("ABS");
+  expect([...FUNCTIONS.keys()].filter((k) => /[|⌊⌋⌈⌉√]/.test(k))).toEqual([]);
+});

@@ -13,6 +13,7 @@ export type TokenKind =
   | "dot"
   | "lparen"
   | "rparen"
+  | "delim"
   | "comma"
   | "eof";
 

@@ -113,6 +113,14 @@ export interface FnDoc {
   errors: readonly FnError[];
   examples: readonly FnExample[];
   see?: readonly FunctionName[];
+  /**
+   * The prose spelling, where the language has one — `|x|` for `ABS`. It is
+   * documentation of the notation the parser accepts (`lang/notation.ts`), kept
+   * here so every renderer shows it in the same words. Where a spelling omits a
+   * parameter, it is a spelling of the call with that parameter's value: `⌊x⌋`
+   * is `FLOOR(x, 1)`.
+   */
+  prose?: string;
 }
 
 /**
@@ -206,6 +214,7 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
       { expr: "ABS(-7)", is: "7" },
       { expr: "ABS(7)", is: "7" },
     ],
+    prose: "|x|",
   },
   MOD: {
     summary: "remainder",
@@ -232,6 +241,7 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
       { expr: "SQRT(9)", is: "3" },
       { expr: "SQRT(0)", is: "0" },
     ],
+    prose: "√(x)",
   },
   FLOOR: {
     summary: "greatest multiple of `s` that does not exceed `x`, toward −∞",
@@ -247,6 +257,7 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
       { expr: "FLOOR(-7, 3)", is: "-9" },
     ],
     see: ["CEILING", "ROUND"],
+    prose: "⌊x⌋",
   },
   CEILING: {
     summary: "least multiple of `s` that is not less than `x`, toward +∞",
@@ -262,6 +273,7 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
       { expr: "CEILING(-7, 3)", is: "-6" },
     ],
     see: ["FLOOR", "ROUND"],
+    prose: "⌈x⌉",
   },
   IF: {
     summary: "returns `a` or `b`",

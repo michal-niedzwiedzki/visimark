@@ -58,6 +58,18 @@ jobs:
           done
           exit $fail
 
+      # Each changelog is a release input: CHANGELOG.md becomes the GitHub
+      # Release body and editors/vscode/CHANGELOG.md becomes the Marketplace
+      # page. A tag ahead of either ships the previous version's notes, or a
+      # version the page silently skips, and nothing above opens them. This
+      # fails a release commit that bumps the manifests without a dated
+      # `## X.Y.Z - YYYY-MM-DD` heading. It checks presence, not accuracy.
+      # docs/releasing.md ("Preparing the changelog") is the rule; the check
+      # lives in scripts/check-changelog-entries.ts so it can run against a temp
+      # tree.
+      - name: every release must have a changelog entry
+        run: bun scripts/check-changelog-entries.ts
+
       - run: bun run lint
       - run: bun run format:check
       - run: bun run typecheck

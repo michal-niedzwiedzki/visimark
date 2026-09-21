@@ -99,6 +99,11 @@ and builds from it.
    must agree" step fails the build if you miss one, so step 6's green CI is
    the confirmation.
 4. **Write the changelog** — see [Preparing the changelog](#preparing-the-changelog).
+   `ci.yml`'s "every release must have a changelog entry" step fails the build if
+   `CHANGELOG.md` or `editors/vscode/CHANGELOG.md` has no dated
+   `## X.Y.Z - YYYY-MM-DD` heading for its own manifest's version, so step 6's
+   green CI is the confirmation. It checks that the entry exists, not that it is
+   right.
 5. **Promote the shipped rows.** In
    [`docs/vocabulary-catalogue.md`](vocabulary-catalogue.md)'s
    [Shipped register](vocabulary-catalogue.md#shipped), every row with an
@@ -134,7 +139,8 @@ flowchart LR
 ## Preparing the changelog
 
 Two files. Both are read by machines at release time, so both are part of the
-release, not an afterthought.
+release, not an afterthought. CI checks that each has an entry for the release;
+it does not check what the entry says.
 
 - **[`CHANGELOG.md`](../CHANGELOG.md)** — the whole file becomes the GitHub
   Release body, so it has to read correctly top-to-bottom as of the tag.
@@ -147,8 +153,19 @@ release, not an afterthought.
   - Add the `[X.Y.Z]: https://github.com/michal-niedzwiedzki/visimark/releases/tag/vX.Y.Z`
     link reference at the bottom.
 - **[`editors/vscode/CHANGELOG.md`](../editors/vscode/CHANGELOG.md)** — shown on
-  the extension's Marketplace page. Keep it to what an extension user sees:
-  editor features, settings, fixes. Same version, same date.
+  the extension's Marketplace page.
+  - Every release gets a dated `## X.Y.Z - YYYY-MM-DD` entry, even when it is
+    one line: "No editor-visible changes. Bundles engine X.Y.Z." Same version,
+    same date as the root file.
+  - An entry lists only what an extension user sees: diagnostics, hover,
+    highlighting, completion, settings, fixes. A language change belongs there
+    only if the extension surfaces it.
+  - To decide that, remember the language server calls the engine's `analyze()`
+    (`packages/visimark-lsp/src/analysis.ts`). An engine finding reaches the
+    editor as a diagnostic unless the language server maps it away, so a new or
+    widened finding usually belongs here. CI cannot check this; you do.
+  - `## Unreleased` is optional in this file. Write the entry when you cut the
+    release.
 
 If a change only touches CI, the build, or the tests, it does not need a
 changelog line — unless a consumer can observe it (the provenance attestation
@@ -204,10 +221,11 @@ re-trigger the pipeline.**
 | The tag is the only publisher. No hand-run `npm publish` / `vsce publish` / `ovsx publish`. | npm keeps the version number forever on the first publish it sees. `visimark@0.1.0` is a mis-publish that can never be reissued. |
 | All three `package.json` versions equal the tag, exactly. | One tag then publishes mismatched version numbers, or a leg fails mid-release with the others already out. |
 | The changelog entry is written, dated and merged **before** the tag. | The GitHub Release body is built from `CHANGELOG.md` at the tagged commit — a tag ahead of the changelog ships the previous version's notes. |
+| Each changelog has a dated `## X.Y.Z - YYYY-MM-DD` heading for the release's version, in the release commit. | `ci.yml`'s "every release must have a changelog entry" step fails the release commit. Without the entry the GitHub Release body ships the previous version's notes, or the Marketplace page silently skips the version. The check proves the heading exists, not that the entry is accurate. |
 | The Shipped-register **Released** cells are filled **before** the tag (step 5). | The released `vocabulary-catalogue.md` shows shipped primitives as still pending, while `release.yml` closes their issues — the catalogue and the tracker disagree. |
 | Tag a commit already on `origin/master` with green `ci` and `dogfood`. | `release.yml` builds from the tag. Uncommitted, unpushed or red work is silently not in the release. |
 | `action.yml`'s `version` default is bumped with the manifests. | Every consumer who pins the new Action ref keeps running the previous engine, with nothing at run time to tell them. Nothing fails; it just quietly verifies with the old code. |
-| Changelog dates are ISO 8601, `YYYY-MM-DD`. | The project's own date rule, unenforced here because nothing runs `check` with date repair on the changelog. |
+| Changelog dates are ISO 8601, `YYYY-MM-DD`. | The project's own date rule. A release heading with no date fails CI; every other date in a changelog is unchecked, because nothing runs `check` with date repair on it. |
 | Never retag, force-push a tag, or `npm unpublish` to tidy a botched release. | It rewrites history to look like the pipeline did something it did not. Bump to the next patch and let the record stand — the move `infer`'s near-miss refusal exists to enforce, applied to the release instead of a spreadsheet. |
 | A green `release` run is not a fully released package. Verify each leg. | The run's final step asserts the three registries have the version, but nothing automated checks the provenance attestation or the GitHub Release. The v0.1.1 run reported success with npm and the GitHub Release done and both extension registries empty — that gap is closed; the remaining ones are yours. |
 

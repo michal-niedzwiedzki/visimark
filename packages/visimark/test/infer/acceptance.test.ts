@@ -49,6 +49,11 @@ describe("what inference recovers from the stripped worked invoice", () => {
     expect(scalar("amount_total")?.rule).toBe("amount_total = SUM(Amount)");
   });
 
+  test("infer proposes code notation only, never a prose spelling", () => {
+    expect(proposals.length).toBeGreaterThan(0);
+    expect(proposals.filter((p) => /[|⌊⌋⌈⌉√Σ∑]/.test(p.rule))).toEqual([]);
+  });
+
   test("both sheet ids were minted, in document order", () => {
     expect([...new Set(proposals.map((p) => p.sheetId))]).toEqual(["unnamed1", "unnamed2", ""]);
     expect(proposals.every((p) => p.sheetId === "" || p.mintedSheetId)).toBe(true);

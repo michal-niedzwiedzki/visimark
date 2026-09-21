@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Hover on a function written as `Σ(x)`, `√(x)`, `|x|`, `⌊x⌋` or `⌈x⌉` now
+  targets the glyph and shows the function's entry, with its prose spelling. It
+  no longer shows the entry over the first characters of the argument.
+
 ## 0.1.6 - 2026-09-20
 
 - Division by zero (`/` or `MOD` with a zero divisor) is reported as a `TYPE`

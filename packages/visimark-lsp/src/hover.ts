@@ -36,7 +36,7 @@ export function hoverAt(doc: TextDocument, analysis: Analysis, position: Positio
   // 1. a function name, hovered inside a vmark block. `Call` spans cover the
   // whole call including its arguments, so hovering `Net` in `SUM(Net)` would
   // match `SUM` too; narrow to the name token, innermost call first.
-  const called = innermostCallNameAt(allBindings, off);
+  const called = innermostCallNameAt(allBindings, off, model.source);
   if (called) {
     const e = describeFunction(called);
     if (e) {
@@ -48,6 +48,7 @@ export function hoverAt(doc: TextDocument, analysis: Analysis, position: Positio
           `${e.name}(${e.params.map((p) => p.name).join(", ")})\n` +
           "```\n\n" +
           `${summary}.\n\n${params}\n\nreturns: ${e.returns}` +
+          (e.prose !== undefined ? `\n\nalso written: \`${e.prose}\`` : "") +
           `\n\nprecision: ${precisionPhrase(e.precision)}` +
           (e.rounding ? `\n\nrounding: ${e.rounding}` : "") +
           (errors ? `\n\nerrors:\n${errors}` : ""),
@@ -100,12 +101,20 @@ export function hoverAt(doc: TextDocument, analysis: Analysis, position: Positio
   return null;
 }
 
-/** The name of the innermost call whose *name token* covers `off`, if any. */
-function innermostCallNameAt(bindings: Binding[], off: number): string | null {
+/**
+ * The name of the innermost call whose *name token* covers `off`, if any.
+ *
+ * A call written by name has its name at the start of its span. A call written
+ * as a prose spelling — `Σ(Net)`, `√(x)`, `|x|`, `⌊x⌋` — has a one-character
+ * glyph there instead, and the resolved name is not in the source at all, so the
+ * name token is that opening glyph alone.
+ */
+function innermostCallNameAt(bindings: Binding[], off: number, source: string): string | null {
   const hits: { name: string; width: number }[] = [];
   const visit = (e: Expr): void => {
     if (e.type === "call") {
-      if (off >= e.start && off < e.start + e.name.length) {
+      const written = source.startsWith(e.name, e.start);
+      if (off >= e.start && off < e.start + (written ? e.name.length : 1)) {
         hits.push({ name: e.name, width: e.end - e.start });
       }
       for (const a of e.args) visit(a);

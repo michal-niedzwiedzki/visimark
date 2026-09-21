@@ -41,62 +41,20 @@ import {
   ScenarioError,
   type ParamInfo,
 } from "../eval/scenario.js";
+import { parseArgs, usageLine, type Refusal } from "./args.js";
 import { readVersion } from "./version.js";
 import { fmt } from "../write/fmt.js";
 import { applyEdits } from "../write/splice.js";
-
-interface Parsed {
-  files: string[];
-  flags: Set<string>;
-  options: Map<string, string>;
-  sheets: string[]; // #sheet arguments
-}
-
-function parseArgs(args: string[]): Parsed {
-  const files: string[] = [];
-  const flags = new Set<string>();
-  const options = new Map<string, string>();
-  const sheets: string[] = [];
-  for (let i = 0; i < args.length; i++) {
-    const a = args[i]!;
-    if (a === "--get") {
-      options.set("get", args[++i] ?? "");
-    } else if (a === "--scenario") {
-      // a value option; `-` is stdin. A missing value, or another option in
-      // its place, is recorded as empty so the command can say so.
-      const v = args[i + 1];
-      if (v === undefined || v.startsWith("--")) options.set("scenario", "");
-      else options.set("scenario", args[++i]!);
-    } else if (a.startsWith("--")) {
-      flags.add(a.slice(2));
-    } else if (a.startsWith("#")) {
-      sheets.push(a.slice(1));
-    } else {
-      files.push(a);
-    }
-  }
-  return { files, flags, options, sheets };
-}
 
 function read(path: string): string {
   return readFileSync(path, "utf8");
 }
 
-const SCENARIO_ONLY_EVAL = "visimark: --scenario is only valid with eval";
-
-/**
- * `--scenario` on any command but `eval` is refused, not ignored: a scenario
- * must never reach a writer, and a read-only command that silently dropped it
- * would let its author believe one had been handled
- * (docs/design/scenario-params-spec.md §5.3). Returns true when it refused.
- */
-function refuseScenario(command: CommandName, parsed: Parsed, out: Writer, err: Writer): boolean {
-  if (!parsed.options.has("scenario")) return false;
-  err(SCENARIO_ONLY_EVAL);
-  if (parsed.flags.has("json")) {
-    emitJson(out, errorEnvelope(command, "SCENARIO", SCENARIO_ONLY_EVAL));
-  }
-  return true;
+function refuse(command: CommandName, r: Refusal, out: Writer, err: Writer): 2 {
+  err(r.message);
+  if (r.usage) err(r.usage);
+  if (r.json) emitJson(out, errorEnvelope(command, "USAGE", r.message));
+  return 2;
 }
 
 function showValue(v: Value): string {
@@ -107,12 +65,13 @@ function showValue(v: Value): string {
 }
 
 export function cmdCheck(args: string[], out: Writer, err: Writer): number {
-  const parsed = parseArgs(args);
-  if (refuseScenario("check", parsed, out, err)) return 2;
+  const p = parseArgs("check", args);
+  if (!p.ok) return refuse("check", p, out, err);
+  const parsed = p.parsed;
   const { files, flags } = parsed;
   const json = flags.has("json");
   if (files.length === 0) {
-    const msg = "usage: visimark check FILE...";
+    const msg = usageLine("check");
     err(msg);
     if (json) emitJson(out, errorEnvelope("check", "USAGE", msg));
     return 2;
@@ -161,12 +120,13 @@ export function cmdCheck(args: string[], out: Writer, err: Writer): number {
 }
 
 export function cmdFmt(args: string[], out: Writer, err: Writer): number {
-  const parsed = parseArgs(args);
-  if (refuseScenario("fmt", parsed, out, err)) return 2;
+  const p = parseArgs("fmt", args);
+  if (!p.ok) return refuse("fmt", p, out, err);
+  const parsed = p.parsed;
   const { files, flags } = parsed;
   const json = flags.has("json");
   if (files.length === 0) {
-    const msg = "usage: visimark fmt FILE... [--fix-dates]";
+    const msg = usageLine("fmt");
     err(msg);
     if (json) emitJson(out, errorEnvelope("fmt", "USAGE", msg));
     return 2;
@@ -282,13 +242,14 @@ export function cmdFmt(args: string[], out: Writer, err: Writer): number {
  * failure, it is a document, and all CI pressure stays in `check`.
  */
 export function cmdInfer(args: string[], out: Writer, err: Writer): number {
-  const parsed = parseArgs(args);
-  if (refuseScenario("infer", parsed, out, err)) return 2;
+  const p = parseArgs("infer", args);
+  if (!p.ok) return refuse("infer", p, out, err);
+  const parsed = p.parsed;
   const { files, flags } = parsed;
   const json = flags.has("json");
   const write = flags.has("write");
   if (files.length === 0) {
-    const msg = "usage: visimark infer FILE... [--write]";
+    const msg = usageLine("infer");
     err(msg);
     if (json) emitJson(out, errorEnvelope("infer", "USAGE", msg));
     return 2;
@@ -362,11 +323,13 @@ export function cmdInfer(args: string[], out: Writer, err: Writer): number {
 }
 
 export function cmdEval(args: string[], out: Writer, err: Writer): number {
-  const { files, flags, options } = parseArgs(args);
+  const p = parseArgs("eval", args);
+  if (!p.ok) return refuse("eval", p, out, err);
+  const { files, flags, options } = p.parsed;
   const json = flags.has("json");
   const path = files[0];
   if (!path) {
-    const msg = "usage: visimark eval FILE [--scenario FILE|-] [--get NAME] [--json]";
+    const msg = usageLine("eval");
     err(msg);
     if (json) emitJson(out, errorEnvelope("eval", "USAGE", msg));
     return 2;
@@ -388,9 +351,6 @@ export function cmdEval(args: string[], out: Writer, err: Writer): number {
   let scenario: { file: string; params: ParamInfo[]; supplied: Set<string> } | null = null;
   if (scenarioFile !== undefined) {
     try {
-      if (scenarioFile === "") {
-        throw new ScenarioError("visimark: --scenario needs a file, or - for stdin");
-      }
       let text: string;
       try {
         text = scenarioFile === "-" ? readFileSync(0, "utf8") : read(scenarioFile);
@@ -536,13 +496,14 @@ function bareToQualified(model: DocModel, name: string): string {
 }
 
 export function cmdExplain(args: string[], out: Writer, err: Writer): number {
-  const parsed = parseArgs(args);
-  if (refuseScenario("explain", parsed, out, err)) return 2;
+  const p = parseArgs("explain", args);
+  if (!p.ok) return refuse("explain", p, out, err);
+  const parsed = p.parsed;
   const { files, flags, sheets } = parsed;
   const json = flags.has("json");
   const path = files[0];
   if (!path) {
-    const msg = "usage: visimark explain FILE [#sheet]";
+    const msg = usageLine("explain");
     err(msg);
     if (json) emitJson(out, errorEnvelope("explain", "USAGE", msg));
     return 2;
@@ -588,8 +549,9 @@ export type Writer = (line: string) => void;
  * not about a document. Its whole body is formatting over `describeFunction`.
  */
 export function cmdRef(args: string[], out: Writer, err: Writer): number {
-  const parsed = parseArgs(args);
-  if (refuseScenario("ref", parsed, out, err)) return 2;
+  const p = parseArgs("ref", args);
+  if (!p.ok) return refuse("ref", p, out, err);
+  const parsed = p.parsed;
   const { files, flags } = parsed;
   const json = flags.has("json");
   const name = files[0];
