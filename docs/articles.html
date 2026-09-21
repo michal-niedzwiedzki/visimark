@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+
+    <!--
+      A <meta> policy, because GitHub Pages cannot send headers. No inline
+      script, and `connect-src 'self'` for the one fetch this page makes:
+      articles/articles.json, which is also what the landing page's articles
+      panel reads.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none';
+               script-src 'self';
+               style-src 'self';
+               img-src 'self';
+               connect-src 'self';
+               base-uri 'none';
+               form-action 'none'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Articles about VisiMark: keeping the numbers in Markdown checked, on every commit."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="VisiMark" />
+    <meta property="og:title" content="VisiMark articles" />
+    <meta
+      property="og:description"
+      content="Articles about VisiMark: keeping the numbers in Markdown checked, on every commit."
+    />
+    <meta
+      property="og:url"
+      content="https://michal-niedzwiedzki.github.io/visimark/articles.html"
+    />
+    <meta
+      property="og:image"
+      content="https://michal-niedzwiedzki.github.io/visimark/og-card.png"
+    />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="VisiMark" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <title>VisiMark articles</title>
+    <link rel="icon" type="image/webp" href="assets/visimark.webp" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="masthead">
+        <a href="./"><img src="assets/visimark.webp" alt="VisiMark logo" /></a>
+        <h1>Articles</h1>
+        <p class="subtitle">on the numbers in your Markdown</p>
+      </header>
+    </div>
+
+    <p class="install-cta">
+      <a href="./">Home</a>
+      <a href="playground.html">Try in Playground</a>
+      <a href="tutorial.html">Read the tutorial</a>
+      <a href="ci.html">Continuous integration</a>
+      <a href="articles.html">Articles</a>
+    </p>
+
+    <div class="wrap wrap-rest">
+      <main class="articles-list" id="articles-list"></main>
+    </div>
+
+    <script src="vendor/visimark-site-articles.js"></script>
+  </body>
+</html>

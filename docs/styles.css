@@ -276,14 +276,294 @@ body {
 }
 
 /* Jump to Installation, sitting on the dark ground between Adopt and
-   Explore — the footer's pill, one size down. */
+   Explore — the footer's pill, one size down. A full-width bar outside
+   .wrap: it inherits the body's background so it reads as the page itself,
+   with a hairline above and below, and sticks to the top once scrolled
+   past. */
+.wrap:has(+ .install-cta) {
+  padding-bottom: 0;
+}
+.wrap-rest {
+  padding-top: 0;
+}
 .install-cta {
   margin: 40px 0 0;
+  padding: 10px 24px;
   text-align: center;
+  background: inherit;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
 }
-.install-cta .pill-link {
-  padding: 11px 28px;
+.install-cta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 36px;
+}
+.install-cta a {
+  color: #ffffff;
+  text-decoration: none;
   font-size: 0.98rem;
+  font-weight: 550;
+}
+.install-cta a:hover {
+  text-decoration: underline;
+}
+@media (min-width: 700px) {
+  .install-cta {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    height: var(--cta-h);
+    padding-block: 0;
+    align-items: center;
+  }
+  :root {
+    --cta-h: 48px;
+  }
+  .feature {
+    scroll-margin-top: 96px;
+  }
+  /* Anchor jumps must land below the sticky bar. */
+  .section-head {
+    scroll-margin-top: 72px;
+  }
+}
+
+/* Featured articles: a vertical carousel on the dark ground. One slide shows
+   at a time; the track is translated up by articles-carousel.ts. */
+.articles {
+  margin: 40px 0 0;
+  padding: 16px 24px 20px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #e4fee5 0%, #f4fde2 100%);
+  color: #1b1b1b;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.35);
+}
+/* The breathing blob: a soft white radial that swells, shrinks and drifts
+   behind the content. */
+.articles::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: 50%;
+  left: 62%;
+  width: 60%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    #ffffff 0%,
+    rgba(255, 255, 255, 0.85) 35%,
+    rgba(255, 255, 255, 0) 70%
+  );
+  transform: translate(-50%, -50%);
+  animation: articles-blob 9s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes articles-blob {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) scale(0.8);
+    opacity: 0.75;
+  }
+  25% {
+    transform: translate(-70%, -42%) scale(1.15);
+    opacity: 1;
+  }
+  50% {
+    transform: translate(-40%, -58%) scale(0.95);
+    opacity: 0.85;
+  }
+  75% {
+    transform: translate(-58%, -46%) scale(1.25);
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .articles::before {
+    animation: none;
+  }
+}
+.articles-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+.articles-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(27, 27, 27, 0.55);
+}
+.articles-dots {
+  display: flex;
+  gap: 10px;
+}
+.articles-dots button {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(27, 27, 27, 0.1);
+  color: #1b1b1b;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+.articles-dots button[aria-current="true"] {
+  background: #1b1b1b;
+  color: #ffffff;
+}
+.articles-view {
+  height: var(--articles-h, 152px);
+  overflow: hidden;
+}
+.articles-track {
+  display: grid;
+  grid-auto-rows: var(--articles-h, 152px);
+  transition: transform 0.6s ease;
+}
+.articles-track.no-anim {
+  transition: none;
+}
+.articles-slide {
+  min-height: 0;
+  overflow: hidden;
+}
+.articles-slide h3 {
+  margin: 0 0 4px;
+  font-size: 1.35rem;
+  font-weight: 750;
+  line-height: 1.3;
+}
+.articles-slide h3 a {
+  color: #1b1b1b;
+  text-decoration: none;
+}
+.articles-slide h3 a:hover {
+  text-decoration: underline;
+}
+.articles-tags {
+  margin: 0 0 8px;
+  font-size: 0.8rem;
+  color: rgba(27, 27, 27, 0.55);
+}
+.articles-teaser {
+  margin: 0 0 10px;
+  max-width: 62ch;
+  color: #363636;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.articles-read {
+  color: #1b1b1b;
+  font-size: 0.92rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+.articles-read:hover {
+  text-decoration: underline;
+}
+.articles-all {
+  margin-right: auto;
+  margin-left: 4px;
+  color: #1b1b1b;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+.articles-all:hover {
+  text-decoration: underline;
+}
+.articles-dots[hidden] {
+  display: none;
+}
+
+/* Icons: the asset is 400x400; shown at the slide's height in the carousel
+   and a little larger on articles.html. */
+.articles-icon {
+  flex: none;
+  line-height: 0;
+}
+.articles-icon img {
+  width: 100%;
+  height: auto;
+  border-radius: 14px;
+}
+.articles-slide {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+.articles-slide .articles-icon {
+  width: calc(var(--articles-h, 152px) - 4px);
+}
+.article-card .articles-icon {
+  width: 180px;
+}
+.articles-text {
+  min-width: 0;
+}
+
+/* articles.html: one white panel, the articles separated by hairlines. */
+.articles-list {
+  margin-top: 40px;
+  padding: 8px 26px;
+  border-radius: 16px;
+  background: #ffffff;
+  color: #1b1b1b;
+  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.45);
+}
+.article-card {
+  display: flex;
+  align-items: center;
+  gap: 26px;
+  padding: 24px 0;
+}
+.article-card + .article-card {
+  border-top: 1px solid #e6e6e6;
+}
+.article-card h2 {
+  margin: 0 0 4px;
+  font-size: 1.5rem;
+  font-weight: 750;
+  line-height: 1.3;
+}
+.article-card h2 a {
+  color: #1b1b1b;
+  text-decoration: none;
+}
+.article-card h2 a:hover {
+  text-decoration: underline;
+}
+@media (max-width: 560px) {
+  .articles {
+    --articles-h: 244px;
+  }
+  .articles-slide .articles-icon {
+    display: none;
+  }
+  .article-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .article-card .articles-icon {
+    width: 96px;
+  }
 }
 
 /* A big page-section title outside any card, matching the masthead's
@@ -322,35 +602,33 @@ body {
   padding: 1px 5px;
   font-size: 0.88em;
 }
+/* Single-line section strip: text only, clipped at both edges. The active
+   section is scrolled to the centre by wireStickyToc; the inline padding lets
+   the first and last entries reach it. */
 .toc {
   position: sticky;
-  top: 0;
+  top: var(--cta-h, 0px);
   z-index: 5;
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  list-style: none;
-  margin: 0 0 32px;
-  padding: 10px 0;
+  gap: 28px;
+  overflow: hidden;
+  white-space: nowrap;
+  margin: 0 0 24px;
+  padding: 6px 50%;
   background: #ffffff;
+  border-bottom: 1px solid #ececec;
 }
 .toc a {
-  display: inline-block;
-  padding: 8px 18px;
-  border-radius: 999px;
-  background: #f0f0f0;
-  color: #1b1b1b;
+  flex: none;
+  color: #8a8a8a;
   text-decoration: none;
-  font-size: 0.9rem;
-  font-weight: 650;
-  transition:
-    background 0.18s ease,
-    color 0.18s ease;
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: color 0.18s ease;
 }
 .toc a:hover,
 .toc a.active {
-  background: #1b1b1b;
-  color: #ffffff;
+  color: #1b1b1b;
 }
 .feature {
   padding-top: 30px;
@@ -1038,5 +1316,121 @@ body {
     right: 0;
     width: 100%;
     transform: none;
+  }
+}
+
+/* article.html: the reader. One white panel, the article set in a narrow
+   column inside it. */
+.reader {
+  display: block;
+  margin-top: 40px;
+  padding: 40px 32px 56px;
+  border-radius: 16px;
+  background: #ffffff;
+  color: #1b1b1b;
+  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.45);
+}
+.reader-inner {
+  max-width: 740px;
+  margin: 0 auto;
+}
+.reader-head h1 {
+  margin: 0 0 8px;
+  font-size: 2.1rem;
+  line-height: 1.2;
+  font-weight: 800;
+}
+.reader-meta {
+  margin: 0;
+  color: #5f5f5f;
+  font-size: 0.92rem;
+}
+.reader-links {
+  margin: 4px 0 0;
+  font-size: 0.88rem;
+  color: #5f5f5f;
+}
+.reader-links a,
+.reader-body a {
+  color: #0b5cad;
+}
+.reader-head {
+  padding-bottom: 20px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid #e6e6e6;
+}
+.reader-body {
+  font-size: 1.05rem;
+  line-height: 1.7;
+}
+.reader-body h2,
+.reader-body h3 {
+  line-height: 1.25;
+  margin: 2rem 0 0.5rem;
+}
+.reader-body h2 {
+  font-size: 1.55rem;
+}
+.reader-body h3 {
+  font-size: 1.2rem;
+}
+.reader-body p,
+.reader-body ul,
+.reader-body ol {
+  margin: 0.9rem 0;
+}
+.reader-body code {
+  background: #f0f0f0;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 0.88em;
+}
+.reader-body pre {
+  background: #1f1e1c;
+  color: #f4f4f4;
+  padding: 14px 16px;
+  border-radius: 10px;
+  overflow-x: auto;
+  line-height: 1.5;
+}
+.reader-body pre code {
+  background: none;
+  padding: 0;
+  font-size: 0.85rem;
+}
+.reader-body table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.95rem;
+  margin: 1rem 0;
+}
+.reader-body th,
+.reader-body td {
+  border: 1px solid #e0e0e0;
+  padding: 6px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+.reader-body th {
+  background: #f5f5f5;
+}
+.reader-body blockquote {
+  margin: 1rem 0;
+  padding-left: 16px;
+  border-left: 3px solid #d8d8d8;
+  color: #4a4a4a;
+}
+.reader-body img {
+  max-width: 100%;
+  height: auto;
+}
+.reader-body hr {
+  border: 0;
+  border-top: 1px solid #e6e6e6;
+  margin: 2.2rem 0;
+}
+@media (max-width: 560px) {
+  .reader {
+    padding: 28px 18px 40px;
   }
 }

@@ -1,0 +1,45 @@
+{
+  "articles": [
+    {
+      "slug": "looks-good-is-wrong",
+      "title": "Markdown woes: Looks right, is wrong",
+      "author": "Michał Niedźwiedzki",
+      "tags": ["Markdown", "CI", "AI", "GitHub"],
+      "teaser": "A table lines up, GitHub renders it beautifully, the pull request is green, and you merge it. And the invoice is wrong.",
+      "icon": "../assets/report.webp",
+      "path": "looks-good-is-wrong/markdown-woes-looks-right-is-wrong.md",
+      "url": "https://dev.to/holdmybear/markdown-woes-looks-right-is-wrong-4ep0",
+      "featured": true
+    },
+    {
+      "slug": "better-in-spreadsheeting-than-spreadsheet",
+      "title": "Markdown wins: Better in spreadsheeting than spreadsheet",
+      "author": "Michał Niedźwiedzki",
+      "tags": ["Markdown", "Spreadsheets", "CI", "AI"],
+      "teaser": "He needed one number. Calc wanted a relationship. At 11pm he wanted a sticky note with arithmetic, not a conference room.",
+      "icon": "../assets/table.webp",
+      "path": "better-in-spreadsheeting-than-spreadsheet/markdown-wins-better-in-spreadsheeting-than-spreadsheet.md",
+      "featured": true
+    },
+    {
+      "slug": "agent-budget",
+      "title": "The budget an agent cannot talk itself out of",
+      "author": "Michał Niedźwiedzki",
+      "tags": ["AI", "Agents", "Markdown", "CI"],
+      "teaser": "The prompt said keep the session under $2. At breakfast the provider dashboard said $46, and every step of the way had sounded reasonable.",
+      "icon": "../assets/agent.webp",
+      "path": "agent-budget/budget-an-agent-cannot-talk-itself-out-of.md",
+      "featured": true
+    },
+    {
+      "slug": "10-things-excel-cannot-do-but-visimark-can",
+      "title": "10 things Excel cannot do but VisiMark can",
+      "author": "Michał Niedźwiedzki",
+      "tags": ["Excel", "Markdown", "Git", "CI"],
+      "teaser": "An .xlsx is a zip of XML. A VisiMark document is a Markdown file. What follows is what that difference does.",
+      "icon": "../assets/excel.webp",
+      "path": "10-things-excel-cannot-do-but-visimark-can/10-things-excel-cannot-do.md",
+      "featured": true
+    }
+  ]
+}

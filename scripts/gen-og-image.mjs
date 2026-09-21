@@ -34,7 +34,7 @@ const tagline = description.split(":")[0];
 
 // The logo is inlined as a data URI rather than linked, so the card renders
 // the same whether or not the page is being served.
-const logo = readFileSync(join(DOCS, "visimark.webp")).toString("base64");
+const logo = readFileSync(join(DOCS, "assets", "visimark.webp")).toString("base64");
 
 // Deliberately a copy of the site's colours rather than a `<link>` to
 // styles.css: styles.css is a page layout with a masthead, cards, a footer and

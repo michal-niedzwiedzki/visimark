@@ -23,9 +23,9 @@
       execution, so the trade is a different order of magnitude from the
       script one.
 
-      `img-src 'self'` and no `connect-src` at all: every image on this page is
-      a sibling file, and nothing here fetches anything — the demos render
-      Markdown that is already in the markup. `default-src 'none'` makes each
+      `img-src 'self'`: every image on this page is a sibling file. The one
+      fetch is `connect-src 'self'`, articles/articles.json for the articles
+      panel; the demos render Markdown that is already in the markup. `default-src 'none'` makes each
       grant an allowlist rather than a relaxation of a permissive default, so
       anything this page grows later fails closed and loudly.
 
@@ -39,6 +39,7 @@
                style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com;
                font-src https://fonts.gstatic.com;
                img-src 'self';
+               connect-src 'self';
                base-uri 'none';
                form-action 'none'"
     />
@@ -91,7 +92,7 @@
     />
     <meta name="twitter:card" content="summary_large_image" />
     <title>VisiMark</title>
-    <link rel="icon" type="image/webp" href="visimark.webp" />
+    <link rel="icon" type="image/webp" href="assets/visimark.webp" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -110,7 +111,7 @@
   <body>
     <div class="wrap">
       <header class="masthead">
-        <img src="visimark.webp" alt="VisiMark logo" />
+        <img src="assets/visimark.webp" alt="VisiMark logo" />
         <h1>VisiMark</h1>
         <p class="subtitle">the numbers in your Markdown, checked on every commit</p>
       </header>
@@ -260,16 +261,27 @@ Total: **35.00**<span class="c">&lt;!--vmark=order.total--&gt;</span>
           </div>
         </article>
       </main>
+    </div>
 
-      <p class="install-cta">
-        <a class="pill-link" href="#installation-header">Install VisiMark</a>
-        &nbsp;&dot;&nbsp;&dot;&nbsp;&dot;&nbsp;
-        <a class="pill-link" href="playground.html">Try in Playground</a>
-        &nbsp;&dot;&nbsp;&dot;&nbsp;&dot;&nbsp;
-        <a class="pill-link" href="tutorial.html">Read the tutorial</a>
-        &nbsp;&dot;&nbsp;&dot;&nbsp;&dot;&nbsp;
-        <a class="pill-link" href="ci.html">Continuous integration</a>
-      </p>
+    <p class="install-cta">
+      <a href="#installation-header">Install VisiMark</a>
+      <a href="playground.html">Try in Playground</a>
+      <a href="tutorial.html">Read the tutorial</a>
+      <a href="ci.html">Continuous integration</a>
+      <a href="articles.html">Articles</a>
+    </p>
+
+    <div class="wrap wrap-rest">
+      <section class="articles" id="articles" aria-label="Featured articles">
+        <div class="articles-bar">
+          <span class="articles-label">Featured articles</span>
+          <a class="articles-all" href="articles.html">All articles &rarr;</a>
+          <div class="articles-dots"></div>
+        </div>
+        <div class="articles-view">
+          <div class="articles-track"></div>
+        </div>
+      </section>
 
       <header class="section-head">
         <h2>Five documents, five differentiators</h2>
@@ -383,7 +395,7 @@ Total: **35.00**<span class="c">&lt;!--vmark=order.total--&gt;</span>
       <section class="tryout-grid">
         <article class="tryout-item">
           <div class="tryout-top">
-            <img class="tryout-image" src="playground.webp" alt="The VisiMark Playground" />
+            <img class="tryout-image" src="assets/playground.webp" alt="The VisiMark Playground" />
             <div class="tryout-body">
               <h3>Playground</h3>
               <ul>
@@ -400,7 +412,11 @@ Total: **35.00**<span class="c">&lt;!--vmark=order.total--&gt;</span>
 
         <article class="tryout-item">
           <div class="tryout-top">
-            <img class="tryout-image" src="vscode.webp" alt="The VisiMark VS Code extension" />
+            <img
+              class="tryout-image"
+              src="assets/vscode.webp"
+              alt="The VisiMark VS Code extension"
+            />
             <div class="tryout-body">
               <h3>VS Code extension</h3>
               <ul>
@@ -823,19 +839,27 @@ Process completed with exit code 1</pre>
           </p>
           <div class="renderer-row">
             <div class="renderer-card">
-              <img class="renderer-image" src="github.webp" alt="GitHub rendering" />
+              <img class="renderer-image" src="assets/github.webp" alt="GitHub rendering" />
               <h4>GitHub</h4>
               <p><span class="verdict">&#10003; pass</span> &mdash; anchors stripped from output</p>
             </div>
             <div class="renderer-card">
-              <img class="renderer-image" src="vscode.webp" alt="VS Code preview rendering" />
+              <img
+                class="renderer-image"
+                src="assets/vscode.webp"
+                alt="VS Code preview rendering"
+              />
               <h4>VS Code preview</h4>
               <p>
                 <span class="verdict">&#10003; pass</span> &mdash; anchors pass through as a comment
               </p>
             </div>
             <div class="renderer-card">
-              <img class="renderer-image" src="html.webp" alt="pandoc HTML5 output rendering" />
+              <img
+                class="renderer-image"
+                src="assets/html.webp"
+                alt="pandoc HTML5 output rendering"
+              />
               <h4>pandoc &rarr; html5</h4>
               <p>
                 <span class="verdict">&#10003; pass</span> &mdash; anchors pass through as a comment

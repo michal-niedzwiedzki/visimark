@@ -1,6 +1,7 @@
 # The budget an agent cannot talk itself out of
 
 Tags: AI, Agents, Markdown, CI
+Author: Michał Niedźwiedzki
 
 Posted:
 Reposted:
@@ -77,9 +78,3 @@ The prompt still says two dollars. This time, so does breakfast.
 ## Disclosure
 
 I wrote this article with AI. VisiMark is a MIT-licensed project with no business model or sales team behind it.
-
-- [Website](https://michal-niedzwiedzki.github.io/visimark/)
-- [Playground](https://michal-niedzwiedzki.github.io/visimark/playground.html)
-- [Tutorial](https://michal-niedzwiedzki.github.io/visimark/tutorial.html)
-- [GitHub](https://github.com/michal-niedzwiedzki/visimark)
-- [VS Code extension](https://marketplace.visualstudio.com/items?itemName=visimark-michal-niedzwiedzki.visimark-vscode)

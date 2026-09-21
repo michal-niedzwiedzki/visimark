@@ -8,7 +8,7 @@
 //
 // test/playground/csp.test.ts stays where it is: it checks the playground's
 // own policy against the things only that page does (the chart `data:` grant,
-// §2.12). This file is the sweep — every page in docs/, on the terms all five
+// §2.12). This file is the sweep — every page in docs/, on the terms all seven
 // now share.
 
 import { describe, expect, test } from "bun:test";
@@ -44,8 +44,10 @@ function directive(page: string, name: string): string[] {
   return found === undefined ? [] : found.slice(name.length).trim().split(/\s+/).filter(Boolean);
 }
 
-test("there are five pages, so this sweep is sweeping something", () => {
+test("there are seven pages, so this sweep is sweeping something", () => {
   expect(pages).toEqual([
+    "article.html",
+    "articles.html",
     "ci.html",
     "index.html",
     "playground.html",

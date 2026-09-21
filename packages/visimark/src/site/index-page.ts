@@ -10,6 +10,7 @@
  * interactive bits, and the preview cards.
  */
 
+import { wireArticlesCarousel } from "./articles-carousel.js";
 import { byId } from "./dom.js";
 import { renderDemo } from "./demo-panes.js";
 import { fillPreviewCards, wireSwipers } from "./preview-cards.js";
@@ -138,10 +139,12 @@ function wireDepToggle(): void {
 }
 
 /** Sticky TOC: highlights whichever feature article is currently in the middle
- *  band of the viewport as the reader scrolls past it. */
+ *  band of the viewport as the reader scrolls past it, and scrolls the
+ *  single-line strip so that entry sits in its centre. */
 function wireStickyToc(): void {
-  const toc = document.querySelector("#explore .toc");
+  const toc = document.querySelector<HTMLElement>("#explore .toc");
   if (!toc || !("IntersectionObserver" in window)) return;
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
   const links = [...toc.querySelectorAll<HTMLAnchorElement>("a")];
   const byTarget = new Map(links.map((a) => [a.getAttribute("href")!.slice(1), a]));
   const observer = new IntersectionObserver(
@@ -151,6 +154,10 @@ function wireStickyToc(): void {
         if (!link || !entry.isIntersecting) continue;
         for (const l of links) l.classList.remove("active");
         link.classList.add("active");
+        toc.scrollTo({
+          left: link.offsetLeft - (toc.clientWidth - link.offsetWidth) / 2,
+          behavior: reduceMotion.matches ? "auto" : "smooth",
+        });
       }
     },
     { rootMargin: "-45% 0px -50% 0px", threshold: 0 },
@@ -166,5 +173,6 @@ wireInferToggle();
 wireDriftToggle();
 wireDepToggle();
 wireStickyToc();
+void wireArticlesCarousel();
 fillPreviewCards();
 wireSwipers();
