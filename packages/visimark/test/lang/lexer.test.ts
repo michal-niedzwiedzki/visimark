@@ -164,6 +164,45 @@ test("lowercase sigma is not aliased", () => {
   expect(() => lex("ς(Net)")).toThrow('unexpected character "ς"');
 });
 
+// --- prose notation for unary vocabulary (#64) ------------------------------
+
+test("√ lexes as the identifier SQRT with its own one-character span", () => {
+  expect(pairs("√(Net)")).toEqual(pairs("SQRT(Net)"));
+  const toks = lex("√(Net)");
+  expect(toks.map((t) => [t.kind, t.value, t.start, t.end])).toEqual([
+    ["ident", "SQRT", 0, 1],
+    ["lparen", "(", 1, 2],
+    ["ident", "Net", 2, 5],
+    ["rparen", ")", 5, 6],
+    ["eof", "", 6, 6],
+  ]);
+});
+
+test("| ⌊ ⌋ ⌈ ⌉ lex as delimiter tokens, one code unit each", () => {
+  for (const [src, open, close] of [
+    ["|a|", "|", "|"],
+    ["⌊a⌋", "⌊", "⌋"],
+    ["⌈a⌉", "⌈", "⌉"],
+  ] as const) {
+    expect(lex(src).map((t) => [t.kind, t.value, t.start, t.end])).toEqual([
+      ["delim", open, 0, 1],
+      ["ident", "a", 1, 2],
+      ["delim", close, 2, 3],
+      ["eof", "", 3, 3],
+    ]);
+  }
+});
+
+test("adjacent bars are two delimiter tokens, not a `||` token", () => {
+  expect(kinds("||")).toEqual(["delim", "delim", "eof"]);
+});
+
+test("look-alike glyphs are not recognised", () => {
+  for (const g of ["∣", "∥", "｜", "│", "⎣", "⎦", "⎡", "⎤", "∛"]) {
+    expect(() => lex(`${g}a`)).toThrow(`unexpected character "${g}"`);
+  }
+});
+
 test("`precision` is a statement keyword, case-sensitively", () => {
   expect(pairs("precision")).toEqual([
     ["precision", "precision"],

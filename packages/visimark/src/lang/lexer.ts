@@ -1,3 +1,4 @@
+import { DELIMS, GLYPH_IDENTS } from "./notation.js";
 import { LangError, type Token, type TokenKind } from "./token.js";
 
 const WORD_OPS = new Set(["and", "or", "not"]);
@@ -110,13 +111,23 @@ export function lex(src: string): Token[] {
       continue;
     }
 
-    // Σ (U+03A3) and ∑ (U+2211) lex as the identifier `SUM` — a closed,
-    // two-codepoint substitution, not a general symbol-alias mechanism. See
-    // the design doc, section 4, and docs/design/as-an-alias-for-sum-spec.md.
+    // Σ (U+03A3), ∑ (U+2211) and √ (U+221A) lex as the identifier `SUM` or
+    // `SQRT` — a closed, three-codepoint substitution, not a general
+    // symbol-alias mechanism. See lang/notation.ts and the design doc, section 4.
     // Everything downstream (parser, arity/shape check, evaluator, `infer`,
-    // did-you-mean) sees plain `SUM` and has no awareness an alias exists.
-    if (c === "Σ" || c === "∑") {
-      push("ident", "SUM", i, i + 1);
+    // did-you-mean) sees the plain name and has no awareness an alias exists.
+    const glyphName = GLYPH_IDENTS[c];
+    if (glyphName !== undefined) {
+      push("ident", glyphName, i, i + 1);
+      i++;
+      continue;
+    }
+
+    // The paired delimiters `|x|`, `⌊x⌋`, `⌈x⌉`. The lexer only classifies the
+    // glyph; the parser pairs them, because position decides whether a `|`
+    // opens or closes.
+    if (DELIMS.has(c)) {
+      push("delim", c, i, i + 1);
       i++;
       continue;
     }
