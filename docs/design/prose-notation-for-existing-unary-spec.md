@@ -249,8 +249,9 @@ in `docs/tutorial.md`, the reconciliation assertion becomes:
 assert |variance| <= 0.05
 ```
 
-The tutorial prose that quotes the assertion (the "deleted or loosened" note in
-`docs/tutorial.md`) is edited to match. All other examples are unchanged, and
+The tutorial prose that quotes the assertion (the "deleted or loosened" note) and
+the sabotaged-run `check` transcript that echoes it are edited to match, the
+transcript being regenerated from a real run and not typed by hand. All other examples are unchanged, and
 the three canonical documents' transcripts in
 [§13](../visimark-design.md#13-testing) are unaffected.
 
@@ -350,7 +351,10 @@ Hand-written edits:
   Shipped register as `UNRELEASED` by the plan.
 - **`CHANGELOG.md`** `## Unreleased` → `### Added`, and one line in
   `editors/vscode/CHANGELOG.md` for the hover fix and the new spellings.
-- **`docs/tutorial.md`** and `docs/tutorial/capstone.md`, per §6.
+- **`docs/tutorial.md`** and `docs/tutorial/capstone.md`, per §6. The tutorial's
+  §11 function table also gains the prose spelling in the `What it does` cell of
+  the `ABS`, `SQRT`, `FLOOR` and `CEILING` rows, so the notation is introduced
+  before the capstone uses it.
 
 Not edited: §1 (the audience sentence stays as written), §9, the `#43` spec, and
 `docs/cli-reference.md`.
