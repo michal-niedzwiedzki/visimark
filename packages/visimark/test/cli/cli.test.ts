@@ -120,9 +120,11 @@ test("check passes a document that has a formula", async () => {
   expect(await runCli(["check", cleanPath], c.io)).toBe(0);
 });
 
-test("an unrecognised flag is ignored rather than failing the run", async () => {
+test("an unrecognised flag is refused with exit 2", async () => {
   const c = capture();
-  expect(await runCli(["check", cleanPath, "--require-formulas"], c.io)).toBe(0);
+  expect(await runCli(["check", cleanPath, "--require-formulas"], c.io)).toBe(2);
+  expect(c.err()).toBe("visimark: unknown option --require-formulas");
+  expect(c.out()).toBe("");
 });
 
 const pkgVersion = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8"))

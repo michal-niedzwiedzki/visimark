@@ -72,10 +72,11 @@ test("ref --json on an unknown name emits the error envelope", async () => {
   expect(doc.error.code).toBe("USAGE");
 });
 
-test("an unrecognised flag is ignored, as elsewhere in the CLI", async () => {
+test("an unrecognised flag is refused, as elsewhere in the CLI", async () => {
   const c = capture();
-  expect(await runCli(["ref", "SUM", "--jsonn"], c.io)).toBe(0);
-  expect(c.out()).toContain("SUM(col)");
+  expect(await runCli(["ref", "SUM", "--jsonn"], c.io)).toBe(2);
+  expect(c.err()).toBe("visimark: unknown option --jsonn — did you mean `--json`?");
+  expect(c.out()).toBe("");
 });
 
 // A `PRECISION` finding sends the author to `visimark ref` to find out why a

@@ -100,11 +100,11 @@ test("check --json multi-file with one unreadable: READ, exit 2, other file list
   expect(files[1]!.findings).toBeUndefined();
 });
 
-test("check FILE --jsonn is ignored: human text, not JSON", async () => {
+test("check FILE --jsonn is refused: a did-you-mean on stderr, no report", async () => {
   const c = capture();
-  expect(await runCli(["check", cleanPath, "--jsonn"], c.io)).toBe(0);
-  expect(c.out()).toContain("0 problems");
-  expect(() => JSON.parse(c.out())).toThrow();
+  expect(await runCli(["check", cleanPath, "--jsonn"], c.io)).toBe(2);
+  expect(c.err()).toBe("visimark: unknown option --jsonn — did you mean `--json`?");
+  expect(c.out()).toBe("");
 });
 
 test("eval --json uses the envelope, not a flat map", async () => {

@@ -174,6 +174,8 @@ describe("--scenario plumbing", () => {
       expect(r.code).toBe(2);
       expect(r.err).toBe("visimark: --scenario needs a file, or - for stdin");
     }
+    const j = await run(["eval", example, "--scenario", "--json"]);
+    expect(JSON.parse(j.out).error.code).toBe("USAGE");
   });
 
   test("an unreadable file", async () => {
@@ -225,7 +227,7 @@ describe("--scenario plumbing", () => {
       expect(readFileSync(copy, "utf8")).toBe(before);
       const j = await run([command, copy, "--scenario", tight, "--json", "--write"]);
       expect(JSON.parse(j.out).error).toEqual({
-        code: "SCENARIO",
+        code: "USAGE",
         message: "visimark: --scenario is only valid with eval",
       });
       expect(readFileSync(copy, "utf8")).toBe(before);
