@@ -158,7 +158,9 @@ the engine's own function registry, so that what the documents promise and what
 package manifests and `action.yml`'s pinned `version` default. One tag publishes
 all of them, and the Action's default is what a consumer's `npx` actually
 installs. You only touch these in a release commit; see
-[`docs/releasing.md`](docs/releasing.md).
+[`docs/releasing.md`](docs/releasing.md). The same commit needs a dated
+`## X.Y.Z - YYYY-MM-DD` heading in `CHANGELOG.md` and in
+`editors/vscode/CHANGELOG.md`; a separate CI step checks that each has one.
 
 **The built CLI must run under Node, not only Bun.** A separate job builds with
 Bun and then exercises `dist/` under Node against the worked examples, including
