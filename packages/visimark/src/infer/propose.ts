@@ -1,9 +1,11 @@
-import { numericValue } from "../eval/units.js";
+import { FUNCTIONS } from "../eval/functions.js";
+import { cellPrecision, numericValue } from "../eval/units.js";
 import type { AnchorTargetKind, ProseFigure, Span } from "../parse/document.js";
+import { aliasCandidates } from "./aliases.js";
 import { type ColumnCandidate, columnCandidates, crossSheetCandidates } from "./candidates.js";
 import { buildContext, type InferContext, type InferSheet } from "./context.js";
 import { type Ambiguity, select, type Selection } from "./select.js";
-import { type Accepted, verifyScalar } from "./verify.js";
+import { type Accepted, verifyScalar, withPrecision } from "./verify.js";
 
 export type ProposalKind =
   | "column"
@@ -12,7 +14,9 @@ export type ProposalKind =
   | "near-miss"
   | "ambiguous"
   /** a rule that fits but lost to a better one for the same column */
-  | "alternative";
+  | "alternative"
+  /** `"Header" is symbol` — a name for a header no identifier can reach */
+  | "alias";
 
 export interface Proposal {
   kind: ProposalKind;
@@ -45,6 +49,8 @@ export interface Proposal {
   weak?: boolean;
   /** why a fitting rule was not proposed */
   reason?: string;
+  /** alias: the header text `name` stands for */
+  header?: string;
 }
 
 /**
@@ -69,8 +75,15 @@ interface ScalarCandidate {
   reduce: string;
   name: string;
   rule: string;
+  /** false when no width follows from the rule — the proposal must declare one */
+  derivable: boolean;
   /** true when this value is already written in prose the way `fmt` writes it */
   writes(figure: string): boolean;
+}
+
+/** the decimals a prose figure shows, which is the width it states */
+function figurePrecision(text: string): number {
+  return cellPrecision(text) ?? 2;
 }
 
 interface ScalarPick {
@@ -81,6 +94,15 @@ interface ScalarPick {
 export function infer(source: string): Proposal[] {
   const ctx = buildContext(source);
   const { picks, ambiguousFigures } = inferScalars(ctx);
+
+  // A reduce that divides — `AVG` — has no derivable width, so the rule as
+  // proposed would be anchored and then reported. The figure it is claiming is
+  // the evidence for a width, so the proposal declares that: inference never
+  // writes a rule `check` rejects.
+  for (const p of picks) {
+    if (p.candidate.derivable) continue;
+    p.candidate.rule = withPrecision(p.candidate.rule, figurePrecision(p.figure.text));
+  }
 
   const scalarAccepted: Accepted[] = picks.map((p) => ({
     sheet: p.candidate.sheet,
@@ -108,7 +130,58 @@ export function infer(source: string): Proposal[] {
   }
 
   const selection = select(candidates, edges);
-  return assemble(ctx, selection, picks, ambiguousFigures);
+  const out = assemble(ctx, selection, picks, ambiguousFigures);
+  out.push(...aliasProposals(ctx, out));
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// aliases
+
+/** names the language itself owns, and so no alias may take */
+const RESERVED = new Set<string>([
+  "is",
+  "assert",
+  "chart",
+  ...FUNCTIONS.keys(),
+  ...[...FUNCTIONS.keys()].map((f) => f.toLowerCase()),
+]);
+
+/**
+ * An `is` alias for every header no identifier can reach. Run last, so that
+ * `taken` can include the names this same run already proposed: a column rule
+ * and an alias competing for one name is the collision the spec drops, not a
+ * pair of proposals that cannot both be adopted.
+ */
+function aliasProposals(ctx: InferContext, sofar: Proposal[]): Proposal[] {
+  const out: Proposal[] = [];
+  for (const sheet of ctx.sheets) {
+    const existing = ctx.base.sheets.get(sheet.id);
+    const taken = new Set<string>([
+      ...RESERVED,
+      ...sheet.index.keys(),
+      ...(existing?.scalars.keys() ?? []),
+      ...(existing?.aliases.keys() ?? []),
+      ...sofar.filter((p) => p.sheetId === sheet.id).map((p) => p.name),
+    ]);
+    const { proposals, collisions } = aliasCandidates(sheet, taken);
+    out.push(...proposals);
+    for (const c of collisions) {
+      out.push({
+        kind: "ambiguous",
+        stage: 1,
+        sheetId: sheet.id,
+        mintedSheetId: sheet.minted || undefined,
+        name: c.header,
+        rule: "",
+        fits: 0,
+        rows: sheet.table.rows.length,
+        tableSpan: sheet.table.span,
+        alternatives: [`"${c.header}" is ${c.name} — \`${c.name}\` is already taken`],
+      });
+    }
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -129,7 +202,7 @@ function inferScalars(ctx: InferContext): {
         const rule = `${name} = ${reduce}(${column})`;
         const v = verifyScalar(ctx, sheet, rule, [], column);
         if (!v.usable) continue;
-        all.push({ sheet, column, reduce, name, rule, writes: v.writes });
+        all.push({ sheet, column, reduce, name, rule, derivable: v.derivable, writes: v.writes });
       }
     }
   }

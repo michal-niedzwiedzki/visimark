@@ -1,5 +1,5 @@
 ---
-description: Decide a GitHub issue — a vocabulary request or any other design/tooling issue. On APPROVED, draft the spec and implementation plan with the maintainer, post the decision, merge the catalogue PR, open a draft implementation PR, and on confirmation execute the plan and promote the PR once CI is green
+description: Decide a GitHub issue on any track — vocabulary, language feature, or tooling/CLI/process. On APPROVED, draft the spec and implementation plan with the maintainer, post the decision, merge the catalogue PR, open a draft implementation PR, and on confirmation execute the plan and promote the PR once CI is green
 argument-hint: <issue-number> [verdict and/or notes]
 allowed-tools: Bash(gh:*), Bash(git:*), Bash(bun:*), Bash(bunx:*), Bash(mktemp:*), Bash(cat:*), Bash(mkdir:*), Read, Write, Edit, Glob, Grep, WebFetch, AskUserQuestion
 ---
@@ -9,7 +9,8 @@ You are running the **decision** stage of the issue-review workflow.
 Read first, every run:
 - `.claude/rules/ai-attribution.md` — commit / PR trailer for **this** session (never copy a hardcoded Claude line)
 - `docs/superpowers/specs/2026-09-06-vocabulary-review-workflow-design.md` — the design
-- `docs/vocabulary-catalogue.md` — the register, its four vocabulary criteria, its status values, and sections E–F for everything else
+- `docs/vocabulary-catalogue.md` — the register, its four vocabulary criteria, its status values, the six-template table in its preface, and the E/F line
+- `docs/issue-runbook.md` — **Six kinds, three tracks**, and **Front-loading**: this stage owes the plan writer a spec with nothing left to invent
 - `docs/visimark-design.md` — [§1](../../docs/visimark-design.md#1-purpose), [§2](../../docs/visimark-design.md#2-constraints-that-shaped-the-design), [§4](../../docs/visimark-design.md#4-syntax), [§5](../../docs/visimark-design.md#5-dates), [§7](../../docs/visimark-design.md#7-numeric-semantics), [§9](../../docs/visimark-design.md#9-write-back), [§10](../../docs/visimark-design.md#10-error-taxonomy), [§13](../../docs/visimark-design.md#13-testing), [§14](../../docs/visimark-design.md#14-deferred)
 
 Arguments: `$ARGUMENTS`
@@ -25,26 +26,73 @@ Run `git status --porcelain`; if non-empty, stop: "Working tree is dirty — com
 
 Read: the request, the pre-review comment if present (first line starts `**Automated pre-review**`), the discussion summary if present (first line starts `**Discussion summary**`), **every maintainer comment posted since**, the free-text argument, and the conversation preceding this command in the session.
 
-**Pick the track** (same rule as `/issue-review`):
-- **VOCAB track** — *both* a label exactly `vocabulary` and a title starting `vocabulary: `.
-- **GENERAL track** — anything else.
+**Pick the track** (same rule as `/issue-review` §1 — form fields first, then
+labels, then the prose):
 
-There is no label/title guard beyond this — any open issue can be decided. If the GENERAL-track issue is really a single vocabulary primitive (see `/issue-review` §2G.1), stop and tell the maintainer to refile it on the template; do not decide it here.
+| Kind | Track | Catalogue section |
+|---|---|---|
+| Vocabulary request | **VOCAB** | A–D |
+| Language feature — what a *document* means | **LANGUAGE** | E |
+| Tooling, CLI, or process — what a *machine* sees | **TOOLING** | F |
+| Bug that promotes (the fix decides unspecified behaviour) | LANGUAGE or TOOLING by the same line | E or F |
+| Bug that does not promote, site/docs, direction | — | **no row: do not decide here** |
+
+**The E/F line is not negotiable at decision time.** Options, exit codes, the
+stdout/stderr split, the `--json` shape and the composite Action are section F
+— `--json` (#60) is the precedent. A new finding is E; how it is printed is F.
+If the issue spans both, stop: tell the maintainer it must be split, because a
+single row cannot be cited for two decisions.
+
+Any open issue on a row-producing track can be decided. **Refuse** and say why
+if the issue is:
+- a single vocabulary primitive filed off-template → refile on the form;
+- a **direction or outreach** issue → it gets a comment, never a row. Offer to
+  draft that comment with `/issue-discuss` instead;
+- a **site/docs** issue or a **non-promoting bug** → recommend the fix; there is
+  nothing to catalogue.
 
 **Slug and branch.**
 - VOCAB: `<slug>` from the `Name` field (lowercase, non-`[a-z0-9]` runs → `-`, trim; fall back to the `Kind` word). Branches `vocab/issue-<n>-<slug>`, `vocab/issue-<n>-<slug>-impl`. Spec at `docs/vocab/<slug>-spec.md`, plan at `docs/vocab/<slug>-plan.md`.
-- GENERAL: `<slug>` from the issue title (strip a leading `feature:`/`bug:`/`docs:`; lowercase; non-`[a-z0-9]` runs → `-`; trim; cap ~40 chars). Branches `issue/<n>-<slug>`, `issue/<n>-<slug>-impl`. Spec at `docs/design/<slug>-spec.md`, plan at `docs/design/<slug>-plan.md`.
+- LANGUAGE / TOOLING: `<slug>` from the issue title (strip a leading `feature:`/`chore:`/`bug:`/`docs:`; lowercase; non-`[a-z0-9]` runs → `-`; trim; cap ~40 chars). Branches `issue/<n>-<slug>`, `issue/<n>-<slug>-impl`. Spec at `docs/design/<slug>-spec.md`, plan at `docs/design/<slug>-plan.md`.
 
 ## 2. Evaluate
 
 - **Pre-review exists** → reconcile it with the maintainer's input. On any conflict the maintainer wins.
 - **No pre-review** → run the rubric now:
   - **VOCAB**: in scope; criterion 1 shape ([§4](../../docs/visimark-design.md#4-syntax)); criterion 2 document-local ([§2](../../docs/visimark-design.md#2-constraints-that-shaped-the-design) constraint 4); criterion 3 no ambiguity ([§2](../../docs/visimark-design.md#2-constraints-that-shaped-the-design) constraint 3); criterion 4 a real document needs it ([§14](../../docs/visimark-design.md#14-deferred)); overlap with the builtins / operators / existing rows; precision cost ([§7](../../docs/visimark-design.md#7-numeric-semantics)).
-  - **GENERAL**: in scope ([§1](../../docs/visimark-design.md#1-purpose) purpose and non-goals); the four [§2](../../docs/visimark-design.md#2-constraints-that-shaped-the-design) constraints and the no-plugin rule; shape system ([§4](../../docs/visimark-design.md#4-syntax)) where expressions are touched; diffability ([§9](../../docs/visimark-design.md#9-write-back)); overlap with existing behaviour and every catalogue row including E–F; cost / precision ([§7](../../docs/visimark-design.md#7-numeric-semantics)).
+  - **LANGUAGE**: in scope ([§1](../../docs/visimark-design.md#1-purpose) purpose and non-goals); the four [§2](../../docs/visimark-design.md#2-constraints-that-shaped-the-design) constraints and the no-plugin rule; shape system ([§4](../../docs/visimark-design.md#4-syntax)) where expressions are touched; the [§10](../../docs/visimark-design.md#10-error-taxonomy) taxonomy where a finding is added or widened; **backward compatibility — does a document that passes `check` today still pass**; diffability ([§9](../../docs/visimark-design.md#9-write-back)); overlap with existing behaviour and every catalogue row including E–F; cost / precision ([§7](../../docs/visimark-design.md#7-numeric-semantics)).
+  - **TOOLING**: in scope ([§1](../../docs/visimark-design.md#1-purpose)); constraint 4 — the result must not start depending on the environment, the clock or the network; the **machine contract** (exit codes, the stdout/stderr split, the `--json` shape); **backward compatibility — does an existing CI job, script or composite-Action invocation behave differently afterwards**; blast radius and reversibility; the documentation the change invalidates; overlap with every catalogue row and with `docs/releasing.md` and the runbook; cost, and whether a smaller version would do.
 
 Settle on `APPROVED` / `DEFERRED` / `REJECTED` and the reason, citing the design-doc section that governs.
 
 **Order from here:** for `DEFERRED` / `REJECTED`, skip to step 4. For `APPROVED`, step 3 must complete — a handoff-ready spec — **before** step 4 posts anything or step 5 merges anything.
+
+```mermaid
+flowchart LR
+  reread[Re-read the issue] --> dirty{"Dirty tree?"}
+  dirty -->|yes| stop[Stop]
+  dirty -->|no| evalStep[Evaluate]
+  evalStep --> verdict{Verdict}
+  verdict -->|DEFERRED or REJECTED| comment[Post the Decision comment]
+  verdict -->|APPROVED| spec[Draft the spec with the maintainer]
+  spec --> ready{"Spec ready?"}
+  ready -->|Keep editing| spec
+  ready -->|Change the verdict| evalStep
+  ready -->|Ready| comment
+  comment --> cat[Update the catalogue PR and merge it]
+  cat --> after{Verdict}
+  after -->|DEFERRED or REJECTED| close[Close the issue]
+  after -->|APPROVED| impl[Open a draft impl PR with the spec]
+  impl --> planQ{"Write the plan now?"}
+  planQ -->|Not now| laterPlan[Stop: writing-plans later]
+  planQ -->|Write it| plan[Commit the plan]
+  plan --> implQ{"Start implementation?"}
+  implQ -->|Not now| laterImpl[Stop: executing-plans later]
+  implQ -->|Start| implRun[Execute the plan]
+  implRun --> ci{"CI green?"}
+  ci -->|no| implRun
+  ci -->|yes| readyPR[Promote the PR out of draft]
+```
 
 ## 3. Draft the spec — APPROVED only
 
@@ -60,9 +108,10 @@ a spec PR is already open — note it, skip to step 4, and in step 7 update that
 branch's spec file instead of creating a new PR.
 
 Build the draft in a temp file — **do not touch the working tree yet**. Source
-material: the issue body (VOCAB: the form fields; GENERAL: the proposal and its
-motivating case), the pre-review, the discussion summary, and this session's
-conversation.
+material: the issue body (VOCAB: the form fields; LANGUAGE / TOOLING: the form
+fields and the motivating case), the pre-review — **including its Open design
+questions, every one of which must be closed in this spec** — the discussion
+summary, and this session's conversation.
 
 House design-doc style — prose sections and tables, like `docs/visimark-design.md`.
 Header:
@@ -83,7 +132,7 @@ Header:
 7. **Non-goals** — adjacent things this spec does not cover.
 8. **Open questions** — must be **empty** before handoff.
 
-**GENERAL sections** (language feature), in order:
+**LANGUAGE sections**, in order:
 1. **Purpose** — what the feature is; the motivating document or scenario (quote it); what a document cannot express or verify without it; why existing features do not reach it.
 2. **Syntax** — the exact surface: the grammar addition, where it may appear, what it binds or produces, and how it reads in an unmodified renderer (constraint 1, [§2](../../docs/visimark-design.md#2-constraints-that-shaped-the-design)).
 3. **Semantics** — a table, one row per behavioural case, worked input → output. Normal case; every boundary; interaction with rounding ([§7](../../docs/visimark-design.md#7-numeric-semantics)) and with vectors vs scalars ([§4](../../docs/visimark-design.md#4-syntax)).
@@ -93,19 +142,46 @@ Header:
 7. **Non-goals** — adjacent things this spec does not cover, especially anything the deciding comment carved out for a later issue.
 8. **Open questions** — must be **empty** before handoff.
 
+**TOOLING sections**, in order:
+1. **Purpose** — what changes and for whom; the scenario that motivated it (quote the before session from the issue); why the current surface does not reach it.
+2. **The surface** — the exact invocation. Every command and option affected, spelled precisely, with short forms; where an option is legal and where it is refused. For a non-CLI change, the exact file, workflow or command that changes.
+3. **The machine contract** — a table, one row per outcome: the condition, the **exit code**, what goes to **stdout**, what goes to **stderr**, and the `--json` shape if the outcome is representable there. Exit codes today are `0` clean, `1` findings, `2` usage; a new code must be justified here, not assumed.
+4. **Behaviour table** — one row per case, with the literal session: invocation → output → exit code. Normal case, every boundary, every refusal. This doubles as acceptance.
+5. **Compatibility** — what an existing CI job, script, composite-Action invocation, or installed extension does before and after. Name each one concretely (`docs/ci.md`, `.github/workflows/dogfood.yml`, the Action definition). If anything breaks, state the migration note verbatim.
+6. **Interaction with the rest of the tooling** — the other commands and options, `--json`, the release workflow, the LSP/extension, and the review workflow itself. State explicitly what does **not** change.
+7. **Documentation to update** — every file that states the current behaviour: `docs/cli-reference.md`, `docs/ci.md`, the tutorial, `CONTRIBUTING.md`, `docs/issue-runbook.md`, `docs/releasing.md`, `README.md`, the extension listing. This list becomes the plan's final task; an unnamed file is drift waiting to happen.
+8. **Non-goals** — adjacent things this spec does not cover.
+9. **Open questions** — must be **empty** before handoff.
+
 ### 3.2 Gap hunt
 
 Walk this checklist against the draft and turn every gap into a concrete question:
 
+**Every track:**
+- Is each Open design question from the pre-review answered in the spec text — not merely acknowledged?
+- Acceptance: is the expected tool output written out **literally**, or still hand-wavy?
+- Does the spec say what does **not** change? The interaction nobody wrote down is the one that breaks two releases later.
+- Anything the pre-review, the discussion, or the deciding reasoning raised that the draft does not answer.
+
+**VOCAB and LANGUAGE:**
 - Is every type pinned — argument types, result type, "integer not merely number" where it matters?
 - Every boundary — zero / negative / empty / overflow / leap / out-of-range / rounding edge — is the result **specified**, not implied?
-- For each error case, is the [§10](../../docs/visimark-design.md#10-error-taxonomy) code chosen (not "an error"), and is a **new** code called out if one is needed?
-- (GENERAL) Does the new surface compose with anchors, `fmt` write-back, and the dependency graph? Is its behaviour under an upstream error specified?
+- For each error case, is the [§10](../../docs/visimark-design.md#10-error-taxonomy) code chosen (not "an error"), and is a **new** code called out if one is needed? Is there anywhere a sentinel value could leak instead of a finding (the #122 failure)?
+- Does the new surface compose with anchors, `fmt` write-back, and the dependency graph? Is its behaviour under an upstream error specified?
+- Does it compose with each feature already shipped — imports, `param`, `assert`, `chart`, column aliases, declared precision?
 - Does the result type compose with what the motivating document then does with it?
 - Write precision / decoration: what does a written cell or anchor look like?
 - Does `visimark infer` need to know about it? `explain`? `--json`? the did-you-mean list once a new name is known?
-- Acceptance: is the expected tool output written out literally, or still hand-wavy?
-- Anything the pre-review, the discussion, or the deciding reasoning raised that the draft does not answer.
+- Does any document in `docs/` that passes `check` today stop passing? Name it, or state that none does.
+
+**TOOLING:**
+- Does every outcome in the behaviour table have an exit code, and is each stream's content specified?
+- Is any **new** exit code justified, or is an existing one being overloaded?
+- Is the `--json` shape for each outcome written out, given that it is a consumed contract?
+- Is the exact spelling of every new option settled, including short forms and the refusal message wording?
+- Is each affected CI job, script, Action invocation and extension surface named, with its before and after behaviour?
+- Is the documentation list complete enough to be the plan's final task verbatim?
+- Is the change reversible without another release? If not, is that stated?
 
 ### 3.3 Resolve with the maintainer
 
@@ -134,7 +210,7 @@ Write it to a temp file, post with `gh issue comment <n> --body-file <file>`, th
 
 ## 5. Catalogue PR
 
-Locate this issue's row in `docs/vocabulary-catalogue.md` (the row whose Request cell links `#<n>`) — sections A–D for a vocab primitive, E for a language feature, F for tooling / process.
+Locate this issue's row in `docs/vocabulary-catalogue.md` (the row whose Request cell links `#<n>`) — sections A–D for a vocabulary primitive, **E** for a change to what a document means, **F** for the CLI surface and everything else a machine sees.
 
 Check the review PR: `gh pr list --search "head:<review-branch>" --state all --json number,state,headRefName` (`<review-branch>` is `vocab/issue-<n>-<slug>` or `issue/<n>-<slug>`).
 
@@ -207,10 +283,10 @@ Only after the catalogue PR is merged.
 ```bash
 git fetch origin
 git switch -c <impl-branch> origin/master   # or: git switch to the existing branch (3.1 guard)
-mkdir -p docs/vocab   # VOCAB;  or:  mkdir -p docs/design   # GENERAL
+mkdir -p docs/vocab   # VOCAB;  or:  mkdir -p docs/design   # LANGUAGE / TOOLING
 ```
 
-Write the finalised step-3 spec to the spec path (VOCAB: `docs/vocab/<slug>-spec.md`; GENERAL: `docs/design/<slug>-spec.md`). The header's `**Decision:**` now carries the real comment URL. The `-spec` suffix mirrors the `-plan` suffix step 8 uses.
+Write the finalised step-3 spec to the spec path (VOCAB: `docs/vocab/<slug>-spec.md`; LANGUAGE / TOOLING: `docs/design/<slug>-spec.md`). The header's `**Decision:**` now carries the real comment URL. The `-spec` suffix mirrors the `-plan` suffix step 8 uses.
 
 ```bash
 git add <spec-path>
@@ -250,7 +326,9 @@ Ask the maintainer via `AskUserQuestion` — "Write the implementation plan now?
   **While drafting, do not silently fill a gap the spec does not settle.** Any
   decision you cannot infer with high confidence — module boundaries and which
   files change, where a new function's classification row goes in
-  `eval/functions.ts` (VOCAB), where new grammar lives in `lang/` (GENERAL),
+  `eval/functions.ts` and the `FnDoc` entry in `lang/reference.ts` (VOCAB),
+  where new grammar lives in `lang/` (LANGUAGE), which module owns an option
+  and where it is refused (TOOLING),
   test-file layout and fixtures, evaluation-order and error-suppression edge
   handling, exact error-message wording, whether an example document is edited
   or a new one added — is put to the maintainer (`AskUserQuestion` for discrete
@@ -259,11 +337,14 @@ Ask the maintainer via `AskUserQuestion` — "Write the implementation plan now?
 
   The plan's **final task is always "documentation"**, and it must list, at
   minimum:
-  - the relevant `visimark-design.md` section — the [§4](../../docs/visimark-design.md#4-syntax) builtin table for a VOCAB primitive; the section(s) the feature changes for a GENERAL feature (syntax [§4](../../docs/visimark-design.md#4-syntax), evaluation [§8](../../docs/visimark-design.md#8-evaluation), the [§10](../../docs/visimark-design.md#10-error-taxonomy) taxonomy table if a finding is added, [§14](../../docs/visimark-design.md#14-deferred) if it clears a deferred item);
+  - **VOCAB** — the [§4](../../docs/visimark-design.md#4-syntax) builtin table, which is generated from the `FnDoc` in `packages/visimark/src/lang/reference.ts`: the entry is the documentation, so the plan writes it there rather than in two places;
+  - **LANGUAGE** — every `visimark-design.md` section the feature changes, taken from the form's `What it touches` answer (syntax [§4](../../docs/visimark-design.md#4-syntax), evaluation [§8](../../docs/visimark-design.md#8-evaluation), the [§10](../../docs/visimark-design.md#10-error-taxonomy) taxonomy table if a finding is added, [§14](../../docs/visimark-design.md#14-deferred) if it clears a deferred item);
+  - **TOOLING** — every file in the spec's `Documentation to update` section, at minimum `docs/cli-reference.md` for a CLI change and `docs/ci.md` for anything a CI job sees;
   - a `CHANGELOG.md` entry under `## Unreleased` → `### Added` (and a one-line `editors/vscode/CHANGELOG.md` entry when the LSP/extension surface changes — e.g. a name that used to flag as unknown no longer does, or a new diagnostic);
   - the `vocabulary-catalogue.md` row **moved out of its section table into the Shipped register** as `UNRELEASED` — condensed to that table's columns (`Name`, `Kind`, `Request`, `Landed` = this PR, `Released` = `—`, `Decision` = the deciding comment), dropping the prose columns;
   - `docs/cli-reference.md` if it enumerates the changed surface;
-  - `docs/issue-review.md` and this command / `issue-review.md` if the change is `tooling / process` and alters the workflow they describe.
+  - `docs/issue-runbook.md` and this command / `.claude/commands/issue-review.md` if the change is TOOLING and alters the workflow they describe;
+  - `.github/ISSUE_TEMPLATE/` if the change alters what a request must state — a new finding, a new precision variant or a new exit code makes a form's question stale, and a stale form is how the next issue arrives under-specified.
   A merged implementation PR with no `## Unreleased` line is a bug in the plan.
 
   The row stays `UNRELEASED` until a tagged release ships it — `releasing.md`

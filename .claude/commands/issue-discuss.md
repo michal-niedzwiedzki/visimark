@@ -16,6 +16,19 @@ Read first, every run:
 
 Arguments: `$ARGUMENTS` — the issue number `<n>`, nothing else.
 
+```mermaid
+flowchart LR
+  load[Load the issue] --> decided{"Decision comment exists?"}
+  decided -->|yes| refuse["Refuse: reopen via /issue-decide"]
+  decided -->|no| session{"Session discussion?"}
+  session -->|no| nothing[Refuse: nothing to summarize]
+  session -->|yes| draft[Draft the summary]
+  draft --> ask{"Post this summary?"}
+  ask -->|Revise| draft
+  ask -->|Cancel| cancel[Post nothing]
+  ask -->|Post| post[Comment on the issue]
+```
+
 ## 1. Load and guard
 
 Run `gh issue view <n> --json number,title,labels,url,comments`.
@@ -24,8 +37,17 @@ Refuse (print the reason, do nothing else) if the issue is already decided —
 any comment body starts with `Decision: ` and its author is the repository
 owner. Point the user at the reopen path in `/issue-decide`.
 
-Any open issue is otherwise in scope — a vocabulary request or any other design
-or tooling issue.
+Any open issue is otherwise in scope, on any of the six kinds in
+`docs/issue-runbook.md`. Two notes:
+
+- For a **direction or outreach** issue the summary is the *only* public
+  artifact the workflow will ever produce — there is no row and no decision
+  comment — so it carries the whole outcome, including which concrete changes
+  were split out and where they were filed.
+- For a **language feature** or a **tooling / CLI** issue, anything the
+  discussion settled that a spec would otherwise have to ask is the most
+  valuable thing in the summary. Record it as settled, so `/issue-decide` does
+  not reopen it.
 
 Refuse and say "Nothing to summarize — no discussion about #<n> in this session."
 if the conversation preceding this command holds no substantive back-and-forth
@@ -42,9 +64,11 @@ Source material, in priority order:
 
 Scope it **ruthlessly**:
 - Keep only what bears on the disposition of *this* issue, the wording of its
-  catalogue row, or (for a language feature) the design questions a spec would
-  have to close — the question(s) raised, the considerations for and against,
-  where the discussion landed, and any point left open.
+  catalogue row, or the design questions a spec would have to close — for a
+  language feature, semantics and edge cases; for a tooling or CLI change, exit
+  codes, option spelling and what breaks downstream. Record the question(s)
+  raised, the considerations for and against, where the discussion landed, and
+  any point left open.
 - Compress every precedent, analogy, or outside reference to the single sentence
   that changes the decision.
 - Drop entirely: which commands were run, tooling or process asides,

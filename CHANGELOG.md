@@ -2,8 +2,126 @@
 
 ## Unreleased
 
+### Changed
+
+- **Breaking:** every command now refuses an option it does not recognise, or
+  one that belongs to another command, with exit `2` and a `visimark: …` line
+  on stderr. Before, the option was ignored and the run reported success. If a
+  job now fails with `unknown option` or `is only valid with`, remove the
+  option or move it to the command that owns it. To use an option a newer
+  release added, pin the engine, and the Action ref, to that release. A
+  misplaced `--scenario`, or `--scenario` with no value, now reports
+  `error.code: "USAGE"` under `--json` instead of `"SCENARIO"`. See
+  [`refuse-unrecognised-and-misplaced-cli-options-spec.md`](docs/design/refuse-unrecognised-and-misplaced-cli-options-spec.md)
+  and [#121](https://github.com/michal-niedzwiedzki/visimark/issues/121).
+
+## 0.1.6 - 2026-09-20
+
+### Fixed
+
+- **Division by zero is a `TYPE` error**, not a value. `/` and `MOD` with a
+  zero divisor (including `-0`) report `division by zero`; a non-finite
+  `Decimal` (`0 ^ -1`, `(-2) ^ 0.5`) reports `result is not a finite
+  decimal`. `check` no longer treats these as `STALE`, and `fmt` does not
+  write `Infinity` or `NaN` into the document. See
+  [`division-by-zero-evaluates-to-infinity-spec.md`](docs/design/division-by-zero-evaluates-to-infinity-spec.md)
+  and [#122](https://github.com/michal-niedzwiedzki/visimark/issues/122).
+
 ### Added
 
+- **Scenario parameters: `param` and `eval --scenario`.** A `vmark` block may
+  declare `param tax precision 3 = default 19%`, a numeric scalar that is
+  exactly `tax precision 3 = 19%` in every command except one.
+  `visimark eval --scenario FILE` (or `-` for stdin) evaluates the document
+  with the values in a flat JSON object such as `{ "tax": "12.5%" }` in place
+  of the defaults, and writes nothing. Keys must name declared params, values
+  must be JSON strings that fit the declared precision, and a percent param
+  takes only a percent. Any fault is exit `2` with JSON error code `SCENARIO`.
+  The output quotes the scenario beside the values, and a false `assert` says
+  whether it holds on the defaults. `check`, `fmt`, `infer`, `explain` and
+  `ref` refuse `--scenario` rather than ignore it. `param` and `default` are
+  contextual, so no word becomes reserved and `param = 5` still binds a
+  scalar. `explain` lists params apart from scalars. See
+  [`docs/design/scenario-params-spec.md`](docs/design/scenario-params-spec.md)
+  and [#119](https://github.com/michal-niedzwiedzki/visimark/issues/119).
+
+## 0.1.5 - 2026-09-17
+
+### Changed
+
+- **A value's decimal width no longer comes from prose.** A binding's head may
+  carry a `precision N` clause (`eur_total precision 2 = gross / fx_eur`, `N`
+  from 0 to 18); without one the width is derived from the binding's own
+  expression, but only where the operation bounds the result's scale exactly.
+  `+ - MIN MAX SUM` take the wider operand, `*` sums the scales, `COUNT` is 0,
+  `ROUND`/`FLOOR`/`CEILING` take theirs from an argument, `ABS`/`MOD`/`IF` pass
+  theirs through. **Division, `AVG` and `SQRT` bound nothing**, so a binding
+  using them must declare a width. One invariant holds throughout: a derived
+  precision never discards a digit.
+
+  This closes three defects that `check` reported as `0 problems`: anchoring a
+  constant with a `0` placeholder rounded the stored value and moved every
+  figure derived from it; a second anchor on the same scalar rendered decimal
+  places that had already been rounded away, order-dependently; and a
+  string-valued scalar could not be anchored in bare prose at all, so `fmt`
+  wrote documents `check` then rejected.
+
+  An anchor is now purely an output — it supplies the unit and nothing else. A
+  bare anchor is seeded by `fmt`, and an anchor whose rendering disagrees with
+  its scalar's width is `STALE`. **The document-scope `precision` constant is
+  removed**; there is no sheet-scope equivalent.
+
+### Added
+
+- **`visimark ref [NAME] [--json]`** — the one command that reads no file: it
+  answers about the language, not about a document, which is why it is not
+  folded into `explain`. With no name it lists all thirteen builtins, each
+  against its signature, kind and arity; a name prints that function's full
+  signature, parameters, return type, precision rule, errors and worked
+  examples. An unknown name is a `USAGE` exit with a did-you-mean suggestion,
+  the same fuzzy match `check` already uses for undefined names.
+- **`PRECISION` finding** — a numeric binding with no declared width and none
+  derivable, or a value large enough that its declared width would print digits
+  the engine never computed (`Decimal.precision` is 40 *significant* digits, so
+  the ceiling binds on the integer part). Not auto-fixable; `visimark infer`
+  proposes the clause where the document's own cells or figures verify one.
+- **`explain` shows each binding's width** and whether it was declared or
+  derived.
+- **Precision is a documented property of every builtin**, alongside its shape,
+  its arity and its errors: `visimark ref NAME`, the editor hover and
+  [`function-reference.md`](docs/function-reference.md) all state where a
+  result's width comes from, and `ref --json` carries the rule as data rather
+  than prose. `FnDoc.precision` is a typed rule held against `eval/precision.ts`
+  by a test, so the reference cannot drift from the engine. The tie-breaking
+  note that used to be `FnDoc.precision` is now `FnDoc.rounding` — the two were
+  different questions under one word.
+- **`Precision behaviour` is a required field** on the vocabulary-request
+  template, and a judging criterion in the catalogue: every new primitive states
+  whether its result's width derives from its operands, comes from an argument,
+  or requires a declaration.
+
+## 0.1.4 - 2026-09-16
+
+### Fixed
+
+- **The VS Code Marketplace publisher `michal-niedzwiedzki` never existed as a
+  real account** — a `VSCE_PAT` authenticates to Azure DevOps but does not
+  create a publisher, and `vsce publish` reported false success against it.
+  v0.1.3's Marketplace leg failed outright once the workflow started checking
+  the registry for real. The extension is now published under the publisher
+  `visimark-michal-niedzwiedzki`, created under the maintainer's account. The
+  Open VSX namespace `michal-niedzwiedzki` is unaffected.
+
+## 0.1.3 - 2026-09-15
+
+### Added
+
+- **Human-readable column references and aliases** (issue #86) — a quoted GFM
+  header (`"Header" = expr`) is now a legal column-rule left-hand side, and
+  `"Header" is symbol` gives that column a short formula-facing name — closes
+  #86. See
+  [`human-readable-column-aliases-spec.md`](docs/design/human-readable-column-aliases-spec.md)
+  and [§4](docs/visimark-design.md#4-syntax).
 - **Declared local data imports with integrity stamps** (issue #66) — a sheet
   may take its table from a declared local CSV file instead of an inline GFM
   table: `` ```vmark #benchmark from benchmark.csv at sha256:<digest> ``. `fmt`
@@ -21,6 +139,15 @@
   `labelled` and `unlabelled` are mutually exclusive. See
   [`explicit-schema-for-headerless-csv-imports-spec.md`](docs/design/explicit-schema-for-headerless-csv-imports-spec.md)
   and [§19](docs/visimark-design.md#19-declared-local-data-imports).
+- **Three more chart engines** — `line`, `area` and `stacked-bar`, alongside
+  the existing `pie` and `bar`. `line` draws one polyline per series on bar's
+  value axis; `area` fills each series to the zero baseline at a fixed opacity
+  so overlapping series stay legible; `stacked-bar` stacks a row's series in
+  declared order, positives upward and negatives downward from zero
+  independently. `stacked-bar` is the one hyphenated engine name — its two
+  idents and the `-` between them must sit with no spaces. See
+  [`charts-spec.md`](docs/design/charts-spec.md) and
+  [§18](docs/visimark-design.md#18-generated-artifacts).
 
 ## 0.1.2 - 2026-09-10
 
@@ -151,7 +278,7 @@
   vocabulary-request-template ones (issue #27). The three commands were renamed
   `vocab-review` / `vocab-discuss` / `vocab-decide` → `issue-review` /
   `issue-discuss` / `issue-decide`; `docs/vocabulary-review.md` →
-  [`docs/issue-review.md`](docs/issue-review.md); and
+  `docs/issue-review.md` (now [`docs/issue-runbook.md`](docs/issue-runbook.md)); and
   [`docs/vocabulary-catalogue.md`](docs/vocabulary-catalogue.md) gained
   section **E** (language features) and **F** (tooling / process). A free-form
   issue is classified and judged against the design doc's constraints; one too
@@ -275,5 +402,9 @@ record that the publish happened, and making the history read clean after the
 fact is the kind of underived edit this project exists to catch. There is no
 0.1.0 of the VS Code extension.
 
+[0.1.6]: https://github.com/michal-niedzwiedzki/visimark/releases/tag/v0.1.6
+[0.1.5]: https://github.com/michal-niedzwiedzki/visimark/releases/tag/v0.1.5
+[0.1.4]: https://github.com/michal-niedzwiedzki/visimark/releases/tag/v0.1.4
+[0.1.3]: https://github.com/michal-niedzwiedzki/visimark/releases/tag/v0.1.3
 [0.1.2]: https://github.com/michal-niedzwiedzki/visimark/releases/tag/v0.1.2
 [0.1.1]: https://github.com/michal-niedzwiedzki/visimark/releases/tag/v0.1.1

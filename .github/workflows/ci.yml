@@ -22,6 +22,42 @@ jobs:
         with:
           bun-version: latest
       - run: bun install --frozen-lockfile
+
+      # Four files carry the version and all four must agree. The three
+      # manifests have to match because one tag publishes all of them, and a
+      # mismatch ships a release under the wrong number or fails a leg midway
+      # with the others already out. action.yml joins them because its `version`
+      # default is what a consumer's `npx` actually installs: leave it behind
+      # and every tag-pinned consumer silently keeps running an older engine
+      # than the Action ref they pinned, with nothing at run time to tell them.
+      #
+      # docs/releasing.md used to ask the releaser to eyeball this with grep.
+      # A release checklist step that nothing enforces is a step that gets
+      # skipped on the release where it matters.
+      - name: every version-carrying file must agree
+        run: |
+          set -e
+          engine=$(bun -e 'console.log(require("./packages/visimark/package.json").version)')
+          lsp=$(bun -e 'console.log(require("./packages/visimark-lsp/package.json").version)')
+          ext=$(bun -e 'console.log(require("./editors/vscode/package.json").version)')
+          # The `version` input's default, read without a YAML parser the repo
+          # does not depend on: first `default:` after the `version:` key.
+          pinned=$(awk '/^  version:/{f=1} f && /^    default:/{sub(/^    default: *"/,"");sub(/"[[:space:]]*$/,"");print;exit}' action.yml)
+          echo "engine=$engine lsp=$lsp vscode=$ext action.yml=$pinned"
+          if [ -z "$pinned" ]; then
+            echo "::error::could not read the version default out of action.yml. The version input or its default line moved; fix this check rather than deleting it."
+            exit 1
+          fi
+          fail=0
+          for pair in "packages/visimark-lsp/package.json:$lsp" "editors/vscode/package.json:$ext" "action.yml:$pinned"; do
+            file=${pair%%:*}; got=${pair#*:}
+            if [ "$got" != "$engine" ]; then
+              echo "::error file=$file::$file says $got but packages/visimark/package.json says $engine. Bump every version-carrying file in the release commit — see docs/releasing.md."
+              fail=1
+            fi
+          done
+          exit $fail
+
       - run: bun run lint
       - run: bun run format:check
       - run: bun run typecheck
@@ -34,6 +70,53 @@ jobs:
         with:
           name: visimark-vsix
           path: editors/vscode/visimark.vsix
+
+  # docs/vendor/visimark-browser.js is a committed build artifact. pages.yml
+  # uploads docs/ verbatim with no build step, so nothing else in this pipeline
+  # notices it drifting from packages/visimark/src/**. It did drift, silently,
+  # for two releases — the deployed playground was missing three chart engines
+  # the docs already documented (see docs/reviews/2026-09-15.md §2.5).
+  #
+  # Its own job rather than a step in `build`, because Bun has to be pinned here
+  # and nowhere else: the comparison is byte-exact against an artifact produced
+  # by the packageManager toolchain, so a minifier change in a newer Bun would
+  # fail this check for a reason that has nothing to do with the pull request.
+  # `build` keeps `latest` so the "VisiMark works on current Bun" signal stays.
+  playground-bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+      - run: bun install --frozen-lockfile
+      - name: the committed playground bundle must match the source
+        run: |
+          bun run --filter visimark build:playground
+          if ! git diff --exit-code -- docs/vendor/; then
+            echo "::error::docs/vendor/ is stale. Run 'bun run --filter visimark build:playground' and commit the result. If the diff looks like pure minifier churn rather than a real change, check that your local Bun matches packageManager in package.json."
+            exit 1
+          fi
+
+  # The generated function documents must match the registry they come from.
+  # Modelled on `playground-bundle`, but Bun is not pinned: the output is
+  # Markdown rendered by our own script, so there is no minifier whose version
+  # could churn it.
+  function-reference:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - name: the generated function reference must match the registry
+        run: |
+          bun run gen:docs
+          if ! git diff --exit-code -- docs/function-reference.md docs/visimark-design.md; then
+            echo "::error::The generated function documents are stale. Run 'bun run gen:docs' and commit the result."
+            exit 1
+          fi
 
   # The published CLI must run under Node, not only Bun. Build with Bun (the
   # only supported build path), then exercise the built dist/ under Node.
@@ -61,6 +144,28 @@ jobs:
           if node "$bin" check docs/example-quote-plain.md; then
             echo "::error::plain quote passed under Node; it must fail (COVERAGE)"; exit 1
           fi
+
+      # The expression-depth cap was measured against JavaScriptCore, but V8's
+      # default stack is smaller and this is the job that has Node. Both halves
+      # matter: the behaviour, and the margin that makes the behaviour hold.
+      - name: pathological input is refused, not a stack overflow, under Node
+        run: |
+          set -e
+          bin=packages/visimark/bin/visimark.js
+          deep=$(node -e 'const n=30000;process.stdout.write("# deep\n\n```vmark #s\nx = "+"(".repeat(n)+"1"+")".repeat(n)+"\n```\n")')
+          printf '%s' "$deep" > /tmp/deep.md
+          out=$(node "$bin" check /tmp/deep.md 2>&1) && rc=0 || rc=$?
+          if printf '%s' "$out" | grep -q 'RangeError'; then
+            echo "::error::deeply nested formula crashed the CLI under Node"
+            printf '%s\n' "$out" | head -20; exit 1
+          fi
+          if ! printf '%s' "$out" | grep -q 'nests more than'; then
+            echo "::error::no depth finding under Node; got:"; printf '%s\n' "$out" | head -20; exit 1
+          fi
+          [ "$rc" = 1 ] || { echo "::error::expected exit 1, got $rc"; exit 1; }
+
+      - name: the depth cap still has stack headroom under Node
+        run: node scripts/stack-headroom.mjs
 
   # Pack once, then install the tarball globally in two isolated environments —
   # a Node-only runner and a Bun-only container — and run the command. This is

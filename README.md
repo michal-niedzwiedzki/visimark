@@ -124,6 +124,18 @@ Four ideas, and that is the whole format:
   invisible in every target renderer, so the prose reads normally while the
   number stays machine-checkable.
 
+## The tutorial
+
+[`docs/tutorial.md`](docs/tutorial.md) is the end-to-end tutorial: twenty-eight
+short chapters from a plain Markdown table to a checked document, a CI job and a
+script reading values back out. It teaches the language in dependency order, every
+finding `check` can report, and the one habit that keeps a green check meaningful.
+Every transcript in it is real.
+
+There is a side-by-side reader for it at
+[`docs/tutorial.html`](https://michal-niedzwiedzki.github.io/visimark/tutorial.html),
+which shows each block's Markdown source next to its rendering, in lockstep.
+
 ## Worked examples
 
 [`docs/example-invoice.md`](docs/example-invoice.md) is a complete B2B invoice
@@ -182,7 +194,7 @@ docs/example-quote-plain.md  table at line 24 — 3 rows, 4 columns
   also fits, not proposed
     Amount = Share * 29808    prefers a rule over materialised columns
 
-4 rules, 6 scalars, 6 anchors.
+4 rules, 0 aliases, 6 scalars, 6 anchors.
 ```
 
 A rule is proposed only if it reproduces every row exactly, at that column's
@@ -205,6 +217,16 @@ VisiMark parses the document, builds a dependency graph across every sheet,
 sorts it topologically, and evaluates in decimal arithmetic. Circular
 dependencies are reported with the full path through the cycle.
 
+```mermaid
+flowchart LR
+  parse[Parse Markdown] --> deps[Build dependency graph]
+  deps --> sort[Topological sort]
+  sort --> evaluate[Evaluate in decimal]
+  evaluate --> cycle{"Cycle?"}
+  cycle -->|yes| report[Report the CYCLE path]
+  cycle -->|no| values[Computed values]
+```
+
 The CLI is the product. An agent must be able to verify a document without an
 editor; a VS Code extension is a later, thin wrapper.
 
@@ -213,6 +235,16 @@ editor; a VS Code extension is a later, thin wrapper.
 Five of them. `check` is the one that matters; the rest exist to get a
 document into a state `check` can be strict about, or to explain what it did.
 
+```mermaid
+flowchart LR
+  plain[Plain table] -->|"infer --write"| wired[Rules and anchors in the file]
+  wired -->|edit an input or a rule| stale[Stored values disagree]
+  stale -->|fmt| wired
+  stale -->|check| fail[Exit 1]
+  wired -->|check| pass[Exit 0]
+  wired -.-> evalCmd["eval / explain"]
+```
+
 | Command | What it does | Options | What it writes | Exit codes |
 |---------|--------------|---------|----------------|------------|
 | `visimark check FILE...` | Recomputes every formula and reports the numbers that no longer agree with it | — | nothing, ever | `0` clean · `1` findings · `2` bad usage or unreadable file |
@@ -220,6 +252,7 @@ document into a state `check` can be strict about, or to explain what it did.
 | `visimark infer FILE...` | Works out which rules reproduce the numbers a document already has, and proposes them | `--write` inserts what it proposed | nothing, unless `--write` — and then it only ever inserts | `0` whatever it finds, because it is advisory · `2` bad usage or unreadable file |
 | `visimark eval FILE` | Prints the computed values — all of them, or one by name | `--get NAME`, `--json` | nothing | `0` · `2` bad usage, unreadable file, or no such name |
 | `visimark explain FILE` | Prints each sheet's inputs, rules and evaluation order | `#sheet` limits it to one sheet | nothing | `0` · `2` bad usage, unreadable file, or no such sheet |
+| `visimark ref [NAME]` | Prints what a builtin function does — signature, parameters, errors, worked examples — or lists all thirteen | `--json` | nothing | `0` · `2` no such function |
 
 Every option, every exit code and every finding `check` can report is
 tabulated in [`docs/cli-reference.md`](docs/cli-reference.md).
@@ -280,7 +313,7 @@ this repo ships ([`action.yml`](action.yml)) instead of hand-rolling the
 `npx` line:
 
 ```yaml
-- uses: michal-niedzwiedzki/visimark@v0.1.0
+- uses: michal-niedzwiedzki/visimark@v0.1.5
   with:
     files: "docs/**/*.md"
 ```
@@ -355,7 +388,7 @@ an input column where a human wrote it down. Requests to grow that vocabulary �
 and proposals for any other language or tooling change — go through
 [`docs/vocabulary-catalogue.md`](docs/vocabulary-catalogue.md), which records
 every one and the decision on it; the review process is
-[`docs/issue-review.md`](docs/issue-review.md).
+[`docs/issue-runbook.md`](docs/issue-runbook.md).
 
 This makes the format smaller, not merely stricter: there is no locale, no
 configuration, and no rule for what a bare `/` means.

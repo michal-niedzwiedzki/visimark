@@ -5,7 +5,7 @@ import type { Proposal } from "../infer/propose.js";
 import { ERROR_CODES, isProblem, type Finding } from "../model/types.js";
 
 export type JsonWriter = (line: string) => void;
-export type CommandName = "check" | "fmt" | "infer" | "eval" | "explain";
+export type CommandName = "check" | "fmt" | "infer" | "eval" | "explain" | "ref";
 
 export function emitJson(out: JsonWriter, doc: object): void {
   out(JSON.stringify(doc, null, 2));
@@ -17,7 +17,7 @@ export function statusFromExit(code: 0 | 1 | 2): "ok" | "problems" | "error" {
 
 export function errorEnvelope(
   command: CommandName,
-  code: "USAGE" | "READ",
+  code: "USAGE" | "READ" | "SCENARIO",
   message: string,
 ): object {
   return { command, visimark: readVersion(), status: "error", error: { code, message } };
@@ -58,6 +58,11 @@ export function publicFinding(file: string, f: Finding): object {
     if (f.altA !== undefined) details.altA = f.altA;
     if (f.altB !== undefined) details.altB = f.altB;
     if (f.daysApart !== undefined) details.daysApart = f.daysApart;
+  } else if (f.code === "PRECISION") {
+    // the formula that has no derivable width, or the ceiling message
+    if (f.raw !== undefined) details.formula = f.raw;
+    if (f.message) details.message = f.message;
+    if (f.suggestion) details.suggestion = f.suggestion;
   } else if (f.code === "CYCLE") {
     details.cyclePath = f.cyclePath ?? [];
   } else if (f.code === "ASSERT") {
@@ -99,17 +104,31 @@ export function evalValues(result: CheckResult): Record<string, JsonValue> {
   return values;
 }
 
-export function publicAssertions(assertions: AssertionResult[]): object[] {
-  return assertions.map((a) => ({
+/** how a failed assertion fares on the document's defaults, under a scenario */
+export type OnDefaults = "pass" | "fail" | "unverified";
+
+/**
+ * `defaults`, when given, carries one entry per assertion (same order): its
+ * result on the defaults. It is attached only to entries that are false —
+ * scenario-params-spec.md §5.3.
+ */
+export function publicAssertions(
+  assertions: AssertionResult[],
+  defaults?: (OnDefaults | undefined)[],
+): object[] {
+  return assertions.map((a, i) => ({
     sheet: a.sheetId,
     source: a.source,
     holds: a.holds,
     operands: a.operands,
     substituted: a.substituted,
+    ...(a.holds === false && defaults?.[i] !== undefined ? { defaults: defaults[i] } : {}),
   }));
 }
 
-export function publicCharts(charts: ChartResult[]): object[] {
+/** `withState: false` under a scenario: the artifact on disk was drawn from
+ *  the defaults, so its state says nothing about this evaluation */
+export function publicCharts(charts: ChartResult[], withState = true): object[] {
   return charts.map((c) => ({
     sheet: c.sheetId,
     name: c.name,
@@ -117,7 +136,7 @@ export function publicCharts(charts: ChartResult[]): object[] {
     series: c.series,
     labels: c.labels,
     path: c.path,
-    state: c.state,
+    ...(withState ? { state: c.state } : {}),
   }));
 }
 

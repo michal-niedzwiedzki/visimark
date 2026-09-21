@@ -25,23 +25,34 @@ export interface FnSpec {
   arity: number;
 }
 
-export const FUNCTIONS: ReadonlyMap<string, FnSpec> = new Map<string, FnSpec>([
+/**
+ * The table itself. Written as a `const` record rather than a `Map` literal so
+ * that the set of function names is a type — `lang/reference.ts` keys its
+ * documentation by it, and a function added here without a reference entry
+ * fails `typecheck` rather than shipping undocumented.
+ */
+export const FUNCTION_TABLE = {
   // reduces: one column reference in, one scalar out
-  ["SUM", { kind: "reduce", arity: 1 }],
-  ["MIN", { kind: "reduce", arity: 1 }],
-  ["MAX", { kind: "reduce", arity: 1 }],
-  ["COUNT", { kind: "reduce", arity: 1 }],
-  ["AVG", { kind: "reduce", arity: 1 }],
+  SUM: { kind: "reduce", arity: 1 },
+  MIN: { kind: "reduce", arity: 1 },
+  MAX: { kind: "reduce", arity: 1 },
+  AVG: { kind: "reduce", arity: 1 },
+  COUNT: { kind: "reduce", arity: 1 },
   // maps: scalars in, one scalar out
-  ["ROUND", { kind: "map", arity: 2 }],
-  ["ABS", { kind: "map", arity: 1 }],
-  ["MOD", { kind: "map", arity: 2 }],
-  ["SQRT", { kind: "map", arity: 1 }],
-  ["FLOOR", { kind: "map", arity: 2 }],
-  ["CEILING", { kind: "map", arity: 2 }],
-  ["IF", { kind: "map", arity: 3 }],
-  ["EOMONTH", { kind: "map", arity: 2 }],
-]);
+  ROUND: { kind: "map", arity: 2 },
+  ABS: { kind: "map", arity: 1 },
+  MOD: { kind: "map", arity: 2 },
+  SQRT: { kind: "map", arity: 1 },
+  FLOOR: { kind: "map", arity: 2 },
+  CEILING: { kind: "map", arity: 2 },
+  IF: { kind: "map", arity: 3 },
+  EOMONTH: { kind: "map", arity: 2 },
+} as const satisfies Record<string, FnSpec>;
+
+/** Every builtin function name, as a type. */
+export type FunctionName = keyof typeof FUNCTION_TABLE;
+
+export const FUNCTIONS: ReadonlyMap<string, FnSpec> = new Map(Object.entries(FUNCTION_TABLE));
 
 export const isReduce = (name: string): boolean => FUNCTIONS.get(name)?.kind === "reduce";
 

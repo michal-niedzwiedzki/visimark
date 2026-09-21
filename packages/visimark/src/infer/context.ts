@@ -23,6 +23,8 @@ export interface InferSheet {
   numeric: string[];
   /** headers that already carry a rule; inference never proposes for these */
   managed: Set<string>;
+  /** headers that already carry an `is` alias; inference never proposes a second one */
+  aliasedHeaders: Set<string>;
   /** rows with a non-empty cell, per header */
   filled: Map<string, number>;
   /** numeric headers whose non-empty cells all hold the same value */
@@ -88,6 +90,7 @@ export function buildContext(source: string): InferContext {
       index,
       numeric,
       managed: new Set(existing?.columns.keys() ?? []),
+      aliasedHeaders: new Set([...(existing?.aliases.values() ?? [])].map((a) => a.header)),
       filled,
       constant,
     } satisfies InferSheet;
@@ -114,6 +117,7 @@ export function provisional(ctx: InferContext, extra: Binding[]): DocModel {
         scalars: new Map(),
         columnIndex: new Map(s.index),
         inputColumns: new Set(s.index.keys()),
+        aliases: new Map(),
         assertions: [],
         charts: [],
         imported: null,
@@ -153,6 +157,7 @@ function cloneSheet(s: Sheet): Sheet {
     scalars: new Map(s.scalars),
     columnIndex: new Map(s.columnIndex),
     inputColumns: new Set(s.inputColumns),
+    aliases: new Map(s.aliases),
     assertions: [...s.assertions],
     charts: [...s.charts],
     imported: s.imported,
@@ -172,6 +177,7 @@ export function makeBinding(sheet: InferSheet, text: string): Binding {
     name: parsed.name,
     expr: parsed.expr,
     kind: sheet.index.has(parsed.name) ? "column" : "scalar",
+    ...(parsed.precision === undefined ? {} : { precision: parsed.precision }),
     span: { start: 0, end: text.length },
   };
 }

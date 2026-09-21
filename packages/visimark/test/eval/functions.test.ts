@@ -3,7 +3,7 @@ import { locate } from "../../src/parse/document.js";
 import { build } from "../../src/model/build.js";
 import { check } from "../../src/eval/check.js";
 import { formatCheck } from "../../src/report/format.js";
-import { callProblem, FUNCTIONS, isReduce } from "../../src/eval/functions.js";
+import { callProblem, FUNCTION_TABLE, FUNCTIONS, isReduce } from "../../src/eval/functions.js";
 import type { Finding } from "../../src/model/types.js";
 
 const run = (src: string) => check(build(locate(src)));
@@ -146,7 +146,7 @@ test("a reduce over a column is legal, and a map may consume its result", () => 
 | b   | 150.00 |  0.75 |
 
 \`\`\`vmark #legs
-Share = Net / SUM(Net)
+Share precision 2 = Net / SUM(Net)
 \`\`\`
 `;
   expect(run(src).findings).toEqual([]);
@@ -197,7 +197,7 @@ test("share = Net / Σ(Net) composes exactly like SUM", () => {
 | b   | 150.00 |  0.75 |
 
 \`\`\`vmark #legs
-Share = Net / Σ(Net)
+Share precision 2 = Net / Σ(Net)
 \`\`\`
 `;
   expect(run(src).findings).toEqual([]);
@@ -311,10 +311,10 @@ Roots: **3.00**<!--vmark=r.a-->, **0.00**<!--vmark=r.b-->, **0.50**<!--vmark=r.c
 **1.41**<!--vmark=r.d-->.
 
 \`\`\`vmark #r
-a = SQRT(9)
-b = SQRT(0)
-c = SQRT(0.25)
-d = SQRT(2)
+a precision 2 = SQRT(9)
+b precision 2 = SQRT(0)
+c precision 2 = SQRT(0.25)
+d precision 2 = SQRT(2)
 \`\`\`
 `;
   expect(run(src).findings).toEqual([]);
@@ -338,6 +338,72 @@ test("SQRT misspelled gets a did-you-mean", () => {
   expect(ts).toHaveLength(1);
   expect(ts[0]!.message).toBe("unknown function `SQR`");
   expect(ts[0]!.suggestion).toBe("SQRT");
+});
+
+// ---- finite numeric values ------------------------------------------
+
+test("0 ^ -1 is a TYPE error, not Infinity", () => {
+  const fs = typeFindings(run(withScalar("0 ^ -1")).findings);
+  expect(fs).toHaveLength(1);
+  expect(fs[0]!.message).toBe("result is not a finite decimal");
+});
+
+test("(-2) ^ 0.5 is a TYPE error, not NaN", () => {
+  const fs = typeFindings(run(withScalar("(-2) ^ 0.5")).findings);
+  expect(fs).toHaveLength(1);
+  expect(fs[0]!.message).toBe("result is not a finite decimal");
+});
+
+test("x / 0 is TYPE division by zero", () => {
+  const fs = typeFindings(run(withScalar("100 / 0")).findings);
+  expect(fs).toHaveLength(1);
+  expect(fs[0]!.message).toBe("division by zero");
+});
+
+test("0 / 0 is TYPE division by zero, not NaN", () => {
+  const fs = typeFindings(run(withScalar("0 / 0")).findings);
+  expect(fs).toHaveLength(1);
+  expect(fs[0]!.message).toBe("division by zero");
+});
+
+test("1 / -0 is TYPE division by zero", () => {
+  const fs = typeFindings(run(withScalar("1 / -0")).findings);
+  expect(fs).toHaveLength(1);
+  expect(fs[0]!.message).toBe("division by zero");
+});
+
+test("a tiny non-zero divisor still divides", () => {
+  const src = `
+n is **10000.00**<!--vmark=s.n-->.
+
+\`\`\`vmark #s
+n precision 2 = 1 / 0.0001
+\`\`\`
+`;
+  expect(run(src).findings).toEqual([]);
+});
+
+test("MOD(x, 0) is TYPE division by zero", () => {
+  const fs = typeFindings(run(withScalar("MOD(5, 0)")).findings);
+  expect(fs).toHaveLength(1);
+  expect(fs[0]!.message).toBe("division by zero");
+});
+
+test("MOD(x, -0) is TYPE division by zero", () => {
+  const fs = typeFindings(run(withScalar("MOD(5, -0)")).findings);
+  expect(fs).toHaveLength(1);
+  expect(fs[0]!.message).toBe("division by zero");
+});
+
+test("ordinary MOD is unchanged", () => {
+  const src = `
+n is **1**<!--vmark=s.n-->.
+
+\`\`\`vmark #s
+n = MOD(7, 3)
+\`\`\`
+`;
+  expect(run(src).findings).toEqual([]);
 });
 
 // ---- FLOOR ----------------------------------------------------------
@@ -520,4 +586,11 @@ test("CEILING misspelled gets a did-you-mean", () => {
   expect(ts).toHaveLength(1);
   expect(ts[0]!.message).toBe("unknown function `CELING`");
   expect(ts[0]!.suggestion).toBe("CEILING");
+});
+
+test("the function table and the exported map agree", () => {
+  const fromTable = Object.keys(FUNCTION_TABLE).sort();
+  const fromMap = [...FUNCTIONS.keys()].sort();
+  expect(fromMap).toEqual(fromTable);
+  expect(fromTable).toHaveLength(13);
 });

@@ -38,6 +38,7 @@ export function formatInfer(path: string, source: string, proposals: Proposal[])
     );
 
     section(lines, "column rules", rules(group));
+    section(lines, "column aliases", aliases(group));
     section(lines, "constants worth naming", constants(group, source));
     section(lines, "scalars matching figures in prose", scalars(group, source));
     section(lines, "no rule found — treating as inputs", inputs(group, table));
@@ -53,12 +54,13 @@ export function formatInfer(path: string, source: string, proposals: Proposal[])
   );
 
   const ruleCount = proposals.filter((p) => p.kind === "column" && !p.weak).length;
+  const aliasCount = proposals.filter((p) => p.kind === "alias").length;
   const scalarCount = proposals.filter((p) => p.kind === "scalar").length;
   const anchorCount = proposals.filter((p) => p.kind === "scalar" && p.anchorSite).length;
   if (lines.length > 0) lines.push("");
   lines.push(
-    `${plural(ruleCount, "rule")}, ${plural(scalarCount, "scalar")}, ` +
-      `${plural(anchorCount, "anchor")}.`,
+    `${plural(ruleCount, "rule")}, ${plural(aliasCount, "alias", "aliases")}, ` +
+      `${plural(scalarCount, "scalar")}, ${plural(anchorCount, "anchor")}.`,
   );
   return lines.join("\n");
 }
@@ -79,6 +81,12 @@ function rules(group: Proposal[]): string[] {
     const note = p.weak ? "2 rows — weak, not written" : `${p.fits}/${p.rows} rows`;
     return heads[i]!.padEnd(col) + note;
   });
+}
+
+function aliases(group: Proposal[]): string[] {
+  const ps = group.filter((p) => p.kind === "alias");
+  const w = field(ps.map((p) => p.name));
+  return ps.map((p) => `    ${p.name.padEnd(w)}for "${p.header}"`);
 }
 
 function constants(group: Proposal[], source: string): string[] {
@@ -184,6 +192,6 @@ function column(heads: string[], min: number): number {
   return Math.max(min, ...heads.map((h) => h.length + 2));
 }
 
-function plural(n: number, what: string): string {
-  return `${n} ${what}${n === 1 ? "" : "s"}`;
+function plural(n: number, what: string, many = `${what}s`): string {
+  return `${n} ${n === 1 ? what : many}`;
 }

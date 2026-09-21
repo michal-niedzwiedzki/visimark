@@ -1,0 +1,21 @@
+// The browser UI: the playground application (src/playground/app/) and the
+// four docs/ pages' scripts (src/site/). Both touch `document`, `window`,
+// `localStorage` and the DOM event model, none of which exist in the engine's
+// ES2023-plus-Node world.
+//
+// They get their own program rather than DOM being added to
+// tsconfig.base.json, so that the engine and the CLI keep failing the
+// typecheck if they ever reach for a browser global — the property that made
+// the node:fs port (src/fs/reader.ts) worth building in the first place.
+//
+// One program for both, not two: they share the CDN-library declarations
+// (`marked` is used by five pages and declared once), and a second config
+// would buy separation between two directories that are the same kind of
+// thing.
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM", "DOM.Iterable"]
+  },
+  "include": ["src/playground/app", "src/site", "test/playground/app", "test/site"]
+}

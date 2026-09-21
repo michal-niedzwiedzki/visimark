@@ -67,11 +67,14 @@ function staleLine(f: Finding): string {
   }
   const left = f.rowLabel ? id(f).padEnd(ID_FIELD) + "· " + f.rowLabel : id(f);
   const stored = f.stored ?? "";
-  const pad = Math.max(1, STORED_END - left.length);
+  // the stored value ends at STORED_END, but a long left field (a rule named
+  // after a header text, say) can already run past it — count the spaces to
+  // insert rather than a total width, so there is always a visible gap
+  const gap = Math.max(1, STORED_END - left.length - stored.length);
   const computed = f.formula
     ? (f.computed ?? "").padEnd(COMPUTED_FIELD) + f.formula
     : (f.computed ?? "");
-  return prefix("STALE") + left + stored.padStart(pad) + " ≠ " + computed;
+  return prefix("STALE") + left + " ".repeat(gap) + stored + " ≠ " + computed;
 }
 
 function renderGroup(f: Finding): string[] {
@@ -171,6 +174,25 @@ function renderGroup(f: Finding): string[] {
           ? [" ".repeat(prefix("ARTIFACT").length) + `did you mean \`${f.suggestion}\`?`]
           : []),
       ];
+    }
+    case "PRECISION": {
+      // `PRECISION` is one character past the 8-wide code field, so its payload
+      // overhangs by one — the same degradation an over-long row label already
+      // takes, and cheaper than widening the grid under every other code.
+      const head =
+        prefix("PRECISION") +
+        id(f).padEnd(ID_FIELD) +
+        (f.rowLabel ? "· " + f.rowLabel + "  " : "  ") +
+        (f.message ??
+          (f.raw
+            ? `\`${f.raw}\` has no derivable precision`
+            : "no precision declared and none follows from the formula"));
+      const hint = f.message
+        ? f.suggestion
+          ? `write \`${f.suggestion}\``
+          : undefined
+        : `declare the width: \`${f.name ?? "name"} precision N = …\``;
+      return [head, ...(hint ? [" ".repeat(prefix("PRECISION").length) + hint] : [])];
     }
     case "ANCHOR":
       return [

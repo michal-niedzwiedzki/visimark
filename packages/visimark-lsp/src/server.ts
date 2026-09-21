@@ -86,12 +86,27 @@ async function runCheck(doc: TextDocument): Promise<void> {
     await connection.sendDiagnostics({ uri: doc.uri, diagnostics: [] });
     return;
   }
-  const analysis = analyzeDocument(doc.uri, doc.version, doc.getText());
-  await connection.sendDiagnostics({
-    uri: doc.uri,
-    diagnostics: toDiagnostics(doc, analysis),
-  });
-  await connection.sendNotification("visimark/status", statusOf(doc.uri, analysis));
+  // Every caller invokes this as `void runCheck(doc)`, so a throw here is an
+  // unhandled rejection with nobody above to catch it — which ends the server
+  // process, and with it hover, code lens, inlay hints and format-on-save for
+  // every open file, not just this document. A deeply nested formula used to
+  // do exactly that; the parser's depth cap closed that one input, and this
+  // closes the class. The error is logged rather than swallowed, so a real bug
+  // still surfaces in the client's output channel instead of looking like a
+  // document that simply has no findings.
+  try {
+    const analysis = analyzeDocument(doc.uri, doc.version, doc.getText());
+    await connection.sendDiagnostics({
+      uri: doc.uri,
+      diagnostics: toDiagnostics(doc, analysis),
+    });
+    await connection.sendNotification("visimark/status", statusOf(doc.uri, analysis));
+  } catch (e) {
+    connection.console.error(
+      `visimark: analysing ${doc.uri} failed: ${e instanceof Error ? (e.stack ?? e.message) : String(e)}`,
+    );
+    await connection.sendDiagnostics({ uri: doc.uri, diagnostics: [] });
+  }
 }
 
 documents.onDidOpen((e) => scheduleCheck(e.document, true));

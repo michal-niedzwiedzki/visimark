@@ -1,14 +1,14 @@
 {
-  "//": "Declarative data for the SCENARIO panel + quest checklist in playground.html — the single source for every file's scenario, keyed by FILES filename (see normalizeStep() in playground.html for the check-name vocabulary). A file with no entry here (e.g. a new blank file the visitor created) hides the SCENARIO panel entirely rather than falling back to placeholder content — see renderScenario(). Loaded at runtime by loadScenarios().",
+  "//": "Declarative data for the SCENARIO panel + quest checklist in playground.html — the single source for every file's scenario, quest, reward and badge, keyed by FILES filename (see normalizeStep() in playground.html for the check-name vocabulary). A file with no entry here (e.g. a new blank file the visitor created) hides the SCENARIO panel entirely rather than falling back to placeholder content — see renderScenario(). `badge` is optional and only tutorial chapters (01-tables.md..13-imports.md) carry one: `name`/`skill` are shown and shared once every quest step is checked off, and `icon` is a key into playground.html's BADGE_ICONS dict — add an entry there before using a new icon name. `skill` is written first person, ready to post as-is on socials. Loaded at runtime by loadScenarios().",
 
   "demo.md": {
-    "body": "Start here. This is the smallest possible VisiMark document — one vmark block computing a total from a table.",
+    "body": "Start here. This is the smallest useful VisiMark document — one vmark block computing a total from a table, and an assertion. In later chapters we will dive in each concept separately.",
     "quest": [
       {
         "kind": "eval",
         "check": "value-changed",
         "id": "edit",
-        "text": "Change a Qty or Price cell and watch Knowledge update"
+        "text": "Change a Qty or Price cell and watch Total and grand total update"
       },
       {
         "kind": "tab",
@@ -17,15 +17,15 @@
         "text": "Switch to the Knowledge tab and find the new total"
       },
       {
-        "kind": "action",
-        "action": "action:infer-run",
-        "text": "Click Infer anyway, just to see what it says about a document that's already annotated"
+        "kind": "eval",
+        "check": "assertion-failing",
+        "text": "Change the assertion to cause it to fail in both — the terminal, and Knowledge tab"
       }
     ]
   },
 
   "01-tables.md": {
-    "body": "This table is not verifiable. Change one number and nothing updates. Even if unchanged, no one can guarantee the math is solid.",
+    "body": "This table is not verifiable. Change one number and nothing updates. Even if unchanged, no one can guarantee the math is solid. In next chapters we will work to power up the document.",
     "quest": [
       {
         "kind": "eval",
@@ -36,17 +36,28 @@
         "kind": "text",
         "contains": "158.00",
         "text": "The real order total is 158.00 — fix it by hand. Nothing in this file can confirm you got it right."
+      },
+      {
+        "kind": "tab",
+        "group": "diag",
+        "tab": "knowledge",
+        "text": "Switch to the Knowledge tab — VisiMark can extract no knowledge from this document"
       }
     ],
     "reward": {
-      "text": "Install Visimark now.",
+      "text": "Install VisiMark now.",
       "kind": "link",
-      "link": "https://"
+      "link": "https://michal-niedzwiedzki.github.io/visimark/#installation-header"
+    },
+    "badge": {
+      "name": "Rookie",
+      "icon": "beanie",
+      "skill": "I have just started learning VisiMark, a verifiable calculations tool for Markdown."
     }
   },
 
   "02-inference.md": {
-    "body": "Inference is a feature where formulas and anchors are detected by VisiMark automatically. Inferred formulas are saved in the document as sheets.",
+    "body": "Inference is a feature where formulas and anchors are detected by VisiMark automatically. Inferred formulas are saved in the document as sheets and denoted with vmark block.",
     "quest": [
       {
         "kind": "tab",
@@ -60,20 +71,31 @@
         "text": "Click Infer and write — the formula needs to actually land in the document"
       },
       {
+        "kind": "tab",
+        "group": "diag",
+        "tab": "knowledge",
+        "text": "Switch to the Knowledge tab — see how much more knowledge VisiMark can now extract from the document"
+      },
+      {
         "kind": "eval",
         "check": "value-changed",
-        "text": "Change Qty or Price and watch Total and the order total update automatically"
+        "text": "Change Qty or Price and watch Total and the order total update automatically — the change is also reflected in Knowledge extract"
       },
       {
         "kind": "action",
         "action": "action:fmt-corrected",
-        "text": "Edit Total directly — VisiMark overwrites it back to the derived value"
+        "text": "Edit Total directly — VisiMark overwrites it back to the derived value on every fmt poass"
       }
     ],
     "reward": {
-      "text": "Go get a VS Code extension for Visimark.",
+      "text": "Go get a VS Code extension for VisiMark.",
       "kind": "link",
       "link": "https://"
+    },
+    "badge": {
+      "name": "Inference Practitioner",
+      "icon": "plugs",
+      "skill": "Me now knows how to infer formulas in Markdown using VisiMark."
     }
   },
 
@@ -81,14 +103,23 @@
     "body": "A sheet can be written by hand instead of inferred. The name after # is the sheet name — it is mandatory whenever a value is anchored in prose, because a document can hold more than one table and sheet.",
     "quest": [
       {
+        "kind": "action",
+        "action": "action:fmt-clean",
+        "text": "See the Terminal output. It is complaining that value from sheet #unnamed1 is defined but never used. But how so? The value is used in anchor. Or is it? Correct the reference — fmt runs clean once it's right."
+      },
+      {
         "kind": "manual",
-        "text": "See the Terminal output. It is complaining that value from sheet #unnamed1 is defined but never used. But how so? The value is used in anchor. Or is it? Correct."
+        "text": "VisiMark document can have multiple sheets. Here you have sheet #tax at the bottom. Sheets can address values between each other by qualifying them with sheet name and a comma. Now mark this quest manually as completed."
       }
     ],
     "reward": {
       "text": "Post it to Gist.",
-      "kind": "gist",
-      "link": "https://"
+      "kind": "gist"
+    },
+    "badge": {
+      "name": "Sheet Adorer",
+      "icon": "bed",
+      "skill": "I have just created my 1st verifiable calculation in Markdown with VisiMark."
     }
   },
 
@@ -98,51 +129,57 @@
       {
         "kind": "eval",
         "check": "value-changed",
-        "text": "Change Qty or Price and watch Total and the anchored order total update automatically"
+        "text": "Change Qty or Price and watch Total and the anchored order total update automatically."
       },
       {
         "kind": "action",
         "action": "action:fmt-corrected",
-        "text": "Type over the anchored 110.00 with a wrong number — VisiMark overwrites it back to the derived value"
+        "text": "Type over the anchored Order Total with a wrong number — VisiMark overwrites it back to the derived value."
       },
       {
-        "kind": "manual",
-        "text": "Change the sheet name after `#` and watch the `OrderTotal` anchor lose its target"
+        "kind": "action",
+        "action": "action:fmt-failing",
+        "text": "Change the sheet name after `#` and watch the `OrderTotal` anchor lose its target."
+      },
+      {
+        "kind": "action",
+        "action": "action:fmt-clean",
+        "text": "Change the sheet name back to restore the anchor."
       }
     ],
     "reward": {
       "text": "Post it to Gist.",
-      "kind": "gist",
-      "link": "https://"
+      "kind": "gist"
+    },
+    "badge": {
+      "name": "Anchored Editor",
+      "icon": "anchor",
+      "skill": "I have just anchored verifiable computation to a text in Markdown."
     }
   },
 
   "05-mappers.md": {
-    "body": "Mappers run once per row, or once for a scalar, turning one value into another. `IF(condition, if_true, if_false)` is the one you will reach for most.",
+    "body": "Mappers run once per row, or once for a scalar, turning one value into another.",
     "quest": [
       {
-        "kind": "manual",
-        "text": "Add a column rule `Discounted = ROUND(Total * 0.9, 2)` and watch the new column appear"
-      },
-      {
         "kind": "eval",
-        "check": "value-changed",
-        "text": "Add `big_order = IF(grand_total > 100, \"yes\", \"no\")`, then change Qty until it flips"
+        "check": "column-added",
+        "column": "Discount",
+        "text": "Add a column Discount filled with 0.00 and write a new rule: Discount = ROUND(Net * 0.1, 2) to apply a 10% rebate."
       },
       {
         "kind": "manual",
-        "text": "Try `is_big = grand_total > 100` without IF — VisiMark refuses to store a bare boolean"
-      },
-      {
-        "kind": "eval",
-        "check": "value-changed",
-        "text": "Add `issued = 2026-01-15` and `due = EOMONTH(issued, 0)`, then change issued and watch due follow"
+        "text": "Complicate the formula a little: apply discount for large orders only where Qty > 10. Use IF(condition, value if yes, value if no) just like in Excel. Play with Qty column values and mark this quest manually to advance."
       }
     ],
     "reward": {
       "text": "Post it to Gist.",
-      "kind": "gist",
-      "link": "https://"
+      "kind": "gist"
+    },
+    "badge": {
+      "name": "Analytics Specialist",
+      "icon": "wrench",
+      "skill": "Me now knows how to add spreadsheet mechanics in Markdown using VisiMark."
     }
   },
 
@@ -152,12 +189,12 @@
       {
         "kind": "eval",
         "check": "value-changed",
-        "text": "Add `average_price = AVG(Price)` and find it in Knowledge next to grand_total"
+        "text": "Add `cheapest = MIN(Total)`, `priciest = MAX(Total)`, `line_count = COUNT(Total)`, then add a fourth row"
       },
       {
         "kind": "eval",
         "check": "value-changed",
-        "text": "Add `cheapest = MIN(Total)`, `priciest = MAX(Total)`, `line_count = COUNT(Total)`, then add a fourth row"
+        "text": "Add a new value: hasDiscounts. Make it a \"yes\" or \"no\" depending if any discount was applied."
       },
       {
         "kind": "manual",
@@ -166,8 +203,12 @@
     ],
     "reward": {
       "text": "Post it to Gist.",
-      "kind": "gist",
-      "link": "https://"
+      "kind": "gist"
+    },
+    "badge": {
+      "name": "Synthesis Expert",
+      "icon": "hammer",
+      "skill": "Mastered table data aggregation in Markdown using VisiMark."
     }
   },
 
@@ -186,10 +227,18 @@
         "text": "Change Qty, then compare Reasoning (unchanged) against Knowledge (updated)"
       },
       {
-        "kind": "manual",
-        "text": "Add `tax = ROUND(grand_total * 0.2, 2)` and find it appended to Reasoning, after grand_total"
+        "kind": "tab",
+        "group": "diag",
+        "tab": "reasoning",
+        "id": "tab:diag:reasoning:after-tax",
+        "text": "Add tax = ROUND(grand_total * 0.2, 2) and find it appended to Reasoning, after grand_total"
       }
-    ]
+    ],
+    "badge": {
+      "name": "Private Investigator",
+      "icon": "magnifier",
+      "skill": "I learned how VisiMark reasons about verifiable knowledge in Markdown."
+    }
   },
 
   "08-knowledge.md": {
@@ -215,6 +264,11 @@
       "text": "Feed it to an AI agent.",
       "kind": "agent",
       "prompt": "I used VisiMark to extract those figures from a Markdown document. Can you guess what is in the document without looking?\n{json}"
+    },
+    "badge": {
+      "name": "Studious",
+      "icon": "wand",
+      "skill": "Now I can extract computational knowledge from Markdown documents."
     }
   },
 
@@ -239,6 +293,11 @@
       "text": "Post it to Gist.",
       "kind": "gist",
       "link": "https://"
+    },
+    "badge": {
+      "name": "Scientist",
+      "icon": "gradcap",
+      "skill": "I have just learned about units propagation for Markdown validation with VisiMark."
     }
   },
 
@@ -269,6 +328,11 @@
     "reward": {
       "text": "Post it to Gist.",
       "kind": "gist"
+    },
+    "badge": {
+      "name": "IED Consultant",
+      "icon": "bomb",
+      "skill": "I have just built my first Markdown math error detector with VisiMark."
     }
   },
 
@@ -293,6 +357,11 @@
       "text": "Add this Action into your GitHub repo.",
       "kind": "link",
       "link": "https://"
+    },
+    "badge": {
+      "name": "Continuous Integrator",
+      "icon": "megaphone",
+      "skill": "Learned how to shield git repo from computationally incorrect Markdown."
     }
   },
 
@@ -323,6 +392,56 @@
       "text": "Post it to Gist.",
       "kind": "gist",
       "link": "https://"
+    },
+    "badge": {
+      "name": "Maestro",
+      "icon": "paintbrush",
+      "skill": "Me soon to be promoted to executive role thanks to their VisiMark charting skill."
+    }
+  },
+
+  "13-imports.csv": {
+    "body": "Not a VisiMark document — this is the CSV that 13-imports.md imports, loaded into the playground's in-memory filesystem so the import resolves for real. Edit it and the bytes stop matching the `at sha256:...` stamp recorded in the chapter.",
+    "quest": [
+      {
+        "kind": "eval",
+        "check": "source-changed",
+        "text": "Change a Total — make the 50.00 a 5000.00"
+      },
+      {
+        "kind": "action",
+        "action": "action:build-run",
+        "text": "Press BUILD: 13-imports.md now fails with STALE — the stamp no longer matches these bytes. `fmt` would rewrite the stamp; `check` never does"
+      }
+    ]
+  },
+
+  "13-imports.md": {
+    "body": "A sheet can take its table from a declared local CSV file instead of an inline GFM table. `labelled` asserts the header, and `at sha256:...` pins the file's exact bytes — `fmt` writes and updates that stamp, `check` verifies it and never updates it. `13-imports.csv` is in the file list on the left: the playground loads it into the same in-memory filesystem the engine reads, so everything below really runs here, stamp included.",
+    "quest": [
+      {
+        "kind": "manual",
+        "text": "Find the `from 13-imports.csv ... at sha256:...` clause — it replaces the GFM table you'd otherwise write above the vmark block"
+      },
+      {
+        "kind": "manual",
+        "text": "An imported sheet has no column rules — Item, Qty, Price and Total are all read-only, straight from the CSV; only `grand_total = SUM(Total)` runs here"
+      },
+      {
+        "kind": "eval",
+        "check": "value-changed",
+        "text": "Change `SUM(Total)` to `SUM(Price)` — grand_total recomputes from a column that came out of the CSV, not out of this document. The stamp was verified here too: the playground hashes `13-imports.csv` in your browser and compares it to the `at sha256:...` clause above"
+      }
+    ],
+    "reward": {
+      "text": "Post it to Gist.",
+      "kind": "gist",
+      "link": "https://"
+    },
+    "badge": {
+      "name": "Data Importer",
+      "icon": "stamp",
+      "skill": "I just imported a CSV file into Markdown as integrity-stamped sheet."
     }
   }
 }

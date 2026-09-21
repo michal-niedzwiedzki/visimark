@@ -368,7 +368,7 @@ git commit -m "$(printf 'test: end-to-end CEILING fixture — kubernetes workers
 **Files:**
 - Edit: `docs/visimark-design.md` ([§4](../visimark-design.md#4-syntax) builtin table + the "Twelve, chosen…" sentence; [§14](../visimark-design.md#14-deferred) "beyond the twelve")
 - Edit: `docs/vocabulary-catalogue.md` (line 3 count; both `CEILING` rows in section A **moved/deleted** — the #54 row into the Shipped register as `UNRELEASED`, the seed `CEILING(x, mult)` row deleted)
-- Edit: `docs/issue-review.md` (the "twelve builtins" phrase)
+- Edit: `docs/issue-runbook.md` (the "twelve builtins" phrase)
 - Edit: `docs/cli-reference.md` (only if it enumerates builtins — it does not today; grep to confirm)
 - Edit: `CHANGELOG.md` (`## Unreleased` → `### Added`)
 - Edit: `editors/vscode/CHANGELOG.md` (`## Unreleased`)
@@ -397,7 +397,7 @@ and change the section's opening `Twelve, chosen to cover the examples and the c
 ```
 Do **not** set Status to `SHIPPED`. Do **not** close issue #54.
 
-- [ ] **Step 5: runbook phrasing** — `docs/issue-review.md` currently: `overlap with the twelve builtins` → `overlap with the thirteen builtins`.
+- [ ] **Step 5: runbook phrasing** — `docs/issue-runbook.md` currently: `overlap with the twelve builtins` → `overlap with the thirteen builtins`.
 
 - [ ] **Step 6: `cli-reference.md`** — `grep -n "ABS\\|SUM\\|builtin\\|EOMONTH\\|SQRT\\|FLOOR\\|CEILING" docs/cli-reference.md`. Today it names no builtin list, only a `TYPE` example ("calling a function wrongly"). If that is still all, make no change; if a list has appeared, add `CEILING`.
 
@@ -426,7 +426,7 @@ Do **not** set Status to `SHIPPED`. Do **not** close issue #54.
 - [ ] **Step 10: Commit**
 
 ```bash
-git add docs/visimark-design.md docs/vocabulary-catalogue.md docs/issue-review.md docs/cli-reference.md CHANGELOG.md editors/vscode/CHANGELOG.md
+git add docs/visimark-design.md docs/vocabulary-catalogue.md docs/issue-runbook.md docs/cli-reference.md CHANGELOG.md editors/vscode/CHANGELOG.md
 git commit -m "$(printf 'docs: CEILING is the thirteenth builtin — design §4, catalogue UNRELEASED, changelog\n\nCo-Authored-By: Grok 4.6 <noreply@x.ai>')"
 ```
 If `cli-reference.md` was unchanged, drop it from `git add`.

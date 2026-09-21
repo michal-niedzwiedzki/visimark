@@ -1,0 +1,71 @@
+name: Bug report
+description: The tool does something it does not claim to do
+title: "bug: <one line>"
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A bug gets a pre-review comment and a fix, not a catalogue row —
+        unless the fix has to *decide* behaviour nothing specifies yet, in
+        which case it is promoted to a catalogue row so the new behaviour
+        carries a citable reason: **section E** if what changes is what a
+        document means, **section F** if what changes is the command's surface
+        or the repo's machinery. That has happened three times — the sheet-id
+        grammar (#38) and division by zero (#122) to E, the runtime-portable
+        launcher (#29) to F. The last field below is what decides it.
+
+        A fix may be sent as a pull request straight away —
+        [`CONTRIBUTING.md`](../blob/master/CONTRIBUTING.md). The issue is
+        welcome but not required.
+  - type: textarea
+    id: repro
+    attributes:
+      label: The document that reproduces it
+      description: A whole Markdown document, small enough to paste, that shows the wrong behaviour.
+      render: markdown
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: Command, output, and what should have happened instead
+      description: The exact invocation, its stdout/stderr and exit code, then the verdict you expected.
+      render: console
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Does a wrong number survive it?
+      description: >
+        The project's one unacceptable outcome is a document that carries a
+        false value and passes `check`.
+      options:
+        - "Yes — check passes on a document whose number is wrong"
+        - "No — the tool fails, crashes, or refuses something it should accept"
+        - "No — the command misreports: wrong exit code, wrong stream, wrong --json shape"
+        - "No — the output is right but wrong-looking (wording, formatting)"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version and runtime
+      description: Output of `visimark --version`, plus Bun or Node and its version.
+      placeholder: "visimark 0.1.5, Bun 1.4.2"
+    validations:
+      required: true
+  - type: textarea
+    id: spec
+    attributes:
+      label: Is the correct behaviour already specified?
+      description: >
+        Link the design-doc section, the function reference row, or the
+        `cli-reference.md` line the tool contradicts. If nothing specifies it —
+        if fixing this means *deciding* what should happen — say so, and say
+        which it is: a decision about what a **document** means (section E) or
+        about the **command's** surface (section F). The fix then earns a
+        catalogue row and a decision comment.
+    validations:
+      required: true

@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+
+    <!--
+      Follow-up review §2.3. The playground carried a `default-src 'none'`
+      allowlist and its four neighbours carried nothing at all, on a site
+      served verbatim by GitHub Pages — which cannot send headers, so a
+      <meta> policy is the only content-security control available, and it
+      has to come before the first subresource.
+
+      `script-src` grants no inline script, which is the whole reason this is
+      worth having: this page's 112 lines of `<script>` moved to
+      packages/visimark/src/site/, where four gates can see them, and are
+      loaded from vendor/ like the playground's. A policy that still needed
+      'unsafe-inline' would buy almost nothing.
+
+      `style-src` does still carry it, for the same reason playground.html's
+      does: this page's CSS is inline. An inline-style injection is a defacement, not code
+      execution, so the trade is a different order of magnitude from the
+      script one.
+
+      `connect-src 'self'` is the one fetch this page makes: ci.md, from its own
+      directory.
+
+      `frame-ancestors` is absent because a <meta> policy cannot carry it; on
+      Pages there is nowhere to put it.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none';
+               script-src 'self' https://cdnjs.cloudflare.com;
+               style-src 'self' 'unsafe-inline';
+               img-src 'self';
+               connect-src 'self';
+               base-uri 'none';
+               form-action 'none'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <meta
+      name="description"
+      content="Make a build read your Markdown documents on every commit, and stop a merge when the arithmetic in them stops adding up — the GitHub Action, globs, annotations, pinning and rollout."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="VisiMark" />
+    <meta property="og:title" content="Protect your Markdown numbers with CI" />
+    <meta
+      property="og:description"
+      content="Make a build read your Markdown documents on every commit, and stop a merge when the arithmetic in them stops adding up — the GitHub Action, globs, annotations, pinning and rollout."
+    />
+    <meta property="og:url" content="https://michal-niedzwiedzki.github.io/visimark/ci.html" />
+    <meta
+      property="og:image"
+      content="https://michal-niedzwiedzki.github.io/visimark/og-card.png"
+    />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="VisiMark: a vmark block computing grand_total = SUM(Total), and the prose value it keeps in step"
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <title>Protect your Markdown numbers with CI</title>
+    <link rel="icon" type="image/webp" href="visimark.webp" />
+
+    <!--
+      A viewer, not a document.
+
+      Every word lives in ci.md. This page fetches that file and renders it as
+      one column. Unlike tutorial.html there is no source/rendering split: the
+      CI guide's code blocks are YAML, shell and console transcripts, and the
+      Markdown behind them is not the thing a reader is here to study.
+
+      Delete this file and the whole guide is still there in ci.md, rendering
+      on GitHub. That is the point.
+
+      Needs to be served over http(s) — `bun run serve`, or GitHub Pages —
+      because fetch() of a local file is blocked under file://.
+    -->
+
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/marked/18.0.11/lib/marked.umd.min.js"
+      integrity="sha512-spWXz/aNScpDSOz0auQxbzVBx6LmlxjgH7zilyCenKLGEyBje0iSJiLGsdPlrfNqFitWXRDdAXo1Bi7bonkZ6A=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+
+    <style>
+      :root {
+        --bg: #fdfdfc;
+        --fg: #1c1b19;
+        --muted: #6b6862;
+        --rule: #e0ddd6;
+        --src-bg: #f5f3ee;
+        --src-fg: #3a372f;
+        --accent: #2f6f4f;
+        --bar: #ffffff;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #16161a;
+          --fg: #e6e4de;
+          --muted: #9a968d;
+          --rule: #33333a;
+          --src-bg: #1e1e24;
+          --src-fg: #c9c5ba;
+          --accent: #7fc4a0;
+          --bar: #1b1b20;
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-padding-top: 4.5rem;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font:
+          16px/1.6 -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          Helvetica,
+          Arial,
+          sans-serif;
+      }
+
+      /* ---- top bar ---- */
+      .bar {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: center;
+        padding: 0.6rem 1rem;
+        background: var(--bar);
+        border-bottom: 1px solid var(--rule);
+      }
+      .bar-side {
+        flex: 1 1 0;
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.9rem;
+      }
+      .bar-side-end {
+        justify-content: flex-end;
+      }
+      .bar .title {
+        font-weight: 600;
+        /* On top of .bar-side's gap: the wordmark and the site links are two
+           different things and should not read as one run of text. */
+        margin-right: 1.25rem;
+      }
+      .bar .title a {
+        color: inherit;
+        text-decoration: none;
+      }
+      .nav {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      .nav a {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--muted);
+        text-decoration: none;
+        white-space: nowrap;
+        padding: 2px 0;
+        border-bottom: 2px solid transparent;
+      }
+      .nav a:hover,
+      .nav a:focus-visible {
+        color: var(--fg);
+        border-bottom-color: var(--accent);
+      }
+
+      /* ---- table of contents ---- */
+      .toc-btn {
+        font: inherit;
+        font-size: 0.85rem;
+        font-weight: 600;
+        white-space: nowrap;
+        padding: 0.3rem 1rem;
+        color: var(--fg);
+        background: var(--bg);
+        border: 1px solid var(--rule);
+        border-radius: 999px;
+        cursor: pointer;
+      }
+      .toc-btn:hover,
+      .toc-btn:focus-visible {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      /* A native <dialog> rather than a hand-rolled overlay: Esc to close,
+         focus containment and the backdrop all come for free. */
+      .toc {
+        width: 66%;
+        height: 75%;
+        max-width: none;
+        max-height: none;
+        padding: 0;
+        color: var(--fg);
+        background: var(--bg);
+        border: 1px solid var(--rule);
+        border-radius: 8px;
+        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.18);
+        overflow: hidden;
+      }
+      @media (prefers-color-scheme: dark) {
+        .toc {
+          box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
+        }
+      }
+      .toc::backdrop {
+        background: rgba(0, 0, 0, 0.35);
+      }
+      .toc-inner {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+      }
+      .toc-head {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.9rem 1.25rem;
+        border-bottom: 1px solid var(--rule);
+      }
+      .toc-head strong {
+        font-size: 1rem;
+      }
+      .toc-close {
+        margin-left: auto;
+        font: inherit;
+        font-size: 1.3rem;
+        line-height: 1;
+        padding: 0.1rem 0.5rem;
+        color: var(--muted);
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .toc-close:hover,
+      .toc-close:focus-visible {
+        color: var(--fg);
+        border-color: var(--rule);
+      }
+      .toc-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 0.75rem 0;
+      }
+      .toc-list a {
+        display: block;
+        padding: 0.3rem 1.25rem;
+        color: var(--fg);
+        text-decoration: none;
+        border-left: 3px solid transparent;
+      }
+      .toc-list a:hover,
+      .toc-list a:focus-visible {
+        background: var(--src-bg);
+        border-left-color: var(--accent);
+      }
+      /* Indented by heading level, so the parts, the chapters and the
+         subsections read as the outline they are. */
+      .toc-list a[data-level="1"] {
+        font-weight: 700;
+        font-size: 1.02rem;
+        margin-top: 0.7rem;
+      }
+      .toc-list a[data-level="2"] {
+        padding-left: 2.5rem;
+      }
+      .toc-list a[data-level="3"] {
+        padding-left: 3.9rem;
+        font-size: 0.9rem;
+        color: var(--muted);
+      }
+      .toc-list a[data-level="4"],
+      .toc-list a[data-level="5"],
+      .toc-list a[data-level="6"] {
+        padding-left: 5.3rem;
+        font-size: 0.9rem;
+        color: var(--muted);
+      }
+
+      /* ---- the document ---- */
+      main {
+        max-width: 880px;
+        margin: 0 auto;
+        padding: 1.5rem 1rem 6rem;
+      }
+      main h1,
+      main h2,
+      main h3,
+      main h4 {
+        line-height: 1.25;
+        margin: 1.8rem 0 0.6rem;
+      }
+      main h1 {
+        font-size: 1.7rem;
+        border-bottom: 2px solid var(--accent);
+        padding-bottom: 0.3rem;
+        margin-top: 2.6rem;
+      }
+      main h2 {
+        font-size: 1.3rem;
+      }
+      main h3 {
+        font-size: 1.05rem;
+      }
+      main p,
+      main ul,
+      main ol {
+        margin: 0.7rem 0;
+      }
+      main a {
+        color: var(--accent);
+      }
+      main code {
+        font:
+          0.87em ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          Consolas,
+          monospace;
+        background: var(--src-bg);
+        padding: 0.1em 0.35em;
+        border-radius: 3px;
+      }
+      main pre {
+        background: var(--src-bg);
+        padding: 0.7rem 0.85rem;
+        overflow-x: auto;
+        border-radius: 4px;
+        border-left: 2px solid var(--accent);
+      }
+      main pre code {
+        background: none;
+        padding: 0;
+        font-size: 0.8rem;
+        line-height: 1.5;
+      }
+      main table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 0.9rem;
+        margin: 0.9rem 0;
+      }
+      main th,
+      main td {
+        border: 1px solid var(--rule);
+        padding: 0.35rem 0.55rem;
+        text-align: left;
+        vertical-align: top;
+      }
+      main th {
+        background: var(--src-bg);
+      }
+      main blockquote {
+        margin: 0.8rem 0;
+        padding-left: 0.9rem;
+        border-left: 3px solid var(--rule);
+        color: var(--muted);
+      }
+      main hr {
+        border: 0;
+        border-top: 1px solid var(--rule);
+        margin: 2.5rem 0;
+      }
+      /* The checklist in the last chapter is a task list, and a bullet in
+         front of a checkbox is one marker too many. */
+      main li:has(> input[type="checkbox"]) {
+        list-style: none;
+        margin-left: -1.2rem;
+      }
+
+      .note {
+        padding: 2rem 0;
+        color: var(--muted);
+      }
+      .note code {
+        color: var(--fg);
+      }
+
+      @media (max-width: 700px) {
+        /* 66% of a phone is not comfortable screen estate, it is a slot. */
+        .toc {
+          width: 92%;
+          height: 85%;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <header class="bar">
+      <div class="bar-side">
+        <span class="title"><a href="index.html">VisiMark</a> — CI</span>
+        <nav class="nav" aria-label="Site">
+          <a href="index.html">Home</a>
+          <a href="playground.html">Playground</a>
+          <a href="tutorial.html">Tutorial</a>
+          <a href="https://github.com/michal-niedzwiedzki/visimark" rel="noopener">GitHub</a>
+        </nav>
+      </div>
+
+      <button class="toc-btn" id="toc-btn" type="button" aria-haspopup="dialog">
+        Table of Contents
+      </button>
+
+      <div class="bar-side bar-side-end"></div>
+    </header>
+
+    <dialog class="toc" id="toc" aria-label="Table of contents">
+      <div class="toc-inner">
+        <div class="toc-head">
+          <strong>Table of Contents</strong>
+          <button class="toc-close" id="toc-close" type="button" aria-label="Close">&times;</button>
+        </div>
+        <nav class="toc-list" id="toc-list"></nav>
+      </div>
+    </dialog>
+
+    <main id="doc">
+      <p class="note">Loading <code>ci.md</code>…</p>
+    </main>
+
+    <script src="vendor/visimark-site-ci.js"></script>
+  </body>
+</html>

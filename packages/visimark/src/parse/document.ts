@@ -156,6 +156,9 @@ const ANCHOR_LOOSE_RE = /^<!--\s*vmark\s*=/;
 export const NO_FORMULAS_MARKER = "<!--vmark:no-formulas-->";
 const NO_FORMULAS_RE = /^<!--\s*vmark\s*:\s*no-formulas\s*-->$/;
 const TRAILING_NUMBER_RE = /(-?\d+(?:\.\d+)?)\s*$/;
+/** the value an anchor rewrites when it is not a number — the trailing word,
+ *  so a string-valued scalar can be materialised in prose at all */
+const TRAILING_WORD_RE = /(\S+?)\s*$/;
 
 const off = (n: MdNode, which: "start" | "end"): number => {
   const v = n.position?.[which].offset;
@@ -400,9 +403,19 @@ function anchorValueSpan(prev: MdNode): (Span & { kind: AnchorTargetKind }) | nu
   if (prev.type === "text") {
     const value = prev.value ?? "";
     const m = TRAILING_NUMBER_RE.exec(value);
-    if (!m) return null;
-    const start = off(prev, "start") + m.index;
-    return { start, end: start + m[1]!.length, kind: "text" };
+    if (m) {
+      const start = off(prev, "start") + m.index;
+      return { start, end: start + m[1]!.length, kind: "text" };
+    }
+    // No trailing number is no longer a refusal. A scalar's precision comes
+    // from its binding now, so the anchor does not have to show a number for
+    // the tool to know how to write one — and a string-valued scalar never
+    // could. The trailing word is the span; delimiting a multi-word string
+    // value is deliberately still open (spec section 9).
+    const w = TRAILING_WORD_RE.exec(value);
+    if (!w) return null;
+    const start = off(prev, "start") + w.index;
+    return { start, end: start + w[1]!.length, kind: "text" };
   }
   return null;
 }

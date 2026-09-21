@@ -120,9 +120,11 @@ test("check passes a document that has a formula", async () => {
   expect(await runCli(["check", cleanPath], c.io)).toBe(0);
 });
 
-test("an unrecognised flag is ignored rather than failing the run", async () => {
+test("an unrecognised flag is refused with exit 2", async () => {
   const c = capture();
-  expect(await runCli(["check", cleanPath, "--require-formulas"], c.io)).toBe(0);
+  expect(await runCli(["check", cleanPath, "--require-formulas"], c.io)).toBe(2);
+  expect(c.err()).toBe("visimark: unknown option --require-formulas");
+  expect(c.out()).toBe("");
 });
 
 const pkgVersion = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8"))
@@ -213,4 +215,26 @@ test("explain lists a sheet's assertions", async () => {
   const c = capture();
   await runCli(["explain", assertFailPath], c.io);
   expect(c.out()).toContain("  assertions:\n    total == 1");
+});
+
+const withAlias = `
+| GPUs | Bandwidth per Unit (TB/s, full-duplex) |
+|-----:|----------------------------------------:|
+|    8 |                                      3.2 |
+
+\`\`\`vmark #network
+"Bandwidth per Unit (TB/s, full-duplex)" is bpu
+peak = bpu
+\`\`\`
+`;
+
+test("explain lists an aliased column's header", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "visimark-"));
+  const p = join(dir, "alias.md");
+  writeFileSync(p, withAlias);
+  const c = capture();
+  const code = await runCli(["explain", p], c.io);
+  expect(code).toBe(0);
+  expect(c.out()).toContain("aliases:");
+  expect(c.out()).toContain('bpu → "Bandwidth per Unit (TB/s, full-duplex)"');
 });

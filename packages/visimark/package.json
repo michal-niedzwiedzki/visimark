@@ -1,7 +1,7 @@
 {
   "name": "visimark",
-  "version": "0.1.2",
-  "description": "Spreadsheet mechanics for Markdown: every computed number carries the formula that produced it, and a machine can prove the two still agree.",
+  "version": "0.1.6",
+  "description": "The numbers in your Markdown, checked on every commit: every computed number carries the formula that produced it, and a machine can prove the two still agree.",
   "keywords": [
     "ai",
     "arithmetic",
@@ -43,9 +43,10 @@
   },
   "scripts": {
     "test": "bun test",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.app.json",
     "build": "bun build src/cli/main.ts src/index.ts --target node --outdir dist && tsc -p tsconfig.build.json",
-    "build:playground": "bun build src/playground/browser-entry.ts --target browser --format iife --minify --outfile ../../docs/vendor/visimark-browser.js",
+    "build:playground": "bun build src/playground/browser-entry.ts --target browser --format iife --minify --outfile ../../docs/vendor/visimark-browser.js && bun build src/playground/app/main.ts --target browser --format iife --minify --outfile ../../docs/vendor/visimark-playground.js && bun run build:site",
+    "build:site": "for p in index tutorial ci preview; do bun build src/site/$p-page.ts --target browser --format iife --minify --outfile ../../docs/vendor/visimark-site-$p.js || exit 1; done",
     "prepublishOnly": "cp ../../README.md README.md && bun run typecheck && bun test && bun run build"
   },
   "dependencies": {
@@ -56,7 +57,7 @@
   },
   "devDependencies": {
     "@types/bun": "^1.4.2",
-    "@types/node": "^26.5.1",
+    "@types/node": "^26.6.1",
     "typescript": "^7.0.2"
   },
   "engines": {

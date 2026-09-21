@@ -50,6 +50,15 @@ export function messageOf(f: Finding): string {
       return `\`${f.raw}\` is a column, not a value — wrap it in an aggregate, e.g. SUM(${f.raw})`;
     case "CYCLE":
       return `circular dependency: ${(f.cyclePath ?? []).join(" → ")}`;
+    case "PRECISION":
+      // `f.message` carries the working-precision-ceiling case; otherwise no
+      // width follows from the formula and the author has to declare one.
+      return (
+        f.message ??
+        (f.raw
+          ? `\`${f.raw}\` has no derivable precision — declare it, e.g. \`${f.name} precision 2 = …\``
+          : "no precision declared and none follows from the formula")
+      );
     case "ANCHOR":
       // `f.message` carries the specific reason — an image/chart mismatch,
       // or (issue #38) a `vmark=` comment that never parsed. The generic

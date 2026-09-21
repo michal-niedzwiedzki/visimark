@@ -25,6 +25,10 @@ export const assertFailPath = join(here, "fixtures", "assert-fail.md");
 /** the charts worked example, and its committed artifacts */
 export const chartsPath = join(docDir, "example-charts.md");
 export const charts = readFileSync(chartsPath, "utf8");
+
+/** the fourth worked example: human-readable column references and aliases */
+export const bandwidthPath = join(docDir, "example-bandwidth.md");
+export const bandwidth = readFileSync(bandwidthPath, "utf8");
 /** a minimal fixture whose pie cannot be drawn — the ARTIFACT acceptance */
 export const chartFailPath = join(here, "fixtures", "chart-fail.md");
 

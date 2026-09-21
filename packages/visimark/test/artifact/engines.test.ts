@@ -51,9 +51,12 @@ test("niceTicks always spans zero and uses 1/2/5 steps", () => {
   expect(neg[0]).toBeLessThanOrEqual(-40);
 });
 
-test("both engines are registered and nothing else is", () => {
-  expect(engineNames()).toContain("pie");
-  expect(engineNames()).toContain("bar");
+test("all five built-in engines are registered", () => {
+  // other test files register throwaway stub engines into this same shared
+  // registry, so this checks presence, not the full set
+  for (const name of ["area", "bar", "line", "pie", "stacked-bar"]) {
+    expect(engineNames()).toContain(name);
+  }
 });
 
 test("pie: renders, is byte-stable, and carries the marker", () => {
@@ -130,4 +133,100 @@ test("units are carried into value labels", () => {
   );
   if ("err" in r) throw new Error(r.err);
   expect(r.svg).toContain("$20.00");
+});
+
+test("line: single series renders a polyline with a point per row and value labels", () => {
+  const r = buildArtifact("line", input(), id);
+  if ("err" in r) throw new Error(r.err);
+  expect(r.svg).toContain("<polyline");
+  expect(r.svg.match(/<polyline/g)).toHaveLength(1);
+  expect(r.svg.match(/<circle/g)).toHaveLength(2);
+  expect(r.svg).toContain("20.00");
+  expect(r.svg).toContain("pen");
+});
+
+test("line: multiple series draw one polyline each and a legend", () => {
+  const r = buildArtifact(
+    "line",
+    input({ series: [S("Rev", [10, 20]), S("Cost", [4, 9])], labels: ["Jan", "Feb"] }),
+    id,
+  );
+  if ("err" in r) throw new Error(r.err);
+  expect(r.svg.match(/<polyline/g)).toHaveLength(2);
+  expect(r.svg).toContain("Rev");
+  expect(r.svg).toContain("Cost");
+});
+
+test("line: negative values are legal and need no special case", () => {
+  const r = buildArtifact("line", input({ series: [S("Net", [10, -5])] }), id);
+  expect("err" in r).toBe(false);
+});
+
+test("line: an empty series list is refused", () => {
+  const r = buildArtifact("line", input({ series: [] }), id);
+  expect(r).toEqual({ err: "a line chart needs a series" });
+});
+
+test("area: single series fills to the zero baseline and draws points", () => {
+  const r = buildArtifact("area", input(), id);
+  if ("err" in r) throw new Error(r.err);
+  expect(r.svg).toContain("<path");
+  expect(r.svg).toContain('fill-opacity="0.55"');
+  expect(r.svg.match(/<circle/g)).toHaveLength(2);
+});
+
+test("area: multiple series each fill and stroke in their own grey, with a legend", () => {
+  const r = buildArtifact(
+    "area",
+    input({ series: [S("Rev", [10, 20]), S("Cost", [4, 9])], labels: ["Jan", "Feb"] }),
+    id,
+  );
+  if ("err" in r) throw new Error(r.err);
+  expect(r.svg.match(/<path/g)).toHaveLength(2);
+  expect(r.svg).toContain("Rev");
+  expect(r.svg).toContain("Cost");
+});
+
+test("area: an empty series list is refused", () => {
+  const r = buildArtifact("area", input({ series: [] }), id);
+  expect(r).toEqual({ err: "an area chart needs a series" });
+});
+
+test("stacked-bar: single series stacks trivially, one segment per row", () => {
+  const r = buildArtifact("stacked-bar", input(), id);
+  if ("err" in r) throw new Error(r.err);
+  expect(r.svg.match(/<rect/g)).toHaveLength(2);
+});
+
+test("stacked-bar: multiple positive series stack upward with a legend", () => {
+  const r = buildArtifact(
+    "stacked-bar",
+    input({ series: [S("Rev", [10, 20]), S("Cost", [4, 9])], labels: ["Jan", "Feb"] }),
+    id,
+  );
+  if ("err" in r) throw new Error(r.err);
+  // 2 rows x 2 series + 2 legend swatches
+  expect(r.svg.match(/<rect/g)).toHaveLength(6);
+  expect(r.svg).toContain("Rev");
+  expect(r.svg).toContain("Cost");
+});
+
+test("stacked-bar: mixed-sign series split into a positive stack and a negative stack", () => {
+  const r = buildArtifact(
+    "stacked-bar",
+    input({ series: [S("A", [10, -10]), S("B", [5, -5])] }),
+    id,
+  );
+  if ("err" in r) throw new Error(r.err);
+  // the axis must span both the positive and negative cumulative extremes:
+  // row 0 stacks to +15, row 1 stacks to -15
+  expect(r.svg).toContain(">20<");
+  expect(r.svg).toContain(">-20<");
+  // 2 rows x 2 series + 2 legend swatches
+  expect(r.svg.match(/<rect/g)).toHaveLength(6);
+});
+
+test("stacked-bar: an empty series list is refused", () => {
+  const r = buildArtifact("stacked-bar", input({ series: [] }), id);
+  expect(r).toEqual({ err: "a stacked-bar chart needs a series" });
 });

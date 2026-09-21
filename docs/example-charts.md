@@ -26,6 +26,8 @@ total_revenue = SUM(Revenue)
 total_profit = SUM(Profit)
 assert total_profit > 0
 chart performance as bar of Revenue, Cost, Profit labelled Month aspect 16:9
+chart trend as line of Revenue, Cost, Profit labelled Month
+chart split as stacked-bar of Cost, Profit labelled Month
 ```
 
 Revenue across the five months totals **260550.00**<!--vmark=sales.total_revenue-->,
@@ -36,6 +38,17 @@ against a profit of **92900.00**<!--vmark=sales.total_profit-->.
 The chart takes three series from one sheet, so they share a row count by
 construction. It carries an explicit `aspect 16:9`; the pie below takes the
 default `16:10`.
+
+![the same three series as a trend line](charts/example-charts-trend.svg)<!--vmark=sales.trend-->
+
+The same three columns, drawn as a line instead of grouped bars — points share
+the exact x position bar centers its groups on.
+
+![cost and profit stacked to revenue](charts/example-charts-split.svg)<!--vmark=sales.split-->
+
+`Cost` and `Profit` stack to exactly `Revenue`, since `Profit = Revenue - Cost`
+— a stacked bar is a running total, and this one totals to a column already on
+the page.
 
 ## Audience
 
@@ -49,6 +62,7 @@ default `16:10`.
 ```vmark #audience
 total = SUM(Headcount)
 chart mix as pie of Headcount labelled Segment
+chart spread as area of Headcount labelled Segment
 ```
 
 The sample covers **8500**<!--vmark=audience.total--> people.
@@ -58,10 +72,16 @@ The sample covers **8500**<!--vmark=audience.total--> people.
 `Headcount` is a human-written input column with no decimals, so its total
 writes bare — the same precision inference every other value gets.
 
+![the same headcount as a filled area](charts/example-charts-spread.svg)<!--vmark=audience.spread-->
+
+A single series needs no legend and no overlap to justify the area engine's
+fixed fill opacity — it exists for the case a second series would put on top
+of this one, and applies uniformly whether or not that happens.
+
 ## What `check` guarantees here
 
-`visimark check` proves that both SVGs on disk are exactly what the current
-data renders to. Change a `Revenue` cell and the bar chart is `STALE` until
+`visimark check` proves that all five SVGs on disk are exactly what the
+current data renders to. Change a `Revenue` cell and the bar chart is `STALE` until
 `fmt` regenerates it; delete either file and it is `STALE` as missing. What
 `check` does **not** prove is that the picture is a faithful depiction of the
 numbers — an artifact's provenance is verifiable, its draughtsmanship is not.

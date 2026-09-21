@@ -174,3 +174,32 @@ test("`assert` as a binding name is a TYPE finding", () => {
   expect(t.length).toBe(1);
   expect(t[0]!.message).toBe("`assert` is a keyword");
 });
+
+test("a `precision` clause reaches the model, on a scalar and on a column rule", () => {
+  const m = build(
+    locate(
+      [
+        "| Item | Net |",
+        "|------|----:|",
+        "| a    | 1.00 |",
+        "",
+        "```vmark #lines",
+        "Net precision 2 = 1 + 1",
+        "net_total precision 4 = SUM(Net)",
+        "bare = SUM(Net)",
+        "```",
+      ].join("\n"),
+    ),
+  );
+  const sheet = m.sheets.get("lines")!;
+  expect(sheet.columns.get("Net")!.precision).toBe(2);
+  expect(sheet.scalars.get("net_total")!.precision).toBe(4);
+  expect(sheet.scalars.get("bare")!.precision).toBeUndefined();
+});
+
+test("`precision` as a bound name is a TYPE finding carrying the keyword message", () => {
+  const m = build(locate(["```vmark", "precision = 2", "```"].join("\n")));
+  expect(m.findings.map((f) => [f.code, f.message])).toEqual([
+    ["TYPE", "`precision` is a keyword — write `precision 2`, not `precision = 2`"],
+  ]);
+});

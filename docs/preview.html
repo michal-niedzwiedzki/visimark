@@ -2,7 +2,74 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+
+    <!--
+      Follow-up review §2.3. The playground carried a `default-src 'none'`
+      allowlist and its four neighbours carried nothing at all, on a site
+      served verbatim by GitHub Pages — which cannot send headers, so a
+      <meta> policy is the only content-security control available, and it
+      has to come before the first subresource.
+
+      `script-src` grants no inline script, which is the whole reason this is
+      worth having: this page's 70 lines of `<script>` moved to
+      packages/visimark/src/site/, where four gates can see them, and are
+      loaded from vendor/ like the playground's. A policy that still needed
+      'unsafe-inline' would buy almost nothing.
+
+      `style-src` does still carry it, for the same reason playground.html's
+      does: this page's CSS is inline. An inline-style injection is a defacement, not code
+      execution, so the trade is a different order of magnitude from the
+      script one.
+
+      `connect-src 'self'` is what `?file=` fetches — already restricted to a
+      bare filename in this directory by the pattern in
+      packages/visimark/src/site/preview-page.ts, which is the check review §2.3
+      credited this page for. The policy is the second lock on that door.
+
+      `frame-ancestors` is absent because a <meta> policy cannot carry it; on
+      Pages there is nowhere to put it.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none';
+               script-src 'self' https://cdnjs.cloudflare.com;
+               style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+               font-src https://fonts.gstatic.com;
+               img-src 'self';
+               connect-src 'self';
+               base-uri 'none';
+               form-action 'none'"
+    />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!-- Review §2.9 — the card a pasted link renders as. The wording, the
+         image and the reasoning are all in index.html's copy of this block.
+         This page shows whichever example `?file=` names, so its card is the
+         generic site one: a scraper never runs the script that would know
+         which example it is. -->
+    <meta
+      name="description"
+      content="A worked VisiMark example, rendered side by side with its source: the formulas, the values they produce and the prose that stays in step with them."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="VisiMark" />
+    <meta property="og:title" content="A VisiMark example" />
+    <meta
+      property="og:description"
+      content="A worked VisiMark example, rendered side by side with its source: the formulas, the values they produce and the prose that stays in step with them."
+    />
+    <meta property="og:url" content="https://michal-niedzwiedzki.github.io/visimark/preview.html" />
+    <meta
+      property="og:image"
+      content="https://michal-niedzwiedzki.github.io/visimark/og-card.png"
+    />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="VisiMark: a vmark block computing grand_total = SUM(Total), and the prose value it keeps in step"
+    />
+    <meta name="twitter:card" content="summary_large_image" />
     <title>VisiMark — preview</title>
     <link rel="icon" type="image/webp" href="visimark.webp" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -223,75 +290,6 @@
       crossorigin="anonymous"
       referrerpolicy="no-referrer"
     ></script>
-    <script>
-      (function () {
-        var params = new URLSearchParams(window.location.search);
-        var file = params.get("file") || "example-ci-sharding.md";
-        var highlight = params.get("highlight") === "1";
-
-        // Guard against an arbitrary path escaping the docs/ folder or
-        // pointing off-site — only a bare filename in this directory is
-        // ever fetched.
-        var safe = /^[A-Za-z0-9_-]+\.md$/.test(file);
-
-        var sourceLabelEl = document.getElementById("source-label");
-        var sourceLinkEl = document.getElementById("source-link");
-        var sourceEl = document.getElementById("doc-source");
-        var previewEl = document.getElementById("doc-preview");
-        var demoEl = document.getElementById("doc-demo");
-        var highlightEl = document.getElementById("doc-highlight");
-        var errorEl = document.getElementById("doc-error");
-
-        // With ?highlight=1, repeat the document's last "## " section — its
-        // closing rationale — above the source/preview panes, rendered as a
-        // heading and prose rather than shown as raw Markdown.
-        function renderHighlight(raw) {
-          var lines = raw.split("\n");
-          var start = -1;
-          for (var i = 0; i < lines.length; i++) {
-            if (/^## /.test(lines[i])) start = i;
-          }
-          if (start === -1) return;
-          var section = lines.slice(start).join("\n").trim();
-          highlightEl.innerHTML = typeof marked !== "undefined" ? marked.parse(section) : section;
-          highlightEl.hidden = false;
-        }
-
-        function showError(message) {
-          errorEl.textContent = message;
-          errorEl.hidden = false;
-        }
-
-        if (!safe) {
-          showError("Unrecognised ?file= value: " + file);
-          return;
-        }
-
-        sourceLabelEl.textContent = "docs/" + file;
-        var githubUrl = "https://github.com/michal-niedzwiedzki/visimark/blob/master/docs/" + file;
-        sourceLinkEl.innerHTML =
-          'View on GitHub: <a href="' +
-          githubUrl +
-          '" target="_blank" rel="noopener">docs/' +
-          file +
-          "</a>";
-
-        fetch(file)
-          .then(function (res) {
-            if (!res.ok) throw new Error(res.status + " " + res.statusText);
-            return res.text();
-          })
-          .then(function (raw) {
-            document.title = "VisiMark — " + file;
-            sourceEl.textContent = raw;
-            previewEl.innerHTML = typeof marked !== "undefined" ? marked.parse(raw) : raw;
-            if (highlight) renderHighlight(raw);
-            demoEl.hidden = false;
-          })
-          .catch(function (err) {
-            showError("Could not load docs/" + file + " (" + err.message + ").");
-          });
-      })();
-    </script>
+    <script src="vendor/visimark-site-preview.js"></script>
   </body>
 </html>

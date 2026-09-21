@@ -7,5 +7,10 @@
     "rootDir": "src",
     "outDir": "dist"
   },
-  "include": ["src"]
+  "include": ["src"],
+  // Browser-only UI: not part of the published package, and needs the DOM lib
+  // (see tsconfig.app.json). Both directories, not just the playground — the
+  // docs/ pages' scripts moved under src/site in the follow-up review's §2.3,
+  // and this config emits the published .d.ts, which neither belongs in.
+  "exclude": ["src/playground/app", "src/site"]
 }

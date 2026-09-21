@@ -61,3 +61,13 @@ export interface ChartDecl extends Pos {
   labels: string;
   aspect: { w: number; h: number } | null;
 }
+
+/** A `"<header>" is <symbol>` statement. Binds no expression; declares that
+ *  `symbol` is a second, formula-facing name for the column whose GFM header
+ *  is `header`, exactly as `header` itself would be if it were an identifier.
+ *  See docs/design/human-readable-column-aliases-spec.md. */
+export interface AliasDecl extends Pos {
+  type: "alias";
+  header: string;
+  symbol: string;
+}

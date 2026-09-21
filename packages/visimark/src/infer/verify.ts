@@ -1,9 +1,32 @@
 import { check, matchesStored, roundValue, showValue } from "../eval/check.js";
-import { applyUnit, parseDecorated, type Unit } from "../eval/units.js";
+import { applyUnit, cellPrecision, parseDecorated, type Unit } from "../eval/units.js";
 import type { Value } from "../eval/value.js";
 import type { Binding } from "../model/types.js";
 import type { Span } from "../parse/document.js";
 import { type InferContext, type InferSheet, makeBinding, provisional } from "./context.js";
+
+/**
+ * Insert a `precision N` clause into a rule's head. The head is everything left
+ * of the first `=`, which is a name or a quoted header — inference never builds
+ * anything else.
+ */
+export function withPrecision(rule: string, places: number): string {
+  const eq = rule.indexOf("=");
+  if (eq === -1) return rule;
+  return `${rule.slice(0, eq).trimEnd()} precision ${places} = ${rule.slice(eq + 1).trim()}`;
+}
+
+/** the widest decimals the column's own cells show, or `null` if none do */
+function columnCellPrecision(sheet: InferSheet, name: string): number | null {
+  const idx = sheet.index.get(name);
+  if (idx === undefined) return null;
+  let max = -1;
+  for (const row of sheet.table.rows) {
+    const p = cellPrecision(row.cells[idx]?.text ?? "");
+    if (p !== null) max = Math.max(max, p);
+  }
+  return max === -1 ? null : max;
+}
 
 /** a rule already chosen, carried into the model a candidate is verified in */
 export interface Accepted {
@@ -27,10 +50,15 @@ export interface ColumnVerdict {
   /** rows the rule reproduces exactly */
   fits: number;
   misses: Disagreement[];
+  /** the rule as verified, when a `precision` clause had to be added to it */
+  ruleUsed?: string;
 }
 
 export interface ScalarVerdict {
   usable: boolean;
+  /** false when no width follows from the rule, so a `precision` clause is
+   *  needed before the value can be anchored */
+  derivable: boolean;
   /** the value rendered at `places` decimals, for comparison against prose */
   text(places: number): string;
   /**
@@ -51,6 +79,8 @@ export function verifyColumn(
   sheet: InferSheet,
   rule: string,
   accepted: Accepted[],
+  /** internal: set once the rule has already been retried with a clause */
+  retried = false,
 ): ColumnVerdict {
   const miss: ColumnVerdict = { usable: false, rows: 0, fits: 0, misses: [] };
   const binding = safeBinding(sheet, rule);
@@ -62,6 +92,17 @@ export function verifyColumn(
 
   for (const f of result.findings) {
     if (f.code === "STALE") continue;
+    if (f.code === "PRECISION" && f.sheetId === sheet.id && f.name === binding.name && !retried) {
+      // The rule divides, averages or roots, so no width follows from it. The
+      // column's own cells are the evidence for one — the same evidence every
+      // other part of inference matches against — so retry with the clause
+      // rather than discard a rule that does reproduce the numbers.
+      const places = columnCellPrecision(sheet, binding.name);
+      if (places === null) return miss;
+      const withClause = withPrecision(rule, places);
+      const retry = verifyColumn(ctx, sheet, withClause, accepted, true);
+      return retry.usable ? { ...retry, ruleUsed: withClause } : miss;
+    }
     if (f.sheetId === sheet.id && f.name === binding.name) return miss;
     if (f.code === "CYCLE" && f.cyclePath?.includes(binding.id)) return miss;
   }
@@ -109,6 +150,7 @@ export function verifyScalar(
 ): ScalarVerdict {
   const miss: ScalarVerdict = {
     usable: false,
+    derivable: false,
     text: () => "",
     writes: () => false,
   };
@@ -127,6 +169,7 @@ export function verifyScalar(
 
   return {
     usable: true,
+    derivable: result.scalarPrecision.has(binding.id),
     text: (places) => showValue(v, places),
     writes: (figure) => writesExactly(v, unit, figure),
   };

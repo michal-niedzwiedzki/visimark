@@ -1,5 +1,6 @@
 import { Decimal } from "decimal.js";
 import {
+  type AliasDecl,
   type Assertion,
   type ChartDecl,
   COMPARISON_OPS,
@@ -29,8 +30,85 @@ const RIGHT_ASSOC = new Set(["^"]);
 const UNARY_MINUS_BP = 5;
 const UNARY_NOT_BP = 2;
 
+/**
+ * Deepest expression the pipeline will accept, guarding *two* different
+ * overflows that a single guard does not cover. See
+ * docs/design/parser-depth-cap-plan.md.
+ *
+ * 1. The parser's own recursion. `((((…1…))))` never returns an AST at all —
+ *    `parseBp` overflows the stack first (measured: n = 18,751 under Bun on
+ *    Linux; `ABS(ABS(…))` and a unary-minus run at n = 12,501).
+ * 2. The depth of the tree that *does* come back. `parseBp` consumes a
+ *    left-associative chain iteratively, so `1+1+…+1` recurses to depth 1 and
+ *    still builds a left-leaning spine as deep as the chain is long. A
+ *    recursion counter never fires on it, and five recursive AST walkers then
+ *    have to descend it: `evalExpr`, `build`'s `rebase`, `check-report`'s
+ *    `visit`, and the walkers in `eval/graph.ts` and `eval/check.ts`. Measured:
+ *    `1+1+…+1` at n = 30,000 parses cleanly, then overflows `evalExpr`.
+ *
+ * So the ceiling is the *shallowest* of those walkers, not the parser, and the
+ * figures above are JavaScriptCore's. That distinction is not academic: the CLI
+ * ships to Node and the LSP runs under the editor's Node, and `acceptance-node`
+ * measures the same synthetic walker at **9,520 levels under Node 20 against
+ * 31,925 under Bun** — V8's usable stack here is 3.3x smaller. A cap chosen
+ * against the Bun figure alone would have about a third of the margin it
+ * appeared to have.
+ *
+ * Hence a cap two orders of magnitude below the smallest number measured
+ * anywhere, rather than one tuned close to it, and `scripts/stack-headroom.mjs`
+ * re-measuring on every CI run so this comment cannot quietly go stale. A
+ * future walker inherits the budget for free, which is why it lives here, at
+ * the only place that produces an `Expr`.
+ *
+ * 256 is not a squeeze: the deepest formula in this repository's own documents
+ * is 5 (`ROUND(MaxNodes * (1 - budget.reserved_capacity) - 0.5, 0)`). The one
+ * real input it refuses is a summed-every-column chain over a 300-column table,
+ * which is accepted knowingly — it now gets a positioned finding instead of a
+ * `RangeError` and a 10,000-frame stack trace.
+ *
+ * The declaration below is read verbatim by `scripts/stack-headroom.mjs`, so
+ * that the headroom CI checks is the cap actually in force. Renaming or
+ * reformatting this line fails that check loudly rather than silently; update
+ * the pattern there too.
+ */
+const MAX_EXPR_DEPTH = 256;
+
+const DEPTH_MESSAGE = `expression nests more than ${MAX_EXPR_DEPTH} levels deep`;
+
+/**
+ * Deepest node under `root`, found with an explicit worklist. A recursive
+ * guard against runaway recursion would overflow on exactly the input it is
+ * meant to refuse, so this one never touches the call stack.
+ */
+function deepestNode(root: Expr): { depth: number; at: Expr } {
+  let best = { depth: 0, at: root };
+  const stack: { node: Expr; depth: number }[] = [{ node: root, depth: 1 }];
+  for (;;) {
+    const top = stack.pop();
+    if (top === undefined) break;
+    const { node, depth } = top;
+    if (depth > best.depth) best = { depth, at: node };
+    switch (node.type) {
+      case "unary":
+        stack.push({ node: node.operand, depth: depth + 1 });
+        break;
+      case "binary":
+        stack.push({ node: node.left, depth: depth + 1 });
+        stack.push({ node: node.right, depth: depth + 1 });
+        break;
+      case "call":
+        for (const a of node.args) stack.push({ node: a, depth: depth + 1 });
+        break;
+      default:
+        break;
+    }
+  }
+  return best;
+}
+
 class Parser {
   private pos = 0;
+  private depth = 0;
   constructor(private readonly toks: Token[]) {}
 
   private peek(): Token {
@@ -57,10 +135,34 @@ class Parser {
         t.end,
       );
     }
+    // Guard 2. The recursion counter in parseBp cannot see a left-associative
+    // spine, which that loop builds without recursing at all.
+    const deepest = deepestNode(expr);
+    if (deepest.depth > MAX_EXPR_DEPTH) {
+      // Point at the deepest node rather than the whole expression: on a 60 KB
+      // line a whole-line span is not a location.
+      throw new LangError(DEPTH_MESSAGE, deepest.at.start, deepest.at.end);
+    }
     return expr;
   }
 
   private parseBp(minBp: number): Expr {
+    // Guard 1. The decrement is in a `finally` because parseStatement's outer
+    // catch inspects and rethrows; a counter leaked on the error path would
+    // make a later statement refuse for a depth it never reached.
+    if (++this.depth > MAX_EXPR_DEPTH) {
+      this.depth--;
+      const t = this.peek();
+      throw new LangError(DEPTH_MESSAGE, t.start, t.end);
+    }
+    try {
+      return this.parseBpInner(minBp);
+    } finally {
+      this.depth--;
+    }
+  }
+
+  private parseBpInner(minBp: number): Expr {
     let left = this.nud();
 
     for (;;) {
@@ -188,6 +290,14 @@ export interface Binding {
   expr: Expr;
   nameStart: number;
   nameEnd: number;
+  /** true when the left-hand side was a quoted column header, not an identifier */
+  quoted: boolean;
+  /** declared write precision, from a `precision N` clause on the head */
+  precision?: number;
+  /** set on a `param NAME precision N = default LITERAL` statement: the default
+   *  literal as written, and whether it was a percent literal. See
+   *  docs/design/scenario-params-spec.md. */
+  param?: { text: string; percent: boolean };
 }
 
 const LEADING_NAME_RE = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=/;
@@ -211,7 +321,7 @@ export function parseBinding(line: string): Binding {
  * ordinary `name = expression` binding. `assert` is a keyword — `assert = 1`
  * and a binding named `assert` are rejected here rather than silently parsed.
  */
-export function parseStatement(line: string): Binding | Assertion | ChartDecl {
+export function parseStatement(line: string): Binding | Assertion | ChartDecl | AliasDecl {
   try {
     return parseStatementInner(line);
   } catch (e) {
@@ -223,7 +333,7 @@ export function parseStatement(line: string): Binding | Assertion | ChartDecl {
   }
 }
 
-function parseStatementInner(line: string): Binding | Assertion | ChartDecl {
+function parseStatementInner(line: string): Binding | Assertion | ChartDecl | AliasDecl {
   const toks = lex(line);
   const first = toks.find((t) => t.kind !== "eof");
   if (first?.kind === "chart") {
@@ -248,6 +358,34 @@ function parseStatementInner(line: string): Binding | Assertion | ChartDecl {
     const at = toks.find((t) => t.kind === "assert")!;
     throw new LangError("`assert` is a keyword", at.start, at.end);
   }
+  if (first?.kind === "string") {
+    const afterIdx = toks.indexOf(first) + 1;
+    const after = toks[afterIdx];
+    if (after?.kind === "is") {
+      return parseAlias(toks, first, after);
+    }
+  }
+  if (toks.some((t) => t.kind === "is")) {
+    const at = toks.find((t) => t.kind === "is")!;
+    throw new LangError("`is` is a keyword", at.start, at.end);
+  }
+  // `param` is contextual: the keyword only as the first token and followed by
+  // a name, so `param = 5` and `param precision 2 = …` stay ordinary bindings.
+  if (first?.kind === "ident" && first.value === "param") {
+    const second = toks[toks.indexOf(first) + 1];
+    if (second?.kind === "ident" || second?.kind === "string") {
+      return parseParam(line, toks, first, second);
+    }
+  }
+  // A `precision` clause belongs on the binding head, where `parseBindingInner`
+  // takes it from. Anywhere to the right of `=` it is a keyword inside an
+  // expression, which is never legal.
+  const eqAt = toks.findIndex((t) => t.kind === "op" && t.value === "=");
+  const precAt = toks.findIndex((t) => t.kind === "precision");
+  if (precAt !== -1 && eqAt !== -1 && precAt > eqAt) {
+    const at = toks[precAt]!;
+    throw new LangError("`precision` is a keyword", at.start, at.end);
+  }
   return parseBinding(line);
 }
 
@@ -258,11 +396,12 @@ function parseBindingInner(line: string): Binding {
     throw new LangError("binding has no `=`", 0, line.length);
   }
   const lhs = toks.slice(0, eqIndex);
-  const nameToks = lhs.filter((t) => t.kind !== "eof");
-  if (nameToks.length !== 1 || nameToks[0]!.kind !== "ident") {
+  const headToks = lhs.filter((t) => t.kind !== "eof");
+  const { nameToks, precision } = takePrecisionClause(headToks);
+  if (nameToks.length !== 1 || (nameToks[0]!.kind !== "ident" && nameToks[0]!.kind !== "string")) {
     const start = nameToks[0]?.start ?? 0;
     const end = nameToks[nameToks.length - 1]?.end ?? line.length;
-    throw new LangError("the left of `=` must be a single name", start, end);
+    throw new LangError("the left of `=` must be a name or a quoted column header", start, end);
   }
   const nameTok = nameToks[0]!;
   const rhs = toks.slice(eqIndex + 1); // keeps the trailing eof
@@ -272,7 +411,113 @@ function parseBindingInner(line: string): Binding {
     expr,
     nameStart: nameTok.start,
     nameEnd: nameTok.end,
+    quoted: nameTok.kind === "string",
+    ...(precision === undefined ? {} : { precision }),
   };
+}
+
+export const PARAM_DEFAULT_MESSAGE = "a param default must be a number literal";
+
+/**
+ * `param NAME [precision N] = default LITERAL` — see
+ * docs/design/scenario-params-spec.md §2. A missing `precision` clause is not
+ * a parse error: the binding is returned without one and `check` reports
+ * `PRECISION`, as it does for any binding whose width is required.
+ */
+function parseParam(line: string, toks: Token[], kw: Token, nameTok: Token): Binding {
+  try {
+    return parseParamInner(line, toks, kw, nameTok);
+  } catch (e) {
+    // `LEADING_NAME_RE` cannot see past the `param` keyword, so name the
+    // binding here or its findings would print as a bare `sheet.`
+    if (e instanceof LangError && e.bindingName === undefined) e.bindingName = nameTok.value;
+    throw e;
+  }
+}
+
+function parseParamInner(line: string, toks: Token[], kw: Token, nameTok: Token): Binding {
+  if (nameTok.kind === "string") {
+    throw new LangError(
+      "a param name must be an identifier, not a quoted header",
+      nameTok.start,
+      nameTok.end,
+    );
+  }
+  const eqIndex = toks.findIndex((t) => t.kind === "op" && t.value === "=");
+  if (eqIndex === -1) {
+    throw new LangError("binding has no `=`", kw.start, line.length);
+  }
+  const head = toks.slice(toks.indexOf(nameTok), eqIndex);
+  const { nameToks, precision } = takePrecisionClause(head);
+  if (nameToks.length !== 1) {
+    const extra = nameToks[1] ?? nameToks[0]!;
+    throw new LangError(`unexpected ${extra.kind}`, extra.start, extra.end);
+  }
+  const dflt = toks[eqIndex + 1]!;
+  if (dflt.kind !== "ident" || dflt.value !== "default") {
+    throw new LangError("expected `default` after `=` in a param", dflt.start, dflt.end);
+  }
+  let i = eqIndex + 2;
+  let negative = false;
+  const litStart = toks[i]!.start;
+  if (toks[i]?.kind === "op" && toks[i]!.value === "-") {
+    negative = true;
+    i++;
+  }
+  const lit = toks[i]!;
+  if ((lit.kind !== "number" && lit.kind !== "percent") || toks[i + 1]?.kind !== "eof") {
+    const at = toks[eqIndex + 2]!;
+    throw new LangError(PARAM_DEFAULT_MESSAGE, at.start, Math.max(line.length, at.end));
+  }
+  const percent = lit.kind === "percent";
+  // the written digits are kept, as `nud` keeps them for any number literal;
+  // a percent folds exactly as it does there
+  const magnitude = percent ? new Decimal(lit.value).div(100).toString() : lit.value;
+  const value = negative ? `-${magnitude}` : magnitude;
+  return {
+    name: nameTok.value,
+    expr: { type: "num", value, start: litStart, end: lit.end },
+    nameStart: nameTok.start,
+    nameEnd: nameTok.end,
+    quoted: false,
+    ...(precision === undefined ? {} : { precision }),
+    param: { text: line.slice(litStart, lit.end), percent },
+  };
+}
+
+export const PRECISION_RANGE_MESSAGE = "precision must be a whole number from 0 to 18";
+export const PRECISION_KEYWORD_MESSAGE =
+  "`precision` is a keyword — write `precision 2`, not `precision = 2`";
+/** the widest declarable width: `Decimal.precision` is 40 significant digits,
+ *  so 18 decimals stays exact for integer parts up to 22 digits. See
+ *  docs/design/declared-precision-spec.md section 3.5. */
+const MAX_PRECISION = 18;
+
+/**
+ * Split a `precision N` clause off the end of a binding head, leaving the name
+ * tokens. The head is already multi-token for `"Header" is symbol`, so a
+ * trailing clause needs no new grammar layer — only that the clause is last.
+ */
+function takePrecisionClause(head: Token[]): { nameToks: Token[]; precision?: number } {
+  const kwIndex = head.findIndex((t) => t.kind === "precision");
+  if (kwIndex === -1) return { nameToks: head };
+  const kw = head[kwIndex]!;
+  if (kwIndex === 0) {
+    // `precision = 2` — the removed document-scope constant.
+    throw new LangError(PRECISION_KEYWORD_MESSAGE, kw.start, kw.end);
+  }
+  const rest = head.slice(kwIndex + 1);
+  const digits = rest[0];
+  if (rest.length !== 1 || digits?.kind !== "number" || !/^\d+$/.test(digits.value)) {
+    const start = digits?.start ?? kw.start;
+    const end = rest[rest.length - 1]?.end ?? kw.end;
+    throw new LangError(PRECISION_RANGE_MESSAGE, start, end);
+  }
+  const n = Number(digits.value);
+  if (!Number.isInteger(n) || n < 0 || n > MAX_PRECISION) {
+    throw new LangError(PRECISION_RANGE_MESSAGE, digits.start, digits.end);
+  }
+  return { nameToks: head.slice(0, kwIndex), precision: n };
 }
 
 const ASPECT_MESSAGE = "aspect needs two positive integers, as `16:9`";
@@ -319,7 +564,20 @@ function parseChart(toks: Token[], kw: Token): ChartDecl {
 
   const name = ident("a chart name").value;
   word("as");
-  const engine = ident("a chart type").value;
+  const engineHead = ident("a chart type");
+  let engine = engineHead.value;
+  // a hyphenated built-in name like `stacked-bar` lexes as ident, op, ident;
+  // joined here, and only here, when the pieces are written with no spaces
+  if (at().kind === "op" && at().value === "-" && at().start === engineHead.end) {
+    const dash = at();
+    i++;
+    const tail = at();
+    if (tail.kind !== "ident" || tail.start !== dash.end) {
+      throw new LangError("expected a chart type", engineHead.start, dash.end);
+    }
+    i++;
+    engine = `${engine}-${tail.value}`;
+  }
   word("of");
 
   // a qualified `sheet.Col` parses here and is refused later as a VECTOR
@@ -376,4 +634,32 @@ function parseChart(toks: Token[], kw: Token): ChartDecl {
     );
   }
   return { type: "chart", name, engine, series, labels, aspect, start: kw.start, end: end.start };
+}
+
+/** `"<header>" is <symbol>` — see docs/design/human-readable-column-aliases-spec.md */
+function parseAlias(toks: Token[], headerTok: Token, isTok: Token): AliasDecl {
+  let i = toks.indexOf(isTok) + 1;
+  const at = (): Token => toks[i] ?? toks[toks.length - 1]!;
+
+  const symTok = at();
+  if (symTok.kind !== "ident") {
+    throw new LangError("expected a name after `is`", symTok.start, symTok.end);
+  }
+  i++;
+
+  const end = at();
+  if (end.kind !== "eof") {
+    throw new LangError(
+      `unexpected ${end.kind === "op" ? `operator \`${end.value}\`` : end.kind}`,
+      end.start,
+      end.end,
+    );
+  }
+  return {
+    type: "alias",
+    header: headerTok.value,
+    symbol: symTok.value,
+    start: headerTok.start,
+    end: symTok.end,
+  };
 }

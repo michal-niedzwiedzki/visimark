@@ -36,7 +36,7 @@ Fb = 875
 S  = 21.39
 spacing_in = 16
 
-w_plf = loads.total * spacing_in / 12
+w_plf precision 2 = loads.total * spacing_in / 12
 ```
 
 Tributary load per joist comes to **66.67**<!--vmark=joist.w_plf--> lb/ft.
@@ -45,7 +45,7 @@ The maximum allowable span for a simply-supported joist under uniform load,
 governed by bending, is the standard beam formula solved for length:
 
 ```vmark #span
-Mallow = joist.Fb * joist.S / 12
+Mallow precision 2 = joist.Fb * joist.S / 12
 Lmax   = SQRT(8 * Mallow / joist.w_plf)
 
 Lmax_ft = ROUND(Lmax, 2)

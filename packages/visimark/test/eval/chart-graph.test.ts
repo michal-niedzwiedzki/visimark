@@ -54,6 +54,45 @@ test("a chart reading an unevaluable column produces no arithmetic finding", () 
   expect(r.findings.some((x) => x.code === "TYPE")).toBe(false);
 });
 
+test("a chart may label its points through an alias", () => {
+  // `columnIndex` is keyed by header text; reading the label column straight
+  // off the written name used to report the alias as "not a column", and a
+  // quoted string is not legal as a `labelled` operand, so such a table could
+  // not be charted at all.
+  const src = `| Item Name | Price |
+|-----------|------:|
+| pen       |  5.00 |
+| mug       |  8.00 |
+
+\`\`\`vmark #order
+"Item Name" is it
+chart cost as bar of Price labelled it
+\`\`\`
+${IMG}`;
+  const r = check(build(locate(src)));
+  expect(r.findings.filter((f) => f.code === "ARTIFACT")).toEqual([]);
+  expect(r.charts[0]!.state).not.toBe("error");
+});
+
+test("an aliased series carries its column's real unit, so no false UNIT fires", () => {
+  // the unit map is keyed by header text too: looking it up under the alias
+  // symbol missed, making the aliased series look unitless beside its
+  // identically decorated neighbour and tripping the §7 agreement rule
+  const src = `| Item | Unit Cost | Extra |
+|------|----------:|------:|
+| pen  |     $5.50 | $2.00 |
+| mug  |     $8.00 | $3.00 |
+
+\`\`\`vmark #order
+"Unit Cost" is uc
+chart cost as bar of uc, Extra labelled Item
+\`\`\`
+${IMG}`;
+  const r = check(build(locate(src)));
+  expect(r.findings.filter((f) => f.code === "UNIT")).toEqual([]);
+  expect(r.charts[0]!.state).not.toBe("error");
+});
+
 test("a valid chart's synthetic expression is never evaluated as arithmetic", () => {
   // `Item` is a string column; a real `Net + Item` would be a TYPE error
   const r = check(

@@ -2,7 +2,94 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+
+    <!--
+      Follow-up review §2.3. The playground carried a `default-src 'none'`
+      allowlist and its four neighbours carried nothing at all, on a site
+      served verbatim by GitHub Pages — which cannot send headers, so a
+      <meta> policy is the only content-security control available, and it
+      has to come before the first subresource.
+
+      `script-src` grants no inline script, which is the whole reason this is
+      worth having: this page's 578 lines of `<script>` moved to
+      packages/visimark/src/site/, where four gates can see them, and are
+      loaded from vendor/ like the playground's. A policy that still needed
+      'unsafe-inline' would buy almost nothing.
+
+      `style-src` does still carry it, for the same reason playground.html's
+      does: mermaid injects a <style> into every
+      diagram it renders, Swiper's bundle injects its own, and the dependency
+      graph is coloured by setting element styles. An inline-style injection is a defacement, not code
+      execution, so the trade is a different order of magnitude from the
+      script one.
+
+      `img-src 'self'` and no `connect-src` at all: every image on this page is
+      a sibling file, and nothing here fetches anything — the demos render
+      Markdown that is already in the markup. `default-src 'none'` makes each
+      grant an allowlist rather than a relaxation of a permissive default, so
+      anything this page grows later fails closed and loudly.
+
+      `frame-ancestors` is absent because a <meta> policy cannot carry it; on
+      Pages there is nowhere to put it.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none';
+               script-src 'self' https://cdnjs.cloudflare.com;
+               style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com;
+               font-src https://fonts.gstatic.com;
+               img-src 'self';
+               base-uri 'none';
+               form-action 'none'"
+    />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!--
+      Review §2.9. Four badge-share buttons opened Facebook, LinkedIn,
+      Instagram and X with this site's URL, and the site had no og: tags at
+      all — so the feature's own success case rendered as a bare blue link on
+      every one of them.
+
+      The wording has one source of truth: packages/visimark/package.json's
+      `description`, which is also what npm and the VS Code Marketplace show,
+      and whose first clause is index.html's subtitle. og:image is
+      docs/og-card.png, generated from that same field by
+      `bun scripts/gen-og-image.mjs`.
+
+      Every URL here is absolute. A relative og:image resolves against the
+      scraper, not the page, so it silently fetches nothing — the same class
+      of bug as the vsix-readme-image-urls note.
+
+      One card for the whole site rather than one per page image, and
+      deliberately no per-badge card: the share button knows which badge was
+      earned, but a card per badge means a static page per badge for the
+      scrapers to read, which is thirteen pages of build machinery for a
+      thumbnail. That is scope creep, and this is it being declined rather
+      than left open.
+    -->
+    <meta
+      name="description"
+      content="The numbers in your Markdown, checked on every commit: every computed number carries the formula that produced it, and a machine can prove the two still agree."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="VisiMark" />
+    <meta property="og:title" content="VisiMark" />
+    <meta
+      property="og:description"
+      content="The numbers in your Markdown, checked on every commit: every computed number carries the formula that produced it, and a machine can prove the two still agree."
+    />
+    <meta property="og:url" content="https://michal-niedzwiedzki.github.io/visimark/" />
+    <meta
+      property="og:image"
+      content="https://michal-niedzwiedzki.github.io/visimark/og-card.png"
+    />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="VisiMark: a vmark block computing grand_total = SUM(Total), and the prose value it keeps in step"
+    />
+    <meta name="twitter:card" content="summary_large_image" />
     <title>VisiMark</title>
     <link rel="icon" type="image/webp" href="visimark.webp" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -175,8 +262,13 @@ Total: **35.00**<span class="c">&lt;!--vmark=order.total--&gt;</span>
       </main>
 
       <p class="install-cta">
-        <a class="pill-link" href="#installation-header">Install VisiMark</a>&nbsp;
+        <a class="pill-link" href="#installation-header">Install VisiMark</a>
+        &nbsp;&dot;&nbsp;&dot;&nbsp;&dot;&nbsp;
         <a class="pill-link" href="playground.html">Try in Playground</a>
+        &nbsp;&dot;&nbsp;&dot;&nbsp;&dot;&nbsp;
+        <a class="pill-link" href="tutorial.html">Read the tutorial</a>
+        &nbsp;&dot;&nbsp;&dot;&nbsp;&dot;&nbsp;
+        <a class="pill-link" href="ci.html">Continuous integration</a>
       </p>
 
       <header class="section-head">
@@ -291,7 +383,7 @@ Total: **35.00**<span class="c">&lt;!--vmark=order.total--&gt;</span>
       <section class="tryout-grid">
         <article class="tryout-item">
           <div class="tryout-top">
-            <div class="tryout-image" role="img" aria-label="Playground preview placeholder"></div>
+            <img class="tryout-image" src="playground.webp" alt="The VisiMark Playground" />
             <div class="tryout-body">
               <h3>Playground</h3>
               <ul>
@@ -308,11 +400,7 @@ Total: **35.00**<span class="c">&lt;!--vmark=order.total--&gt;</span>
 
         <article class="tryout-item">
           <div class="tryout-top">
-            <div
-              class="tryout-image"
-              role="img"
-              aria-label="VS Code extension preview placeholder"
-            ></div>
+            <img class="tryout-image" src="vscode.webp" alt="The VisiMark VS Code extension" />
             <div class="tryout-body">
               <h3>VS Code extension</h3>
               <ul>
@@ -694,7 +782,7 @@ graph LR
     classDef fail fill:#fdecea,stroke:#c0392b,color:#c0392b,font-weight:bold;
           </pre>
           <pre>
-- uses: michal-niedzwiedzki/visimark@v0.1.0
+- uses: michal-niedzwiedzki/visimark@v0.1.3
   with:
     files: "docs/**/*.md"</pre>
           <div class="outcome-row">
@@ -735,16 +823,19 @@ Process completed with exit code 1</pre>
           </p>
           <div class="renderer-row">
             <div class="renderer-card">
+              <img class="renderer-image" src="github.webp" alt="GitHub rendering" />
               <h4>GitHub</h4>
               <p><span class="verdict">&#10003; pass</span> &mdash; anchors stripped from output</p>
             </div>
             <div class="renderer-card">
+              <img class="renderer-image" src="vscode.webp" alt="VS Code preview rendering" />
               <h4>VS Code preview</h4>
               <p>
                 <span class="verdict">&#10003; pass</span> &mdash; anchors pass through as a comment
               </p>
             </div>
             <div class="renderer-card">
+              <img class="renderer-image" src="html.webp" alt="pandoc HTML5 output rendering" />
               <h4>pandoc &rarr; html5</h4>
               <p>
                 <span class="verdict">&#10003; pass</span> &mdash; anchors pass through as a comment
@@ -850,7 +941,7 @@ Process completed with exit code 1</pre>
         <article class="feature feature--sm" id="feature-tools">
           <div class="feature-head">
             <h3>Power tools</h3>
-            <p class="feature-statement">Eight ways in, one engine</p>
+            <p class="feature-statement">Twelve ways in, one engine</p>
           </div>
           <p>
             More to explore &mdash; each is one command, documented in full in the
@@ -874,18 +965,23 @@ Process completed with exit code 1</pre>
             </div>
             <div class="power-card">
               <h4><code>infer</code></h4>
-              <p>Discover formulas from existing tables.</p>
+              <p>Discover formulas in existing tables for instant onboarding.</p>
               <p class="feature-statement">&rarr; To power up your MDs.</p>
             </div>
             <div class="power-card">
               <h4><code>eval</code></h4>
-              <p>Inspect calculated values programmatically, including as JSON.</p>
+              <p>Export facts and calculations to your programmatic pipeline.</p>
               <p class="feature-statement">&rarr; For your AI agent.</p>
             </div>
             <div class="power-card">
               <h4><code>explain</code></h4>
               <p>Understand a sheet's inputs, rules and evaluation order.</p>
-              <p class="feature-statement">&rarr; As a cheat sheet.</p>
+              <p class="feature-statement">&rarr; Your document guidance.</p>
+            </div>
+            <div class="power-card">
+              <h4><code>ref</code></h4>
+              <p>Language reference at your fingertips, also on hover in your editor.</p>
+              <p class="feature-statement">&rarr; Instant reference.</p>
             </div>
             <div class="power-card">
               <h4><code>chart</code></h4>
@@ -893,14 +989,9 @@ Process completed with exit code 1</pre>
               <p class="feature-statement">&rarr; To manage artifacts.</p>
             </div>
             <div class="power-card">
-              <h4>Assertions</h4>
-              <p><code>assert</code> states an invariant a stray formula could still satisfy.</p>
-              <p class="feature-statement">&rarr; For your CI build.</p>
-            </div>
-            <div class="power-card">
-              <h4>VS Code extension</h4>
-              <p>The same engine, as live diagnostics, quick fixes and hover.</p>
-              <p class="feature-statement">&rarr; Power up your editor.</p>
+              <h4><code>--json</code> everywhere</h4>
+              <p>Make everything machine readable.</p>
+              <p class="feature-statement">&rarr; For your workflow.</p>
             </div>
           </div>
         </article>
@@ -1228,10 +1319,13 @@ $ npx visimark check invoice.md</pre>
             <h3>As an agent skill</h3>
           </div>
           <p>
-            VisiMark ships an agent skill &mdash; copy it in, and an agent picks up authoring and
+            VisiMark ships an agent skill &mdash; install it and an agent picks up authoring and
             verification discipline automatically, no prompting required.
           </p>
-          <pre>$ cp -r skills/visimark ~/.claude/skills/visimark</pre>
+          <pre>
+$ npx skills add michal-niedzwiedzki/visimark
+<span class="c"># or, copied in by hand</span>
+$ cp -r skills/visimark ~/.claude/skills/visimark</pre>
           <p style="margin-top: 14px">
             Its central warning is worth stating here too: a green check is evidence of agreement,
             not of derivation. Change an input and confirm the checker starts complaining before
@@ -1275,16 +1369,27 @@ $ npx visimark check invoice.md</pre>
 
           <article class="featured-item">
             <div class="feature-head">
-              <h3>Anchors</h3>
+              <h3>CSV imports</h3>
             </div>
             <p>
-              A comment anchor binds a printed number to a name, so a sentence stays plain prose
-              while the value stays machine-checkable:
+              Keep bulky rows out of the document. A <code>from</code> clause on the fence line
+              points at a CSV in the same directory, and its header row supplies the column names:
             </p>
-            <pre>Invoice total: **28659.00**<span class="c">&lt;!--vmark=lines.gross_total--&gt;</span></pre>
+            <pre><span class="c">```</span><span class="k">vmark #sales from sales.csv</span>
+total = SUM(Amount)
+<span class="c">```</span>
+
+Total: **1240.00**<span class="c">&lt;!--vmark=sales.total--&gt;</span></pre>
+            <p style="margin-top: 14px">Where <code>sales.csv</code> is an ordinary file:</p>
+            <pre><span class="csv-c1">Region</span>,<span class="csv-c2">Amount</span>
+<span class="csv-c1">North</span>,<span class="csv-c2">420.00</span>
+<span class="csv-c1">South</span>,<span class="csv-c2">310.00</span>
+<span class="csv-c1">West</span>,<span class="csv-c2">510.00</span></pre>
             <p style="margin-top: 14px">
-              The HTML comment is invisible in every renderer that permits raw HTML &mdash; GitHub,
-              VS Code, pandoc &mdash; so a reader just sees the bold number.
+              Run <code>fmt</code> once and it pins the file's bytes with
+              <code>at sha256:&hellip;</code> on the fence line; from then on
+              <code>check</code> reports <code>STALE</code> if the CSV changes underneath the
+              document.
             </p>
           </article>
 
@@ -1313,19 +1418,16 @@ variance  = lines.gross_total - scheduled
 
           <article class="featured-item">
             <div class="feature-head">
-              <h3>VS Code extension</h3>
+              <h3>Anchors</h3>
             </div>
             <p>
-              One language server wraps the same engine, so the editor disagrees with you as you
-              type rather than at commit time &mdash; live diagnostics, quick fixes, inlay hints,
-              CodeLens and hover, with <code>fmt</code> behind the editor's own format-on-save.
+              A comment anchor binds a printed number to a name, so a sentence stays plain prose
+              while the value stays machine-checkable:
             </p>
-            <pre><span class="del">STALE</span>   lines.Net &middot; On-call support
-        3120.00 &ne; 5200.00     Qty * Rate
-        <span class="c">Quick fix: update the value to 5200.00</span></pre>
+            <pre>Invoice total: **28659.00**<span class="c">&lt;!--vmark=lines.gross_total--&gt;</span></pre>
             <p style="margin-top: 14px">
-              Not on a marketplace yet &mdash; build and install it from a clone with
-              <code>bun run vscode-install</code>, then reload the window.
+              The HTML comment is invisible in every renderer that permits raw HTML &mdash; GitHub,
+              VS Code, pandoc &mdash; so a reader just sees the bold number.
             </p>
           </article>
         </div>
@@ -1338,12 +1440,6 @@ variance  = lines.gross_total - scheduled
           enforceable &mdash; while keeping the document as plain Markdown.
         </p>
       </div>
-
-      <footer class="footer">
-        <a href="https://github.com/michal-niedzwiedzki/visimark"
-          >Try VisiMark documentation &rarr;</a
-        >
-      </footer>
     </div>
 
     <script
@@ -1364,583 +1460,6 @@ variance  = lines.gross_total - scheduled
       crossorigin="anonymous"
       referrerpolicy="no-referrer"
     ></script>
-    <script>
-      // Explore's small structural diagrams (dependency flow, CI pass/fail,
-      // the verified state transition), rendered from text instead of
-      // hand-drawn ASCII art. Theme matches the card: light, monospace,
-      // the same red accent used elsewhere on the page.
-      if (typeof mermaid !== "undefined") {
-        mermaid.initialize({
-          startOnLoad: false,
-          theme: "base",
-          themeVariables: {
-            fontFamily:
-              '"SF Mono", "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace',
-            fontSize: "14px",
-            primaryColor: "#f0f0f0",
-            primaryTextColor: "#1b1b1b",
-            primaryBorderColor: "#1b1b1b",
-            lineColor: "#1b1b1b",
-            secondaryColor: "#f0f0f0",
-            tertiaryColor: "#ffffff",
-          },
-          flowchart: { curve: "linear" },
-        });
-        mermaid.run({ querySelector: ".mermaid" });
-      }
-    </script>
-    <script>
-      // Source/preview demo panes: render an inline Markdown snippet with
-      // marked, optionally swap image sources for embedded assets, and keep
-      // the two panes' scroll positions in lockstep. The snippets are
-      // curated excerpts/variants for this page's narrative (e.g. the infer
-      // before/after pair), not verbatim copies of docs/*.md, so they stay
-      // inline even though this page now lives alongside docs/ and could
-      // fetch real files directly — see the chart images below, which do.
-      // The formatter indents everything inside <script> by the tag's nesting
-      // depth, so the embedded Markdown never starts at column 0. Markdown
-      // treats 4+ leading spaces as an indented code block, so without
-      // dedenting first, every one of these demos renders as one giant code
-      // block instead of parsed Markdown. Strip the common leading
-      // whitespace (ignoring blank lines) before handing it to marked.
-      function dedent(text) {
-        var lines = text.split("\n");
-        var indent = Infinity;
-        lines.forEach(function (line) {
-          if (!line.trim()) return;
-          indent = Math.min(indent, line.match(/^[ \t]*/)[0].length);
-        });
-        if (!isFinite(indent)) indent = 0;
-        return lines
-          .map(function (line) {
-            return line.slice(indent);
-          })
-          .join("\n");
-      }
-
-      function renderDemo(sourceId, previewId, mdId, images) {
-        var sourceEl = document.getElementById(sourceId);
-        var previewEl = document.getElementById(previewId);
-        var mdEl = document.getElementById(mdId);
-        if (!sourceEl || !previewEl || !mdEl || typeof marked === "undefined") return;
-
-        var raw = dedent(mdEl.textContent.replace(/^\n/, "")).replace(/\s+$/, "");
-        sourceEl.textContent = raw;
-        previewEl.innerHTML = marked.parse(raw);
-        if (images) {
-          previewEl.querySelectorAll("img[src]").forEach(function (img) {
-            var uri = images[img.getAttribute("src")];
-            if (uri) img.src = uri;
-          });
-        }
-
-        // Lockstep scroll: moving either pane scrolls the other by the same
-        // fraction of its own scrollable range.
-        var syncingFrom = null;
-        function link(from, to) {
-          from.addEventListener("scroll", function () {
-            if (syncingFrom && syncingFrom !== from) return;
-            syncingFrom = from;
-            var range = from.scrollHeight - from.clientHeight;
-            var ratio = range > 0 ? from.scrollTop / range : 0;
-            to.scrollTop = ratio * (to.scrollHeight - to.clientHeight);
-            requestAnimationFrame(function () {
-              syncingFrom = null;
-            });
-          });
-        }
-        link(sourceEl, previewEl);
-        link(previewEl, sourceEl);
-      }
-
-      (function () {
-        // Chart images (charts/example-charts-*.svg) resolve on their own now
-        // that index.html and docs/charts/ are siblings — the relative <img>
-        // src the markdown already carries just works, no embedding needed.
-        renderDemo("chart-source", "chart-preview", "chart-source-md", null);
-        renderDemo("eval-source", "eval-preview", "eval-source-md", null);
-        renderDemo("computes-source", "computes-preview", "computes-source-md", null);
-        renderDemo("drift-source", "drift-preview", "drift-source-md", null);
-        renderDemo("power-chart-source", "power-chart-preview", "power-chart-source-md", null);
-        renderDemo("power-import-source", "power-import-preview", "power-import-source-md", null);
-      })();
-    </script>
-    <script>
-      // Explore section: small interactive bits. Each one renders real,
-      // already-committed example content — nothing here simulates the CLI,
-      // it only shows or hides text that's already on the page.
-      (function () {
-        // "Discover rules in existing tables" — toggles the source/preview
-        // pair between the un-annotated table and the same table with infer's
-        // proposed rule written in, and reveals the infer transcript.
-        var inferBtn = document.getElementById("infer-btn");
-        var inferOut = document.getElementById("infer-out");
-        var inferTitle = document.getElementById("infer-pane-title");
-        var inferShown = false;
-        if (inferBtn) {
-          inferBtn.addEventListener("click", function () {
-            inferShown = !inferShown;
-            renderDemo(
-              "infer-source",
-              "infer-preview",
-              inferShown ? "infer-after-md" : "infer-before-md",
-              null,
-            );
-            if (inferOut) inferOut.hidden = !inferShown;
-            if (inferTitle)
-              inferTitle.textContent = "quote.md — " + (inferShown ? "after" : "before");
-            inferBtn.setAttribute("aria-pressed", String(inferShown));
-            inferBtn.innerHTML = inferShown
-              ? "Show the table before"
-              : 'Run <code style="background:none;color:inherit;padding:0">visimark infer</code>';
-          });
-        }
-        // Render the "before" state on load, same as the static markup would.
-        renderDemo("infer-source", "infer-preview", "infer-before-md", null);
-
-        // "A document can look right and still be wrong" — reveals the check
-        // transcript for the invoice above.
-        var driftBtn = document.getElementById("drift-check-btn");
-        var driftOut = document.getElementById("drift-check-out");
-        if (driftBtn && driftOut) {
-          driftBtn.addEventListener("click", function () {
-            var shown = driftOut.hidden;
-            driftOut.hidden = !shown;
-            driftBtn.setAttribute("aria-pressed", String(shown));
-            driftBtn.setAttribute("aria-expanded", String(shown));
-          });
-        }
-
-        // "Change one input, follow every consequence" — swaps the Net/VAT/
-        // Gross figures between the stale (Qty 12) and current (Qty 20)
-        // values, same numbers as the check transcript above.
-        // Yellow is the input the reader changed; green is everything VisiMark
-        // recalculated because of it. The source pane and the graph use the same
-        // pairing, so the eye can carry one to the other.
-        var DEP_TONES = {
-          input: { fill: "#fff8e1", stroke: "#b7791f", text: "#8a6100" },
-          derived: { fill: "#eafaf0", stroke: "#1a7f37", text: "#1a7f37" },
-        };
-        function paintDepGraph(on) {
-          var box = document.getElementById("dep-diagram");
-          if (!box) return;
-          box.querySelectorAll("g.node").forEach(function (node) {
-            // mermaid names each node group "…-flowchart-<id>-<n>"
-            var parts = (node.id || "").split("-");
-            var name = parts[parts.length - 2];
-            var tone = !on
-              ? null
-              : name === "Qty"
-                ? DEP_TONES.input
-                : name === "Rate"
-                  ? null
-                  : DEP_TONES.derived;
-            node.querySelectorAll("rect, polygon, path").forEach(function (shape) {
-              shape.style.fill = tone ? tone.fill : "";
-              shape.style.stroke = tone ? tone.stroke : "";
-            });
-            node.querySelectorAll(".nodeLabel, text, tspan").forEach(function (label) {
-              label.style.color = tone ? tone.text : "";
-              label.style.fill = tone ? tone.text : "";
-              label.style.fontWeight = tone ? "700" : "";
-            });
-          });
-        }
-
-        var depBtn = document.getElementById("dep-btn");
-        var depBefore = document.getElementById("dep-before");
-        var depAfter = document.getElementById("dep-after");
-        var depChanged = false;
-        if (depBtn && depBefore && depAfter) {
-          depBtn.addEventListener("click", function () {
-            depChanged = !depChanged;
-            depBefore.hidden = depChanged;
-            depAfter.hidden = !depChanged;
-            paintDepGraph(depChanged);
-            depBtn.textContent = depChanged
-              ? "Change Qty back: 20 \u2192 12"
-              : "Change Qty: 12 \u2192 20";
-            depBtn.setAttribute("aria-pressed", String(depChanged));
-          });
-        }
-      })();
-
-      // Sticky TOC: highlight whichever feature article is currently in the
-      // middle band of the viewport as the user scrolls past it.
-      (function () {
-        var toc = document.querySelector("#explore .toc");
-        if (!toc || !("IntersectionObserver" in window)) return;
-        var links = Array.from(toc.querySelectorAll("a"));
-        var byId = {};
-        links.forEach(function (a) {
-          byId[a.getAttribute("href").slice(1)] = a;
-        });
-        var observer = new IntersectionObserver(
-          function (entries) {
-            entries.forEach(function (entry) {
-              var link = byId[entry.target.id];
-              if (!link || !entry.isIntersecting) return;
-              links.forEach(function (l) {
-                l.classList.remove("active");
-              });
-              link.classList.add("active");
-            });
-          },
-          { rootMargin: "-45% 0px -50% 0px", threshold: 0 },
-        );
-        document.querySelectorAll("#explore .feature[id]").forEach(function (article) {
-          observer.observe(article);
-        });
-      })();
-    </script>
-    <script>
-      // The previews ship with the "order" dataset hardcoded (so crawlers and
-      // no-JS visitors see real content). On load we pick one of four example
-      // datasets at random and re-render every preview from it. Each dataset is
-      // two rows, one column rule + one aggregate, one prose anchor.
-      (function () {
-        var DATASETS = {
-          order: {
-            slug: "order",
-            file: "figures.md",
-            cols: ["Item", "Price", "Qty", "Net"],
-            dp: [null, 2, 0, 2],
-            rows: [
-              ["pen", 2.0, 10],
-              ["paper", 0.15, 100],
-            ],
-            agg: "total",
-            label: "Total",
-            unit: "",
-            edits: [
-              [0, 1, 2.2],
-              [1, 2, 150],
-            ],
-          },
-          power: {
-            slug: "power",
-            file: "figures.md",
-            cols: ["Load", "mA", "Qty", "Draw"],
-            dp: [null, 0, 0, 0],
-            rows: [
-              ["radio", 120, 1],
-              ["LED", 15, 4],
-            ],
-            agg: "total",
-            label: "Peak draw",
-            unit: " mA",
-            edits: [
-              [0, 1, 140],
-              [1, 2, 8],
-            ],
-          },
-          mass: {
-            slug: "mass",
-            file: "figures.md",
-            cols: ["Part", "Unit", "Qty", "Mass"],
-            dp: [null, 0, 0, 0],
-            rows: [
-              ["bar", 45, 4],
-              ["clip", 6, 16],
-            ],
-            agg: "total",
-            label: "Total mass",
-            unit: " g",
-            edits: [
-              [0, 2, 6],
-              [1, 1, 8],
-            ],
-          },
-          latency: {
-            slug: "latency",
-            file: "figures.md",
-            cols: ["Hop", "ms", "n", "Total"],
-            dp: [null, 1, 0, 1],
-            rows: [
-              ["edge", 4.0, 2],
-              ["api", 12.0, 3],
-            ],
-            agg: "budget",
-            label: "Budget",
-            unit: " ms",
-            edits: [
-              [0, 1, 6.0],
-              [1, 2, 4],
-            ],
-          },
-        };
-
-        function rep(ch, n) {
-          return n > 0 ? new Array(n + 1).join(ch) : "";
-        }
-        function padL(s, w) {
-          return rep(" ", w - s.length) + s;
-        }
-        function padR(s, w) {
-          return s + rep(" ", w - s.length);
-        }
-        function esc(s) {
-          return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        }
-        function fmt(v, dp) {
-          return dp == null ? String(v) : v.toFixed(dp);
-        }
-        function editedRows(d) {
-          var rows = d.rows.map(function (r) {
-            return r.slice();
-          });
-          d.edits.forEach(function (e) {
-            rows[e[0]][e[1]] = e[2];
-          });
-          return rows;
-        }
-        function derived(rows) {
-          return rows.map(function (r) {
-            return r[1] * r[2];
-          });
-        }
-        function sum(a) {
-          return a.reduce(function (x, y) {
-            return x + y;
-          }, 0);
-        }
-
-        function table(d, rows, derivedVals, em) {
-          var cols = d.cols;
-          var col = [
-            [cols[0]].concat(
-              rows.map(function (r) {
-                return String(r[0]);
-              }),
-            ),
-            [cols[1]].concat(
-              rows.map(function (r) {
-                return fmt(r[1], d.dp[1]);
-              }),
-            ),
-            [cols[2]].concat(
-              rows.map(function (r) {
-                return fmt(r[2], d.dp[2]);
-              }),
-            ),
-            [cols[3]].concat(
-              derivedVals.map(function (v) {
-                return fmt(v, d.dp[3]);
-              }),
-            ),
-          ];
-          var w = col.map(function (c) {
-            return Math.max.apply(
-              null,
-              c.map(function (s) {
-                return s.length;
-              }),
-            );
-          });
-          function cell(txt, width, right, mark) {
-            var pad = rep(" ", width - txt.length);
-            var body = mark ? "<em>" + esc(txt) + "</em>" : esc(txt);
-            return right ? pad + body : body + pad;
-          }
-          var out = [
-            "| " +
-              padR(cols[0], w[0]) +
-              " | " +
-              padL(cols[1], w[1]) +
-              " | " +
-              padL(cols[2], w[2]) +
-              " | " +
-              padL(cols[3], w[3]) +
-              " |",
-            "|" +
-              rep("-", w[0] + 2) +
-              "|" +
-              rep("-", w[1] + 1) +
-              ":|" +
-              rep("-", w[2] + 1) +
-              ":|" +
-              rep("-", w[3] + 1) +
-              ":|",
-          ];
-          for (var i = 0; i < rows.length; i++) {
-            out.push(
-              "| " +
-                cell(col[0][i + 1], w[0], false, false) +
-                " | " +
-                cell(col[1][i + 1], w[1], true, em.indexOf(i + ",1") >= 0) +
-                " | " +
-                cell(col[2][i + 1], w[2], true, em.indexOf(i + ",2") >= 0) +
-                " | " +
-                cell(col[3][i + 1], w[3], true, em.indexOf(i + ",3") >= 0) +
-                " |",
-            );
-          }
-          return out.join("\n");
-        }
-
-        function fence(d) {
-          var lhs = Math.max(d.cols[3].length, d.agg.length);
-          return (
-            '<span class="k">```vmark #' +
-            d.slug +
-            "</span>\n" +
-            padR(d.cols[3], lhs) +
-            " = " +
-            d.cols[1] +
-            " * " +
-            d.cols[2] +
-            "\n" +
-            padR(d.agg, lhs) +
-            " = SUM(" +
-            d.cols[3] +
-            ")\n" +
-            '<span class="k">```</span>'
-          );
-        }
-        function anchor(d, value, mark) {
-          var v = fmt(value, d.dp[3]) + d.unit;
-          return (
-            d.label +
-            ": **" +
-            (mark ? "<em>" + esc(v) + "</em>" : esc(v)) +
-            '**<span class="c">&lt;!--vmark=' +
-            d.slug +
-            "." +
-            d.agg +
-            "--&gt;</span>"
-          );
-        }
-        // Pad every slide in a card to the same row count by inserting blank
-        // lines *above the last line* — so the closing prompt stays pinned to
-        // the bottom and a trailing "\n" never adds a phantom row.
-        function padCard(arr) {
-          var rows = arr.map(function (s) {
-            return s.split("\n");
-          });
-          var max = Math.max.apply(
-            null,
-            rows.map(function (r) {
-              return r.length;
-            }),
-          );
-          return rows.map(function (r) {
-            while (r.length < max) r.splice(r.length - 1, 0, "");
-            return r.join("\n");
-          });
-        }
-
-        function buildSlots(d) {
-          var baseR = d.rows,
-            baseD = derived(baseR),
-            baseT = sum(baseD);
-          var edR = editedRows(d),
-            newD = derived(edR),
-            newT = sum(newD);
-          var inEm = d.edits.map(function (e) {
-            return e[0] + "," + e[1];
-          });
-          var outEm = [];
-          baseD.forEach(function (v, i) {
-            if (newD[i] !== v) outEm.push(i + ",3");
-          });
-          var f = fence(d);
-
-          // Every Author slide ends with a real (non-empty) prompt line so all
-          // three render the same number of rows and the box never jumps.
-          var authorBase =
-            table(d, baseR, baseD, []) +
-            "\n" +
-            f +
-            "\n" +
-            anchor(d, baseT, false) +
-            '\n<span class="p">$</span>';
-          var authorEdit =
-            table(d, edR, baseD, inEm) +
-            "\n" +
-            f +
-            "\n" +
-            anchor(d, baseT, false) +
-            '\n<span class="p">$</span> <em>visimark fmt ' +
-            d.file +
-            "</em>";
-          var authorFixed =
-            table(d, edR, newD, outEm) +
-            "\n" +
-            f +
-            "\n" +
-            anchor(d, newT, true) +
-            '\n<span class="p">$</span>';
-
-          var plain = table(d, baseR, baseD, []) + "\nTotal: **" + fmt(baseT, d.dp[3]) + "**";
-          var adoptBase =
-            plain + '\n<span class="p">$</span> <em>visimark infer ' + d.file + "</em>";
-          var adoptOut =
-            plain +
-            '\n<span class="p">$</span> visimark infer ' +
-            d.file +
-            "\n  column rules\n    " +
-            d.cols[3] +
-            " = " +
-            d.cols[1] +
-            " * " +
-            d.cols[2] +
-            '    <span class="c">2/2 ok</span>\n  1 rule, 1 scalar written.';
-          var adoptFixed = authorBase;
-
-          var n = d.rows.length + 2;
-          var enforceOut =
-            '<span class="p">$</span> visimark check ' +
-            d.file +
-            '\n<span class="ok">&#10003;</span> ' +
-            d.file +
-            " &mdash; " +
-            n +
-            ' values agree\n<span class="p">$</span> echo $?\n0';
-
-          var c1 = padCard([authorBase, authorEdit, authorFixed]);
-          var c2 = padCard([adoptBase, adoptOut, adoptFixed]);
-          return {
-            "author-base": c1[0],
-            "author-edit": c1[1],
-            "author-fixed": c1[2],
-            "adopt-base": c2[0],
-            "adopt-out": c2[1],
-            "adopt-fixed": c2[2],
-            "enforce-out": enforceOut,
-          };
-        }
-
-        var keys = Object.keys(DATASETS);
-        var slots = buildSlots(DATASETS[keys[Math.floor(Math.random() * keys.length)]]);
-        document.querySelectorAll("pre[data-ex]").forEach(function (pre) {
-          var html = slots[pre.getAttribute("data-ex")];
-          if (html != null) pre.innerHTML = html;
-        });
-      })();
-
-      document.querySelectorAll(".preview").forEach(function (preview) {
-        var swiperEl = preview.querySelector(".swiper");
-        var swiper = new Swiper(swiperEl, {
-          effect: "fade",
-          fadeEffect: { crossFade: true },
-          speed: 400,
-          pagination: {
-            el: preview.querySelector(".preview-dots"),
-            clickable: true,
-            renderBullet: function (index, className) {
-              return '<span class="' + className + '"><i>' + (index + 1) + "</i></span>";
-            },
-          },
-        });
-
-        // Fade stacks the slides, so lock the box to the tallest one; without
-        // it the card resizes as the reader steps through.
-        var tallest = 0;
-        swiper.slides.forEach(function (slide) {
-          tallest = Math.max(tallest, slide.scrollHeight);
-        });
-        swiperEl.style.height = tallest + "px";
-      });
-    </script>
+    <script src="vendor/visimark-site-index.js"></script>
   </body>
 </html>

@@ -190,6 +190,17 @@ test("chart statement: multi-series and an explicit aspect", () => {
   expect(c.aspect).toEqual({ w: 16, h: 9 });
 });
 
+test("chart statement: a hyphenated engine name joins with no spaces", () => {
+  const c = chart("chart mix as stacked-bar of Revenue, Cost labelled Month");
+  expect(c.engine).toBe("stacked-bar");
+});
+
+test("chart statement: a spaced hyphen after the engine name is not joined", () => {
+  expect(() => chart("chart m as bar - 1 of Net labelled Item")).toThrow(
+    "a chart takes a column, not an expression",
+  );
+});
+
 test("chart statement: `as` is mandatory", () => {
   expect(() => chart("chart cost pie of Net labelled Item")).toThrow(LangError);
 });
@@ -218,4 +229,76 @@ test("`chart` may not be a bound name", () => {
 
 test("a chart needs a name", () => {
   expect(() => chart("chart as pie of Net labelled Item")).toThrow(LangError);
+});
+
+test("a quoted string is legal as a binding's left-hand side", () => {
+  const b = parseBinding('"Bandwidth per Unit (TB/s, full-duplex)" = ROUND(x, 2)');
+  expect(b.name).toBe("Bandwidth per Unit (TB/s, full-duplex)");
+  expect(b.quoted).toBe(true);
+});
+
+test("a plain identifier binding is not marked quoted", () => {
+  const b = parseBinding("Net = Price * Qty");
+  expect(b.quoted).toBe(false);
+});
+
+test("`is` parses as an alias declaration", () => {
+  const s = parseStatement('"Bandwidth per Unit (TB/s, full-duplex)" is bpu');
+  expect(s).toMatchObject({
+    type: "alias",
+    header: "Bandwidth per Unit (TB/s, full-duplex)",
+    symbol: "bpu",
+  });
+});
+
+test("`is` with no symbol after it is a parse error", () => {
+  expect(() => parseStatement('"Header" is')).toThrow(/expected a name after `is`/);
+});
+
+test("`is` used outside the alias shape is rejected as a keyword", () => {
+  expect(() => parseStatement("is = 1")).toThrow(/`is` is a keyword/);
+  expect(() => parseStatement("x = is")).toThrow(/`is` is a keyword/);
+});
+
+test("a quoted binding with trailing junk after `is symbol` is a parse error", () => {
+  expect(() => parseStatement('"Header" is bpu extra')).toThrow(/unexpected/);
+});
+
+test("parseStatement: a `precision` clause on the binding head", () => {
+  const st = parseStatement("eur_total precision 2 = gross / fx");
+  expect("type" in st).toBe(false);
+  expect(st).toMatchObject({ name: "eur_total", precision: 2 });
+});
+
+test("parseStatement: a `precision` clause on a quoted header and on an alias", () => {
+  expect(parseStatement('"Gross amount" precision 2 = Net + VAT')).toMatchObject({
+    name: "Gross amount",
+    precision: 2,
+  });
+  expect(parseStatement("gross precision 0 = Net + VAT")).toMatchObject({
+    name: "gross",
+    precision: 0,
+  });
+});
+
+test("parseStatement: no clause leaves precision absent", () => {
+  expect((parseStatement("total = SUM(Net)") as { precision?: number }).precision).toBeUndefined();
+});
+
+test("parseStatement: `precision` cannot be a bound name", () => {
+  expect(() => parseStatement("precision = 2")).toThrow(
+    "`precision` is a keyword — write `precision 2`, not `precision = 2`",
+  );
+});
+
+test("parseStatement: N must be a whole number from 0 to 18", () => {
+  const msg = "precision must be a whole number from 0 to 18";
+  expect(() => parseStatement("x precision 19 = 1")).toThrow(msg);
+  expect(() => parseStatement("x precision 2.5 = 1")).toThrow(msg);
+  expect(() => parseStatement("x precision -1 = 1")).toThrow(msg);
+  expect(parseStatement("x precision 18 = 1")).toMatchObject({ precision: 18 });
+});
+
+test("parseStatement: `precision` mid-expression is rejected", () => {
+  expect(() => parseStatement("x = 1 precision 2")).toThrow("`precision` is a keyword");
 });

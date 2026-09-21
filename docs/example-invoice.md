@@ -21,9 +21,9 @@ fx_eur         = 4.2650
 | On-call support            | hour  |  12 |  260.00 |  3120.00 |  717.60 |  3837.60 |
 
 ```vmark #lines
-Net   = Qty * Rate
-VAT   = Net * vat
-Gross = Net + VAT
+Net               = Qty * Rate
+VAT   precision 2 = Net * vat
+Gross             = Net + VAT
 
 net_total   = SUM(Net)
 vat_total   = SUM(VAT)
@@ -43,7 +43,7 @@ VAT at 23% adds **5359.00**<!--vmark=lines.vat_total--> PLN, giving a total due 
 | Acceptance          |   30% |  8597.70 | 2026-11-30 |
 
 ```vmark #schedule
-Amount = Share * lines.gross_total
+Amount precision 2 = Share * lines.gross_total
 
 covered = SUM(Amount)
 ```
@@ -53,9 +53,9 @@ The three milestones account for **28659.00**<!--vmark=schedule.covered--> PLN.
 ## Payment terms
 
 ```vmark #terms
-early_pay_total = lines.gross_total * (1 - early_pay_disc)
-early_pay_saved = lines.gross_total - early_pay_total
-eur_total       = lines.gross_total / fx_eur
+early_pay_total precision 2 = lines.gross_total * (1 - early_pay_disc)
+early_pay_saved             = lines.gross_total - early_pay_total
+eur_total       precision 2 = lines.gross_total / fx_eur
 ```
 
 Settlement within 7 days qualifies for a 2% early-payment discount, reducing the

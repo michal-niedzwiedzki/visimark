@@ -1,4 +1,9 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
-  "ignorePatterns": ["**/*.md", ".vscode/**"]
+  // docs/vendor/ holds committed `bun build --minify` artifacts, not source (see
+  // docs/reviews/2026-09-15.md §2.5 and the `playground-bundle` CI job). Formatting one
+  // un-minifies it, and the next rebuild puts it back — a permanent `git diff` that
+  // fails CI on every pull request. .oxlintrc.json skips the same directory, for the
+  // same reason.
+  "ignorePatterns": ["**/*.md", ".vscode/**", "docs/vendor/**"]
 }

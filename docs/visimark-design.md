@@ -47,6 +47,10 @@ committed beside the Markdown and verified like any other derived value
    writes it. Two people checking out the same commit get the same answer,
    and a reviewer reading the diff sees every input to it — including a
    declared local one ([§19](#19-declared-local-data-imports)).
+   A scenario supplied to `eval` is an argument to that evaluation, not part
+   of the document's meaning: `check`, `fmt` and `infer` never accept one,
+   and `eval` reports the scenario it used alongside the values it produced
+   ([§20](#20-scenario-parameters)).
 
 **The consequence is that VisiMark will not have a plugin architecture**, and
 this is a deliberate refusal rather than an unbuilt feature. A registry of
@@ -104,6 +108,15 @@ block that declares column rules but owns no table is a `SHEET` error, so
 inserting a paragraph between a table and its block fails loudly rather than
 silently detaching the rules.
 
+**A column rule's left-hand side may also be a quoted string** instead of an
+identifier, matched byte-for-byte against a header cell's raw source text
+rather than parsed as a name — see [§4](#4-syntax). This is what lets a
+formula target a header that is not itself a valid identifier, one carrying
+spaces or punctuation, without rewriting the table. Two header cells sharing
+byte-identical text are a `DUP` finding ([§10](#10-error-taxonomy)), naming
+both positions — closing what was previously an unremarked last-write-wins
+collision, for identifier-shaped headers as much as for any other.
+
 **Anchors** materialise a scalar into prose:
 
 ```markdown
@@ -111,9 +124,19 @@ Invoice total: **28659.00**<!--vmark=lines.gross_total-->
 ```
 
 The anchor rewrites the text content of the inline node immediately preceding
-it. That node must be `strong`, `emphasis`, `inlineCode`, or a text node whose
-trailing token is a number; anything else is an `ANCHOR` error. HTML comments
-are invisible in every target renderer, so the sentence reads normally.
+it. That node must be `strong`, `emphasis`, `inlineCode`, or a text node;
+anything else is an `ANCHOR` error. An anchor with nothing in front of it is
+legal authoring syntax — `fmt` seeds it — and a bare text node need not show a
+number, because a scalar's width comes from its binding rather than from its
+anchor ([§7](#7-numeric-semantics)). A string-valued scalar can therefore be
+materialised in prose at all, which the old numeric requirement prevented.
+HTML comments are invisible in every target renderer, so the sentence reads
+normally.
+
+**An anchor is an output.** Its text states a value and never determines one:
+not the width, and — unlike a unit — nothing the evaluator reads back. Two
+anchors on one scalar cannot disagree about precision, because neither is
+consulted.
 
 **A comment that announces itself as an anchor but does not parse is also an
 `ANCHOR` error.** Any HTML comment matching the loose prefix `<!--vmark=` is
@@ -126,6 +149,13 @@ uses `:` rather than `=`.
 ## 4. Syntax
 
 **Bindings.** A block is a list of `name = expression` bindings, one per line.
+A binding's head may carry a **`precision N` clause** — `total precision 2 =
+SUM(Net)` — declaring the width it writes at ([§7](#7-numeric-semantics)).
+`precision` is a reserved word, tokenised beside `is`, `assert` and `chart`: it
+may not be a bound name or a column header, and `precision = 2` reports as
+keyword misuse rather than binding anything. The clause is legal on a scalar and
+on a column rule, in the identifier and quoted-header forms alike, and is
+optional wherever the width is derivable.
 `#` begins a comment (the sheet id lives in the fence info string, so `#` is
 free inside the body). Order is irrelevant; evaluation follows dependencies.
 
@@ -135,6 +165,38 @@ Columns not named by any rule are **inputs**: human-owned, never written.
 
 There are no per-row exceptions and no totals row inside a table. A total is a
 scalar, and it reaches the reader through an anchor.
+
+**Quoted bindings.** A binding's left-hand side may also be a string literal —
+`"Header text" = expr` — using the same grammar that already lexes `"net 30"`
+below, verbatim between two `"` characters, no escapes. It is a column rule if
+and only if the quoted text is byte-identical to some header cell's text in
+the sheet's table ([§3](#3-document-model)); there is no other outcome. **A
+quoted binding never falls back to becoming a scalar** the way an unresolved
+identifier binding never arises in the first place — an unresolved quoted
+header is unambiguously a mistake, not a new named value, so it is an `UNDEF`
+error naming the quoted text, with a did-you-mean against the sheet's header
+texts ([§10](#10-error-taxonomy)).
+
+**`is` — alias declaration.** `is` is a reserved word, tokenised beside `chart`
+([§18](#18-generated-artifacts)), `assert` ([§17](#17-assertions)) and
+`precision` ([§7](#7-numeric-semantics)): it may
+not be a bound name or a column header. `"Header text" is symbol` gives that
+header's column a second name, an ordinary identifier, usable everywhere a
+column's own identifier name already is — as a bare operand, as a reduce's
+argument, or as the left-hand side of an ordinary `symbol = expr` binding,
+which is then a column rule for that header exactly as `"Header text" = expr`
+would be. The alias creates no second column and no second node in the
+dependency graph; it is a second key resolving to the same column data
+([§6](#6-name-resolution-and-scoping)).
+
+**`param` — scenario parameter.** `param tax precision 3 = default 19%`
+declares a numeric scalar that `eval --scenario` may vary. Everywhere else it
+is exactly the binding `tax precision 3 = 19%`. `param` and `default` are
+**contextual** words, not reserved ones, like `as`, `of`, `labelled` and
+`aspect` inside a `chart` statement: `param` is the keyword only as the first
+token followed by a name, and `default` only right after that statement's `=`,
+so `param = 5` and `default = 3` stay ordinary bindings
+([§20](#20-scenario-parameters)).
 
 **Literals.**
 
@@ -177,6 +239,13 @@ in an input column would silently change type. A materialised value is a
 number, a date, or a string — nothing else.
 
 **Operators.** `+ - * / ^`, comparison `== != < <= > >=`, and `and or not`.
+Their precision behaviour: `+` and `-` take the wider operand, `*` sums the two
+scales, `^` multiplies by a non-negative integer exponent, and **`/` bounds
+nothing**, so a binding that divides declares its width
+([§7](#7-numeric-semantics)). A zero divisor in `/` or `MOD` is a `TYPE` error
+(`division by zero`); a non-finite `Decimal` never becomes a value
+(`result is not a finite decimal`). `date - date` is a whole number of days and
+`date ± n` is another date ([§5](#5-dates)).
 Equality is `==`; `=` is binding only. Two characters are deliberately absent:
 `|` would collide with table syntax, and `%` is postfix-only so that `23%` is
 never ambiguous. Use `MOD()` for modulo.
@@ -225,21 +294,36 @@ the single home for a classification the dependency walk, the evaluator and the
 reporter each need. The parser stays function-agnostic: it builds a call node
 for any name, and the name is judged afterwards.
 
-| Function | Kind | Arity | Meaning |
-|----------|------|------:|---------|
-| `SUM(col)` | reduce | 1 | total of a column; `0` over an empty column |
-| `MIN(col)` | reduce | 1 | least value; numbers or dates, not mixed |
-| `MAX(col)` | reduce | 1 | greatest value; numbers or dates, not mixed |
-| `AVG(col)` | reduce | 1 | arithmetic mean; an empty column is a `TYPE` error |
-| `COUNT(col)` | reduce | 1 | number of rows |
-| `ROUND(x, places)` | map | 2 | half-up to `places` decimals |
-| `ABS(x)` | map | 1 | absolute value |
-| `MOD(x, y)` | map | 2 | remainder; the language has no `%` operator |
-| `IF(cond, a, b)` | map | 3 | `cond` must be a boolean; returns `a` or `b` |
-| `EOMONTH(d, months)` | map | 2 | last day of the month `months` calendar months from `d`; `d`'s day is discarded; `months` is a whole number; a result outside years 1–9999 is a `DATE` error |
-| `SQRT(x)` | map | 1 | non-negative square root of a non-negative number; a negative operand is a `TYPE` error |
-| `FLOOR(x, s)` | map | 2 | greatest multiple of positive `s` that does not exceed `x`, toward −∞; a non-positive `s` is a `TYPE` error |
-| `CEILING(x, s)` | map | 2 | least multiple of positive `s` that is not less than `x`, toward +∞; a non-positive `s` is a `TYPE` error |
+**Precision** is the fourth column: where the result's decimal width comes
+from — the operands, an argument's *value*, an argument's *width*, or nowhere,
+in which case a binding using it must declare one ([§7](#7-numeric-semantics)).
+It is a property of the function in the same way its arity is, so `visimark ref
+NAME` and the editor's hover state it too. Every new primitive states it; the
+request template asks for it, and a test holds each answer against the
+derivation the engine actually performs.
+
+<!-- generated: function-table — `bun run gen:docs` -->
+
+| Function | Kind | Arity | Precision | Meaning |
+|----------|------|------:|-----------|---------|
+| `SUM(col)` | reduce | 1 | the width of `col` | total of a column; `0` over an empty column |
+| `MIN(col)` | reduce | 1 | the width of `col` | least value; a column mixing numbers and dates is a `TYPE` error |
+| `MAX(col)` | reduce | 1 | the width of `col` | greatest value; a column mixing numbers and dates is a `TYPE` error |
+| `AVG(col)` | reduce | 1 | **must be declared** | arithmetic mean; an empty column is a `TYPE` error |
+| `COUNT(col)` | reduce | 1 | always 0 | number of rows |
+| `ROUND(x, places)` | map | 2 | the value of `places` | half-up to `places` decimals |
+| `ABS(x)` | map | 1 | the width of `x` | absolute value |
+| `MOD(x, y)` | map | 2 | the wider of `x` and `y` | remainder; a zero divisor is a `TYPE` error |
+| `SQRT(x)` | map | 1 | **must be declared** | non-negative square root; a negative operand is a `TYPE` error |
+| `FLOOR(x, s)` | map | 2 | the width of `s` | greatest multiple of `s` that does not exceed `x`, toward −∞; a non-positive `s` is a `TYPE` error |
+| `CEILING(x, s)` | map | 2 | the width of `s` | least multiple of `s` that is not less than `x`, toward +∞; a non-positive `s` is a `TYPE` error |
+| `IF(cond, a, b)` | map | 3 | the wider of `a` and `b` | returns `a` or `b`; a non-boolean `cond` is a `TYPE` error |
+| `EOMONTH(d, months)` | map | 2 | not applicable — the result is a date | last day of the month `months` calendar months from `d`; `d`'s day is discarded; a non-whole `months` is a `TYPE` error; a result outside years 1–9999 is a `DATE` error |
+
+Parameters, precision and worked examples for each are in
+[`function-reference.md`](function-reference.md), or `visimark ref NAME`.
+
+<!-- /generated: function-table -->
 
 **Arity is exact and checked statically**, once per binding, before anything is
 evaluated. `ROUND(Qty)` is a `TYPE` error blaming the span of the call, not a
@@ -250,6 +334,8 @@ name unlike anything builtin is reported without a misleading guess.
 
 Every reduce takes exactly one argument by construction, which is the shape
 rule restated as a number: there is nothing for a second column to mean.
+
+The language has no `%` operator; `MOD(x, y)` is how a remainder is written.
 
 `Σ` (U+03A3) and `∑` (U+2211) lex as `SUM` — nothing else changes. `SUM` is the
 only spelling documented, generated by `infer`, or suggested by did-you-mean;
@@ -292,6 +378,14 @@ qualified name `sheet.name` reaches another sheet's columns or scalars
 directly. An unresolvable name is an `UNDEF` error carrying a did-you-mean
 suggestion by edit distance.
 
+**An `is` alias ([§4](#4-syntax)) resolves before any other name lookup.**
+Once `"Header text" is symbol` is processed, `symbol` is inserted into the
+sheet's name space as a first-class key, and is indistinguishable everywhere
+after that from a column whose header was itself the identifier `symbol` —
+the same resolution order above, the same `DUP` check, the same did-you-mean
+on `UNDEF`. There is no separate alias-resolution step visible to the rest of
+the language.
+
 Because there is no global search, two tables that both have a `Net` column
 never collide: they are two sheets, and the names are `a.Net` and `b.Net`. A
 bare `Net` is always the one in the current sheet.
@@ -331,12 +425,42 @@ precision. The consequence worth having is that a reader re-adding a column on
 a calculator gets the same answer the tool does, which is what makes a printed
 invoice defensible.
 
-**Write precision is inferred, not declared.** A computed column takes the
-decimal-place count of its existing cells; a scalar takes it from its anchor's
-current text. Empty or absent, both fall back to the document-scope `precision`
-constant, default 2. This is why `Days` writes `7` rather than `7.00` while
-`Net` writes `5200.00`, with no syntax for either. Per-column precision
-declarations are deferred until something needs them.
+**Write precision is declared, or it follows from the formula.** A binding's
+head may carry a `precision N` clause — `eur_total precision 2 = gross / fx` —
+with `N` from 0 to 18. Without one, the width is **derived** from the binding's
+own expression, but only where the operation bounds the result's scale exactly:
+`+`, `-`, `MIN`, `MAX` and `SUM` take the wider operand, `*` sums the two
+scales, `COUNT` is 0, `ROUND` and `FLOOR`/`CEILING` take theirs from an
+argument, and `ABS`, `MOD` and `IF` pass theirs through. **Division, `AVG` and
+`SQRT` bound nothing**, so a binding using them must declare a width; failing
+to is a `PRECISION` error ([§10](#10-error-taxonomy)).
+
+One invariant holds the design together: **a derived precision never discards a
+digit.** Only a declared one can, and only because the author asked — with
+one exception: a `param` default is the value a reader sees in the document,
+so a default wider than its declared width is a `PRECISION` error rather than
+a rounding ([§20](#20-scenario-parameters)). So
+`Days` still writes `7` rather than `7.00` — its operands are whole — and `Net`
+still writes `5200.00`, while a money product that derives four decimals and is
+meant to keep two says so in one clause.
+
+An **input** column's width is the decimals its cells show, which is exact
+because the cells are the values. A percent cell counts by its value: `30%` is
+exactly `0.30`, so it carries two decimals rather than none. A scalar with no
+anchor is never written, so it has no write precision and keeps full precision —
+a working value feeding an anchored `ROUND(…, 2)` is not rounded twice.
+
+**Precision does not come from prose.** An anchor's text is an output
+([§3](#3-document-model)); reading a width out of it made a `0` placeholder in a
+sentence round the stored value and move every figure derived from it. There is
+no document-scope and no sheet-scope precision: a width that comes from neither
+the binding nor its own formula is action at a distance on a number, which is
+the same objection [§4](#4-syntax) uses to refuse boolean literals. The
+rounding *discipline* stays global and undeclared — half-up — and
+`ROUND`/`FLOOR`/`CEILING` remain the only per-binding control over it.
+
+Per-column *output formats* are still deferred ([§14](#14-deferred)).
+`docs/design/declared-precision-spec.md` is the full specification.
 
 Thousands separators are rejected. They reintroduce exactly what ISO-only dates
 eliminated: a separator whose meaning depends on locale, colliding with the
@@ -366,7 +490,11 @@ Operand propagation and an explicit per-column unit declaration are deferred
 (section 14).
 
 Scalars work the same way: a scalar's unit is the decoration on its anchored
-value, and two anchors on one scalar that disagree are a `UNIT` error. The
+value, and two anchors on one scalar that disagree are a `UNIT` error. A unit is
+therefore still inferred from prose while precision no longer is, and the
+asymmetry is deliberate: [§15](#15-known-tensions)'s compromise is that a unit
+is inert and does not compute, so a wrong unit cannot move a number the way a
+wrong width could. The
 invoice's `**23300.00**<!--vmark=lines.net_total--> PLN` is unaffected: the
 anchored value is bare and `PLN` sits in the prose after the comment.
 
@@ -424,6 +552,14 @@ second kind of generated artifact should not reopen this question.
 by a renamed or removed declaration is the author's to remove, and shows up at
 git staging like any other stray file.
 
+A rewritten cell or anchor is written at the binding's **declared or derived**
+width ([§7](#7-numeric-semantics)), never at the width the text there happens to
+show. So an anchor whose rendering disagrees is `STALE` and `fmt` repairs it,
+and an anchor with nothing in front of it is seeded. `fmt` never *inserts* a
+`precision` clause: a rule is authoring, not write-back, and deriving a width
+from prose is what this replaced. `infer` proposes the clause instead, where the
+document's own cells or figures verify one.
+
 A rewritten cell or anchor keeps its column's or scalar's inferred unit: the
 number changes, the `$` or ` kg` around it does not. A column carrying a `UNIT`
 error is not rewritten at all — the tool cannot know which decoration to
@@ -445,16 +581,17 @@ justifies the project.
 | `DATE` | not an ISO 8601 calendar date | only if decidable, with `--fix-dates` |
 | `UNIT` | a column mixes unit decorations, or a value is decorated on both sides | no |
 | `UNDEF` | unresolvable name | no |
-| `DUP` | a name is bound twice in one scope | no |
+| `DUP` | a name is bound twice in one scope, or two header cells sharing text | no |
 | `VECTOR` | foreign column outside an aggregate | no |
 | `CYCLE` | circular dependency | no |
 | `TYPE` | illegal operand types, or a malformed call (name, arity, shape) | no |
 | `SHEET` | column rules with no table, or an `assert` in a document-scope block | no |
 | `ANCHOR` | anchor with no rewritable target | no |
+| `PRECISION` | a numeric binding with no declared width and none derivable, or a value too large to carry the width it has ([§7](#7-numeric-semantics)) | no |
 | `ASSERT` | an `assert` statement evaluated false ([§17](#17-assertions)) | no |
 | `ARTIFACT` | a declared artifact cannot be built or written ([§18](#18-generated-artifacts)) | no |
 | `IMPORT` | a declared local import cannot be resolved: unstamped, missing file, malformed stamp, bad path, malformed CSV, or a column rule attempted on a read-only imported sheet ([§19](#19-declared-local-data-imports)) | no (except the stamp itself — see below) |
-| `WARN` | scalar defined and never read | no |
+| `WARN` | scalar defined and never read, or an alias declared and never used | no |
 | `NOTE` | finding suppressed by an upstream error | n/a |
 
 `fmt` repairs every `STALE` finding without asking, because those cells are
@@ -467,6 +604,20 @@ import stamp is `STALE`, and `fmt` rewrites the digest — the one part of an
 finding `fmt` fixes without asking, since it is legal authoring syntax rather
 than a question for a human ([§19](#19-declared-local-data-imports)).
 
+`STALE` is widened once more: an anchor whose rendered text disagrees with its
+scalar's width is `STALE` rather than a conflict, which is what makes `686.0000`
+and a bare `0` converge on one rendering under `fmt`. `ANCHOR` narrows to match
+— a bare text node no longer has to end in a number ([§3](#3-document-model)).
+
+`DUP` is widened again here, as it was for `STALE` above: two header cells
+sharing byte-identical text are `DUP` before any binding names them at all
+([§3](#3-document-model)), and an alias symbol colliding with an existing
+column, scalar, builtin or keyword is `DUP` by the same mechanism as any other
+name collision ([§6](#6-name-resolution-and-scoping)). `WARN` is widened the
+same way: an `is` alias declared and never referenced by any expression is
+`WARN`, naming the alias, exactly as an unreferenced scalar already is
+([§6](#6-name-resolution-and-scoping)).
+
 ## 11. CLI
 
 The CLI is the product; the VS Code extension is a later thin wrapper. An agent
@@ -476,7 +627,7 @@ must be able to verify a document without an editor.
 visimark check FILE... [--json]     read-only; exit 1 if any finding
 visimark fmt   FILE... [--fix-dates] [--json]
 visimark infer FILE... [--write] [--json]
-visimark eval  FILE [--get NAME] [--json]
+visimark eval  FILE [--scenario FILE|-] [--get NAME] [--json]
 visimark explain FILE [#sheet] [--json]
 ```
 
@@ -486,6 +637,16 @@ evaluation, writes, or exit codes. The shape is
 [`structured-output-json-spec.md`](design/structured-output-json-spec.md).
 `eval --json` is that envelope (`values`, `assertions`, `charts`), not a flat
 map of binding names.
+
+Every command refuses an option it does not accept, and extra file arguments:
+an unknown option (`--jsonn`) or one that belongs to another command
+(`fmt --write`) is exit `2` with a `visimark: …` line on stderr, before any
+file is read or written, and a `USAGE` envelope under `--json`. This applies
+constraint 3 to invocation: a silently ignored option produces a run that looks
+right and is wrong. `--scenario` is one case of it — valid only with `eval`,
+because a scenario must never reach a writer ([§20](#20-scenario-parameters)).
+The rules are in
+[`refuse-unrecognised-and-misplaced-cli-options-spec.md`](design/refuse-unrecognised-and-misplaced-cli-options-spec.md).
 
 Exit codes: `0` clean, `1` findings, `2` usage or parse failure. `eval` also
 exits `1` if an `assert` statement is false ([§17](#17-assertions)) — the
@@ -547,8 +708,17 @@ point of keeping artifacts out of the Markdown rather than inlining them, since
 an inlined artifact would rewrite a line of the document on every data change.
 
 Beyond those: unit tests per module; golden-file tests for the splicer proving
-that a one-cell change touches one line; and a property test that `fmt` is
-idempotent.
+that a one-cell change touches one line; and three property tests.
+
+- **`fmt` is idempotent.**
+- **`fmt`'s output re-reads identically** — every anchor it writes is found
+  again by the scanner on the next parse. Idempotence cannot catch a value the
+  scanner reads back differently, because the second `fmt` run reports
+  `unchanged`; the absence of this test is why that defect shipped.
+- **A derived precision never discards a digit** ([§7](#7-numeric-semantics)) —
+  for every binding with a derived width, the exact result equals that result
+  rounded to it. This asserts the invariant rather than trusting the table that
+  implements it.
 
 Declared local data imports ([§19](#19-declared-local-data-imports)) have
 their own acceptance fixture, `test/fixtures/import/benchmark.{md,csv}`, and
@@ -567,8 +737,12 @@ under a second `fmt`.
 
 ## 14. Deferred
 
-Month and partial-date types. Joining sheets by key. Per-column precision and
-output formats. Per-row exceptions. A function library beyond the thirteen —
+Month and partial-date types. Joining sheets by key. Per-column **output
+formats** — masks, thousands separators, anything beyond a width. Per-column
+*precision* has landed as the `precision N` clause
+([§7](#7-numeric-semantics)); a document- or sheet-scope default has not, and
+should not: it could only override a derivation or suppress a required
+declaration. Per-row exceptions. A function library beyond the thirteen —
 proposals and the decision on each are tracked in
 [`vocabulary-catalogue.md`](vocabulary-catalogue.md). Incremental reparse.
 
@@ -604,6 +778,11 @@ columns whose cells cannot be inferred from; anything resembling dimensional
 analysis, where `N` divided by `m` yields `N/m`. The v1 rule is deliberately
 flat: a unit is a display decoration on one column, inferred from that column's
 own cells, and it does not compute.
+
+Beyond scalar scenario parameters: table overrides, required params,
+non-numeric params, named scenarios inside a document, and per-param
+overrides on the command line are deferred in
+[`scenario-params-spec.md` §7](design/scenario-params-spec.md#7-non-goals).
 
 The editor plugins are specified separately in
 [`visimark-editor-plugins-design.md`](visimark-editor-plugins-design.md).
@@ -780,8 +959,12 @@ a column, a scalar or another chart is a `DUP`. There is no `#` sigil — `#`
 already begins a comment inside a block body ([§4](#4-syntax)). `as` is
 mandatory: it marks the name/engine boundary structurally rather than
 positionally, which keeps a misspelled engine diagnosable. The engines are
-`pie` and `bar`, a closed built-in set — a document selects `pie` exactly as it
-selects `SUM`, and there is no plugin point ([§2](#2-constraints-that-shaped-the-design)).
+`pie`, `bar`, `line`, `area` and `stacked-bar`, a closed built-in set — a
+document selects `pie` exactly as it selects `SUM`, and there is no plugin
+point ([§2](#2-constraints-that-shaped-the-design)). `stacked-bar` is the one
+hyphenated name; the parser joins it from its two idents only when they sit
+with no spaces around the `-`, so a hyphen anywhere else in the statement
+still lexes as subtraction.
 
 Operands are **bare column references in the statement's own sheet**, the same
 rule a reduce follows: `of Profit / Revenue` is refused, so every series is a
@@ -854,8 +1037,9 @@ state; `eval --json` carries a `charts` array. `infer` never proposes a chart �
 a chartable column is not evidence of an intended chart.
 
 **Deferred.** `numbered` labels (they would render strings appearing nowhere in
-the document — add a visible column instead), cross-sheet series, further
-engines (`line`, `area`, `scatter`, `stacked-bar`), orphan cleanup, and any
+the document — add a visible column instead), cross-sheet series, a `scatter`
+engine (it needs a numeric x axis, which no other engine here does, since
+labels are categorical strings rather than values), orphan cleanup, and any
 output format other than SVG.
 
 ## 19. Declared local data imports
@@ -939,5 +1123,39 @@ shows toward `chart` and `assert`.
 computed columns on an imported sheet in any form; a performance budget or
 caching strategy for a very large import — `check` re-reads and re-hashes the
 file on every run in v1.
+
+## 20. Scenario parameters
+
+A document computes one answer from one set of numbers; a scenario asks what
+it would come to with some of them changed, without editing the document.
+[`design/scenario-params-spec.md`](design/scenario-params-spec.md) is the
+full specification. The motivating document is
+[`example-agent-budget.md`](example-agent-budget.md).
+
+**The defaults are the document; a scenario is a view of it.**
+
+- **Declaring.** `param NAME precision N = default LITERAL` in a `vmark` block
+  declares a numeric scalar of its sheet (or of document scope). `NAME` is an
+  identifier, `precision` is required, and `LITERAL` is a number literal
+  (optionally negative, optionally a percent). The default must fit the
+  declared width ([§7](#7-numeric-semantics)). A param named like a column
+  header of its sheet is `DUP`.
+- **Everywhere but `eval --scenario`** — `check`, `fmt`, `infer`, `explain`,
+  a plain `eval` — a param is the constant binding its default declares.
+  Stored numbers, anchors and artifacts are always the defaults'. The tool
+  owns nothing new ([§9](#9-write-back)).
+- **`eval --scenario FILE|-`** evaluates the same graph with the scenario's
+  values in place of the defaults. The file is a flat JSON object; every key
+  must name a declared param and every value must be a JSON *string* holding
+  a number literal that fits the param's width. A param whose default is a
+  percent takes only a percent. Any fault is a usage error (exit `2`, JSON
+  error code `SCENARIO`) and nothing is evaluated.
+- **Output** quotes the scenario separately: a `scenario:` block after the
+  values, or a `scenario` key under `--json`, listing every param with its
+  value, default and source. Assertions run under the scenario and a false one
+  exits `1`; each also says whether it holds on the defaults. Chart entries
+  omit their on-disk `state`.
+- **`explain`** lists each sheet's params, with width and default, apart from
+  its scalars.
 
 <!--vmark:no-formulas-->

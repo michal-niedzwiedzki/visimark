@@ -1,6 +1,6 @@
 import type { Call, Expr, Ref } from "../lang/ast.js";
 import { closest } from "../report/levenshtein.js";
-import type { Assertion, Binding, Chart, DocModel } from "../model/types.js";
+import type { Assertion, Binding, Chart, DocModel, Sheet } from "../model/types.js";
 import { type CallProblem, callProblem, isReduce } from "./functions.js";
 
 /**
@@ -58,6 +58,19 @@ export type Resolution =
   | { kind: "input-column"; sheetId: string; column: string }
   | { kind: "unknown"; suggestion: string | null; badName: string };
 
+/**
+ * The canonical key `name` stands for in `sheet`: an alias symbol becomes the
+ * header text it was declared for, any other name is already canonical.
+ *
+ * `sheet.columns` / `scalars` / `columnIndex` / `inputColumns` are keyed by
+ * canonical header text only (see `Sheet.aliases`), so every lookup into them
+ * from a name the document wrote must pass through here first. An absent sheet
+ * has no aliases to apply, so the name comes back untouched.
+ */
+export function canonicalName(sheet: Sheet | undefined, name: string): string {
+  return sheet?.aliases.get(name)?.header ?? name;
+}
+
 export function refText(ref: Ref): string {
   return ref.qualifier ? `${ref.qualifier}.${ref.name}` : ref.name;
 }
@@ -76,12 +89,13 @@ export function resolve(
         suggestion: closest(ref.qualifier, model.sheets.keys()),
       };
     }
-    const col = sheet.columns.get(ref.name);
+    const name = canonicalName(sheet, ref.name);
+    const col = sheet.columns.get(name);
     if (col) return { kind: "column", binding: col, sheetId: sheet.id };
-    if (sheet.inputColumns.has(ref.name)) {
-      return { kind: "input-column", sheetId: sheet.id, column: ref.name };
+    if (sheet.inputColumns.has(name)) {
+      return { kind: "input-column", sheetId: sheet.id, column: name };
     }
-    const sc = sheet.scalars.get(ref.name);
+    const sc = sheet.scalars.get(name);
     if (sc) return { kind: "scalar", binding: sc, sheetId: sheet.id };
     return {
       kind: "unknown",
@@ -90,18 +104,20 @@ export function resolve(
         ...sheet.columns.keys(),
         ...sheet.inputColumns,
         ...sheet.scalars.keys(),
+        ...sheet.aliases.keys(),
       ]),
     };
   }
 
   const sheet = model.sheets.get(fromSheetId);
+  const name = canonicalName(sheet, ref.name);
   if (sheet) {
-    const col = sheet.columns.get(ref.name);
+    const col = sheet.columns.get(name);
     if (col) return { kind: "column", binding: col, sheetId: sheet.id };
-    if (sheet.inputColumns.has(ref.name)) {
-      return { kind: "input-column", sheetId: sheet.id, column: ref.name };
+    if (sheet.inputColumns.has(name)) {
+      return { kind: "input-column", sheetId: sheet.id, column: name };
     }
-    const sc = sheet.scalars.get(ref.name);
+    const sc = sheet.scalars.get(name);
     if (sc) return { kind: "scalar", binding: sc, sheetId: sheet.id };
   }
   const doc = model.docScope.get(ref.name);
@@ -112,6 +128,7 @@ export function resolve(
     for (const k of sheet.columns.keys()) candidates.add(k);
     for (const k of sheet.inputColumns) candidates.add(k);
     for (const k of sheet.scalars.keys()) candidates.add(k);
+    for (const k of sheet.aliases.keys()) candidates.add(k);
   }
   return {
     kind: "unknown",

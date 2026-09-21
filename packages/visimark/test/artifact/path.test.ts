@@ -3,10 +3,12 @@ import { mkdtempSync, mkdirSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { resolveArtifactPath } from "../../src/artifact/path.js";
+import { onDisk } from "../../src/fs/node-reader.js";
 
 const dir = mkdtempSync(join(tmpdir(), "vmark-path-"));
-const doc = join(dir, "report.md");
-writeFileSync(doc, "# x\n");
+const docPath = join(dir, "report.md");
+const doc = onDisk(docPath);
+writeFileSync(docPath, "# x\n");
 
 const ok = (url: string) => resolveArtifactPath(doc, url);
 const err = (url: string) => {

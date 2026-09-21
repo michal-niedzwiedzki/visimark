@@ -34,6 +34,28 @@ call it refuses to make for you.
 
 `check` says the same thing, as a failure, on a document with no rules.
 
+```mermaid
+flowchart LR
+  incoming[Incoming document] --> existing{"Numbers already there, no rules?"}
+  existing -->|yes| infer["infer, then infer --write"]
+  existing -->|no| shape[Table, then vmark block, then anchors, then prose]
+  infer --> shape
+  shape --> fmt["fmt fills computed cells"]
+  fmt --> probe[Change one input]
+  probe --> checkCmd[check]
+  checkCmd --> broke{"Reports problems?"}
+  broke -->|no| unwired[Not derived: fix]
+  broke -->|yes| restore[Undo the probe]
+  restore --> later["Later: change an input or a rule, then fmt"]
+```
+
+A header that already exists as human-facing prose — `Bandwidth per Unit
+(TB/s, full-duplex)` — is not a formula name, and **you do not rewrite it into
+one.** Rewriting someone else's header is exactly the kind of intrusion this
+tool exists to avoid. `infer` proposes a short `is` alias for such a header
+alongside its rule proposals; accept that, or write it yourself — see
+"Non-identifier headers" below.
+
 ## The trap it closes: a green check proves nothing on its own
 
 `visimark check` verifies that the formulas in a document agree with the
@@ -94,9 +116,25 @@ visimark check FILE...                # read-only; exit 1 if anything disagrees,
                                        # or if a table has no rules at all
 visimark fmt   FILE... [--fix-dates]  # rewrite computed cells and anchors
 visimark infer FILE... [--write]      # propose rules for a document with none
-visimark eval  FILE [--get NAME] [--json]
+visimark eval  FILE [--scenario FILE|-] [--get NAME] [--json]
 visimark explain FILE [#sheet]        # rules and evaluation order
+visimark ref   [NAME] [--json]        # what a builtin function does; reads no file
 ```
+
+**Do not guess a function's behaviour.** `visimark ref NAME` prints its
+signature, parameters, return type, errors and worked examples; bare
+`visimark ref` lists all thirteen; `--json` is the machine-readable form. Every
+example it prints is executed against the evaluator in CI, so what it says is
+what the engine does. The same content is in
+[`docs/function-reference.md`](../../docs/function-reference.md).
+
+**What-if questions: declare a `param`, never edit the document.** A value a
+caller may want to vary — a rate, a cap, a headcount — is written
+`param tax precision 3 = default 19%` (`precision` required, a literal default).
+Every command treats it as its default. `visimark eval --scenario s.json FILE`
+evaluates with `{ "tax": "12.5%" }` instead and writes nothing: keys must name
+declared params, values must be JSON *strings* that fit the precision, and a
+percent param takes a percent. Only `eval` accepts `--scenario`.
 
 `infer` is advisory — it exits `0` whatever it finds — and it only ever
 inserts, so prose, headings, input columns and existing blocks are untouched.
@@ -117,6 +155,11 @@ once `bun run build` has been run. `npx visimark` for a published install.
 
 Four parts, in this order. The block must come **immediately after** its table.
 
+```mermaid
+flowchart LR
+  table[Table] --> block[vmark block] --> anchors[Anchors] --> prose[Prose] --> fmtFill[fmt]
+```
+
 ````markdown
 | Item           | Unit | Qty |    Rate |     Net |     VAT |
 |----------------|------|----:|--------:|--------:|--------:|
@@ -128,6 +171,7 @@ Net = Qty * Rate
 VAT = Net * vat
 net_total   = SUM(Net)
 gross_total = SUM(Net) + SUM(VAT)
+avg_line precision 2 = net_total / COUNT(Net)
 ```
 
 Net of tax this comes to **13200.00**<!--vmark=lines.net_total--> PLN,
@@ -139,7 +183,16 @@ or **16236.00**<!--vmark=lines.gross_total--> PLN gross.
 - **Totals are scalars**, declared in the same block. Never add a totals row —
   tables stay rectangular.
 - **Anchors** put a scalar into a sentence. The HTML comment is invisible in
-  GitHub, VS Code preview and pandoc.
+  GitHub, VS Code preview and pandoc. An anchor is an *output*: it never decides
+  how wide a number is written.
+- **Precision** is usually silent. A value's decimal width follows from its
+  formula wherever the arithmetic bounds it — `+ - MIN MAX SUM` take the wider
+  operand, `*` sums the two, `COUNT` is 0, `ROUND`/`FLOOR`/`CEILING` take theirs
+  from an argument. **Division, `AVG` and `SQRT` bound nothing**, so a binding
+  using one must say how wide it writes: `name precision N = expr`, `N` from 0
+  to 18. Not declaring it is a `PRECISION` error, and `fmt` will not guess for
+  you. Declare it electively too wherever a column holds money and must stay at
+  two decimals if an input later gains a third.
 - **`assert <boolean expr>`** in a `#id` block states an invariant `check` must
   hold — `assert variance == 0`, `assert ROUND(SUM(Share), 2) == 1`,
   `assert delivery >= signature`. It stores nothing and `fmt` never touches it;
@@ -150,6 +203,30 @@ or **16236.00**<!--vmark=lines.gross_total--> PLN gross.
 
 Write the table cells as `0.00` placeholders and run `visimark fmt` to fill
 them in. Do not compute them yourself.
+
+## Non-identifier headers
+
+A column rule's name is ordinarily the header text itself, so it normally has
+to be a bare identifier. A header with spaces, units or punctuation — the kind
+a human actually writes — needs one of these instead of a rewrite:
+
+```
+"Bandwidth per Unit (TB/s, full-duplex)" is bpu
+"GPU-to-GPU Bandwidth (GB/s, full-duplex)" =
+    ROUND(bpu / GPUs * 1000, 0)
+```
+
+- **`"Header text" is symbol`** gives that column a short name usable
+  everywhere afterward — as an operand, inside `SUM()`/other reduces, and as
+  the left of an ordinary `symbol = expr` rule. This is the only way to *read*
+  such a column in a formula; a bare quoted string is already a string
+  literal, so it cannot double as an operand.
+- **`"Header text" = expr`** writes a rule directly, no alias needed, when you
+  only ever produce that column and never read it back elsewhere.
+
+Matching is byte-for-byte against the header's exact printed text — no
+trimming, no case-folding. Neither form ever touches the table: the header
+stays exactly as written.
 
 ## Rules that bite
 
@@ -164,6 +241,11 @@ them in. Do not compute them yourself.
 | Currency in prose goes **outside** the anchor | `**13200.00**<!--vmark=lines.net_total--> PLN` — not inside the bold. |
 | A name bound twice in one scope is a `DUP` error | The first binding wins and the second is reported. |
 | An unreferenced scalar is a `WARN` | Usually means you typo'd a column name and silently created a scalar. |
+| Two header cells sharing identical text is a `DUP` error | Neither becomes usable as a name — bare or quoted — until the headers are told apart. |
+| `is` is a reserved word | Naming a column or scalar `is` is refused; use it only for `"Header" is symbol` aliases. |
+| `precision` is a reserved word too | Naming anything `precision` is refused, and `precision = 2` is not a document setting — there is no document- or sheet-wide precision. It goes on the binding: `total precision 2 = …`. |
+| A division, `AVG` or `SQRT` with no `precision N` is a `PRECISION` error | No width follows from those operations. Take the width from what the document already shows, or decide it. |
+| A number's width never comes from prose | Writing `0` as an anchor placeholder does **not** mean "zero decimals" any more. The anchor is rewritten at the binding's width, whatever you put there. |
 
 ## Editing an existing document
 
@@ -186,6 +268,7 @@ only a person can answer — do not paper over a `DATE`, `UNIT`, `CYCLE`,
 | "I'll just fix that one cell by hand" | That cell is an output. Change the input or the rule and run `fmt`. |
 | "The document already has numbers, I'll just write the same rules by hand" | Run `infer` first. It derives and verifies the rule from the numbers already there; hand-authoring re-does that work and can introduce the exact mistake the tool exists to catch. |
 | "The date format is obvious from context" | `11/12/2026` is two different dates. VisiMark refuses on purpose. |
+| "I'll widen the anchor to get more decimals" | The anchor is an output. Change the binding's `precision N`, or the formula. |
 
 ## Red flags — stop
 
@@ -195,11 +278,15 @@ only a person can answer — do not paper over a `DATE`, `UNIT`, `CYCLE`,
 - You edited a value inside a `<!--vmark=…-->` anchor or a computed column.
 - You added a `Total` row to a table.
 - You wrote a date that is not exactly ten characters of `YYYY-MM-DD`.
+- You wrote a division, `AVG` or `SQRT` and did not say how wide it writes.
+- You changed a number's decimals by editing the text in front of an anchor.
 - You silenced a finding by changing the number it complained about.
 
 ## Reference
 
-`docs/visimark-design.md` in the repository is the normative spec.
+`docs/visimark-design.md` in the repository is the normative spec, and
+[`docs/function-reference.md`](../../docs/function-reference.md) is the
+generated per-function reference `visimark ref` serves.
 `docs/example-invoice.md` is a complete worked example — a self-computing B2B
 invoice with VAT, a payment schedule, early-payment terms, a currency
 conversion and a reconciliation. `docs/example-invoice-drift.md` is the same

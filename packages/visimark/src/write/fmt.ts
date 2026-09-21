@@ -1,21 +1,16 @@
 import { locate } from "../parse/document.js";
 import { build } from "../model/build.js";
-import {
-  check,
-  type CheckResult,
-  decimalPlaces,
-  matchesStored,
-  roundValue,
-  showValue,
-} from "../eval/check.js";
+import { check, type CheckResult, matchesStored, roundValue, showValue } from "../eval/check.js";
+import type { DocumentFile } from "../fs/reader.js";
 import type { DocModel, Finding } from "../model/types.js";
 import { applyUnit } from "../eval/units.js";
 import { applyEdits, type Edit } from "./splice.js";
 
 export interface FmtOptions {
   fixDates?: boolean;
-  /** the document's own path — needed to resolve and write its artifacts */
-  docPath?: string;
+  /** where the document lives and how to read the files around it — needed to
+   *  resolve and write its artifacts. See `CheckOptions.doc`. */
+  doc?: DocumentFile;
 }
 
 /** a generated artifact `fmt` must write: absolute target, and its bytes */
@@ -24,6 +19,16 @@ export interface ArtifactWrite {
   svg: string;
   /** path as the document named it; JSON reports this, never `target` */
   path: string | null;
+  /**
+   * what `classify()` found there. The writer re-proves this against the
+   * descriptor it writes through, so it must know what was promised:
+   * `missing` means nothing may be there now, `stale` means our own marker
+   * must still be. See `artifact/write.ts`.
+   */
+  state: "missing" | "stale";
+  sheetId: string;
+  /** the chart's name, the second half of the ownership marker */
+  chart: string;
 }
 
 export interface FmtResult {
@@ -92,7 +97,11 @@ export function planFmt(model: DocModel, result: CheckResult, opts: FmtOptions):
     const v = result.values.get(id);
     if (!v) continue;
     const current = source.slice(a.value.start, a.value.end);
-    const prec = decimalPlaces(current, 2);
+    // The anchor is an output: it renders the scalar at the scalar's own
+    // precision. Reading the width back out of `current` is what let a `0`
+    // placeholder in prose round the stored value.
+    const prec = result.scalarPrecision.get(id);
+    if (prec === undefined) continue;
     const unit = result.scalarUnits.get(id) ?? null;
     const rounded = roundValue(v, prec);
     if (!matchesStored(rounded, current, prec)) {
@@ -172,7 +181,7 @@ const FIXABLE_BY_FMT = new Set(["STALE"]);
 
 export function fmt(source: string, opts: FmtOptions = {}): FmtResult {
   const model = build(locate(source));
-  const result = check(model, { docPath: opts.docPath });
+  const result = check(model, { doc: opts.doc });
   const edits = planFmt(model, result, opts);
   const output = applyEdits(source, edits);
 
@@ -194,9 +203,19 @@ export function fmt(source: string, opts: FmtOptions = {}): FmtResult {
 
   // an artifact carrying an ARTIFACT error is not written at all — the same
   // rule a column with a UNIT conflict already follows
-  const artifacts = result.charts
-    .filter((c) => (c.state === "stale" || c.state === "missing") && c.target && c.svg)
-    .map((c) => ({ target: c.target!, svg: c.svg!, path: c.path }));
+  const artifacts: ArtifactWrite[] = [];
+  for (const c of result.charts) {
+    if (c.state !== "stale" && c.state !== "missing") continue;
+    if (!c.target || !c.svg) continue;
+    artifacts.push({
+      target: c.target,
+      svg: c.svg,
+      path: c.path,
+      state: c.state,
+      sheetId: c.sheetId,
+      chart: c.name,
+    });
+  }
 
   return {
     output,

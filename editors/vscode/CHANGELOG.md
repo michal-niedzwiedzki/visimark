@@ -2,6 +2,35 @@
 
 ## Unreleased
 
+## 0.1.6 - 2026-09-20
+
+- Division by zero (`/` or `MOD` with a zero divisor) is reported as a `TYPE`
+  diagnostic, "division by zero", instead of an unexplained stale value.
+- Documents that declare `param` scenario parameters no longer raise findings.
+  Scenarios are run from the CLI with `eval --scenario`, not from the editor.
+
+## 0.1.5 - 2026-09-17
+
+- A binding's head may carry a `precision N` clause, and a value's decimal width
+  no longer comes from an anchor's text. `precision` is now a reserved word.
+  Undeclared division, `AVG` and `SQRT` report the new `PRECISION` diagnostic.
+
+## 0.1.4 - 2026-09-16
+
+- The extension now publishes under the Marketplace publisher
+  `visimark-michal-niedzwiedzki`. If you installed a build with the old
+  `michal-niedzwiedzki.visimark-vscode` identifier by hand (e.g. a `.vsix`),
+  uninstall it and reinstall from the Marketplace.
+
+## 0.1.3 - 2026-09-15
+
+- A quoted GFM header is now a legal column-rule left-hand side, and
+  `"Header" is symbol` names it for use in formulas. `is` is now a reserved
+  word: a document that used it as a column or scalar name will start getting
+  a diagnostic where it previously did not.
+- Three more chart engines are supported: `line`, `area` and `stacked-bar`,
+  alongside the existing `pie` and `bar`. `stacked-bar` is written as a single
+  hyphenated engine name with no spaces around the `-`.
 - Declared local data imports (`from <path>`) are now supported: a problem
   resolving one — an unstamped or stale import, a missing file, a bad path,
   malformed CSV, or a column rule attempted on a read-only imported sheet —

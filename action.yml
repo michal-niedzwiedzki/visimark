@@ -1,7 +1,5 @@
 name: "VisiMark check"
-description: >-
-  Verify that a VisiMark Markdown document's formulas still agree with its
-  numbers, and fail the build if they don't.
+description: "Verify that a VisiMark Markdown document's formulas still agree with its numbers, and fail the build if they don't."
 author: "VisiMark"
 branding:
   icon: "check-square"
@@ -9,9 +7,7 @@ branding:
 
 inputs:
   files:
-    description: >-
-      Space-separated glob(s) of Markdown files to check (bash globstar, so
-      ** matches across directories).
+    description: "Space-separated glob(s) of Markdown files to check (bash globstar, so ** matches across directories)."
     required: false
     default: "**/*.md"
   command:
@@ -19,13 +15,18 @@ inputs:
     required: false
     default: "check"
   args:
-    description: "Extra flags, e.g. --fix-dates for fmt"
+    description: "Extra flags for the command; each must be valid for it, e.g. --fix-dates for fmt"
     required: false
     default: ""
+  # Pinned rather than `latest` so that pinning the Action ref pins the engine
+  # that does the work: a consumer on `@v0.1.3` re-running an unchanged commit
+  # next month gets the same verifier, and one bad publish cannot reach every
+  # downstream repo at once. The cost is a fourth place the release commit has
+  # to bump, so ci.yml asserts this equals packages/visimark/package.json.
   version:
-    description: "visimark npm version or dist-tag to install"
+    description: "visimark npm version or dist-tag to install. Defaults to the release this Action ref ships, so pinning the Action pins the engine too. Set it to `latest` to track releases as they land instead."
     required: false
-    default: "latest"
+    default: "0.1.6"
 
 runs:
   using: "composite"

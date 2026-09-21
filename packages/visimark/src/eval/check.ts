@@ -4,24 +4,50 @@ import { NO_FORMULAS_MARKER, type RawTable, type Span } from "../parse/document.
 import {
   type Assertion,
   type Binding,
-  type Chart,
   type DocModel,
   type Finding,
   isProblem,
   type Sheet,
 } from "../model/types.js";
 import { closest } from "../report/levenshtein.js";
-import { parseIsoDate } from "./dates.js";
 import { evalExpr, type EvalEnv } from "./evaluate.js";
 import { describeCallProblem, FUNCTIONS, isReduce } from "./functions.js";
-import { chartNode, dependencies, refText, resolve, topoOrder } from "./graph.js";
-import { buildArtifact, hasEngine, type Series, suggestEngine } from "../artifact/index.js";
-import { resolveArtifactPath } from "../artifact/path.js";
-import { classify } from "../artifact/stale.js";
+import { dependencies, refText, resolve, topoOrder } from "./graph.js";
 import { resolveImports } from "../import/resolve.js";
 import type { ImportStatus } from "../model/types.js";
-import { applyUnit, inferColumnUnit, numericValue, parseDecorated, type Unit } from "./units.js";
-import { date, EvalError, num, roundToPlaces, str, type Value } from "./value.js";
+import { derivePrecision, type Width } from "./precision.js";
+import { applyUnit, cellPrecision, parseDecorated, type Unit } from "./units.js";
+import {
+  EvalError,
+  exceedsWorkingPrecision,
+  MAX_SIGNIFICANT_DIGITS,
+  num,
+  roundToPlaces,
+  type Value,
+} from "./value.js";
+import { coerceInput, lookupVector, rowLabel, Unevaluable } from "./check-lookup.js";
+import { checkCharts } from "./check-charts.js";
+import { inferDecoration } from "./check-decoration.js";
+import {
+  reportAnchors,
+  reportCycles,
+  reportUnreachableAssertions,
+  reportUnused,
+} from "./check-report.js";
+import {
+  type AssertionResult,
+  type CheckOptions,
+  type Entry,
+  newAssertionLedger,
+  newCheckState,
+} from "./check-state.js";
+
+import type { ChartResult } from "./check-state.js";
+
+export type { AssertionResult, CheckOptions, ChartResult } from "./check-state.js";
+// `fmt` and the chart pass both need this; it lives with the decoration parser
+// it depends on, and is re-exported here because callers have always found it here.
+export { decimalPlaces } from "./units.js";
 
 /** a misspelling this far from a builtin is a different word, not a typo */
 const MAX_FN_SUGGESTION_DISTANCE = 2;
@@ -34,28 +60,6 @@ const MAX_FN_SUGGESTION_DISTANCE = 2;
  */
 const BOOLEAN_BINDING_MESSAGE =
   "a boolean cannot be stored; wrap it in `IF()` to produce a number or a string";
-
-export interface CheckOptions {
-  /** the document's own path — required to resolve and compare artifacts.
-   *  Without it charts are still validated, but staleness cannot be judged. */
-  docPath?: string;
-}
-
-/** one entry per `chart` declaration, in document order */
-export interface ChartResult {
-  sheetId: string;
-  name: string;
-  engine: string;
-  series: string[];
-  labels: string;
-  /** the path as the document wrote it, or null when there is no image line */
-  path: string | null;
-  state: "current" | "stale" | "missing" | "error" | "skipped";
-  /** absolute target, present when the path passed the gate */
-  target?: string;
-  /** the rendered artifact, present when it built — `fmt` writes this */
-  svg?: string;
-}
 
 export interface CheckResult {
   findings: Finding[];
@@ -78,68 +82,36 @@ export interface CheckResult {
   exitCode: 0 | 1;
 }
 
-export interface AssertionResult {
-  sheetId: string;
-  /** the `assert …` line verbatim */
-  source: string;
-  /** `true` / `false`, or `null` when a dependency stopped it being evaluated */
-  holds: boolean | null;
-  /** each named operand in the expression → its evaluated value */
-  operands: Record<string, string>;
-  /** the expression as written with each named operand replaced by its value;
-   *  equals the bare expression when `holds` is `null` */
-  substituted: string;
-}
-
-class Unevaluable extends Error {}
-
 const PERCENT_RE = /^(\d+(?:\.\d+)?)%$/;
-const DATEISH_RE = /^\d{1,4}[./-]\d{1,4}[./-]\d{1,4}$/;
 
 export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
   // Imported sheets must be resolved — their table, column index, and input
   // columns populated from the CSV — before the dependency graph is built,
   // since every binding that reads an imported column needs that column to
   // already be visible to name resolution (graph.ts).
-  const imported = resolveImports(model, opts.docPath);
+  const imported = resolveImports(model, opts.doc);
 
   const { order, cycles, assertionIds, chartIds } = topoOrder(model);
 
-  const assertionById = new Map<string, Assertion>();
-  for (const sheet of model.sheets.values()) {
-    for (const a of sheet.assertions) assertionById.set(a.id, a);
-  }
-  /** per-sheet count of assertions not evaluated because a dependency failed */
-  const assertSuppressed = new Map<string, number>();
-  const assertionsHandled = new Set<string>();
-  const assertionResults = new Map<string, AssertionResult>();
-  const bumpSuppressed = (sheetId: string): void => {
-    assertSuppressed.set(sheetId, (assertSuppressed.get(sheetId) ?? 0) + 1);
-  };
+  const ledger = newAssertionLedger(model);
 
-  const values = new Map<string, Value>();
-  const cells = new Map<string, (Value | null)[]>();
-  const unevaluable = new Set<string>();
-  const columnPrecision = new Map<string, number>();
-  const scalarPrecision = new Map<string, number>();
-  const columnUnits = new Map<string, Unit | null>();
-  const scalarUnits = new Map<string, Unit | null>();
-  const unitConflicts = new Set<string>();
-  const staleScalars = new Set<string>();
-  const dateErrorRows = new Set<string>(); // `${sheet}.${col}#${row}` already reported
-
-  interface Entry {
-    f: Finding;
-    det: number;
-    sheetId?: string;
-    rowIndex?: number;
-    isColumnCell?: boolean;
-  }
   const entries: Entry[] = [];
-  let det = 0;
-  const emit = (f: Finding, extra: Omit<Entry, "f" | "det"> = {}): void => {
-    entries.push({ f, det: det++, ...extra });
-  };
+  const st = newCheckState(model, opts, entries);
+  // Phases still reach these by their old names. Each is the object living in
+  // `st`, not a copy — `CheckResult` hands the same instances to the caller.
+  const {
+    values,
+    cells,
+    unevaluable,
+    columnPrecision,
+    scalarPrecision,
+    columnUnits,
+    scalarUnits,
+    unitConflicts,
+    staleScalars,
+    buildableCharts,
+  } = st;
+  const emit = st.emit;
 
   // structural findings carried from the model (SHEET, binding parse errors)
   for (const f of model.findings) emit(f);
@@ -147,62 +119,19 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
 
   emitCoverage(model, emit);
 
-  const fallbackPrecision = docPrecision(model);
-
-  // A column's decoration is inferred from its own cells, exactly as write
-  // precision is. Input columns count too: a computed neighbour never inherits
-  // their decoration, but a reader still sees it.
+  inferDecoration(st);
+  // An input column's precision is its cells' — they are the visible values, so
+  // the inference is exact. It has to land before the dependency walk, since a
+  // rule reading the column derives its own width from this.
   for (const sheet of model.sheets.values()) {
     const table = sheet.table;
     if (!table) continue;
     for (const [name, idx] of sheet.columnIndex) {
-      const colId = `${sheet.id}.${name}`;
-      const texts = table.rows.map((r) => r.cells[idx]?.text);
-
-      const bothSidesRow = texts.findIndex((t) => parseDecorated(t ?? "").kind === "both-sides");
-      if (bothSidesRow !== -1) {
-        const cell = table.rows[bothSidesRow]!.cells[idx];
-        unitConflicts.add(colId);
-        columnUnits.set(colId, null);
-        emit(
-          {
-            code: "UNIT",
-            sheetId: sheet.id,
-            name,
-            rowLabel: rowLabel(table, bothSidesRow),
-            raw: texts[bothSidesRow],
-            message: `\`${texts[bothSidesRow]}\` is decorated on both sides; a unit sits before the number or after it, not both`,
-            span: cell ? { start: cell.start, end: cell.end } : undefined,
-          },
-          { sheetId: sheet.id },
-        );
-        continue;
-      }
-
-      const inferred = inferColumnUnit(texts);
-      columnUnits.set(colId, inferred.unit);
-      if (inferred.conflict) {
-        unitConflicts.add(colId);
-        const row = inferred.firstDeviantRow!;
-        const cell = table.rows[row]!.cells[idx];
-        emit(
-          {
-            code: "UNIT",
-            sheetId: sheet.id,
-            name,
-            rowLabel: rowLabel(table, row),
-            raw: texts[row],
-            message: `column mixes units: ${inferred.forms.join(" and ")}`,
-            span: cell ? { start: cell.start, end: cell.end } : undefined,
-          },
-          { sheetId: sheet.id },
-        );
-      }
+      if (sheet.columns.has(name)) continue; // a rule column takes its own
+      const prec = inferColumnPrecision(table, idx);
+      if (prec !== null) columnPrecision.set(`${sheet.id}.${name}`, prec);
     }
   }
-
-  /** charts whose operands resolved — the artifact pass picks these up */
-  const buildableCharts = new Set<string>();
 
   const sheetSeen: string[] = [];
 
@@ -214,7 +143,7 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
     const dep = dependencies(model, binding);
 
     if (assertionIds.has(binding.id)) {
-      evalAssertion(assertionById.get(binding.id)!, binding, dep);
+      evalAssertion(ledger.byId.get(binding.id)!, binding, dep);
       continue;
     }
 
@@ -307,303 +236,55 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
     }
   }
 
-  // cycles reported last
-  for (const cyc of cycles) {
-    emit({
-      code: "CYCLE",
-      sheetId: cyc[0]?.sheetId,
-      cyclePath: cyc.map((b) => b.id),
-      span: cyc[0]?.span,
-    });
-    for (const b of cyc) unevaluable.add(b.id);
-  }
-
-  // assertions the topological sort could not reach — a dependency is on a
-  // cycle, or otherwise never evaluated. One NOTE per sheet, like a column rule.
-  for (const id of assertionIds) {
-    if (assertionsHandled.has(id)) continue;
-    const a = assertionById.get(id)!;
-    assertionResults.set(id, {
-      sheetId: a.sheetId,
-      source: a.source,
-      holds: null,
-      operands: {},
-      substituted: a.source.replace(/^assert\s+/, ""),
-    });
-    bumpSuppressed(a.sheetId);
-  }
-  for (const [sheetId, n] of assertSuppressed) {
-    if (n > 0) {
-      emit(
-        {
-          code: "NOTE",
-          sheetId,
-          suppressedCount: n,
-          message: `${n} assertion${n === 1 ? "" : "s"} not verified (upstream errors)`,
-        },
-        { sheetId },
-      );
-    }
-  }
+  reportCycles(st, cycles);
+  reportUnreachableAssertions(st, ledger, assertionIds);
 
   // ---- generated artifacts -------------------------------------------------
-  // A chart's operands have already been resolved and shape-checked by the
-  // loop above. What remains is data validation the engine cannot see, the
-  // path gate, and byte comparison against the file on disk.
-  const charts: ChartResult[] = [];
-  const claimedPaths = new Map<string, string>();
+  // Emits findings, so it runs here and not later: orderFindings sorts on the
+  // order phases emitted in.
+  const charts = checkCharts(st);
 
-  for (const sheet of model.sheets.values()) {
-    let skipped = 0;
-    for (const c of sheet.charts) {
-      const label = `${c.sheetId}.${c.name}`;
-      const artifactFinding = (message: string, suggestion?: string) =>
-        emit(
-          {
-            code: "ARTIFACT",
-            sheetId: c.sheetId,
-            name: c.name,
-            message,
-            ...(suggestion ? { suggestion } : {}),
-            sourceOffset: c.span.start,
-            span: c.span,
-          },
-          { sheetId: c.sheetId },
+  reportAnchors(st);
+  reportUnused(st, entries);
+
+  // An import that was never *attempted* — `state: "skipped"`, meaning no
+  // reader was supplied, which is the browser's situation — leaves its sheet
+  // with no table at all. Every binding reading a column the CSV would have
+  // supplied then fails with UNDEF, and `did you mean` runs its suggestion
+  // over a name set missing exactly those columns: on the tutorial's imports
+  // chapter that proposed `grand_total` refer to itself, on a document the CLI
+  // passes clean (review 2026-09-16 §3.1 row 4 / §4.3).
+  //
+  // Those findings are consequences of a check that did not happen, so they
+  // are dropped here — `checkCharts` already does the same for a `skipped`
+  // chart, and this is the suppression that mirrors it. `resolveImports`
+  // stays silent about the cause; this is the consequence.
+  //
+  // **Only "skipped".** An import that genuinely failed has already reported
+  // its own IMPORT finding, and its sheet's UNDEFs are real information about
+  // a real document; suppressing those would hide a broken import. `state` is
+  // the discriminant that keeps the two apart, and it is the reason this is
+  // safe. Unreachable from the CLI, which always supplies a reader.
+  const neverAttempted = new Set(
+    [...imported.statuses.values()].filter((s) => s.state === "skipped").map((s) => s.sheetId),
+  );
+  const surviving =
+    neverAttempted.size === 0
+      ? entries
+      : entries.filter(
+          (e) =>
+            !(
+              (e.f.code === "UNDEF" || e.f.code === "VECTOR") &&
+              e.f.sheetId !== undefined &&
+              neverAttempted.has(e.f.sheetId)
+            ),
         );
 
-      if (!buildableCharts.has(c.id)) {
-        // an upstream error stopped its series being computed; one note per
-        // sheet, never one per chart
-        skipped++;
-        charts.push({ ...base(c), path: null, state: "skipped" });
-        continue;
-      }
-
-      if (!hasEngine(c.engine)) {
-        artifactFinding(
-          "unknown chart type `" + c.engine + "`",
-          suggestEngine(c.engine) ?? undefined,
-        );
-        charts.push({ ...base(c), path: null, state: "error" });
-        continue;
-      }
-
-      // series
-      const node = chartNode(c);
-      const built: Series[] = [];
-      let failure: string | null = null;
-      for (const name of c.series) {
-        const vals = readColumn(node, name);
-        if (typeof vals === "string") {
-          failure = vals;
-          break;
-        }
-        if (vals.length === 0) {
-          failure = "`" + name + "` has no rows";
-          break;
-        }
-        if (vals.some((v) => v.t !== "num")) {
-          failure = "`" + name + "` needs numbers";
-          break;
-        }
-        const plain = name.includes(".") ? name.slice(name.indexOf(".") + 1) : name;
-        const colId = `${c.sheetId}.${plain}`;
-        built.push({
-          name,
-          values: vals.map((v) => (v as { t: "num"; d: Decimal }).d),
-          unit: columnUnits.get(colId) ?? null,
-          precision: columnPrecision.get(colId) ?? inputPrecision(c.sheetId, plain),
-        });
-      }
-      if (failure) {
-        artifactFinding(failure);
-        charts.push({ ...base(c), path: null, state: "error" });
-        continue;
-      }
-
-      // a chart whose series disagree about their decoration is the §7 unit
-      // rule one level up
-      const units = built.map((b) => (b.unit ? `${b.unit.side}:${b.unit.text}` : ""));
-      if (new Set(units).size > 1) {
-        emit(
-          {
-            code: "UNIT",
-            sheetId: c.sheetId,
-            name: c.name,
-            message: "a chart's series must agree about their unit",
-            sourceOffset: c.span.start,
-            span: c.span,
-          },
-          { sheetId: c.sheetId },
-        );
-        charts.push({ ...base(c), path: null, state: "error" });
-        continue;
-      }
-
-      // Labels are the cell text as the document writes it, never a coerced
-      // value: `Under 25` is a label, not the number 25 wearing a `Under`
-      // decoration, and a reader must find every rendered string on the page.
-      const labelVals = readLabels(c.sheetId, c.labels);
-      if (typeof labelVals === "string") {
-        artifactFinding(labelVals);
-        charts.push({ ...base(c), path: null, state: "error" });
-        continue;
-      }
-      const labels = labelVals;
-
-      // the document states the path, in an image line carrying the anchor
-      const anchor = model.anchors.find(
-        (a) => a.sheetId === c.sheetId && a.name === c.name && a.imageUrl !== undefined,
-      );
-      if (!anchor?.imageUrl) {
-        artifactFinding(
-          "no image reference for this chart — add `![...](path)<!--vmark=" + label + "-->`",
-        );
-        charts.push({ ...base(c), path: null, state: "error" });
-        continue;
-      }
-      const url = anchor.imageUrl;
-
-      const claimant = claimedPaths.get(url);
-      if (claimant && claimant !== label) {
-        artifactFinding("two charts write to `" + url + "`");
-        charts.push({ ...base(c), path: url, state: "error" });
-        continue;
-      }
-      claimedPaths.set(url, label);
-
-      const rendered = buildArtifact(
-        c.engine,
-        { series: built, labels, aspect: c.aspect ?? { w: 16, h: 10 } },
-        { sheetId: c.sheetId, chart: c.name },
-      );
-      if ("err" in rendered) {
-        artifactFinding(rendered.err);
-        charts.push({ ...base(c), path: url, state: "error" });
-        continue;
-      }
-
-      if (opts.docPath === undefined) {
-        // no file to compare against — the chart is valid, staleness unknown
-        charts.push({ ...base(c), path: url, state: "skipped", svg: rendered.svg });
-        continue;
-      }
-      const gated = resolveArtifactPath(opts.docPath, url);
-      if ("err" in gated) {
-        artifactFinding(gated.err);
-        charts.push({ ...base(c), path: url, state: "error" });
-        continue;
-      }
-
-      const st = classify(gated.ok, rendered.svg, c.sheetId, c.name);
-      if (st.state === "unowned") {
-        artifactFinding("`" + url + "` exists and was not generated by visimark");
-        charts.push({ ...base(c), path: url, state: "error", target: gated.ok });
-        continue;
-      }
-      if (st.state === "foreign") {
-        artifactFinding("`" + url + "` belongs to chart `" + st.sheet + "." + st.chart + "`");
-        charts.push({ ...base(c), path: url, state: "error", target: gated.ok });
-        continue;
-      }
-      if (st.state !== "current") {
-        emit(
-          {
-            code: "STALE",
-            sheetId: c.sheetId,
-            name: c.name,
-            artifact: url,
-            message:
-              st.state === "missing"
-                ? "artifact missing at `" + url + "`"
-                : "artifact is out of date — run `visimark fmt`",
-            sourceOffset: c.span.start,
-            span: c.span,
-          },
-          { sheetId: c.sheetId },
-        );
-      }
-      charts.push({
-        ...base(c),
-        path: url,
-        state: st.state === "current" ? "current" : st.state,
-        target: gated.ok,
-        svg: rendered.svg,
-      });
-    }
-    if (skipped > 0) {
-      emit(
-        {
-          code: "NOTE",
-          sheetId: sheet.id,
-          message: `${skipped} chart${skipped === 1 ? "" : "s"} not built (upstream errors)`,
-        },
-        { sheetId: sheet.id },
-      );
-    }
-  }
-
-  // anchors: collapse staleness, flag rewrite-less anchors
-  const chartIdSet = new Set<string>();
-  for (const sheet of model.sheets.values()) {
-    for (const c of sheet.charts) chartIdSet.add(`${c.sheetId}.${c.name}`);
-  }
-  let staleAnchorCount = 0;
-  for (const a of model.anchors) {
-    const id = `${a.sheetId}.${a.name}`;
-    if (staleScalars.has(id)) staleAnchorCount++;
-    const anchorFinding = (message?: string) =>
-      emit({
-        code: "ANCHOR",
-        sheetId: a.sheetId,
-        name: a.name,
-        sourceOffset: a.commentSpan.start,
-        span: a.commentSpan,
-        ...(message ? { message } : {}),
-      });
-    if (a.value === null) {
-      anchorFinding();
-      continue;
-    }
-    const isChart = chartIdSet.has(id);
-    if (a.value.kind === "image" && !isChart) {
-      // an image holds no value to rewrite; only a chart may be anchored to one
-      anchorFinding("an image anchor must name a chart");
-      continue;
-    }
-    if (a.value.kind !== "image" && isChart) {
-      anchorFinding("a chart must be anchored to an image");
-    }
-  }
-  if (staleAnchorCount > 0) {
-    emit({ code: "STALE", anchorGroup: true, suppressedCount: staleAnchorCount });
-  }
-
-  // WARN: a scalar defined, never read, never anchored, and otherwise clean
-  const referenced = collectReferenced(model);
-  const anchored = new Set(model.anchors.map((a) => `${a.sheetId}.${a.name}`));
-  for (const sheet of model.sheets.values()) {
-    for (const b of sheet.scalars.values()) {
-      if (referenced.has(b.id) || anchored.has(b.id)) continue;
-      if (unevaluable.has(b.id)) continue;
-      if (entries.some((e) => e.f.sheetId === b.sheetId && e.f.name === b.name)) {
-        continue;
-      }
-      emit({
-        code: "WARN",
-        sheetId: b.sheetId,
-        name: b.name,
-        suggestion: closest(b.name, [...referenced].map(idName)) ?? undefined,
-        span: b.span,
-      });
-    }
-  }
-
-  const findings = orderFindings(entries, sheetSeen);
+  const findings = orderFindings(surviving, sheetSeen);
   const assertions: AssertionResult[] = [];
   for (const sheet of model.sheets.values()) {
     for (const a of sheet.assertions) {
-      const r = assertionResults.get(a.id);
+      const r = ledger.results.get(a.id);
       if (r) assertions.push(r);
     }
   }
@@ -622,68 +303,130 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
     exitCode: findings.some(isProblem) ? 1 : 0,
   };
 
-  // ---- artifact helpers ----
-
-  function base(c: Chart) {
-    return {
-      sheetId: c.sheetId,
-      name: c.name,
-      engine: c.engine,
-      series: c.series,
-      labels: c.labels,
-    };
-  }
-
-  /** a column's values, or a message saying why it cannot be read */
-  function readColumn(node: Binding, name: string): Value[] | string {
-    const dot = name.indexOf(".");
-    const ref: Ref =
-      dot === -1
-        ? { type: "ref", name, start: node.span.start, end: node.span.end }
-        : {
-            type: "ref",
-            qualifier: name.slice(0, dot),
-            name: name.slice(dot + 1),
-            start: node.span.start,
-            end: node.span.end,
-          };
-    try {
-      return lookupVector(node, ref, undefined);
-    } catch {
-      return "`" + name + "` contains a blank cell";
-    }
-  }
-
-  /** a label column's cells, verbatim */
-  function readLabels(sheetId: string, name: string): string[] | string {
-    const sheet = model.sheets.get(sheetId);
-    const idx = sheet?.columnIndex.get(name);
-    if (!sheet?.table || idx === undefined) {
-      return "`" + name + "` is not a column of this sheet";
-    }
-    return sheet.table.rows.map((r) => (r.cells[idx]?.text ?? "").trim());
-  }
-
-  /** an input column carries no computed precision, so read it off its cells */
-  function inputPrecision(sheetId: string, name: string): number {
-    const sheet = model.sheets.get(sheetId);
-    const idx = sheet?.columnIndex.get(name);
-    if (sheet?.table && idx !== undefined) {
-      for (const row of sheet.table.rows) {
-        const t = (row.cells[idx]?.text ?? "").trim();
-        if (t) return decimalPlaces(t, 2);
-      }
-    }
-    return 2;
-  }
-
   // ---- helpers bound to the closures above ----
+
+  /**
+   * A binding's write precision: declared on the head, else derived from its own
+   * expression. `null` means neither — the caller emits `PRECISION`, because no
+   * width follows from the formula and only the author can supply one.
+   *
+   * A binding's *cells* and *anchors* are outputs and are never consulted here.
+   * That is the whole point: precision used to come from an anchor's text, which
+   * made prose an input to arithmetic. See
+   * docs/design/declared-precision-spec.md section 3.
+   */
+  function governingPrecision(binding: Binding): number | null {
+    if (binding.precision !== undefined) return binding.precision;
+    const w = derivePrecision(binding.expr, (ref) => refPrecision(binding.sheetId, ref));
+    return typeof w === "number" ? w : null;
+  }
+
+  function refPrecision(fromSheetId: string, ref: Ref): Width {
+    const res = resolve(model, fromSheetId, ref);
+    switch (res.kind) {
+      case "column":
+        return columnPrecision.get(`${res.sheetId}.${res.binding.name}`) ?? null;
+      case "input-column":
+        return (
+          columnPrecision.get(`${res.sheetId}.${res.column}`) ??
+          (isDateColumn(model, res.sheetId, res.column) ? "date" : null)
+        );
+      case "scalar":
+      case "doc-scalar":
+        return (
+          scalarPrecision.get(res.binding.id) ??
+          (values.get(res.binding.id)?.t === "date" ? "date" : null)
+        );
+      default:
+        return null;
+    }
+  }
+
+  /**
+   * A `param` must declare its width, and its default must fit it: a value
+   * arriving from outside has no width the document can derive, and a default
+   * the declaration would round is not the value the reader sees. Emits the
+   * `PRECISION` finding and returns false otherwise. See
+   * docs/design/scenario-params-spec.md §3.1 and §4.1.
+   */
+  function paramWidthOk(binding: Binding): boolean {
+    const param = binding.param!;
+    if (binding.precision === undefined) {
+      emit(
+        {
+          code: "PRECISION",
+          sheetId: binding.sheetId,
+          name: binding.name,
+          message: `param ${binding.name} declares no width`,
+          suggestion: `param ${binding.name} precision N = default …`,
+          span: binding.span,
+        },
+        { sheetId: binding.sheetId },
+      );
+      return false;
+    }
+    const value = binding.expr.type === "num" ? new Decimal(binding.expr.value) : null;
+    const places = value?.decimalPlaces() ?? 0;
+    if (places > binding.precision) {
+      emit(
+        {
+          code: "PRECISION",
+          sheetId: binding.sheetId,
+          name: binding.name,
+          message: `default ${param.text} has ${places} decimal${places === 1 ? "" : "s"}; param ${binding.name} declares ${binding.precision}`,
+          span: binding.span,
+        },
+        { sheetId: binding.sheetId },
+      );
+      return false;
+    }
+    return true;
+  }
+
+  /** the `PRECISION` finding: no declared width, and none follows from the formula */
+  function emitNotDerivable(binding: Binding): void {
+    emit(
+      {
+        code: "PRECISION",
+        sheetId: binding.sheetId,
+        name: binding.name,
+        raw: formulaSource(model, binding),
+        span: binding.span,
+      },
+      { sheetId: binding.sheetId },
+    );
+  }
+
+  /**
+   * The `PRECISION` finding's other trigger: the width is known, but honouring
+   * it here would print digits the engine never computed. Reported rather than
+   * padded — a fabricated tail is exactly the claim this feature removes.
+   */
+  function emitCeiling(binding: Binding, places: number, rowLabel?: string): void {
+    emit(
+      {
+        code: "PRECISION",
+        sheetId: binding.sheetId,
+        name: binding.name,
+        ...(rowLabel === undefined ? {} : { rowLabel }),
+        message: `this value is too large to carry ${places} decimal${places === 1 ? "" : "s"}: ${places} decimals past its integer digits exceeds the ${MAX_SIGNIFICANT_DIGITS}-significant-digit working precision`,
+        span: binding.span,
+      },
+      { sheetId: binding.sheetId },
+    );
+  }
 
   function evalColumn(binding: Binding, sheet: Sheet, table: RawTable): void {
     const colId = `${sheet.id}.${binding.name}`;
     const idx = sheet.columnIndex.get(binding.name)!;
-    const prec = inferColumnPrecision(table, idx, fallbackPrecision);
-    columnPrecision.set(colId, prec);
+    // A rule column's cells are outputs, so they cannot be its precision source.
+    // `null` means no width follows from the formula — but that is only a
+    // problem if the column actually produces numbers. A date or string column
+    // has no width to declare, so the finding waits until a row proves one is
+    // needed.
+    const prec = governingPrecision(binding);
+    if (prec !== null) columnPrecision.set(colId, prec);
+    let needsWidth = false;
     const unit = columnUnits.get(colId) ?? null;
     const suppressed = unitConflicts.has(colId);
     const out: (Value | null)[] = [];
@@ -708,11 +451,22 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
           unevaluable.add(binding.id);
           return;
         }
-        const v = roundValue(v0, prec);
+        if (prec === null && v0.t === "num") needsWidth = true;
+        if (prec !== null && v0.t === "num" && exceedsWorkingPrecision(v0.d, prec)) {
+          emitCeiling(binding, prec, rowLabel(table, r));
+          unevaluable.add(binding.id);
+          return;
+        }
+        const v = prec === null ? v0 : roundValue(v0, prec);
         out.push(v);
         const cell = table.rows[r]!.cells[idx];
         const storedText = cell?.text ?? "";
-        if (!suppressed && storedText !== "" && !matchesStored(v, storedText, prec)) {
+        if (
+          !suppressed &&
+          prec !== null &&
+          storedText !== "" &&
+          !matchesStored(v, storedText, prec)
+        ) {
           emit(
             {
               code: "STALE",
@@ -751,6 +505,12 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
 
     cells.set(colId, out);
 
+    if (needsWidth) {
+      emitNotDerivable(binding);
+      unevaluable.add(binding.id);
+      return;
+    }
+
     if (suppressedUpstream > 0) {
       emit(
         {
@@ -766,6 +526,10 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
   }
 
   function evalScalar(binding: Binding): void {
+    if (binding.param !== undefined && !paramWidthOk(binding)) {
+      unevaluable.add(binding.id);
+      return;
+    }
     try {
       const v0 = evalExpr(binding.expr, scalarEnv(binding));
       if (v0.t === "bool") {
@@ -791,15 +555,30 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
             })()
           : null;
       scalarUnits.set(binding.id, anchorUnit);
-      // A scalar rounds only where it has a materialised value to match; an
-      // anchor-less constant (e.g. `fx_eur = 4.2650`) keeps full precision.
-      const prec =
-        anchorText !== undefined ? decimalPlaces(anchorText, fallbackPrecision) : undefined;
-      if (prec !== undefined) scalarPrecision.set(binding.id, prec);
-      const v = prec !== undefined ? roundValue(v0, prec) : v0;
+      // The anchor supplies the *unit* and nothing else. Its text used to supply
+      // the precision too, which made a `0` placeholder in prose round the
+      // stored value and move every figure downstream of it.
+      const prec = governingPrecision(binding);
+      if (prec !== null) scalarPrecision.set(binding.id, prec);
+      // A scalar rounds only where it materialises. An unanchored working value
+      // — `Lmax = SQRT(...)`, feeding an anchored `ROUND(Lmax, 2)` — is never
+      // written, so it has no write precision to declare and nothing to
+      // disagree with; it keeps full precision, as it always has. Requiring a
+      // declaration there would round an intermediate for no reader's benefit.
+      if (prec === null && anchorText !== undefined && v0.t === "num") {
+        emitNotDerivable(binding);
+        unevaluable.add(binding.id);
+        return;
+      }
+      if (prec !== null && v0.t === "num" && exceedsWorkingPrecision(v0.d, prec)) {
+        emitCeiling(binding, prec);
+        unevaluable.add(binding.id);
+        return;
+      }
+      const v = prec === null ? v0 : roundValue(v0, prec);
       values.set(binding.id, v);
 
-      if (anchorText !== undefined && prec !== undefined && !matchesStored(v, anchorText, prec)) {
+      if (anchorText !== undefined && prec !== null && !matchesStored(v, anchorText, prec)) {
         staleScalars.add(binding.id);
         if (!isCrossSheetAggregate(model, binding)) {
           emit(
@@ -838,15 +617,15 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
   function scalarEnv(binding: Binding): EvalEnv {
     return {
       scalar: (ref) => lookupScalar(binding, ref, null),
-      vector: (ref) => lookupVector(binding, ref, null),
+      vector: (ref) => lookupVector(st, binding, ref),
     };
   }
 
   function evalAssertion(a: Assertion, node: Binding, dep: ReturnType<typeof dependencies>): void {
-    assertionsHandled.add(a.id);
+    ledger.handled.add(a.id);
     const base = { sheetId: a.sheetId, source: a.source, span: a.span } as const;
     const record = (holds: boolean | null): void => {
-      assertionResults.set(a.id, {
+      ledger.results.set(a.id, {
         sheetId: a.sheetId,
         source: a.source,
         holds,
@@ -903,7 +682,7 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
     }
     if ([...dep.deps].some((d) => unevaluable.has(d))) {
       record(null);
-      bumpSuppressed(a.sheetId);
+      ledger.bumpSuppressed(a.sheetId);
       return;
     }
 
@@ -931,7 +710,7 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
     } catch (e) {
       if (e instanceof Unevaluable) {
         record(null);
-        bumpSuppressed(a.sheetId);
+        ledger.bumpSuppressed(a.sheetId);
       } else if (e instanceof EvalError) {
         record(null);
         emit({ ...base, code: e.code, message: e.message }, { sheetId: a.sheetId });
@@ -1003,15 +782,15 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
     if (v.t === "bool") return String(v.b);
     const res = resolve(model, node.sheetId, ref);
     const pid = res.kind === "scalar" || res.kind === "doc-scalar" ? res.binding.id : undefined;
-    const prec =
-      pid !== undefined ? (scalarPrecision.get(pid) ?? fallbackPrecision) : fallbackPrecision;
+    // no document default to fall back on: render the value's own scale
+    const prec = (pid !== undefined ? scalarPrecision.get(pid) : undefined) ?? v.d.decimalPlaces();
     return showValue(v, prec);
   }
 
   function rowEnv(binding: Binding, sheet: Sheet, row: number): EvalEnv {
     return {
       scalar: (ref) => lookupScalar(binding, ref, { sheet, row }),
-      vector: (ref) => lookupVector(binding, ref, { sheet, row }),
+      vector: (ref) => lookupVector(st, binding, ref),
     };
   }
 
@@ -1040,78 +819,13 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
     if (!ctx) throw new Unevaluable();
     const colIdx = ctx.sheet.columnIndex.get(res.column)!;
     const cell = ctx.sheet.table?.rows[ctx.row]?.cells[colIdx];
-    return coerceInput(cell?.text ?? "", ctx.sheet.id, res.column, ctx.row, cell);
-  }
-
-  function lookupVector(binding: Binding, ref: Ref, _ctx: unknown): Value[] {
-    const res = resolve(model, binding.sheetId, ref);
-    if (res.kind === "column") {
-      const col = cells.get(res.binding.id);
-      if (!col || col.some((v) => v === null)) throw new Unevaluable();
-      return col as Value[];
-    }
-    if (res.kind === "input-column") {
-      const sheet = model.sheets.get(res.sheetId)!;
-      const colIdx = sheet.columnIndex.get(res.column)!;
-      return (sheet.table?.rows ?? []).map((row, r) => {
-        const cell = row.cells[colIdx];
-        return coerceInput(cell?.text ?? "", sheet.id, res.column, r, cell);
-      });
-    }
-    throw new Unevaluable();
-  }
-
-  function coerceInput(
-    text: string,
-    sheetId: string,
-    column: string,
-    row: number,
-    cell: { start: number; end: number } | undefined,
-  ): Value {
-    const t = text.trim();
-    const n = numericValue(t);
-    if (n !== null) return num(n);
-    const iso = parseIsoDate(t);
-    if (iso.ok) return date(iso.iso);
-    if (DATEISH_RE.test(t) || /^\d{4}-\d{2}-\d{2}$/.test(t)) {
-      const key = `${sheetId}.${column}#${row}`;
-      if (!dateErrorRows.has(key)) {
-        dateErrorRows.add(key);
-        const table = model.sheets.get(sheetId)!.table!;
-        emit(
-          {
-            code: "DATE",
-            sheetId,
-            name: column,
-            rowLabel: rowLabel(table, row),
-            raw: t,
-            isoFix: iso.ok ? undefined : iso.decidable,
-            altA: iso.ok ? undefined : iso.ambiguous?.a,
-            altB: iso.ok ? undefined : iso.ambiguous?.b,
-            daysApart: iso.ok ? undefined : iso.ambiguous?.daysApart,
-            span: cell ? { start: cell.start, end: cell.end } : undefined,
-          },
-          { sheetId },
-        );
-      }
-      throw new Unevaluable();
-    }
-    return str(t);
+    return coerceInput(st, cell?.text ?? "", ctx.sheet.id, res.column, ctx.row, cell);
   }
 }
 
 // ---------------------------------------------------------------------------
 
-function orderFindings(
-  entries: {
-    f: Finding;
-    det: number;
-    sheetId?: string;
-    rowIndex?: number;
-    isColumnCell?: boolean;
-  }[],
-  sheetOrder: string[],
-): Finding[] {
+function orderFindings(entries: Entry[], sheetOrder: string[]): Finding[] {
   const staleCells = entries.filter((e) => e.f.code === "STALE" && e.isColumnCell);
   const staleScalars = entries.filter(
     (e) => e.f.code === "STALE" && !e.isColumnCell && !e.f.anchorGroup,
@@ -1175,24 +889,21 @@ function orderFindings(
   return [...sectionA, ...sectionB];
 }
 
-export function inferColumnPrecision(table: RawTable, colIndex: number, fallback: number): number {
+/**
+ * A column's precision read off its own cells — the widest any cell shows.
+ * `null` where there is nothing to read: with the document-scope fallback gone,
+ * an empty column has no width to invent, and the caller reports that.
+ */
+export function inferColumnPrecision(table: RawTable, colIndex: number): number | null {
   let max = -1;
   for (const row of table.rows) {
-    const text = row.cells[colIndex]?.text ?? "";
-    const dec = parseDecorated(text);
-    if (dec.kind !== "number") continue;
-    max = Math.max(max, decimalPlaces(dec.num, fallback));
+    // The decimals the cell shows, with a percent cell counted by its value —
+    // see `cellPrecision`.
+    const p = cellPrecision(row.cells[colIndex]?.text ?? "");
+    if (p === null) continue;
+    max = Math.max(max, p);
   }
-  return max === -1 ? fallback : max;
-}
-
-export function decimalPlaces(text: string, fallback: number): number {
-  const dec = parseDecorated(text);
-  const t = (dec.kind === "number" ? dec.num : text).trim();
-  const m = /\.(\d+)\s*$/.exec(t);
-  if (m) return m[1]!.length;
-  if (/^-?\d+$/.test(t)) return 0;
-  return fallback;
+  return max === -1 ? null : max;
 }
 
 export function roundValue(v: Value, places: number): Value {
@@ -1222,10 +933,6 @@ export function showValue(v: Value, places: number): string {
   // Unreachable, as above; the branch keeps the formatter total over `Value`.
   if (v.t === "bool") return String(v.b);
   return v.s;
-}
-
-function rowLabel(table: RawTable, row: number): string {
-  return table.rows[row]?.cells[0]?.text ?? `row ${row + 1}`;
 }
 
 export function countBindings(model: DocModel): number {
@@ -1274,10 +981,33 @@ function emitCoverage(model: DocModel, emit: (f: Finding) => void): void {
   }
 }
 
-function docPrecision(model: DocModel): number {
-  const p = model.docScope.get("precision");
-  if (p && p.expr.type === "num") return Number(p.expr.value);
-  return 2;
+/**
+ * A column that holds dates: at least one cell is an ISO date and none is a
+ * number. A malformed date does not disqualify it — `15.10.2026` is reported as
+ * a `DATE` error in its own right, and a column of dates with one typo in it is
+ * still a column of dates, so a rule reading it still derives `date - date` as
+ * a whole number of days.
+ */
+function isDateColumn(model: DocModel, sheetId: string, name: string): boolean {
+  const sheet = model.sheets.get(sheetId);
+  const table = sheet?.table;
+  const idx = sheet?.columnIndex.get(name);
+  if (!table || idx === undefined) return false;
+  let seenDate = false;
+  for (const row of table.rows) {
+    const t = (row.cells[idx]?.text ?? "").trim();
+    if (t === "") continue;
+    if (cellPrecision(t) !== null) return false; // a number lives here
+    if (ISO_DATE_RE.test(t)) seenDate = true;
+  }
+  return seenDate;
+}
+
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** the binding's expression as written, for a finding that must name it */
+function formulaSource(model: DocModel, binding: Binding): string {
+  return model.source.slice(binding.expr.start, binding.expr.end);
 }
 
 function formulaText(model: DocModel, binding: Binding): string | undefined {
@@ -1311,32 +1041,4 @@ function anchorValueText(model: DocModel, id: string): string | undefined {
     }
   }
   return undefined;
-}
-
-function collectReferenced(model: DocModel): Set<string> {
-  const out = new Set<string>();
-  const visit = (e: Expr, sheetId: string): void => {
-    if (e.type === "ref") {
-      const r = resolve(model, sheetId, e);
-      if (r.kind === "scalar" || r.kind === "doc-scalar" || r.kind === "column") {
-        out.add(r.binding.id);
-      }
-    } else if (e.type === "unary") visit(e.operand, sheetId);
-    else if (e.type === "binary") {
-      visit(e.left, sheetId);
-      visit(e.right, sheetId);
-    } else if (e.type === "call") for (const a of e.args) visit(a, sheetId);
-  };
-  for (const b of model.docScope.values()) visit(b.expr, b.sheetId);
-  for (const sheet of model.sheets.values()) {
-    for (const b of sheet.columns.values()) visit(b.expr, b.sheetId);
-    for (const b of sheet.scalars.values()) visit(b.expr, b.sheetId);
-    for (const a of sheet.assertions) visit(a.expr, a.sheetId);
-  }
-  return out;
-}
-
-function idName(id: string): string {
-  const i = id.lastIndexOf(".");
-  return i === -1 ? id : id.slice(i + 1);
 }

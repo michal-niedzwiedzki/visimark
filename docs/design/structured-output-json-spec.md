@@ -55,9 +55,9 @@ the format.
 There is **no** public `--format` flag in this issue. Internally, a command
 builds a result and a formatter renders it (`text` default, `json` when
 `--json`). A later issue may add `--format yaml` and define `--json` as
-shorthand; that is out of scope here. Unknown flags stay ignored, as
-[`cli-reference.md`](../cli-reference.md) already states — so `--format yaml`
-today remains “flag `format` ignored, word `yaml` treated as a file name.”
+shorthand; that is out of scope here. Unknown flags were ignored when this shipped; they are now refused, see
+[`refuse-unrecognised-and-misplaced-cli-options-spec.md`](refuse-unrecognised-and-misplaced-cli-options-spec.md)
+— so `--format yaml` is `visimark: unknown option --format`, exit `2`.
 
 `--json` does not appear in any document. Constraint 1
 ([§2](../visimark-design.md#2-constraints-that-shaped-the-design)) is
@@ -84,7 +84,7 @@ the absolute target `fmt` used internally.
 | `command` | `"check"` \| `"fmt"` \| `"infer"` \| `"eval"` \| `"explain"` | always |
 | `visimark` | string, the package version (`0.1.1`), **not** the `visimark 0.1.1` `--version` line | always |
 | `status` | `"ok"` \| `"problems"` \| `"error"` | always — exit 0 / 1 / 2. Not a boolean `ok`. |
-| `error` | `{ "code": "USAGE" \| "READ", "message": string }` | only when `status` is `"error"` |
+| `error` | `{ "code": "USAGE" \| "READ" \| "WRITE" \| "SCENARIO", "message": string }` | only when `status` is `"error"` |
 | command body | see below | always on success and on `problems`; on `error` only what was already produced (a multi-file run that read some files still lists them) |
 
 `status` tracks the process exit code. Advisory findings (`WARN`, `NOTE`) never
@@ -306,6 +306,25 @@ exits 1; `status` is `"ok"` unless a `USAGE`/`READ` error applies.
 key). `assertions` and `charts` still describe the whole document — a false
 assertion anywhere still sets `status` to `"problems"` and exit 1, as today.
 
+**Under `eval --scenario`** ([`scenario-params-spec.md`](scenario-params-spec.md)),
+the envelope gains one key, `scenario`, after `file`:
+
+```json
+"scenario": {
+  "file": "tight.json",
+  "params": {
+    "rates.budget": { "value": "0.4", "default": "2", "source": "scenario" }
+  }
+}
+```
+
+`params` lists every declared param, keyed like `values`; `value` and `default`
+are decimal strings in the same form as `values`, and `source` is `"scenario"`
+or `"default"`. `file` is `-` for stdin. Each `assertions` entry with
+`holds: false` also carries `defaults`: `"pass"`, `"fail"` or `"unverified"`,
+the same assertion on the document's defaults. `charts` entries omit `state`.
+Without `--scenario`, none of these keys appear.
+
 On a false assertion, **do not** also print the `ASSERT` block to stderr in
 `--json` mode. The `assertions` array is the report. Text mode is unchanged
 (value on stdout, `ASSERT` on stderr).
@@ -339,6 +358,13 @@ On a false assertion, **do not** also print the `ASSERT` block to stderr in
 source with the `assert ` prefix stripped, matching the text report.
 `#sheet` arguments still filter `sheets`. `documentScope` is `[]` when empty.
 
+A sheet that declares a `param` carries a `params` array of
+`{ "name", "precision", "default" }` (`default` as written, `precision`
+`null` when the clause is missing), and those params are not repeated in
+`scalars`. Document-scope params appear as a top-level `documentScopeParams`
+array of the same shape, and not in `documentScope`. Both keys are absent when
+there is no param.
+
 ### 3.7 Behaviour table
 
 | Case | Result |
@@ -359,8 +385,8 @@ source with the `assert ` prefix stripped, matching the text report.
 | `eval assert-fail.md --json` | `status: "problems"`, `holds: false` in `assertions`; **no** ASSERT text on stderr; exit 1 |
 | `explain file.md --json` | envelope in §3.6; exit 0 |
 | `explain file.md #nope --json` | `status: "error"`, `error.code: "USAGE"`; exit 2 |
-| `check file.md --jsonn` | unknown flag ignored; human text (no `--json`) |
-| `eval` / `explain` extra files after the first | ignored as today; JSON describes the first file |
+| `check file.md --jsonn` | refused (#121): exit 2, ``visimark: unknown option --jsonn — did you mean `--json`?``; no report |
+| `eval` / `explain` extra files after the first | refused (#121): exit 2, `visimark: eval takes one file` |
 
 ## 4. Errors
 
@@ -370,8 +396,10 @@ the envelope `error` object:
 
 | Situation | `error.code` | Exit | Notes |
 |---|---|---|---|
-| No file given; unknown `eval --get` name; unknown `explain` `#sheet` | `USAGE` | 2 | Same cases as today's usage errors. `message` is the current `visimark: …` / `usage: …` line. That line is **also** written to stderr so a person who typed it still sees it. |
+| No file given; unknown `eval --get` name; unknown `explain` `#sheet`; an unknown or misplaced option (including `--scenario` off `eval`), a missing option value, or an extra file argument ([#121](https://github.com/michal-niedzwiedzki/visimark/issues/121)) | `USAGE` | 2 | The first cases are today's usage errors. `message` is the current `visimark: …` / `usage: …` line. That line is **also** written to stderr so a person who typed it still sees it. |
 | Named file cannot be read | `READ` | 2 | Per-file in multi-file commands; whole-command for `eval` / `explain`. |
+| A scenario fault under `eval --scenario` (content: key, type, width) | `SCENARIO` | 2 | Nothing is evaluated and no values are printed. See [`scenario-params-spec.md` §4.2](scenario-params-spec.md#42-scenario-faults). |
+| `fmt` refuses to write a chart artifact | `WRITE` | 2 | Per-file, same shape as `READ`. The target moved between the check and the write, is no longer VisiMark's, or cannot be opened. The document itself is then left unspliced — a partly-applied `fmt` is worse than none. See [`close-toctou-path-gates-plan.md`](close-toctou-path-gates-plan.md). |
 | Unknown command / no command | n/a | 2 | Happens before a document command runs. `--json` is not a command. Human usage text, as today. |
 
 `--json` mode still emits the JSON envelope to stdout **before** exiting 2,
@@ -398,7 +426,7 @@ findings the text report does. A suppressed assertion is a `NOTE`, not an
 | Plugin architecture | A formatter inside the CLI is not a document plugin. Documents cannot select it. |
 
 **Does not change:** document syntax, the finding taxonomy, splicer behaviour,
-ignore-unknown-flags, exit-code meanings, default text transcripts.
+exit-code meanings, default text transcripts.
 
 **Does change:** [§11](../visimark-design.md#11-cli) lists `--json` only on
 `eval`. It must list `--json` on all five document commands and point at this
@@ -463,7 +491,7 @@ and on `USAGE`/`READ`; multi-file `check` with one unreadable file; `--get --jso
 false-assertion `eval --json` with quiet stderr; decimal strings (never JSON
 numbers) on a value like `0.23`; column array with a `null` cell; `fmt` unchanged
 vs changed; `infer` with and without `--write`; pretty-print indent 2; no
-non-JSON on stdout; ignore of `--jsonn`.
+non-JSON on stdout; refusal of `--jsonn`.
 
 ## 7. Non-goals
 
@@ -478,7 +506,8 @@ non-JSON on stdout; ignore of `--jsonn`.
   (constraint 3 collision; two schemas).
 - **TTY-based compact vs pretty.** Rejected (constraint 4).
 - **`--json` on `--version` / `--help` / unknown commands.**
-- **Changing ignore-unknown-flags.**
+- **Changing ignore-unknown-flags.** Out of scope here; decided later in
+  [#121](https://github.com/michal-niedzwiedzki/visimark/issues/121).
 - **LSP / VS Code diagnostics via this JSON.** Out of scope; already a
   different path.
 - **Dry-run `fmt`.** `--json` does not mean “don't write.”

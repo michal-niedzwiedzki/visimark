@@ -12,12 +12,9 @@ panel update live.
 
 ```vmark #order
 Total = Qty * Price
-
 grand_total = SUM(Total)
-```
-
-The order comes to **158.00**<!--vmark=order.grand_total--> in total.
-
-```vmark #order
 assert grand_total > 0
 ```
+
+## The order comes to **158.00**<!--vmark=order.grand_total--> in total.
+

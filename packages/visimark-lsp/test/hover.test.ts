@@ -57,3 +57,24 @@ test("hovering an anchored value shows its scalar rule", async () => {
 test("hovering prose returns nothing", async () => {
   expect(await hover(0, 2)).toBeNull();
 });
+
+test("hovering a function name shows its reference entry", async () => {
+  const hv = await hover(6, 9); // "SUM" in `total = SUM(Net)`
+  expect(hv!.contents.value).toContain("SUM(col)");
+  expect(hv!.contents.value).toContain("Total of a column");
+  expect(hv!.contents.value).toContain("returns: number");
+});
+
+// The editor is where a `PRECISION` diagnostic is read, so it is where the
+// question the diagnostic raises — why does this need a declared width? — has
+// to be answerable without leaving the file.
+test("hovering a function name states where its result gets its width", async () => {
+  const hv = await hover(6, 9); // "SUM" in `total = SUM(Net)`
+  expect(hv!.contents.value).toContain("precision: the width of `col`");
+});
+
+test("hovering an argument inside a call still shows the binding, not the function", async () => {
+  const hv = await hover(6, 13); // "Net" inside `SUM(Net)`
+  expect(hv!.contents.value).toContain("total = SUM(Net)");
+  expect(hv!.contents.value).not.toContain("Total of a column");
+});

@@ -23,6 +23,7 @@ export type FindingCode =
   | "SHEET"
   | "ANCHOR"
   | "ASSERT"
+  | "PRECISION"
   | "ARTIFACT"
   | "IMPORT"
   | "WARN"
@@ -47,6 +48,7 @@ export const ERROR_CODES: ReadonlySet<FindingCode> = new Set<FindingCode>([
   "SHEET",
   "ANCHOR",
   "ASSERT",
+  "PRECISION",
   "ARTIFACT",
   "IMPORT",
   "COVERAGE",
@@ -100,6 +102,14 @@ export interface Binding {
   name: string;
   expr: Expr;
   kind: "column" | "scalar";
+  /** declared write precision from a `precision N` clause on the head; absent
+   *  means derive it from the expression (declared-precision-spec.md §3) */
+  precision?: number;
+  /** set on a `param` statement: the default literal as written, and whether it
+   *  is a percent. The binding's `expr` is that default's literal, so every
+   *  command but `eval --scenario` treats it as the constant binding it is.
+   *  See docs/design/scenario-params-spec.md. */
+  param?: { text: string; percent: boolean };
   /** absolute source span of the binding line */
   span: { start: number; end: number };
   parseError?: LangError;
@@ -127,6 +137,13 @@ export interface Sheet {
   columnIndex: Map<string, number>;
   /** header names with no rule — human-owned inputs */
   inputColumns: Set<string>;
+  /** `"<header>" is <symbol>` declarations, keyed by `symbol`. An alias is
+   *  never a second binding or a second column — `resolve()` in eval/graph.ts
+   *  translates a reference to `symbol` into a reference to `header` before
+   *  doing any lookup, so `columns` / `scalars` / `inputColumns` / `columnIndex`
+   *  stay keyed by canonical header text only. See
+   *  docs/design/human-readable-column-aliases-spec.md. */
+  aliases: Map<string, { header: string; span: Span }>;
   /** `assert` statements, in block-declaration order */
   assertions: Assertion[];
   /** `chart` declarations, in block-declaration order */

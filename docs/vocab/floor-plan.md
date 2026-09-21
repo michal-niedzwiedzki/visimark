@@ -383,7 +383,7 @@ git commit -m "$(printf 'test: end-to-end FLOOR fixture — kubernetes node capa
 **Files:**
 - Edit: `docs/visimark-design.md` ([§4](../visimark-design.md#4-syntax) builtin table + the "Eleven, chosen…" sentence; [§14](../visimark-design.md#14-deferred) "beyond the eleven")
 - Edit: `docs/vocabulary-catalogue.md` (line 3 count; the `FLOOR` row **moved** from section A into the Shipped register as `UNRELEASED`)
-- Edit: `docs/issue-review.md` (the "eleven builtins" phrase)
+- Edit: `docs/issue-runbook.md` (the "eleven builtins" phrase)
 - Edit: `docs/example-executable-documentation.md` (four `FLOOR` call sites only)
 - Edit: `docs/cli-reference.md` (only if it enumerates builtins — it does not today; grep to confirm)
 - Edit: `CHANGELOG.md` (`## Unreleased` → `### Added`)
@@ -409,7 +409,7 @@ and change the section's opening `Eleven, chosen to cover the examples and the t
 ```
 Do **not** set Status to `SHIPPED`. Do **not** close issue #53.
 
-- [ ] **Step 5: runbook phrasing** — `docs/issue-review.md` line ~96: `overlap with the eleven builtins` → `overlap with the twelve builtins`.
+- [ ] **Step 5: runbook phrasing** — `docs/issue-runbook.md` line ~96: `overlap with the eleven builtins` → `overlap with the twelve builtins`.
 
 - [ ] **Step 6: `docs/example-executable-documentation.md`** — rewrite only the four `FLOOR` call sites to arity 2. Do not retitle headers, do not fix name matching, do not make the file check-clean. The `#kubernetes` block becomes:
 ```
@@ -449,7 +449,7 @@ UsableMemory = FLOOR(TotalMemory * (1 - ReservedCapacity), 1)
 - [ ] **Step 10: Commit**
 
 ```bash
-git add docs/visimark-design.md docs/vocabulary-catalogue.md docs/issue-review.md docs/example-executable-documentation.md docs/cli-reference.md CHANGELOG.md editors/vscode/CHANGELOG.md
+git add docs/visimark-design.md docs/vocabulary-catalogue.md docs/issue-runbook.md docs/example-executable-documentation.md docs/cli-reference.md CHANGELOG.md editors/vscode/CHANGELOG.md
 git commit -m "$(printf 'docs: FLOOR is the twelfth builtin — design §4, catalogue UNRELEASED, changelog\n\nCo-Authored-By: Grok 4.6 <noreply@x.ai>')"
 ```
 If `cli-reference.md` was unchanged, drop it from `git add`.

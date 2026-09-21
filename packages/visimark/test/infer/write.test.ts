@@ -57,6 +57,48 @@ describe("--write only ever inserts", () => {
   });
 });
 
+describe("--write inserts a proposed alias", () => {
+  const doc = [
+    "| Item | Unit Price | Qty |",
+    "|------|-----------:|----:|",
+    "| pen  |       5.00 |   2 |",
+    "| mug  |       8.00 |   1 |",
+    "",
+  ].join("\n");
+
+  test('the block gets an `"<header>" is <name>` line', () => {
+    const out = written(doc);
+    expect(out).toContain('"Unit Price" is up');
+  });
+
+  test("check parses the written alias with no ALIAS or name-resolution error", () => {
+    // Nothing in this input-only table uses `up` yet, so `check` still flags
+    // the table as unruled (COVERAGE) and the alias as unused (WARN) — both
+    // expected here. What matters is that the alias itself parses and
+    // resolves cleanly: no ALIAS/NAME-shaped finding at all.
+    const r = check(build(locate(written(doc))));
+    expect(r.findings.map((f) => f.code)).toEqual(["COVERAGE", "WARN"]);
+  });
+
+  test("an alias sits above a column rule in the block", () => {
+    const base = infer(doc).find((p) => p.kind === "alias")!;
+    const fake = {
+      kind: "column" as const,
+      stage: 1 as const,
+      sheetId: base.sheetId,
+      mintedSheetId: base.mintedSheetId,
+      name: "Qty",
+      rule: "Qty = 1",
+      fits: 2,
+      rows: 2,
+      tableSpan: base.tableSpan,
+    };
+    const out = written(doc, [base, fake]);
+    const block = /```vmark #unnamed1\n([\s\S]*?)```/.exec(out)![1]!;
+    expect(block.indexOf('"Unit Price" is up')).toBeLessThan(block.indexOf("Qty = 1"));
+  });
+});
+
 describe("anchors reach all four inline kinds", () => {
   const doc = `| Item | A  | B |
 |------|---:|--:|
