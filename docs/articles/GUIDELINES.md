@@ -1,7 +1,7 @@
 # Writing a VisiMark article
 
 House rules for the articles in this folder. They came out of writing
-[Markdown woes: Looks right, is wrong](markdown-woes-looks-good-is-wrong/looks-right-is-wrong.md),
+[Markdown woes: Looks right, is wrong](looks-good-is-wrong/markdown-woes-looks-right-is-wrong.md),
 which is the worked example: when a rule here is unclear, read how that article
 does it.
 

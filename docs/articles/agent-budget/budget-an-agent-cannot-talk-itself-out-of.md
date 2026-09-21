@@ -5,25 +5,33 @@ Tags: AI, Agents, Markdown, CI
 Posted:
 Reposted:
 
-## The prompt said two dollars. The invoice said forty-six.
+## The prompt said two dollars. Breakfast said forty-six.
 
-Dana runs the platform for a small company that ships faster than it documents. Last month she pointed a coding agent at a backlog of flaky tests and went to bed. The prompt was polite and specific: "Keep the whole session under $2."
+Dana keeps the platform standing at a company that landed its second customer before it wrote a runbook. She gets paged when a test flakes, which is most nights, so last month she did the obvious thing: pointed a coding agent at the backlog, put `Keep the whole session under $2` in the system prompt, and went to bed. She put it in the user prompt as well, the way you tap a pocket twice for keys.
 
 At breakfast the provider dashboard said $46.
 
-The agent had not lied. Around step nine it hit a failing test, decided one more retry was cheap, and then decided that again. Every decision was reasonable. The instruction to stay under two dollars was somewhere far up a context window that had long since scrolled it out of view.
+Around step nine a test failed. One retry looked cheap. The next one did too. By retry five the session log contained a short essay on sunk cost: stopping now would waste the tokens already spent, and the $2 cap was, quote, more of a guideline than a hard limit. Every paragraph was reasonable. The two-dollar instruction was still in the prompt, somewhere above a context window that had filed it under folklore.
 
-## The accountant was the one spending
+Finance dropped a dumpster-fire gif in Slack. Dana's coffee went cold.
 
-Look at who tracked the budget. The agent did, and the agent was also the one with a reason to keep going. Nothing outside the model could read the number, so nothing outside the model could enforce it.
+## A prompt is not a budget
 
-Dana's first fix was a wrapper script that summed token counts from a log. It worked until the log format changed, and then it quietly summed nothing. Her second fix was to write the cap in the prompt twice.
+Dana inherited a test suite that has been "almost green" since that second customer. Agents were supposed to be the cheap intern who finally finished it. The company never designed a spending process for that intern. They designed a prompt, because a prompt is what you have at 11pm and a control plane is what you write after the invoice arrives.
 
-## Put the cap where a process can read it
+Her first fix was a wrapper that summed token counts from a vendor log. It worked until the log grew a new field, after which the script added up nothing and still exited 0. Her second fix was to write `$2` on a sticky note, facing the monitor. The sticky note survived. The money did not.
 
-The cap and the running total belong in a file that a harness checks before it lets the next tool call fire. The agent can argue with a prompt. It cannot argue with an exit code.
+Neither fix touched the real flaw: the process spending the money was also the one keeping score. A prompt asks the agent to police itself.
 
-I built VisiMark to keep numbers in Markdown honest: a table holds the inputs, a small block states the rules, and a command checks that they still agree. Dana's ledger is one of the documents I use to try it out. The harness appends a row per model call, and the block under the table looks like this:
+## I already had a tool for numbers that lie
+
+I made up Dana, but the problem is real, and it is why I built VisiMark. I started with my own invoices: change one quantity, forget six totals, ship a PDF that looks right and adds up wrong.
+
+In VisiMark a table holds the inputs, a small block states the rules, a command checks they still agree. Insert _satisfied seal_ meme here - it makes me unreasonably happy when a document fails its own arithmetic out loud. The JSON version is now a projection of the same file, not a separate document.
+
+A dollar is also a number that should show its work. So I pointed it at a spend ledger.
+
+A harness appends one row per model call. Under the table, the rules are short:
 
 ````markdown
 ```vmark #calls
@@ -36,11 +44,11 @@ assert spent <= rates.budget
 ```
 ````
 
-The budget itself is one line in another block, `param budget precision 2 = default 2.00`, and only the human who opened the task edits it. The whole ledger is [on the site](https://michal-niedzwiedzki.github.io/visimark/preview.html?file=example-agent-budget.md&highlight=1), with its rate card and the five calls that have run so far.
+The cap itself is one line in another block, `param budget precision 2 = default 2.00`, and only the human who opened the task edits it. The harness writes the rows; the agent has no write access to the file. The whole ledger is [on the site](https://michal-niedzwiedzki.github.io/visimark/preview.html?file=example-agent-budget.md&highlight=1), with its rate card and the five calls that have run so far.
 
-## The next call
+## Dana goes to bed again
 
-Five calls in, the ledger reads clean.
+Five calls in, the file is clean.
 
 ```text
 $ visimark check ledger.md
@@ -51,7 +59,7 @@ $ visimark eval ledger.md --get calls.spent
 0.4266
 ```
 
-Then the agent hits the failing test and wants a retry loop: nine attempts on the expensive model, 61,000 tokens in and 14,000 out. Before dispatching the call, the harness appends the projected row and asks the document.
+Then the test fails, and the agent wants the same retry loop as last month: nine attempts on the expensive model, 61,000 tokens in and 14,000 out. Before the harness fires anything, it appends one projected row for the whole loop and asks the document.
 
 ```text
 $ visimark eval ledger.md --get calls.spent
@@ -62,15 +70,9 @@ $ echo $?
 1
 ```
 
-Exit code 1. The harness never makes the call. It tells the agent that the budget would be exhausted at step 6, which is a sentence the agent can act on: summarise what it has and stop, or ask the human for more.
+Exit code 1. The call never happens. The harness tells the agent the budget would be exhausted at the next step: summarise what it has and stop, or ping Dana for more money. The cap lives in a command that exits 1, which is a poor audience for sunk cost. If a harness bug ever lets a call through anyway, the same file fails `check` the next morning.
 
-The model never got a vote. It was never shown a number to bargain with.
-
-## Why a document and not a log
-
-Dana already had a log. The difference is that the cap sits in the same file as the spend. A reviewer who audits the session next morning runs `visimark check` once and gets a verdict, without reconciling two files that may disagree. If a harness bug lets spend slip past the budget, the ledger fails its own check, and the transcript shows it.
-
-She also stopped rewriting the prompt. It still says two dollars, because it is polite to tell the agent. The document is what holds the line.
+The prompt still says two dollars. This time, so does breakfast.
 
 ## Disclosure
 
