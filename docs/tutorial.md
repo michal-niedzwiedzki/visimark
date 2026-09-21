@@ -814,11 +814,11 @@ per row, inside a column rule, and turns one value into one value.
 | Function | What it does |
 |---|---|
 | `ROUND(x, places)` | Round to `places` decimals. Ties go away from zero. |
-| `ABS(x)` | Drop the sign. |
+| `ABS(x)` | Drop the sign. Also written `\|x\|`. |
 | `MOD(x, y)` | Remainder. Zero divisor is an error. |
-| `SQRT(x)` | Square root. Negative input is an error. |
-| `FLOOR(x, s)` | Largest multiple of `s` not above `x`. |
-| `CEILING(x, s)` | Smallest multiple of `s` not below `x`. |
+| `SQRT(x)` | Square root. Negative input is an error. Also written `√(x)`. |
+| `FLOOR(x, s)` | Largest multiple of `s` not above `x`. `⌊x⌋` is the whole-number floor, `FLOOR(x, 1)`. |
+| `CEILING(x, s)` | Smallest multiple of `s` not below `x`. `⌈x⌉` is the whole-number ceiling, `CEILING(x, 1)`. |
 | `IF(cond, a, b)` | `a` when `cond` is true, otherwise `b`. |
 | `EOMONTH(d, months)` | Last day of the month `months` away from `d`. |
 
@@ -1168,7 +1168,7 @@ aggregate: `assert MIN(margin) >= 0` means "no row has a negative margin".
 **There is no rounding tolerance.** If you need one, write it:
 
 ```
-assert ABS(variance) <= 0.05
+assert |variance| <= 0.05
 ```
 
 That is better than a hidden tolerance, because the number `0.05` is on the page
@@ -1189,7 +1189,7 @@ invoiced  = lines.gross_total
 scheduled = schedule.covered
 variance  = scheduled - invoiced
 
-assert ABS(variance) <= 0.05
+assert |variance| <= 0.05
 ```
 ````
 
@@ -1522,7 +1522,7 @@ changed rule silently changes every number under it. Read it carefully.
 moved the net, the tax base, the tax and the amount due. If a quantity changes
 and the tax does not, something is not connected.
 
-**Did an assertion get deleted or loosened?** `assert ABS(variance) <= 0.05`
+**Did an assertion get deleted or loosened?** `assert |variance| <= 0.05`
 becoming `<= 50.00` is a one-character-looking change that removes a real
 guarantee.
 
@@ -2105,7 +2105,7 @@ invoiced  = lines.gross_total
 scheduled = schedule.covered
 variance  = scheduled - invoiced
 
-assert ABS(variance) <= 0.05
+assert |variance| <= 0.05
 ```
 ````
 
@@ -2175,8 +2175,8 @@ capstone.md
   ASSERT  #schedule       share_sum == 1
           1.05 == 1   is false
 
-  ASSERT  #recon          ABS(variance) <= 0.05
-          ABS(1805.04) <= 0.05   is false
+  ASSERT  #recon          |variance| <= 0.05
+          |1805.04| <= 0.05   is false
 
   9 problems (7 stale, 2 errors)
 ```
