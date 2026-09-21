@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { readFileSync, writeFileSync, mkdtempSync } from "node:fs";
 import { cleanPath, drift, driftPath } from "../examples.js";
 import { tmpdir } from "node:os";
+import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import { runCli } from "../../src/cli/main.js";
 
@@ -237,4 +238,40 @@ test("explain lists an aliased column's header", async () => {
   expect(code).toBe(0);
   expect(c.out()).toContain("aliases:");
   expect(c.out()).toContain('bpu → "Bandwidth per Unit (TB/s, full-duplex)"');
+});
+
+// --- prose notation for unary vocabulary (#64) ------------------------------
+
+const proseFixture = fileURLToPath(new URL("../fixtures/prose-notation.md", import.meta.url));
+
+test("eval on the prose-notation fixture prints the values of spec section 6", async () => {
+  const c = capture();
+  const code = await runCli(["eval", proseFixture], c.io);
+  expect(code).toBe(0);
+  expect(c.out()).toBe(
+    [
+      "a     7.5",
+      "b     10",
+      "abs1  2.5",
+      "abs2  1.5",
+      "abs3  32.5",
+      "fl    7",
+      "ce    8",
+      "fln   -8",
+      "mix   7",
+      "rt    4",
+      "ok    2.5",
+    ].join("\n"),
+  );
+});
+
+test("check passes the prose-notation fixture, and explain echoes the glyphs as written", async () => {
+  const check = capture();
+  expect(await runCli(["check", proseFixture], check.io)).toBe(0);
+  expect(check.out()).toContain("0 problems");
+  const explain = capture();
+  expect(await runCli(["explain", proseFixture], explain.io)).toBe(0);
+  expect(explain.out()).toContain("abs2 = ||a - b| - 1|");
+  expect(explain.out()).toContain("mix = ⌊|a - b| * 3⌋");
+  expect(explain.out()).toContain("rt = √(b + 6)");
 });

@@ -209,7 +209,8 @@ as any non-literal default is today.
 - **Units ([§7](../visimark-design.md#7-numeric-semantics)).** Unchanged.
 - **CLI surfaces.**
   - `check`: reports exactly what the named spelling reports, with the
-    findings in §4 for malformed pairs.
+    findings in §4 for malformed pairs. A finding's echoed formula and raw rule
+    text are the spelling the author wrote.
   - `fmt`: never rewrites the spellings; computed cells and anchors are written
     as they are today.
   - `infer`: proposes the same rules it proposes today, in code notation. It
@@ -284,11 +285,16 @@ fln = ⌊-a⌋
 mix = ⌊|a - b| * 3⌋
 rt = √(b + 6)
 ok = ABS(a - b)
+```
+
+```vmark #tolerance
 assert |a - b| <= 2.5
 ```
 ````
 
-`visimark eval` prints:
+The `assert` sits in its own `#tolerance` sheet block because an `assert` in a
+document-scope block is a `SHEET` finding. `visimark check` on the fixture reports
+`0 problems (0 stale, 0 errors)` and exits `0`. `visimark eval` prints:
 
 ```
 a     7.5
