@@ -79,7 +79,8 @@ stdout, and no file read or written. The rules:
    ``— write `--get vat` ``; for a flag ``— `--json` takes no value``.
 7. `--` adds ``— to name a file that starts with -, write ./-name``.
 8. `--help` and `-h` after a command add a second stderr line: that command's
-   existing `usage: visimark …` line. Only the first line is `error.message`.
+   `usage:` line (`ref`, which had none, gets `usage: visimark ref [NAME] [--json]`).
+   Only the first line is `error.message`.
 9. A `#name` token on any command but `explain` is
    `visimark: #<name> is only valid with explain`.
 10. A second file to `eval` or `explain` is `visimark: eval takes one file` (or
@@ -135,6 +136,7 @@ Each row's stdout is empty in text mode.
 | `check invoice.md -j` | `visimark: unknown option -j` | `2` |
 | `check invoice.md --` | ``visimark: unknown option -- — to name a file that starts with -, write ./-name`` | `2` |
 | `check invoice.md --help` | `visimark: unknown option --help` then `usage: visimark check FILE...` | `2` |
+| `ref --help` | `visimark: unknown option --help` then `usage: visimark ref [NAME] [--json]` | `2` |
 | `check invoice.md '#lines'` | `visimark: #lines is only valid with explain` | `2` |
 | `eval invoice.md drift.md` | `visimark: eval takes one file` | `2` |
 | `explain invoice.md drift.md` | `visimark: explain takes one file` | `2` |
