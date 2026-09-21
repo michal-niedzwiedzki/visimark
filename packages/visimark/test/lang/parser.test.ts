@@ -302,3 +302,79 @@ test("parseStatement: N must be a whole number from 0 to 18", () => {
 test("parseStatement: `precision` mid-expression is rejected", () => {
   expect(() => parseStatement("x = 1 precision 2")).toThrow("`precision` is a keyword");
 });
+
+// --- prose notation for unary vocabulary (#64) ------------------------------
+
+test("each prose spelling parses to the call it stands for", () => {
+  for (const [prose, named] of [
+    ["|a - b|", "ABS(a - b)"],
+    ["|-a|", "ABS(-a)"],
+    ["||a - b| - 1|", "ABS(ABS(a - b) - 1)"],
+    ["|a| + |b| * |a - b|", "ABS(a) + ABS(b) * ABS(a - b)"],
+    ["|a|-|b|", "ABS(a) - ABS(b)"],
+    ["⌊a⌋", "FLOOR(a, 1)"],
+    ["⌈a⌉", "CEILING(a, 1)"],
+    ["⌊-a⌋", "FLOOR(-a, 1)"],
+    ["⌊|a - b| * 3⌋", "FLOOR(ABS(a - b) * 3, 1)"],
+    ["√(b + 6)", "SQRT(b + 6)"],
+    ["|SUM(Net)|", "ABS(SUM(Net))"],
+  ] as const) {
+    expect(s(prose)).toEqual(s(named));
+  }
+});
+
+test("a pair's span runs from its opener to its closer", () => {
+  expect(parseExpr("⌊a⌋")).toMatchObject({ type: "call", name: "FLOOR", start: 0, end: 3 });
+  expect(parseExpr("x + |a|")).toMatchObject({
+    right: { type: "call", name: "ABS", start: 4, end: 7 },
+  });
+});
+
+test("the step ⌊ and ⌈ supply is spanned by the closing glyph", () => {
+  const floor = parseExpr("⌊ab⌋") as {
+    args: { type: string; value: string; start: number; end: number }[];
+  };
+  expect(floor.args[1]).toEqual({ type: "num", value: "1", start: 3, end: 4 });
+  const ceil = parseExpr("⌈a⌉") as { args: { start: number; end: number }[] };
+  expect(ceil.args[1]).toMatchObject({ start: 2, end: 3 });
+});
+
+function failure(src: string): { message: string; start: number; end: number } {
+  try {
+    parseExpr(src);
+  } catch (e) {
+    if (e instanceof LangError) return { message: e.message, start: e.start, end: e.end };
+    throw e;
+  }
+  throw new Error(`expected ${JSON.stringify(src)} to fail`);
+}
+
+test("a malformed pair fails at the token the spec names", () => {
+  expect(failure("|a")).toEqual({ message: "expected `|`", start: 2, end: 2 });
+  expect(failure("⌊a")).toEqual({ message: "expected `⌋`", start: 2, end: 2 });
+  expect(failure("⌊a⌉")).toEqual({ message: "expected `⌋`", start: 2, end: 3 });
+  expect(failure("(a⌋")).toEqual({ message: "expected `)`", start: 2, end: 3 });
+  expect(failure("⌋a")).toEqual({
+    message: "`⌋` has no opening `⌊`",
+    start: 0,
+    end: 1,
+  });
+  expect(failure("⌉a")).toEqual({
+    message: "`⌉` has no opening `⌈`",
+    start: 0,
+    end: 1,
+  });
+  expect(failure("a |b|")).toEqual({ message: "unexpected `|`", start: 2, end: 3 });
+  expect(failure("|a|b")).toEqual({ message: "unexpected ident", start: 3, end: 4 });
+  expect(failure("√a")).toEqual({ message: "unexpected ident", start: 1, end: 2 });
+});
+
+test("a pair with a missing operand fails through the unexpected-token path", () => {
+  for (const src of ["||", "|-|", "⌊⌋"]) {
+    expect(() => parseExpr(src)).toThrow(LangError);
+  }
+});
+
+test("a bare √ is a reference to SQRT, like a bare Σ is to SUM", () => {
+  expect(s("√")).toEqual({ type: "ref", name: "SQRT" });
+});
