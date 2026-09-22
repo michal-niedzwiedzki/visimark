@@ -1,6 +1,6 @@
 import { Decimal } from "decimal.js";
 import type { Expr, Ref } from "../lang/ast.js";
-import { NO_FORMULAS_MARKER, type RawTable, type Span } from "../parse/document.js";
+import { NO_FORMULAS_MARKER, type RawTable } from "../parse/document.js";
 import {
   type Assertion,
   type Binding,
