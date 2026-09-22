@@ -1,4 +1,4 @@
-# Three agents and a for-loop
+# Three agents and a 5-dimensional for-loop
 
 Tags: AI, Agents, Markdown, CI
 Author: Michał Niedźwiedzki

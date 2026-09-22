@@ -37,11 +37,11 @@
     },
     {
       "slug": "deal-desk",
-      "title": "Three agents and a for-loop",
+      "title": "Three agents and a 5-dimensional for-loop",
       "author": "Michał Niedźwiedzki",
       "tags": ["AI", "Agents", "Markdown", "CI"],
       "teaser": "Five knobs, one Friday, and a client who wanted to sign before the weekend. Should an agent search for the best deal, or a for-loop?",
-      "icon": "../assets/agent.webp",
+      "icon": "../assets/scenarios.webp",
       "path": "deal-desk/three-agents-and-a-for-loop.md",
       "featured": true
     },
