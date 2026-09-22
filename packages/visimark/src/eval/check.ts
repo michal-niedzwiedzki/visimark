@@ -626,12 +626,7 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
         }
       }
 
-      if (
-        !sigilBlocked &&
-        prec !== null &&
-        v.t === "num" &&
-        mine.length > 0
-      ) {
+      if (!sigilBlocked && prec !== null && v.t === "num" && mine.length > 0) {
         for (const a of mine) {
           const text = model.source.slice(a.value!.start, a.value!.end);
           if (matchesStored(v, text, prec)) continue;
