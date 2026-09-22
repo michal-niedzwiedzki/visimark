@@ -17,7 +17,7 @@
     },
     "editors/vscode": {
       "name": "visimark-vscode",
-      "version": "0.1.5",
+      "version": "0.1.7",
       "dependencies": {
         "visimark": "workspace:*",
         "vscode-languageclient": "^10.1.1",
@@ -29,9 +29,24 @@
         "ovsx": "^1.2.0",
       },
     },
+    "packages/remark-visimark": {
+      "name": "remark-lint-visimark",
+      "version": "0.1.7",
+      "dependencies": {
+        "visimark": "0.1.7",
+      },
+      "devDependencies": {
+        "@types/mdast": "^4.0.4",
+        "remark-gfm": "^4.0.0",
+        "remark-parse": "^11.0.0",
+        "remark-stringify": "^11.0.0",
+        "unified": "^11.0.4",
+        "vfile": "^6.0.3",
+      },
+    },
     "packages/visimark": {
       "name": "visimark",
-      "version": "0.1.5",
+      "version": "0.1.7",
       "bin": {
         "visimark": "bin/visimark",
       },
@@ -49,7 +64,7 @@
     },
     "packages/visimark-lsp": {
       "name": "visimark-lsp",
-      "version": "0.1.5",
+      "version": "0.1.7",
       "dependencies": {
         "visimark": "workspace:*",
         "vscode-jsonrpc": "^9.0.2",
@@ -906,6 +921,8 @@
     "readable-stream": ["readable-stream@3.6.2", "", { "dependencies": { "inherits": "^2.0.3", "string_decoder": "^1.1.1", "util-deprecate": "^1.0.1" } }, "sha512-9u/sniCrY3D5WdsERHzHE4G2YCXqoG5FTHUiCC4SIbr6XcLZBY05ya9EKjYek9O5xOAwjGq+1JdGBAS7Q9ScoA=="],
 
     "remark-gfm": ["remark-gfm@4.0.1", "", { "dependencies": { "@types/mdast": "^4.0.0", "mdast-util-gfm": "^3.0.0", "micromark-extension-gfm": "^3.0.0", "remark-parse": "^11.0.0", "remark-stringify": "^11.0.0", "unified": "^11.0.0" } }, "sha512-1quofZ2RQ9EWdeN34S79+KExV1764+wCUGop5CPL1WGdD0ocPpu91lzPGbwWMECpEpd42kJGQwzRfyov9j4yNg=="],
+
+    "remark-lint-visimark": ["remark-lint-visimark@workspace:packages/remark-visimark"],
 
     "remark-parse": ["remark-parse@11.0.0", "", { "dependencies": { "@types/mdast": "^4.0.0", "mdast-util-from-markdown": "^2.0.0", "micromark-util-types": "^2.0.0", "unified": "^11.0.0" } }, "sha512-FCxlKLNGknS5ba/1lmpYijMUzX2esxW5xQqjWxw2eHFfS2MSdaHVINFmhjo+qN1WhZhNimq0dZATN9pH0IDrpA=="],
 
