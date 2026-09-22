@@ -36,6 +36,16 @@
       "featured": true
     },
     {
+      "slug": "deal-desk",
+      "title": "Three agents and a for-loop",
+      "author": "Michał Niedźwiedzki",
+      "tags": ["AI", "Agents", "Markdown", "CI"],
+      "teaser": "Five knobs, one Friday, and a client who wanted to sign before the weekend. Should an agent search for the best deal, or a for-loop?",
+      "icon": "../assets/agent.webp",
+      "path": "deal-desk/three-agents-and-a-for-loop.md",
+      "featured": true
+    },
+    {
       "slug": "10-things-excel-cannot-do-but-visimark-can",
       "title": "10 things Excel cannot do but VisiMark can",
       "author": "Michał Niedźwiedzki",
