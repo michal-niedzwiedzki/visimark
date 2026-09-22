@@ -1,0 +1,13 @@
+repos:
+  - repo: local
+    hooks:
+      - id: visimark
+        name: visimark check
+        language: system
+        entry: sh scripts/precommit-visimark-check.sh
+        # Scoped to the same file set dogfood.yml's "the clean invoice and
+        # this repo's own prose must pass" step already trusts — most other
+        # tracked Markdown in this repo is deliberately unchecked: specs and
+        # plans with no `vmark` rules (COVERAGE by design), and test fixtures
+        # under packages/*/test/fixtures that exist to fail on purpose.
+        files: ^(docs/example-invoice\.md|docs/tutorial\.md|docs/ci\.md|docs/tutorial/order\.md|docs/tutorial/capstone\.md|docs/tutorial/runway\.md|docs/visimark-design\.md|docs/visimark-editor-plugins-design\.md|docs/cli-reference\.md|docs/releasing\.md|docs/vocabulary-catalogue\.md|README\.md|CHANGELOG\.md|CONTRIBUTING\.md|skills/visimark/SKILL\.md)$
