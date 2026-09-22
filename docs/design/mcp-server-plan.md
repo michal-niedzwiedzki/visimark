@@ -60,7 +60,7 @@ exact. No other runtime dependency.
 
 ## Task 1 — Package skeleton, launcher, and the parity guard
 
-- [ ] Create the package so that it is installable and runnable under both runtimes
+- [x] Create the package so that it is installable and runnable under both runtimes
       before it does anything useful.
 
 **Files**

@@ -1,0 +1,58 @@
+{
+  "name": "visimark-mcp",
+  "version": "0.1.7",
+  "description": "A stdio MCP server exposing the VisiMark engine to agents: every command as a tool, the authoring discipline as resources, read-only unless an operator opens the write gate.",
+  "keywords": [
+    "agent",
+    "ai",
+    "llm",
+    "markdown",
+    "mcp",
+    "modelcontextprotocol",
+    "spreadsheet",
+    "visimark"
+  ],
+  "homepage": "https://github.com/michal-niedzwiedzki/visimark#readme",
+  "bugs": "https://github.com/michal-niedzwiedzki/visimark/issues",
+  "license": "MIT",
+  "author": "Michał Niedźwiedzki <michal@epsi.pl>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/michal-niedzwiedzki/visimark.git",
+    "directory": "packages/visimark-mcp"
+  },
+  "bin": {
+    "visimark-mcp": "bin/visimark-mcp"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "skill.md",
+    "docs",
+    "README.md",
+    "LICENSE"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "build": "bun build src/main.ts src/index.ts --target node --outdir dist && tsc -p tsconfig.build.json",
+    "prepublishOnly": "bun run typecheck && bun test && bun run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.30.0",
+    "visimark": "0.1.7"
+  },
+  "engines": {
+    "bun": ">=1.0.0",
+    "node": ">=18"
+  }
+}
