@@ -138,6 +138,34 @@ const AMOUNTS = `| Amount |
 \`\`\`
 `;
 
+const CASH = `| Cash |
+|-----:|
+| -48000 |
+|  20000 |
+|  20000 |
+|  20000 |
+
+\`\`\`vmark #t
+\`\`\`
+`;
+
+const ONE = `| Cash |
+|-----:|
+| -48000 |
+
+\`\`\`vmark #t
+\`\`\`
+`;
+
+const PAIR = `| Cash |
+|-----:|
+|  100 |
+|  100 |
+
+\`\`\`vmark #t
+\`\`\`
+`;
+
 export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
   SUM: {
     summary: "total of a column; `0` over an empty column",
@@ -186,6 +214,29 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
     errors: [],
     examples: [{ expr: "COUNT(t.Amount)", is: "3", given: AMOUNTS }],
     see: ["SUM"],
+  },
+  NPV: {
+    summary:
+      "present value of a cash-flow column; row 0 is undiscounted; an empty column is a TYPE error",
+    params: [
+      { name: "rate", type: "number", note: "the rate for one period; must be greater than -1" },
+      { name: "flows", type: "column", note: "cash flows in time order; the first row is period 0" },
+    ],
+    returns: "number",
+    precision: { from: "declared" },
+    errors: [
+      { when: "a non-numeric `rate`", code: "TYPE" },
+      { when: "a `rate` of -1 or below", code: "TYPE" },
+      { when: "an empty column", code: "TYPE" },
+      { when: "a non-numeric cell", code: "TYPE" },
+      { when: "a non-column `flows` argument", code: "TYPE" },
+    ],
+    examples: [
+      { expr: "NPV(0, t.Cash)", is: "12000", given: CASH },
+      { expr: "NPV(0.08, t.Cash)", is: "-48000", given: ONE },
+      { expr: "NPV(-0.5, t.Cash)", is: "300", given: PAIR },
+    ],
+    see: ["SUM", "AVG"],
   },
   ROUND: {
     summary: "half-up to `places` decimals",
