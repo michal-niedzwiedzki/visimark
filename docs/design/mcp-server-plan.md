@@ -115,7 +115,7 @@ exact. No other runtime dependency.
 
 ## Task 2 — The input layer: `path` or `content`
 
-- [ ] Turn a tool's arguments into an engine call, and make every refusal a `USAGE`
+- [x] Turn a tool's arguments into an engine call, and make every refusal a `USAGE`
       error rather than a silent preference.
 
 **Files**
