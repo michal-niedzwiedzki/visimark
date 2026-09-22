@@ -1090,8 +1090,23 @@ npx --yes visimark@0.1.5 check $files
 `--diff-filter=ACM` skips deletions, which would otherwise be handed to the tool
 as paths that no longer exist and come back as exit `2`.
 
-With the [pre-commit](https://pre-commit.com) framework, in
+With the [pre-commit](https://pre-commit.com) framework, four lines in
 `.pre-commit-config.yaml`:
+
+```yaml
+repos:
+  - repo: https://github.com/michal-niedzwiedzki/visimark
+    rev: v0.1.7
+    hooks:
+      - id: visimark
+```
+
+`pre-commit autoupdate` moves `rev:` forward as releases ship. Under the hood
+the hook tries an already-installed `visimark` first, then Bun's `bunx`, then
+npm's `npx` — so it works whether the machine has Node, Bun, or both.
+
+Without the framework, or to pin the fetch command yourself, the same recipe
+by hand:
 
 ```yaml
 repos:
@@ -1100,12 +1115,12 @@ repos:
       - id: visimark
         name: visimark check
         language: system
-        entry: npx --yes visimark@0.1.5 check
+        entry: npx --yes visimark@0.1.7 check
         files: \.md$
 ```
 
-The framework passes the staged file names as arguments, which is exactly the
-shape `visimark check` wants.
+Either way, the framework passes the staged file names as arguments, which is
+exactly the shape `visimark check` wants.
 
 A hook checks only staged files, so it cannot see the CSV-import case from
 chapter 19 or the coverage-of-the-whole-repository case from chapter 11. Keep the

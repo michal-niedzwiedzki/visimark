@@ -4,9 +4,10 @@ Everything the `visimark` command does, in one place. The narrative version is
 in the [README](../README.md); this is the lookup table.
 
 Install it with `bun add -g visimark` or `npm i -g visimark`, or run it
-without installing with `npx visimark`. The installed command runs under
-whichever of Bun or Node is on your PATH. From a clone,
-`bun packages/visimark/src/cli/main.ts` runs the same CLI straight from source.
+without installing with `npx visimark` — or, on a machine with Bun but no
+Node, `bunx visimark`. The installed command runs under whichever of Bun or
+Node is on your PATH. From a clone, `bun packages/visimark/src/cli/main.ts`
+runs the same CLI straight from source.
 
 On Windows, `npx visimark` and `npm i -g visimark` work as elsewhere; npm's
 global shim for the launcher invokes `sh`, so `sh` must be on PATH (Git Bash

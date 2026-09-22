@@ -91,6 +91,13 @@ $ bunx visimark check docs/example-invoice.md
 Node is not needed to develop, but the published CLI must run under it, so CI
 exercises that separately. VisiMark supports Node 18 and newer.
 
+This repository dogfoods its own [pre-commit](https://pre-commit.com) hook
+(`.pre-commit-config.yaml`) — run `pre-commit install` once, after `pip install
+pre-commit`, to have `git commit` run `visimark check` over this repo's own
+tracked documents locally. It is a convenience, the way `bun run
+vscode-install` is a from-a-clone step rather than a requirement: `dogfood.yml`
+enforces the same check in CI either way.
+
 ## The commands
 
 | Command | What it does |
