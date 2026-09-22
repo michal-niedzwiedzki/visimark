@@ -246,11 +246,14 @@ export function describeFinding(f: Finding): string {
     case "DATE": {
       const head = `"${f.raw ?? ""}" is not an ISO 8601 date (YYYY-MM-DD)`;
       if (f.isoFix) return `${head}; unambiguous fix is ${f.isoFix}`;
-      if (f.altA && f.altB) return `${head}; ambiguous: ${f.altA} or ${f.altB}, ${f.daysApart} days apart`;
+      if (f.altA && f.altB)
+        return `${head}; ambiguous: ${f.altA} or ${f.altB}, ${f.daysApart} days apart`;
       return head;
     }
     case "UNDEF":
-      return `unknown name \`${f.raw}\`` + (f.suggestion ? `; did you mean \`${f.suggestion}\`?` : "");
+      return (
+        `unknown name \`${f.raw}\`` + (f.suggestion ? `; did you mean \`${f.suggestion}\`?` : "")
+      );
     case "DUP":
       return `\`${f.name}\` is already defined in this scope`;
     case "VECTOR":
@@ -265,7 +268,9 @@ export function describeFinding(f: Finding): string {
     case "PRECISION":
       return (
         f.message ??
-        (f.raw ? `\`${f.raw}\` has no derivable precision` : "no precision declared and none follows from the formula")
+        (f.raw
+          ? `\`${f.raw}\` has no derivable precision`
+          : "no precision declared and none follows from the formula")
       );
     default:
       // UNIT, SHEET, IMPORT, COVERAGE, ARTIFACT, TYPE, ANCHOR, NOTE — format.ts's

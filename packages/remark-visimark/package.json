@@ -2,7 +2,14 @@
   "name": "remark-lint-visimark",
   "version": "0.1.7",
   "description": "A unified/remark plugin that runs visimark check over a document and reports findings as VFile messages.",
-  "keywords": ["remark-lint", "remark-plugin", "unified", "markdown", "visimark", "lint"],
+  "keywords": [
+    "lint",
+    "markdown",
+    "remark-lint",
+    "remark-plugin",
+    "unified",
+    "visimark"
+  ],
   "homepage": "https://github.com/michal-niedzwiedzki/visimark#readme",
   "bugs": "https://github.com/michal-niedzwiedzki/visimark/issues",
   "license": "MIT",
@@ -12,7 +19,11 @@
     "url": "git+https://github.com/michal-niedzwiedzki/visimark.git",
     "directory": "packages/remark-visimark"
   },
-  "files": ["dist", "README.md", "LICENSE"],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

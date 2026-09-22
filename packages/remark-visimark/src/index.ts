@@ -23,7 +23,11 @@ const remarkLintVisimark: Plugin<[], Root> = function remarkLintVisimark() {
     for (const finding of result.findings) {
       if (!finding.span) continue; // no single site to attach a Position to
       const line = lineOf(source, finding.span.start);
-      const message = file.message(describeFinding(finding), lineOnly(line), `visimark:${ruleId(finding.code)}`);
+      const message = file.message(
+        describeFinding(finding),
+        lineOnly(line),
+        `visimark:${ruleId(finding.code)}`,
+      );
       message.fatal = isProblem(finding) ? true : undefined;
     }
   };

@@ -33,7 +33,11 @@ test("STALE, table-row cell with a row label", () => {
 });
 
 test("STALE, artifact — f.message verbatim", () => {
-  const f: Finding = { code: "STALE", artifact: "chart.svg", message: "chart.svg is stale; run `visimark fmt`" };
+  const f: Finding = {
+    code: "STALE",
+    artifact: "chart.svg",
+    message: "chart.svg is stale; run `visimark fmt`",
+  };
   expect(describeFinding(f)).toBe("chart.svg is stale; run `visimark fmt`");
 });
 
@@ -55,7 +59,13 @@ test("DATE, unambiguous fix", () => {
 });
 
 test("DATE, ambiguous", () => {
-  const f: Finding = { code: "DATE", raw: "03/04/2026", altA: "2026-03-04", altB: "2026-04-03", daysApart: 30 };
+  const f: Finding = {
+    code: "DATE",
+    raw: "03/04/2026",
+    altA: "2026-03-04",
+    altB: "2026-04-03",
+    daysApart: 30,
+  };
   expect(describeFinding(f)).toBe(
     '"03/04/2026" is not an ISO 8601 date (YYYY-MM-DD); ambiguous: 2026-03-04 or 2026-04-03, 30 days apart',
   );
@@ -97,7 +107,16 @@ test("WARN, no suggestion", () => {
 });
 
 test("codes that reuse f.message verbatim", () => {
-  for (const code of ["UNIT", "SHEET", "IMPORT", "COVERAGE", "ARTIFACT", "TYPE", "ANCHOR", "NOTE"] as const) {
+  for (const code of [
+    "UNIT",
+    "SHEET",
+    "IMPORT",
+    "COVERAGE",
+    "ARTIFACT",
+    "TYPE",
+    "ANCHOR",
+    "NOTE",
+  ] as const) {
     const f: Finding = { code, message: "a full sentence already" };
     expect(describeFinding(f)).toBe("a full sentence already");
   }
