@@ -100,7 +100,9 @@ test("a malformed vmark= anchor comment is an ANCHOR finding with no sheetId/nam
   const m = build(locate(src));
   const anchor = m.findings.filter((f) => f.code === "ANCHOR");
   expect(anchor.length).toBe(1);
-  expect(anchor[0]!.message).toBe("malformed anchor comment — expected `<!--vmark=sheet.name-->`");
+  expect(anchor[0]!.message).toBe(
+    "malformed anchor comment — expected `<!--vmark=sheet.name-->` or `<!--vmark=sheet.name%-->`",
+  );
   expect(anchor[0]!.sheetId).toBeUndefined();
   expect(anchor[0]!.name).toBeUndefined();
 });

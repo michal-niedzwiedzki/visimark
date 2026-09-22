@@ -384,7 +384,8 @@ export function build(doc: LocatedDoc): DocModel {
   for (const span of doc.malformedAnchors) {
     findings.push({
       code: "ANCHOR",
-      message: "malformed anchor comment — expected `<!--vmark=sheet.name-->`",
+      message:
+        "malformed anchor comment — expected `<!--vmark=sheet.name-->` or `<!--vmark=sheet.name%-->`",
       sourceOffset: span.start,
       span,
     });

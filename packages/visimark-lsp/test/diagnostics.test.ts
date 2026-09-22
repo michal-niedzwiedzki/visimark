@@ -90,7 +90,9 @@ Total: **1.00**<!--vmark=cost-centre.total-->
   await h.open("file:///malformed-anchor.md", doc);
   const diags = await h.nextDiagnostics("file:///malformed-anchor.md");
   const anchor = diags.find((d) => d.code === "ANCHOR")!;
-  expect(anchor.message).toBe("malformed anchor comment — expected `<!--vmark=sheet.name-->`");
+  expect(anchor.message).toBe(
+    "malformed anchor comment — expected `<!--vmark=sheet.name-->` or `<!--vmark=sheet.name%-->`",
+  );
 });
 
 test("editing to a correct document clears the diagnostics", async () => {

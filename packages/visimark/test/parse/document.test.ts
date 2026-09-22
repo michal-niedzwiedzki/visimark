@@ -128,6 +128,29 @@ test("a marker shown inside a fenced example is documentation, not a marker", ()
   expect(d.noFormulas).toBeNull();
 });
 
+test("a trailing % on an anchor comment is a percent display request", () => {
+  const src = "**0.4026**<!--vmark=lines.margin%-->\n";
+  const d = locate(src);
+  const a = d.anchors[0]!;
+  expect(a.sheetId).toBe("lines");
+  expect(a.name).toBe("margin");
+  expect(a.percent).toBe(true);
+  expect(d.malformedAnchors).toEqual([]);
+  expect(src.slice(a.value!.start, a.value!.end)).toBe("0.4026");
+});
+
+test("a well-formed anchor without % has no percent flag", () => {
+  const src = "**0.4026**<!--vmark=lines.margin-->\n";
+  expect(locate(src).anchors[0]!.percent).toBeUndefined();
+});
+
+test("a space before % is a malformed anchor", () => {
+  const src = "**0.40**<!--vmark=lines.margin %-->\n";
+  const d = locate(src);
+  expect(d.anchors).toEqual([]);
+  expect(d.malformedAnchors.length).toBe(1);
+});
+
 test("a hyphenated sheet id in an anchor comment is a malformed anchor, not a RawAnchor", () => {
   const src = "Total: **999.00**<!--vmark=cost-centre.total-->\n";
   const d = locate(src);

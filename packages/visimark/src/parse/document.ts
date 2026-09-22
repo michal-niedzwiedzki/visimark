@@ -99,6 +99,8 @@ export interface RawAnchor {
   /** the image's URL when the anchor follows an image node — the artifact path a
    *  chart declaration writes to. Absent for every other anchor kind. */
   imageUrl?: string;
+  /** set when the comment is `<!--vmark=sheet.name%-->` */
+  percent?: true;
 }
 
 /**
@@ -147,7 +149,8 @@ export interface LocatedDoc {
   detachedTableBlocks: Set<RawBlock>;
 }
 
-const ANCHOR_RE = /^<!--\s*vmark\s*=\s*([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)\s*-->$/;
+const ANCHOR_RE =
+  /^<!--\s*vmark\s*=\s*([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)(%)?\s*-->$/;
 /** loose enough to catch "this was meant to be a value anchor" without
  *  matching the `vmark:no-formulas` marker (`:`, not `=`) or an unrelated
  *  comment. Anything that matches this but not the full `ANCHOR_RE` above
@@ -386,6 +389,7 @@ function collectAnchors(
         commentSpan,
         value: prev ? anchorValueSpan(prev) : null,
         ...(prev?.type === "image" && prev.url !== undefined ? { imageUrl: prev.url } : {}),
+        ...(m[3] ? { percent: true as const } : {}),
       });
     }
   });

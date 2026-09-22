@@ -258,7 +258,9 @@ test("a hyphenated sheet id with a wrong anchored value fails loudly instead of 
     "sheet id `cost-centre` is not a valid identifier — invalid character `-`",
   );
   const anchor = r.findings.find((f) => f.code === "ANCHOR")!;
-  expect(anchor.message).toBe("malformed anchor comment — expected `<!--vmark=sheet.name-->`");
+  expect(anchor.message).toBe(
+    "malformed anchor comment — expected `<!--vmark=sheet.name-->` or `<!--vmark=sheet.name%-->`",
+  );
   // the sheet still built and evaluated despite the bad id
   expect(r.findings.find((f) => f.code === "WARN")!.name).toBe("total");
 });

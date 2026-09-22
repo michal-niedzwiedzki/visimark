@@ -100,11 +100,12 @@ test("SHEET renders a bad sheet id's message", () => {
 test("ANCHOR renders a malformed anchor comment with no id prefix", () => {
   const f: Finding = {
     code: "ANCHOR",
-    message: "malformed anchor comment — expected `<!--vmark=sheet.name-->`",
+    message:
+      "malformed anchor comment — expected `<!--vmark=sheet.name-->` or `<!--vmark=sheet.name%-->`",
   };
   const lines = formatCheck("x.md", [f]).split("\n");
   expect(lines[2]).toBe(
-    "  ANCHOR  .                 malformed anchor comment — expected `<!--vmark=sheet.name-->`",
+    "  ANCHOR  .                 malformed anchor comment — expected `<!--vmark=sheet.name-->` or `<!--vmark=sheet.name%-->`",
   );
 });
 
