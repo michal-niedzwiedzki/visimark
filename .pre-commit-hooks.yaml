@@ -1,0 +1,6 @@
+- id: visimark
+  name: visimark check
+  description: Recompute every formula in a Markdown document and fail if a number no longer agrees with it.
+  language: system
+  entry: sh scripts/precommit-visimark-check.sh
+  files: \.md$
