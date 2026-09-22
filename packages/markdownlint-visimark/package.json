@@ -1,0 +1,52 @@
+{
+  "name": "markdownlint-rule-visimark",
+  "version": "0.1.7",
+  "description": "markdownlint custom rules that run visimark check over a document and report its findings alongside your other rules.",
+  "keywords": [
+    "lint",
+    "markdown",
+    "markdownlint",
+    "markdownlint-cli2",
+    "markdownlint-rule",
+    "visimark"
+  ],
+  "homepage": "https://github.com/michal-niedzwiedzki/visimark#readme",
+  "bugs": "https://github.com/michal-niedzwiedzki/visimark/issues",
+  "license": "MIT",
+  "author": "Michał Niedźwiedzki <michal@epsi.pl>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/michal-niedzwiedzki/visimark.git",
+    "directory": "packages/markdownlint-visimark"
+  },
+  "files": [
+    "dist",
+    "recommended.json",
+    "README.md",
+    "LICENSE"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "bun": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./recommended": "./recommended.json"
+  },
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "build": "bun build src/index.ts --target node --outdir dist && tsc -p tsconfig.build.json",
+    "prepublishOnly": "bun run typecheck && bun test && bun run build"
+  },
+  "dependencies": {
+    "visimark": "0.1.7"
+  },
+  "devDependencies": {
+    "markdownlint": "^0.41.1",
+    "markdownlint-cli2": "^0.23.3"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "resolveJsonModule": true,
+    "paths": {
+      "visimark": ["../visimark/src/index.ts"]
+    }
+  },
+  "include": ["src", "test"]
+}
