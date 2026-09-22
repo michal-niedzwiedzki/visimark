@@ -272,8 +272,7 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
     see: ["SUM", "AVG"],
   },
   IRR: {
-    summary:
-      "rate at which a cash-flow column has present value zero; row 0 is undiscounted",
+    summary: "rate at which a cash-flow column has present value zero; row 0 is undiscounted",
     params: [
       {
         name: "flows",

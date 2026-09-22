@@ -302,9 +302,9 @@ unrelated restrictions all follow from this one:
 
 ### Builtin functions
 
-Fifteen, chosen to cover the examples and the catalogued additions a real
+Sixteen, chosen to cover the examples and the catalogued additions a real
 document needed (`EOMONTH`, issue #6; `SQRT`, issue #18; `FLOOR`, issue #53;
-`CEILING`, issue #54; `PMT`, issue #156; `NPV`, issue #157).
+`CEILING`, issue #54; `PMT`, issue #156; `NPV`, issue #157; `IRR`, issue #158).
 Each is declared with its shape and its exact argument count, in one table in
 `eval/functions.ts` —
 the single home for a classification the dependency walk, the evaluator and the
@@ -329,6 +329,7 @@ derivation the engine actually performs.
 | `AVG(col)` | reduce | 1 | **must be declared** | arithmetic mean; an empty column is a `TYPE` error |
 | `COUNT(col)` | reduce | 1 | always 0 | number of rows |
 | `NPV(rate, flows)` | reduce | 2 | **must be declared** | present value of a cash-flow column; row 0 is undiscounted; an empty column is a TYPE error; a non-numeric `rate` is a `TYPE` error; a `rate` of -1 or below is a `TYPE` error; an empty column is a `TYPE` error; a non-numeric cell is a `TYPE` error; a non-column `flows` argument is a `TYPE` error |
+| `IRR(flows)` | reduce | 1 | **must be declared** | rate at which a cash-flow column has present value zero; row 0 is undiscounted; an empty column is a `TYPE` error; a non-numeric cell is a `TYPE` error; an all-zero column is a `TYPE` error; a column with no sign change is a `TYPE` error; a column with more than one sign change is a `TYPE` error; a rate not determined at the declared width is a `PRECISION` error; a non-column `flows` argument is a `TYPE` error |
 | `ROUND(x, places)` | map | 2 | the value of `places` | half-up to `places` decimals |
 | `ABS(x)` · `\|x\|` | map | 1 | the width of `x` | absolute value |
 | `MOD(x, y)` | map | 2 | the wider of `x` and `y` | remainder; a zero divisor is a `TYPE` error |
@@ -779,7 +780,7 @@ Per-column
 *precision* has landed as the `precision N` clause
 ([§7](#7-numeric-semantics)); a document- or sheet-scope default has not, and
 should not: it could only override a derivation or suppress a required
-declaration. Per-row exceptions. A function library beyond the fifteen —
+declaration. Per-row exceptions. A function library beyond the sixteen —
 proposals and the decision on each are tracked in
 [`vocabulary-catalogue.md`](vocabulary-catalogue.md). Incremental reparse.
 

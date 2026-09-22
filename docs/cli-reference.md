@@ -22,7 +22,7 @@ and WSL provide it, plain PowerShell does not).
 | `visimark infer FILE...` | Works out which rules reproduce the numbers a document already has, and proposes them | the files you name | nothing, unless `--write` | never — it is advisory |
 | `visimark eval FILE` | Prints the computed values, so a script can read one out | one file | nothing | never |
 | `visimark explain FILE` | Prints each sheet's inputs, rules, evaluation order, assertions and charts | one file | nothing | never |
-| `visimark ref [NAME]` | Prints the reference entry for a builtin function, or lists all fifteen | nothing — the only command that reads no file | nothing | `NAME` is not a builtin function |
+| `visimark ref [NAME]` | Prints the reference entry for a builtin function, or lists all sixteen | nothing — the only command that reads no file | nothing | `NAME` is not a builtin function |
 
 `check` is the one CI runs. The others exist to get a document into a state
 `check` can be strict about, or to explain what it did.

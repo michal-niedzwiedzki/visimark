@@ -924,9 +924,7 @@ test("legal widths of the two-period series are the half-up root", () => {
   expect(at2.findings.filter((f) => f.code !== "WARN")).toEqual([]);
   const at4 = run(irrAnchored("rate precision 4 = IRR(Cash)", "0.1307", twoRows));
   expect(at4.findings.filter((f) => f.code !== "WARN")).toEqual([]);
-  const at18 = run(
-    irrAnchored("rate precision 18 = IRR(Cash)", "0.130662386291807485", twoRows),
-  );
+  const at18 = run(irrAnchored("rate precision 18 = IRR(Cash)", "0.130662386291807485", twoRows));
   expect(at18.findings.filter((f) => f.code !== "WARN")).toEqual([]);
 });
 

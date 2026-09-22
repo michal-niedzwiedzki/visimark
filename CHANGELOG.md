@@ -4,6 +4,16 @@
 
 ### Added
 
+- **`IRR(flows)`** — the sixteenth builtin (issue #158). The rate at which a
+  cash-flow column has present value zero, using `NPV`'s period index: row 0
+  is not discounted. Exactly one sign change among the non-zero cells. No
+  guess. A written result declares its width, and that width is the rounding
+  of the root. A blank, an empty column, an all-zero column, or any other
+  number of sign changes, is `TYPE`. A root the 40-digit working precision
+  cannot pin is `PRECISION`. `ref` lists sixteen functions: `IRR`, `NPV`, and
+  `PMT` among them.
+  See [`irr-spec.md`](docs/vocab/irr-spec.md).
+
 - **`NPV(rate, flows)`** — the fifteenth builtin (issue #157). The present value
   of a cash-flow column at a per-period rate. Row 0 is not discounted; row `k`
   is divided by `(1 + rate) ^ k`. A zero rate equals the sum of the column, and

@@ -1101,9 +1101,9 @@ rate = IRR(Cash)
 test("IRR bracket ends disagree only when the declared width cannot choose", () => {
   expect(irrEndsDisagree(new Decimal("0.12044"), new Decimal("0.12045"), 4)).toBe(true);
   expect(irrEndsDisagree(new Decimal("0.120441"), new Decimal("0.120444"), 4)).toBe(false);
-  expect(irrEndsDisagree(new Decimal("0.1306623862918074852"), new Decimal("0.1306623862918074854"), 18)).toBe(
-    false,
-  );
+  expect(
+    irrEndsDisagree(new Decimal("0.1306623862918074852"), new Decimal("0.1306623862918074854"), 18),
+  ).toBe(false);
 });
 
 test("IRR refuses empty, blank, zero, and the wrong number of sign changes", () => {

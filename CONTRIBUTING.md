@@ -10,7 +10,7 @@ work.
 
 ## The design is deliberately small
 
-VisiMark ships **fifteen functions and a fixed operator set**. That is not a
+VisiMark ships **sixteen functions and a fixed operator set**. That is not a
 gap waiting to be filled. A document's numbers must depend on its own text and
 the version of VisiMark reading it, and on nothing else — no locale, no clock,
 no network, no config file, no plugins — because a number you cannot recompute
