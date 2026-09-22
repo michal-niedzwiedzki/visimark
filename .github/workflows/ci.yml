@@ -23,8 +23,8 @@ jobs:
           bun-version: latest
       - run: bun install --frozen-lockfile
 
-      # Nine files/fields carry the version and all nine must agree. The four
-      # manifests have to match because one tag publishes all of them, and a
+      # Nine files/fields carry the version and all nine must agree. The five
+      # package manifests have to match because one tag publishes all of them, and a
       # mismatch ships a release under the wrong number or fails a leg midway
       # with the others already out. action.yml joins them because its `version`
       # default is what a consumer's `npx` actually installs: leave it behind

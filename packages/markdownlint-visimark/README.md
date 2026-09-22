@@ -30,9 +30,9 @@ a `markdownlint-cli2` one, and at the top level it is silently ignored.
 
 ```console
 $ npx markdownlint-cli2 "docs/**/*.md"
-docs/quote.md:12 error visimark-assert An assert statement evaluated false [assert spent <= budget: 5 <= 1 is false]
+docs/quote.md:7 error visimark-assert An `assert` statement evaluated false [assert spent <= budget: 5 <= 1 is false]
 
-Summary: 1 error(s)
+Summary: 1 issue in 1 file
 $ echo $?
 1
 ```

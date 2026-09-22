@@ -29,7 +29,39 @@ function collectHtml(tokens: readonly MicromarkToken[], into: MicromarkToken[]):
  * dot — so writing each token's text back over its own span restores the source
  * byte for byte, and every later span stays valid.
  */
+/**
+ * One entry, keyed on the `lines` array's identity. `markdownlint` freezes that
+ * array once per document and spreads the same reference into each rule's
+ * `params`, so all seventeen rules for one document share a key — the same
+ * shape as the `analyze()` cache in `findings.ts`, one layer down. Without it
+ * the seventeen rules each rebuild the source, which on a document with two
+ * thousand prose anchors is most of the run's wall time.
+ */
+let memo: { lines: readonly string[]; source: string } | undefined;
+
+/** Real reconstructions, for the test that pins the one-rebuild property. */
+let reconstructions = 0;
+
 export function sourceFrom(params: RuleParams): string {
+  if (memo?.lines === params.lines) return memo.source;
+  const source = rebuild(params);
+  memo = { lines: params.lines, source };
+  return source;
+}
+
+/** Test-only. Not re-exported from the package root, so it is not published surface. */
+export function reconstructCount(): number {
+  return reconstructions;
+}
+
+/** Test-only. */
+export function resetSourceCache(): void {
+  memo = undefined;
+  reconstructions = 0;
+}
+
+function rebuild(params: RuleParams): string {
+  reconstructions += 1;
   const source = params.lines.join("\n");
   const html: MicromarkToken[] = [];
   collectHtml(params.parsers?.micromark?.tokens ?? [], html);
@@ -42,7 +74,12 @@ export function sourceFrom(params: RuleParams): string {
     offset += line.length + 1; // the "\n" the join puts back
   }
 
-  let out = source;
+  // Built as segments and joined once. Splicing each comment into a growing
+  // string copies the whole document per comment, which is quadratic in the
+  // number of anchors — and an anchor-heavy document is exactly the case this
+  // code exists for.
+  const parts: string[] = [];
+  let cursor = 0;
   for (const token of html) {
     const from = lineStart[token.startLine - 1];
     const to = lineStart[token.endLine - 1];
@@ -51,8 +88,12 @@ export function sourceFrom(params: RuleParams): string {
     const end = to + token.endColumn - 1;
     // Length-preserving is the invariant that makes this safe. If a future
     // markdownlint breaks it, leave the span alone rather than corrupt offsets.
-    if (end < start || token.text.length !== end - start) continue;
-    out = out.slice(0, start) + token.text + out.slice(end);
+    // A CRLF document's multi-line comment lands here too: micromark's text
+    // keeps the \r that `lines.join("\n")` dropped, so the lengths disagree.
+    if (start < cursor || end < start || token.text.length !== end - start) continue;
+    parts.push(source.slice(cursor, start), token.text);
+    cursor = end;
   }
-  return out;
+  parts.push(source.slice(cursor));
+  return parts.join("");
 }

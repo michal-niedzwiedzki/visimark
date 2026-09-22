@@ -3,6 +3,8 @@ import { expect, test } from "bun:test";
 import { lint } from "markdownlint/promise";
 import rules from "../src/index.js";
 import recommended from "../recommended.json" with { type: "json" };
+import { parseCount, resetFindingsCache } from "../src/findings.js";
+import { reconstructCount, resetSourceCache } from "../src/source.js";
 
 type LintConfig = NonNullable<Parameters<typeof lint>[0]>["config"];
 
@@ -248,4 +250,17 @@ test("the drift invoice reports eighteen violations: check's 26 less the folded 
     rule: "visimark-stale",
     detail: "lines.net_total: stored 23300.00 ≠ computed 25380.00 (SUM(Net))",
   });
+});
+
+test("seventeen rules cost one analyze() and one source reconstruction per document", async () => {
+  // Through the real parser, not a hand-built params. The plan's one-parse
+  // property has to hold for the reconstruction too: `analyze()` was already
+  // memoised, but rebuilding the source from the token stream seventeen times
+  // is the same redundant work moved one layer down, and it is super-linear in
+  // the number of HTML comments.
+  resetFindingsCache();
+  resetSourceCache();
+  await run({ anchored });
+  expect(parseCount()).toBe(1);
+  expect(reconstructCount()).toBe(1);
 });
