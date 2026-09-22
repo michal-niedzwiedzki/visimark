@@ -47,6 +47,7 @@ The options each command accepts, and nothing else:
 |---|---|---|
 | `--json` | flag | `check`, `fmt`, `infer`, `eval`, `explain`, `ref` |
 | `--fix-dates` | flag | `fmt` |
+| `--no-artifacts` | flag | `fmt` |
 | `--write` | flag | `infer` |
 | `--get NAME` | value | `eval` |
 | `--scenario FILE` (`-` is stdin) | value | `eval` |
@@ -124,6 +125,7 @@ Each row's stdout is empty in text mode.
 | `check invoice.md --jsonn` | ``visimark: unknown option --jsonn — did you mean `--json`?`` | `2` |
 | `check invoice.md --jsonn --json` | same line; stdout is the `USAGE` envelope | `2` |
 | `check drift.md --fix-dates` | `visimark: --fix-dates is only valid with fmt` | `2` |
+| `check drift.md --no-artifacts` | `visimark: --no-artifacts is only valid with fmt` | `2` |
 | `fmt invoice.md --write` | `visimark: --write is only valid with infer` | `2` |
 | `check invoice.md --get vat` | `visimark: --get is only valid with eval` | `2` |
 | `check invoice.md --scenario s.json` | `visimark: --scenario is only valid with eval` | `2` |

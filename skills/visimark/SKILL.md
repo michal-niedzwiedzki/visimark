@@ -114,12 +114,23 @@ later grows rules is reported too, so the marker cannot outlive its truth.
 ```bash
 visimark check FILE...                # read-only; exit 1 if anything disagrees,
                                        # or if a table has no rules at all
-visimark fmt   FILE... [--fix-dates]  # rewrite computed cells and anchors
+visimark fmt   FILE... [--fix-dates] [--no-artifacts]
+                                       # rewrite computed cells and anchors;
+                                       # --no-artifacts declines the chart SVG
+                                       # writes, and nothing else
 visimark infer FILE... [--write]      # propose rules for a document with none
 visimark eval  FILE [--scenario FILE|-] [--get NAME] [--json]
 visimark explain FILE [#sheet]        # rules and evaluation order
 visimark ref   [NAME] [--json]        # what a builtin function does; reads no file
 ```
+
+`fmt` writes two kinds of thing: it splices the document you named, and it
+writes whole SVG files at paths that document derives. Reach for
+`--no-artifacts` when you must not write files the user did not name — a
+read-only checkout, a sandbox, or a run whose point is to diff the result
+rather than keep it. It declines the write, never the verdict: `check` still
+reports every missing or stale chart as `STALE` and still exits `1`, so it is
+not a way to make a failing check pass.
 
 **Do not guess a function's behaviour.** `visimark ref NAME` prints its
 signature, parameters, return type, errors and worked examples; bare
