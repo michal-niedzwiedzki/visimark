@@ -759,3 +759,100 @@ instalment precision 2 = PMT(0.01, 12)
   const t = run(src).findings.find((f) => f.code === "TYPE");
   expect(t?.message).toBe("PMT() takes 3 arguments, got 2");
 });
+
+const npvSheet = (rule: string, anchor: string) => `
+The present value is **${anchor}**<!--vmark=t.present-->.
+
+| Cash |
+|-----:|
+| -48000.00 |
+|  20000.00 |
+|  20000.00 |
+|  20000.00 |
+
+\`\`\`vmark #t
+${rule}
+\`\`\`
+`;
+
+test("NPV at 8% anchored 3541.94 with a declared width is clean", () => {
+  const r = run(npvSheet("present precision 2 = NPV(0.08, Cash)", "3541.94"));
+  expect(r.findings.filter((f) => f.code !== "WARN")).toEqual([]);
+  const small = `
+The present value is **-5.26**<!--vmark=t.present-->.
+
+| Cash |
+|-----:|
+| -1000.00 |
+|   400.00 |
+|   400.00 |
+|   400.00 |
+
+\`\`\`vmark #t
+present precision 2 = NPV(0.10, Cash)
+\`\`\`
+`;
+  expect(run(small).findings.filter((f) => f.code !== "WARN")).toEqual([]);
+});
+
+test("NPV anchored at the issue's 6000.00 is STALE, computed 3541.94", () => {
+  const r = run(npvSheet("present precision 2 = NPV(0.08, Cash)", "6000.00"));
+  const stale = r.findings.filter((f) => f.code === "STALE" && !f.anchorGroup);
+  expect(stale).toHaveLength(1);
+  expect(stale[0]!.computed).toBe("3541.94");
+});
+
+test("an anchored NPV with no declared width is PRECISION, and rate zero is too", () => {
+  const missing = run(npvSheet("present = NPV(0.08, Cash)", "3541.94"));
+  const prec = missing.findings.filter((f) => f.code === "PRECISION");
+  expect(prec).toHaveLength(1);
+  expect(prec[0]!.raw).toBe("NPV(0.08, Cash)");
+
+  const zero = run(npvSheet("present = NPV(0, Cash)", "12000.00"));
+  expect(zero.findings.filter((f) => f.code === "PRECISION")).toHaveLength(1);
+
+  const declared = run(npvSheet("present precision 2 = NPV(0, Cash)", "12000.00"));
+  expect(declared.findings.filter((f) => f.code !== "WARN")).toEqual([]);
+});
+
+test("an unanchored NPV is not PRECISION, and ROUND derives the width", () => {
+  const raw = `
+| Cash |
+|-----:|
+| -48000.00 |
+|  20000.00 |
+|  20000.00 |
+|  20000.00 |
+
+\`\`\`vmark #t
+raw = NPV(0.08, Cash)
+shown precision 2 = ROUND(raw, 2)
+\`\`\`
+
+**3541.94**<!--vmark=t.shown-->
+`;
+  const r = run(raw);
+  expect(r.findings.filter((f) => f.code !== "WARN")).toEqual([]);
+});
+
+test("a blank cell is TYPE, and the assertion is only the upstream NOTE", () => {
+  const src = `
+| Cash |
+|-----:|
+| -48000.00 |
+|  |
+|  20000.00 |
+
+\`\`\`vmark #t
+present precision 2 = NPV(0.08, Cash)
+assert present > 0
+\`\`\`
+`;
+  const r = run(src);
+  expect(r.findings.filter((f) => f.code === "TYPE").map((f) => f.message)).toEqual([
+    "NPV expects a number",
+  ]);
+  expect(r.findings.filter((f) => f.code === "NOTE").map((f) => f.message)).toEqual([
+    "1 assertion not verified (upstream errors)",
+  ]);
+});
