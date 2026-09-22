@@ -37,6 +37,7 @@ export const FUNCTION_TABLE = {
   AVG: { kind: "reduce", arity: 1, column: 0 },
   COUNT: { kind: "reduce", arity: 1, column: 0 },
   NPV: { kind: "reduce", arity: 2, column: 1 },
+  IRR: { kind: "reduce", arity: 1, column: 0 },
   // maps: scalars in, one scalar out
   ROUND: { kind: "map", arity: 2 },
   ABS: { kind: "map", arity: 1 },

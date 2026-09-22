@@ -10,6 +10,13 @@ export interface EvalEnv {
   vector(ref: Ref): Value[];
 }
 
+const irrBands = new WeakMap<Decimal, { lo: Decimal; hi: Decimal }>();
+
+/** The bracket `IRR` isolated, when the returned decimal is not an exact root. */
+export function irrBand(d: Decimal): { lo: Decimal; hi: Decimal } | undefined {
+  return irrBands.get(d);
+}
+
 export function evalExpr(expr: Expr, env: EvalEnv): Value {
   switch (expr.type) {
     case "num":
@@ -126,6 +133,7 @@ function evalCall(expr: Extract<Expr, { type: "call" }>, env: EvalEnv): Value {
       const rate = evalExpr(args[0]!, env);
       return npv(rate, env.vector(arg));
     }
+    if (name === "IRR") return irr(env.vector(arg));
     return aggregate(name, env.vector(arg));
   }
 
@@ -194,6 +202,68 @@ function evalCall(expr: Extract<Expr, { type: "call" }>, env: EvalEnv): Value {
     }
     default:
       throw new EvalError(`unknown function \`${name}\``);
+  }
+}
+
+function irr(vec: Value[]): Value {
+  if (vec.length === 0) throw new EvalError("IRR() of an empty column");
+  const flows = vec.map((v) => asNum(v, "IRR"));
+  if (flows.every((f) => f.isZero())) throw new EvalError("IRR() of an all-zero column");
+  let changes = 0;
+  let prev: Decimal | null = null;
+  for (const f of flows) {
+    if (f.isZero()) continue;
+    if (prev !== null && prev.isNegative() !== f.isNegative()) changes++;
+    prev = f;
+  }
+  if (changes === 0) throw new EvalError("IRR needs one sign change");
+  if (changes > 1) throw new EvalError("IRR has more than one sign change");
+
+  const sum = flows.reduce((acc, f) => acc.plus(f), new Decimal(0));
+  if (sum.isZero()) return num(new Decimal(0));
+
+  const npvAt = (rate: Decimal): Decimal => {
+    let s = new Decimal(0);
+    const base = rate.plus(1);
+    for (let k = 0; k < flows.length; k++) s = s.plus(flows[k]!.div(base.pow(k)));
+    return s;
+  };
+  const sign = (rate: Decimal): number => {
+    const v = npvAt(rate);
+    if (v.isZero()) return 0;
+    return v.isNeg() ? -1 : 1;
+  };
+  let lo = new Decimal(-1).plus(new Decimal(10).pow(-30));
+  let hi = new Decimal(1);
+  const sLo = sign(lo);
+  if (sLo === 0) return num(lo);
+  let guard = 0;
+  while (sign(hi) === sLo && guard < 200) {
+    hi = hi.times(2).plus(1);
+    guard++;
+  }
+  if (sign(hi) === 0) return num(hi);
+  if (sign(hi) === sLo) throw new EvalError("IRR did not determine a rate at precision 0");
+  for (let i = 0; i < 400; i++) {
+    const mid = lo.plus(hi).div(2);
+    const sm = sign(mid);
+    if (sm === 0) return num(snap(mid));
+    if (sm === sLo) lo = mid;
+    else hi = mid;
+    if (hi.minus(lo).lt(new Decimal(10).pow(-40))) break;
+  }
+  const mid = lo.plus(hi).div(2);
+  const snapped = snap(mid);
+  if (npvAt(snapped).isZero()) return num(snapped);
+  irrBands.set(mid, { lo, hi });
+  return num(mid);
+
+  function snap(mid: Decimal): Decimal {
+    for (let p = 0; p <= 20; p++) {
+      const c = mid.toDecimalPlaces(p, Decimal.ROUND_HALF_UP);
+      if (c.gt(-1) && npvAt(c).isZero()) return c.isZero() ? new Decimal(0) : c;
+    }
+    return mid;
   }
 }
 

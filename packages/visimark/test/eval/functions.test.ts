@@ -43,6 +43,7 @@ test("every builtin declares a kind and an arity", () => {
     "EOMONTH",
     "FLOOR",
     "IF",
+    "IRR",
     "MAX",
     "MIN",
     "MOD",
@@ -65,7 +66,7 @@ test("the reduces are exactly the aggregates", () => {
     .filter(([, s]) => s.kind === "reduce")
     .map(([n]) => n)
     .sort();
-  expect(reduces).toEqual(["AVG", "COUNT", "MAX", "MIN", "NPV", "SUM"]);
+  expect(reduces).toEqual(["AVG", "COUNT", "IRR", "MAX", "MIN", "NPV", "SUM"]);
   expect(isReduce("SUM")).toBe(true);
   expect(isReduce("ROUND")).toBe(false);
   expect(isReduce("NOPE")).toBe(false);
@@ -596,7 +597,7 @@ test("the function table and the exported map agree", () => {
   const fromTable = Object.keys(FUNCTION_TABLE).sort();
   const fromMap = [...FUNCTIONS.keys()].sort();
   expect(fromMap).toEqual(fromTable);
-  expect(fromTable).toHaveLength(15);
+  expect(fromTable).toHaveLength(16);
 });
 
 // ---- prose notation for unary vocabulary (#64) ------------------------------
@@ -965,4 +966,145 @@ assert present == 3
   expect(r.findings.filter((f) => f.code === "NOTE").map((f) => f.message)).toEqual([
     "1 assertion not verified (upstream errors)",
   ]);
+});
+
+// ---- IRR ------------------------------------------------------------
+
+const irrDoc = (rule: string, rows: string) => `
+| Cash |
+|-----:|
+${rows}
+\`\`\`vmark #t
+rate = ${rule}
+\`\`\`
+`;
+
+test("IRR is a reduce of arity 1 whose column is argument 0", () => {
+  expect(FUNCTIONS.get("IRR")).toEqual({ kind: "reduce", arity: 1, column: 0 });
+  expect(FUNCTIONS.get("NPV")).toEqual({ kind: "reduce", arity: 2, column: 1 });
+  expect(isReduce("IRR")).toBe(true);
+  expect(callProblem("IRR", [{ type: "ref" }])).toBeNull();
+  expect(callProblem("IRR", [])).toEqual({ kind: "arity", expected: 1, got: 0 });
+  expect(callProblem("IRR", [{ type: "ref" }, { type: "num" }])).toEqual({
+    kind: "arity",
+    expected: 1,
+    got: 2,
+  });
+  expect(callProblem("IRR", [{ type: "binary" }])).toEqual({ kind: "shape" });
+  expect(callProblem("IRR", [{ type: "num" }])).toEqual({ kind: "shape" });
+});
+
+test("IRR exact roots and the rounded motivating rates", () => {
+  const src = `
+| Cash |
+|-----:|
+| -48000 |
+|  20000 |
+|  20000 |
+|  20000 |
+
+\`\`\`vmark #press
+rate = IRR(Cash)
+\`\`\`
+
+| Cash |
+|-----:|
+| -1000 |
+|   600 |
+|   600 |
+
+\`\`\`vmark #two
+rate = IRR(Cash)
+\`\`\`
+
+| Cash |
+|-----:|
+| -100 |
+|  110 |
+
+\`\`\`vmark #tenth
+rate = IRR(Cash)
+\`\`\`
+
+| Cash |
+|-----:|
+| -100 |
+|    0 |
+|  121 |
+
+\`\`\`vmark #mid
+rate = IRR(Cash)
+\`\`\`
+
+| Cash |
+|-----:|
+| -200 |
+|  100 |
+|  100 |
+
+\`\`\`vmark #zero
+rate = IRR(Cash)
+\`\`\`
+
+| Cash |
+|-----:|
+| -100 |
+|    0 |
+|   60 |
+
+\`\`\`vmark #neg
+rate = IRR(Cash)
+\`\`\`
+
+| Cash |
+|-----:|
+|  100 |
+|  -40 |
+|  -40 |
+
+\`\`\`vmark #first
+rate = IRR(Cash)
+\`\`\`
+
+| Cash |
+|-----:|
+| -100 PLN |
+|  110 PLN |
+
+\`\`\`vmark #unit
+rate = IRR(Cash)
+\`\`\`
+`;
+  const r = run(src);
+  expect(r.findings.filter((f) => f.code !== "WARN")).toEqual([]);
+  const str = (id: string) => {
+    const v = r.values.get(id);
+    if (!v || v.t !== "num") throw new Error(id);
+    return v.d;
+  };
+  const places = (id: string, n: number) => str(id).toDecimalPlaces(n).toFixed(n);
+  expect(places("press.rate", 4)).toBe("0.1204");
+  expect(places("press.rate", 2)).toBe("0.12");
+  expect(places("two.rate", 4)).toBe("0.1307");
+  expect(places("two.rate", 2)).toBe("0.13");
+  expect(places("two.rate", 38)).toBe("0.13066238629180748525842627449074920102");
+  expect(str("tenth.rate").toString()).toBe("0.1");
+  expect(str("mid.rate").toString()).toBe("0.1");
+  expect(str("zero.rate").toString()).toBe("0");
+  expect(places("neg.rate", 4)).toBe("-0.2254");
+  expect(places("first.rate", 4)).toBe("-0.1367");
+  expect(str("unit.rate").toString()).toBe("0.1");
+});
+
+test("IRR refuses empty, blank, zero, and the wrong number of sign changes", () => {
+  const msg = (rows: string) => typeFindings(run(irrDoc("IRR(Cash)", rows)).findings)[0]?.message;
+  expect(msg("")).toBe("IRR() of an empty column");
+  expect(msg("| 10 |\n|    |\n|  5 |")).toBe("IRR expects a number");
+  expect(msg("| 10 |\n| no |\n|  5 |")).toBe("IRR expects a number");
+  expect(msg("| 10 |\n| 2026-01-01 |")).toBe("IRR expects a number");
+  expect(msg("| 0 |\n| 0 |\n| 0 |")).toBe("IRR() of an all-zero column");
+  expect(msg("| 0 |")).toBe("IRR() of an all-zero column");
+  expect(msg("| -1000 |\n| -600 |")).toBe("IRR needs one sign change");
+  expect(msg("| 100 |")).toBe("IRR needs one sign change");
+  expect(msg("| -100 |\n|  230 |\n| -132 |")).toBe("IRR has more than one sign change");
 });

@@ -195,9 +195,9 @@ export function dependencies(model: DocModel, binding: Binding): DepInfo {
         // A well-formed reduce gates only its column parameter.
         const spec = FUNCTIONS.get(node.name);
         if (spec?.kind === "reduce") {
-          // Only NPV reports a scalar in the column slot. The older reduces
+          // NPV and IRR report a scalar in the column slot. The older reduces
           // still fall through Unevaluable with no finding; the spec keeps that.
-          if (!problem && node.name === "NPV") {
+          if (!problem && (node.name === "NPV" || node.name === "IRR")) {
             const col = node.args[spec.column];
             if (col?.type === "ref") {
               const res = resolve(model, binding.sheetId, col);
