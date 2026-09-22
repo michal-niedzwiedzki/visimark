@@ -275,3 +275,46 @@ test("check passes the prose-notation fixture, and explain echoes the glyphs as 
   expect(explain.out()).toContain("mix = ⌊|a - b| * 3⌋");
   expect(explain.out()).toContain("rt = √(b + 6)");
 });
+
+const percentFixture = fileURLToPath(
+  new URL("../fixtures/percent-display-sigil.md", import.meta.url),
+);
+
+test("check passes the percent-display fixture", async () => {
+  const c = capture();
+  expect(await runCli(["check", percentFixture], c.io)).toBe(0);
+  expect(c.out()).toContain("0 problems");
+});
+
+test("eval --json on the percent-display fixture reports stored numbers", async () => {
+  const c = capture();
+  expect(await runCli(["eval", percentFixture, "--json"], c.io)).toBe(0);
+  const j = JSON.parse(c.out()) as { values: Record<string, string> };
+  expect(j.values["s.margin"]).toBe("0.4026");
+  expect(j.values["s.loss"]).toBe("-0.05");
+  expect(j.values["s.over"]).toBe("1.5");
+});
+
+test("fmt repairs a sabotaged percent span and is idempotent", async () => {
+  const src = readFileSync(percentFixture, "utf8").replace("**40.26%**", "**41.55%**");
+  const dir = mkdtempSync(join(tmpdir(), "vm-pct-"));
+  const path = join(dir, "p.md");
+  writeFileSync(path, src);
+  const check1 = capture();
+  expect(await runCli(["check", path], check1.io)).toBe(1);
+  expect(check1.out()).toContain("41.55% ≠ 40.26%");
+  const fmt1 = capture();
+  expect(await runCli(["fmt", path], fmt1.io)).toBe(0);
+  expect(readFileSync(path, "utf8")).toContain("**40.26%**<!--vmark=s.margin%-->");
+  const fmt2 = capture();
+  expect(await runCli(["fmt", path], fmt2.io)).toBe(0);
+  expect(fmt2.out()).toContain("unchanged");
+  const check2 = capture();
+  expect(await runCli(["check", path], check2.io)).toBe(0);
+});
+
+test("explain on a percent-display document does not mention the sigil", async () => {
+  const c = capture();
+  expect(await runCli(["explain", percentFixture], c.io)).toBe(0);
+  expect(c.out()).not.toContain("margin%");
+});

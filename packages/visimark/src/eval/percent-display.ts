@@ -1,6 +1,12 @@
 import type { Value } from "./value.js";
 import { roundToPlaces } from "./value.js";
 
+export const PERCENT_TEXT_RE = /^(-?)(\d+(?:\.\d+)?)%$/;
+
+export function isPercentText(text: string): boolean {
+  return PERCENT_TEXT_RE.test(text.trim());
+}
+
 /**
  * Print a stored ratio as a percent: × 100 at precision − 2, with a trailing
  * `%` and a leading minus when the stored value is negative.

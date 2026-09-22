@@ -1,7 +1,7 @@
 import { locate } from "../parse/document.js";
 import { build } from "../model/build.js";
 import { check, type CheckResult, matchesStored, roundValue, showValue } from "../eval/check.js";
-import { percentDisplay } from "../eval/percent-display.js";
+import { isPercentText, percentDisplay } from "../eval/percent-display.js";
 import type { DocumentFile } from "../fs/reader.js";
 import type { DocModel, Finding } from "../model/types.js";
 import { applyUnit } from "../eval/units.js";
@@ -115,7 +115,11 @@ export function planFmt(model: DocModel, result: CheckResult, opts: FmtOptions):
     const wanted = a.percent
       ? percentDisplay(rounded, prec)
       : applyUnit(showValue(rounded, prec), unit);
-    if (current !== wanted) {
+    const rewrite =
+      a.percent || isPercentText(current)
+        ? current !== wanted
+        : !matchesStored(rounded, current, prec);
+    if (rewrite) {
       edits.push({
         start: a.value.start,
         end: a.value.end,
