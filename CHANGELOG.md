@@ -4,6 +4,18 @@
 
 ### Added
 
+- **`markdownlint-rule-visimark`: report an `analyze()` failure once, not
+  seventeen times** (issue #173). A bug in the engine, not a document defect,
+  used to surface as seventeen copies of the same stack trace — one per rule
+  — because a thrown `analyze()` left the shared cache unfilled. A new
+  eighteenth rule, `visimark-engine-error`, is now the one place it is
+  reported, on line 1, and the cache holds the failure the same way it holds
+  a success. Also corrects the package's doc comment, which claimed its
+  HTML-comment restoration is byte-for-byte: it is not, for a comment inside
+  a fenced/indented code block or an inline code span, or for a CRLF
+  document's multi-line comment — both harmless today, now tested.
+  See [`pin-what-the-markdownlint-rule-restores-spec.md`](docs/design/pin-what-the-markdownlint-rule-restores-spec.md).
+
 - **`fmt --no-artifacts`** (issue #168). Declines the write of generated
   artifacts — the SVGs a `chart` statement declares — and nothing else.
   Computed cells, anchored values and import stamps are still spliced, and

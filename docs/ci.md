@@ -1201,10 +1201,12 @@ $ echo $?
 ```
 
 There is one rule per finding kind, named after it — `visimark-stale`,
-`visimark-assert`, `visimark-coverage`, and so on for all seventeen — which are
-the same identifiers the `remark` plugin in chapter 24 reports as its `ruleId`.
-That gives three switches, all `markdownlint`'s own rather than anything this
-package invented:
+`visimark-assert`, `visimark-coverage`, and so on for all seventeen, plus an
+eighteenth, `visimark-engine-error`, that reports once if `visimark` itself
+fails to analyse the document rather than finding something wrong with it.
+The seventeen finding-kind rules are the same identifiers the `remark` plugin
+in chapter 24 reports as its `ruleId`. That gives three switches, all
+`markdownlint`'s own rather than anything this package invented:
 
 | `config` entry | Effect |
 |---|---|

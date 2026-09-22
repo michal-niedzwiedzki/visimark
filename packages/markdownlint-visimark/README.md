@@ -48,6 +48,11 @@ One rule per VisiMark finding kind, named after it: `visimark-stale`,
 [`remark-lint-visimark`](https://www.npmjs.com/package/remark-lint-visimark)
 reports as its `ruleId`.
 
+An eighteenth rule, `visimark-engine-error`, is not a finding kind: it
+reports once, on line 1, if `visimark` itself fails to analyse the document —
+a bug, not something wrong with your Markdown. It is never switched off by
+`recommended`.
+
 Three levers, all `markdownlint`'s own:
 
 | `config` entry | Effect |
