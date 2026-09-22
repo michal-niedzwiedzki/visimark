@@ -84,17 +84,17 @@ and does not touch it.
   `.d.ts` resolution never reaches a devDependency. `markdownlint` and
   `markdownlint-cli2` are devDependencies, used by the tests to drive a real
   lint run.
-- **Default export:** an **array of rule objects, one per `FindingCode`** (§2.3).
-- **A second export, `./recommended`:** a `markdownlint` config fragment (§2.4).
+- **Default export:** an **array of rule objects, one per `FindingCode`** ([§2.3](#23-one-rule-per-finding-code)).
+- **A second export, `./recommended`:** a `markdownlint` config fragment ([§2.4](#24-recommended-and-the-severity-question)).
 - **Dependency on the engine.** Exactly as #152: this package is published
   externally, so `workspace:*` is not a valid specifier. `package.json`
   declares `"dependencies": { "visimark": "0.1.7" }`, exact-pinned to the
   engine release it was built against and bumped in the same release commit as
-  every other version-carrying file (§5).
+  every other version-carrying file ([§5](#5-compatibility)).
 - **Engine surface used:** `analyze`, `lineOf`, `describeFinding` — all three
   already public on `packages/visimark/src/index.ts`, the last of them added by
   #152. `isProblem` and `ERROR_CODES` are **not** used; the severity question
-  is answered by configuration instead (§2.4). **No new engine export.**
+  is answered by configuration instead ([§2.4](#24-recommended-and-the-severity-question)). **No new engine export.**
 
 ### 2.2 The integration shape, and why there is only one
 
@@ -151,11 +151,11 @@ member of `FindingCode` (`packages/visimark/src/model/types.ts`):
 | Field | Value |
 |---|---|
 | `names` | `` [`visimark-${code.toLowerCase()}`] `` — `visimark-stale`, `visimark-assert`, `visimark-coverage`, … |
-| `description` | the code's **Meaning** cell from [§10](../visimark-design.md#10-error-taxonomy), verbatim, sentence-cased and with its cross-reference links stripped (§2.5) |
+| `description` | the code's **Meaning** cell from [§10](../visimark-design.md#10-error-taxonomy), verbatim, sentence-cased and with its cross-reference links stripped ([§2.5](#25-rule-descriptions)) |
 | `tags` | `["visimark"]`, plus `"visimark-advisory"` for `WARN` and `NOTE` |
-| `parser` | `"micromark"` — see the correction in §2.2; `"none"` cannot see inside an HTML comment |
+| `parser` | `"micromark"` — see the correction in [§2.2](#22-the-integration-shape-and-why-there-is-only-one); `"none"` cannot see inside an HTML comment |
 | `information` | `new URL("https://github.com/michal-niedzwiedzki/visimark/blob/master/docs/visimark-design.md#10-error-taxonomy")` — a `URL` **instance**, not a string; `markdownlint` v0.41.1 throws on a string here, confirmed by running it |
-| `function` | emits this code's findings (§3) |
+| `function` | emits this code's findings ([§3](#3-the-machine-contract)) |
 
 Per-code ids rather than one `visimark` rule, for three reasons:
 
@@ -262,7 +262,7 @@ package does not author a second copy of it that could drift:
 description above is taken from the two messages `emitCoverage`
 (`packages/visimark/src/eval/check.ts`) actually emits. Adding the missing
 `COVERAGE` row to the taxonomy table is part of this spec's documentation task
-(§7) — the gap is pre-existing, and this package is what surfaced it.
+([§7](#7-documentation-to-update)) — the gap is pre-existing, and this package is what surfaced it.
 
 ## 3. The machine contract
 
@@ -290,7 +290,7 @@ Three deliberate omissions, each closed for this version rather than left open:
   release. `range` is optional in `onError` and its absence degrades nothing —
   `markdownlint` simply reports the line, which is what most of its own
   built-in rules do.
-- **`fixInfo`.** §8.
+- **`fixInfo`.** [§8](#8-non-goals).
 - **`context`.** `markdownlint`'s optional "surrounding text" field. Every
   `describeFinding` string already names the sheet, binding and row label, so a
   `context` would repeat what `detail` says.
@@ -298,7 +298,7 @@ Three deliberate omissions, each closed for this version rather than left open:
 The anchor-group rollup is skipped because it is a *summary* of stale prose
 anchors derived from cells whose own `STALE` findings do have spans and are
 reported. Reporting the summary at line 1 as well would double-count. The
-visible consequence is stated with numbers in §5.
+visible consequence is stated with numbers in [§5](#5-compatibility).
 
 ## 4. Behaviour table
 
@@ -322,13 +322,13 @@ These double as acceptance.
 | One code disabled | `docs/example-invoice-drift.md`, `"visimark-date": false` | the two `visimark-date` violations disappear; the rest stand | `1` |
 | All VisiMark rules off | any document, `"visimark": false` | no `visimark-*` violations; other rules unaffected | per other rules |
 | Seventeen rules, one parse | any document | `analyze()` called **once**; verified by instrumentation | — |
-| **A `no-formulas` marker** | a table under `<!--vmark:no-formulas-->` | no violation — the marker survives `markdownlint`'s comment blanking (§2.2) | `0` |
+| **A `no-formulas` marker** | a table under `<!--vmark:no-formulas-->` | no violation — the marker survives `markdownlint`'s comment blanking ([§2.2](#22-the-integration-shape-and-why-there-is-only-one)) | `0` |
 | **An anchor-bound scalar** | `docs/example-invoice-drift.md`'s `lines.net_total` | `drift.md:34 error visimark-stale ... [lines.net_total: stored 23300.00 ≠ computed 25380.00 (SUM(Net))]` | `1` |
 
 The full `docs/example-invoice-drift.md` run under `recommended` is **eighteen**
 violations — thirteen `STALE`, two `DATE`, and one each of `UNDEF`, `CYCLE` and
 `VECTOR`. The twelve first recorded here were the prototype's, taken before the
-comment-blanking correction in §2.2; the six it was missing are the scalar
+comment-blanking correction in [§2.2](#22-the-integration-shape-and-why-there-is-only-one); the six it was missing are the scalar
 totals on lines 34, 35, 36, 53, 64 and 65, each bound through a prose anchor.
 The twelve below are the subset that never depended on an anchor:
 
@@ -386,7 +386,7 @@ $ echo $?
   `visimark check docs/example-invoice-drift.md` prints `26 problems (21 stale,
   5 errors)`; the same document under `recommended` is `18 issues`. The
   difference is exactly the eight prose anchors folded into the skipped
-  anchor-group rollup (§3). `WARN` and `NOTE` are advice: `check` does not count
+  anchor-group rollup ([§3](#3-the-machine-contract)). `WARN` and `NOTE` are advice: `check` does not count
   them in that footer either, so the advisory tag changes which findings are
   *reported*, not this arithmetic. **The exit code agrees in every case**, which is the property a
   CI gate depends on; only the headline number differs, and `docs/ci.md` says
@@ -416,7 +416,7 @@ $ echo $?
   package needs nothing the engine does not already expose.
 
 Nothing about what a VisiMark *document* means changes. No new finding code, no
-new syntax, no widened taxonomy entry — the one taxonomy edit in §7 fills a
+new syntax, no widened taxonomy entry — the one taxonomy edit in [§7](#7-documentation-to-update) fills a
 pre-existing gap (`COVERAGE` has always been emitted and has never had a row),
 it does not add behaviour.
 
@@ -427,7 +427,7 @@ it does not add behaviour.
   `.markdownlint-cli2.jsonc` entry with `extends` **nested inside `config`**,
   the per-code rule names, the three config levers
   (`visimark-<code>`, `visimark-advisory`, `visimark`), what `recommended`
-  does and why, and the count-vs-`check` note from §5. It lands **inside
+  does and why, and the count-vs-`check` note from [§5](#5-compatibility). It lands **inside
   Part 6**, immediately before the `# Part 7 — Rolling it out` divider, which
   does not move; the existing chapters 25–27 renumber to 26–28. Confirmed
   against the working tree: the only cross-reference to a `ci.md` chapter
@@ -435,13 +435,13 @@ it does not add behaviour.
   (`docs/tutorial.md`'s "chapter 24/26/27" mentions are that document's own,
   independent numbering).
 - **`docs/visimark-design.md` [§10](../visimark-design.md#10-error-taxonomy)** —
-  add the missing `COVERAGE` row (meaning, and `Auto-fixable: no`), per §2.5.
+  add the missing `COVERAGE` row (meaning, and `Auto-fixable: no`), per [§2.5](#25-rule-descriptions).
 - **`docs/releasing.md`** — "Bump the version" step's file list gains
-  `packages/markdownlint-visimark/package.json` (§5).
+  `packages/markdownlint-visimark/package.json` ([§5](#5-compatibility)).
 - **`.github/workflows/ci.yml`** — the version-agreement step's comment and
-  extraction logic gain the eighth/ninth value (§5).
+  extraction logic gain the eighth/ninth value ([§5](#5-compatibility)).
 - **`.github/workflows/release.yml`** — the new publish leg, its entry in the
-  gate's leg-outcome loop, and its registry-presence retry (§5).
+  gate's leg-outcome loop, and its registry-presence retry ([§5](#5-compatibility)).
 - **`CHANGELOG.md`** — an `## Unreleased` → `### Added` entry.
 - **`README.md`** — the "In CI" section gains one sentence pointing at the new
   `docs/ci.md` chapter, the same weight the composite Action and the `remark`
@@ -462,14 +462,14 @@ it does not add behaviour.
   applies every rule's `fixInfo` automatically as part of a run. Wiring `fmt`
   into that path is its own decision, worth taking once report-only has shipped
   in both packages and it is clear whether consumers want it.
-- **No `range` (column highlight) and no `context`.** §3.
+- **No `range` (column highlight) and no `context`.** [§3](#3-the-machine-contract).
 - **No rule-options.** No rule reads `params.config` beyond `markdownlint`'s own
   enable/disable handling. Severity and selection are configuration, through
-  `markdownlint`'s existing per-rule and per-tag mechanisms (§2.4); there is
+  `markdownlint`'s existing per-rule and per-tag mechanisms ([§2.4](#24-recommended-and-the-severity-question)); there is
   nothing package-specific to configure.
 - **No engine entry point accepting a pre-parsed tree.** `markdownlint` has
-  none to offer (§2.2); the question does not arise here the way it did in #152.
-- **No shared package between this and `remark-lint-visimark`.** §6.
+  none to offer ([§2.2](#22-the-integration-shape-and-why-there-is-only-one)); the question does not arise here the way it did in #152.
+- **No shared package between this and `remark-lint-visimark`.** [§6](#6-interaction-with-the-rest-of-the-tooling).
 - **No `visimark` CLI, exit-code or `--json` change.**
 
 ## 9. Open questions
