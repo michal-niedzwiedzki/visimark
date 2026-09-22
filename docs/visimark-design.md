@@ -627,6 +627,7 @@ justifies the project.
 | `IMPORT` | a declared local import cannot be resolved: unstamped, missing file, malformed stamp, bad path, malformed CSV, or a column rule attempted on a read-only imported sheet ([§19](#19-declared-local-data-imports)) | no (except the stamp itself — see below) |
 | `WARN` | scalar defined and never read, or an alias declared and never used | no |
 | `NOTE` | finding suppressed by an upstream error | n/a |
+| `COVERAGE` | a table with no `vmark` rules, or a `no-formulas` marker on a document that has them | no |
 
 `fmt` repairs every `STALE` finding without asking, because those cells are
 outputs and the formula is the authority. It repairs none of the others,

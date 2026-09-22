@@ -129,6 +129,19 @@ jobs:
             npm publish --provenance --access public
           fi
 
+      - name: Publish the markdownlint rule to npm
+        id: markdownlint-rule
+        continue-on-error: true
+        working-directory: packages/markdownlint-visimark
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if npm view "markdownlint-rule-visimark@$ENGINE_VERSION" version >/dev/null 2>&1; then
+            echo "markdownlint-rule-visimark@$ENGINE_VERSION is already on npm; skipping."
+          else
+            npm publish --provenance --access public
+          fi
+
       - name: Package the extension
         id: package
         continue-on-error: true
@@ -252,17 +265,20 @@ jobs:
       # First, any leg that recorded a failure above fails the job here — that
       # is what buys the legs the right to continue past each other, and it is
       # why `continue-on-error` is not a softening. Second, ask all three
-      # registries whether the versions are actually there: the same "ask the
-      # registry, don't trust the exit code" discipline each leg uses, applied
-      # once at the end as an assertion rather than a branch, so a leg that
-      # exits 0 without publishing cannot pass for done.
+      # registries whether the versions are actually there — npm once per
+      # published package, since a gate that asks only about the engine lets a
+      # silently-empty plugin publish pass: the same "ask the registry, don't
+      # trust the exit code" discipline each leg uses, applied once at the end
+      # as an assertion rather than a branch, so a leg that exits 0 without
+      # publishing cannot pass for done.
       #
       # No `set -e`: every check below is explicitly tested and accumulated into
-      # `fail`, so one missing registry still reports the other two.
+      # `fail`, so one missing package or registry still reports the others.
       - name: every leg must have landed
         env:
           NPM_OUTCOME: ${{ steps.npm.outcome }}
           REMARK_PLUGIN_OUTCOME: ${{ steps.remark-plugin.outcome }}
+          MARKDOWNLINT_RULE_OUTCOME: ${{ steps.markdownlint-rule.outcome }}
           PACKAGE_OUTCOME: ${{ steps.package.outcome }}
           MARKETPLACE_OUTCOME: ${{ steps.marketplace.outcome }}
           OVSX_OUTCOME: ${{ steps.ovsx.outcome }}
@@ -278,6 +294,7 @@ jobs:
           for pair in \
             "Publish the engine to npm=$NPM_OUTCOME" \
             "Publish the remark plugin to npm=$REMARK_PLUGIN_OUTCOME" \
+            "Publish the markdownlint rule to npm=$MARKDOWNLINT_RULE_OUTCOME" \
             "Package the extension=$PACKAGE_OUTCOME" \
             "Publish to the VS Code Marketplace=$MARKETPLACE_OUTCOME" \
             "Publish to Open VSX=$OVSX_OUTCOME" \
@@ -311,6 +328,8 @@ jobs:
           }
 
           on_npm() { npm view "visimark@$ENGINE_VERSION" version >/dev/null 2>&1; }
+          on_npm_remark() { npm view "remark-lint-visimark@$ENGINE_VERSION" version >/dev/null 2>&1; }
+          on_npm_markdownlint() { npm view "markdownlint-rule-visimark@$ENGINE_VERSION" version >/dev/null 2>&1; }
           on_marketplace() {
             bunx @vscode/vsce show "$EXT_NS.$EXT_NAME" --json >/tmp/verify-marketplace.json 2>/dev/null || return 1
             node -e 'const fs=require("fs"); let d; try { d = JSON.parse(fs.readFileSync("/tmp/verify-marketplace.json","utf8")) } catch { process.exit(1) } process.exit((d.versions||[]).some(v => v.version === process.env.EXT_VERSION) ? 0 : 1)'
@@ -321,6 +340,20 @@ jobs:
             echo "npm has visimark@$ENGINE_VERSION."
           else
             echo "::error::npm still does not have visimark@$ENGINE_VERSION after ~10 minutes of retries — this is absence, not lag. Fix the npm leg and re-run this workflow; do not publish by hand (see docs/releasing.md)."
+            fail=1
+          fi
+
+          if retry on_npm_remark; then
+            echo "npm has remark-lint-visimark@$ENGINE_VERSION."
+          else
+            echo "::error::npm still does not have remark-lint-visimark@$ENGINE_VERSION after ~10 minutes of retries — this is absence, not lag. Fix the remark plugin leg and re-run this workflow; do not publish by hand (see docs/releasing.md)."
+            fail=1
+          fi
+
+          if retry on_npm_markdownlint; then
+            echo "npm has markdownlint-rule-visimark@$ENGINE_VERSION."
+          else
+            echo "::error::npm still does not have markdownlint-rule-visimark@$ENGINE_VERSION after ~10 minutes of retries — this is absence, not lag. Fix the markdownlint rule leg and re-run this workflow; do not publish by hand (see docs/releasing.md)."
             fail=1
           fi
 

@@ -328,6 +328,11 @@ A project already on `remark`/`remark-lint` adds the same checks with
 [`remark-lint-visimark`](https://www.npmjs.com/package/remark-lint-visimark)
 instead — see [`docs/ci.md` chapter 24](docs/ci.md#24-the-remarkunified-plugin).
 
+A project on [`markdownlint`](https://github.com/DavidAnson/markdownlint) adds
+them with
+[`markdownlint-rule-visimark`](https://www.npmjs.com/package/markdownlint-rule-visimark)
+— see [`docs/ci.md` chapter 25](docs/ci.md#25-the-markdownlint-custom-rule).
+
 ## Diffable by construction
 
 An `.xlsx` is a zip of XML: change one cell and code review can tell you the

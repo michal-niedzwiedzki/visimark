@@ -1162,9 +1162,77 @@ unavailable through it.
 
 ---
 
+## 25. The `markdownlint` custom rule
+
+A project already running
+[`markdownlint`](https://github.com/DavidAnson/markdownlint) or
+`markdownlint-cli2` gets the same findings in that run with
+`markdownlint-rule-visimark` — two entries in the config it already has:
+
+```jsonc
+{
+  "config": {
+    "extends": "markdownlint-rule-visimark/recommended",
+    "default": true
+  },
+  "customRules": ["markdownlint-rule-visimark"]
+}
+```
+
+`extends` goes **inside** `config`. It is a `markdownlint` config property, not
+a `markdownlint-cli2` one, and at the top level it is quietly ignored — the run
+then reports advisory findings you asked it not to.
+
+```console
+$ npx markdownlint-cli2 "docs/**/*.md"
+docs/quote.md:7 error visimark-assert An `assert` statement evaluated false [assert spent <= budget: 5 <= 1 is false]
+
+Summary: 1 issue in 1 file
+$ echo $?
+1
+```
+
+There is one rule per finding kind, named after it — `visimark-stale`,
+`visimark-assert`, `visimark-coverage`, and so on for all seventeen — which are
+the same identifiers the `remark` plugin in chapter 24 reports as its `ruleId`.
+That gives three switches, all `markdownlint`'s own rather than anything this
+package invented:
+
+| `config` entry | Effect |
+|---|---|
+| `"visimark-date": false` | one finding kind off |
+| `"visimark-advisory": false` | the advisory kinds (`WARN`, `NOTE`) off |
+| `"visimark": false` | every VisiMark rule off |
+
+`recommended` is the middle one of those, and nothing else:
+`{ "visimark-advisory": false }`. It exists because `markdownlint` has no
+non-fatal tier — every violation fails the run — while `check` does not fail on
+advisory findings. Without the fragment, a document `visimark check` passes
+with exit `0` fails `markdownlint-cli2` with exit `1`. Extending it gives you a
+run whose exit code agrees with `check`'s; not extending it gives you every
+finding, which is a reasonable choice too.
+
+One number will not match, by design. A stale cell with prose anchors bound to
+it produces one summary finding on top of the cell's own, and this package
+reports the cell rather than the summary, so anchors are not counted twice.
+`visimark check docs/example-invoice-drift.md` prints
+`26 problems (21 stale, 5 errors)` where the same document reports `18 issues`
+here — the difference is exactly the eight prose anchors folded into that
+summary. **The exit codes agree in every case**; the headline number is the only
+thing that differs, and the exit code is what a CI gate reads.
+
+Like the other entries in this part, it only ever runs `check`: it takes no
+options, does no autofix (`markdownlint-cli2 --fix` leaves these rules alone),
+reports a line but no column, and `fmt`, `infer`, `explain`, `eval` and
+`--json` are not reachable through it. See the package's own
+[README](https://github.com/michal-niedzwiedzki/visimark/tree/master/packages/markdownlint-visimark)
+for the full contract.
+
+---
+
 # Part 7 — Rolling it out
 
-## 25. Turning it on in a repository that already has documents
+## 26. Turning it on in a repository that already has documents
 
 Adding a blocking check to a repository full of unchecked documents will produce
 a wall of `COVERAGE` findings on the first run, and a strong urge to delete the
@@ -1214,7 +1282,7 @@ check: point it at the directory you have finished — `files: "quotes/**/*.md"`
 and widen it as you go. A narrow blocking check is worth more than a wide
 advisory one.
 
-## 26. Troubleshooting
+## 27. Troubleshooting
 
 | Symptom | Cause | Fix |
 |---|---|---|
@@ -1245,7 +1313,7 @@ environment variable, no network call and no clock, so a local run and a CI run
 on the same bytes give the same answer. If they differ, the bytes differ — check
 what your workflow actually checked out.
 
-## 27. The checklist
+## 28. The checklist
 
 The complete workflow, with everything this guide recommends:
 
