@@ -12,6 +12,12 @@
       "sourceType": "github",
       "skillPath": "SKILL.md",
       "computedHash": "0a4518725b506f6c83e65f2d6d87cb56fbc042ba92de5eecb1ef8b995ec69d70"
+    },
+    "using-git-worktrees": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "skillPath": "skills/using-git-worktrees/SKILL.md",
+      "computedHash": "48c8a1040e378e0cb7208107294e3afa9067b9370c3f33b49a443eb6b7528b0d"
     }
   }
 }
