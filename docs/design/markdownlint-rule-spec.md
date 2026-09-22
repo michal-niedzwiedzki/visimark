@@ -78,9 +78,12 @@ and does not touch it.
 - **npm name:** `markdownlint-rule-visimark` — `markdownlint`'s own documented
   naming convention for a custom rule package, which is what a consumer
   searching for one expects.
-- **No dependency on `markdownlint` itself.** A rule is a plain object; the
-  package imports nothing from `markdownlint` at runtime. `markdownlint-cli2`
-  is a devDependency, used by the tests to drive a real lint run.
+- **No runtime dependency on `markdownlint` itself.** A rule is a plain object;
+  the package imports nothing from `markdownlint` at runtime, and the rule-API
+  types it uses are declared structurally in `src/types.ts` so a consumer's
+  `.d.ts` resolution never reaches a devDependency. `markdownlint` and
+  `markdownlint-cli2` are devDependencies, used by the tests to drive a real
+  lint run.
 - **Default export:** an **array of rule objects, one per `FindingCode`** (§2.3).
 - **A second export, `./recommended`:** a `markdownlint` config fragment (§2.4).
 - **Dependency on the engine.** Exactly as #152: this package is published
@@ -100,12 +103,31 @@ matter removed) and `params.parsers` (its own `markdown-it` or `micromark`
 token stream), then expects `onError({ lineNumber, ... })` per violation.
 There is no tree `visimark` understands — `markdownlint`'s parsers are
 unrelated to mdast. So unlike #152, which had a deferred option (b), there is
-exactly one shape available: reconstruct the source with
-`params.lines.join("\n")` and call the already-public `analyze(source)`.
+exactly one shape available: reconstruct the source from what `markdownlint`
+hands the rule and call the already-public `analyze(source)`.
 
-Each rule declares `parser: "none"`, `markdownlint`'s own opt-out for a rule
-that uses neither token stream. Nothing is parsed on `markdownlint`'s side for
-these rules beyond the line split it does anyway.
+> **Corrected during implementation (#164).** This section originally said the
+> source is `params.lines.join("\n")` and that each rule declares
+> `parser: "none"`. Both were wrong, and the prototype that produced this
+> spec's numbers was wrong with them.
+>
+> `markdownlint` replaces **the content of every HTML comment with dots**
+> before it hands a rule `params.lines`, so that its own rules do not flag
+> prose nobody renders. VisiMark's prose anchors (`<!--vmark=sheet.name-->`)
+> and its `<!--vmark:no-formulas-->` marker *are* HTML comments. Joining
+> `params.lines` therefore produces a document in which every anchor-bound
+> binding has vanished and every opt-out marker has been erased — which loses
+> real errors (six of them on `docs/example-invoice-drift.md`) and reports a
+> `COVERAGE` violation on a document `visimark check` passes.
+>
+> The fix needs no new engine surface either. The micromark token stream is
+> parsed from the document *before* that blanking and carries each comment's
+> original text with exact positions, and the blanking is length-preserving —
+> every non-whitespace character becomes one dot — so writing each `htmlFlow`
+> and `htmlText` token's text back over its own span restores the source byte
+> for byte. Each rule therefore declares `parser: "micromark"` rather than
+> `"none"`, and `markdownlint` parses each document once, shared across all
+> seventeen rules. See `packages/markdownlint-visimark/src/source.ts`.
 
 **Front matter needs no handling in this package.** Verified against
 `markdownlint` v0.41.1's source and by running it: front matter is absent from
@@ -131,7 +153,7 @@ member of `FindingCode` (`packages/visimark/src/model/types.ts`):
 | `names` | `` [`visimark-${code.toLowerCase()}`] `` — `visimark-stale`, `visimark-assert`, `visimark-coverage`, … |
 | `description` | the code's **Meaning** cell from [§10](../visimark-design.md#10-error-taxonomy), verbatim, sentence-cased and with its cross-reference links stripped (§2.5) |
 | `tags` | `["visimark"]`, plus `"visimark-advisory"` for `WARN` and `NOTE` |
-| `parser` | `"none"` |
+| `parser` | `"micromark"` — see the correction in §2.2; `"none"` cannot see inside an HTML comment |
 | `information` | `new URL("https://github.com/michal-niedzwiedzki/visimark/blob/master/docs/visimark-design.md#10-error-taxonomy")` — a `URL` **instance**, not a string; `markdownlint` v0.41.1 throws on a string here, confirmed by running it |
 | `function` | emits this code's findings (§3) |
 
@@ -295,14 +317,20 @@ These double as acceptance.
 | Ambiguous date | `docs/example-invoice-drift.md` | `drift.md:44 error visimark-date ... ["11/12/2026" is not an ISO 8601 date (YYYY-MM-DD); ambiguous: 2026-12-11 or 2026-11-12, 29 days apart]` | `1` |
 | Cycle | `docs/example-invoice-drift.md` | `drift.md:74 error visimark-cycle ... [late_fees.base → late_fees.fee → late_fees.total → late_fees.base]` | `1` |
 | **Document-scope `COVERAGE`, no span** | a heading and a table, no `vmark` block | `roadmap.md:1 error visimark-coverage ... [a table with no \`vmark\` rules — nothing in this document is checked]` | `1` |
-| Front matter present | `docs/example-invoice-drift.md`-style content behind five lines of YAML | every line number shifted by exactly 5, by `markdownlint`, not by this package | `1` |
+| Front matter present | `docs/example-invoice-drift.md`-style content behind a YAML block | every line number shifted by the block's length plus the blank line that terminates it, by `markdownlint`, not by this package | `1` |
 | Anchor-group rollup | any document whose stale cell has ≥2 prose anchors (`docs/example-invoice-drift.md`, `suppressedCount: 8`) | no violation for the rollup; the underlying cells' own `STALE` violations still report | `1` |
 | One code disabled | `docs/example-invoice-drift.md`, `"visimark-date": false` | the two `visimark-date` violations disappear; the rest stand | `1` |
 | All VisiMark rules off | any document, `"visimark": false` | no `visimark-*` violations; other rules unaffected | per other rules |
 | Seventeen rules, one parse | any document | `analyze()` called **once**; verified by instrumentation | — |
+| **A `no-formulas` marker** | a table under `<!--vmark:no-formulas-->` | no violation — the marker survives `markdownlint`'s comment blanking (§2.2) | `0` |
+| **An anchor-bound scalar** | `docs/example-invoice-drift.md`'s `lines.net_total` | `drift.md:34 error visimark-stale ... [lines.net_total: stored 23300.00 ≠ computed 25380.00 (SUM(Net))]` | `1` |
 
-The full `docs/example-invoice-drift.md` run under `recommended` is twelve
-violations:
+The full `docs/example-invoice-drift.md` run under `recommended` is **eighteen**
+violations — thirteen `STALE`, two `DATE`, and one each of `UNDEF`, `CYCLE` and
+`VECTOR`. The twelve first recorded here were the prototype's, taken before the
+comment-blanking correction in §2.2; the six it was missing are the scalar
+totals on lines 34, 35, 36, 53, 64 and 65, each bound through a prose anchor.
+The twelve below are the subset that never depended on an anchor:
 
 ```console
 $ npx markdownlint-cli2 "docs/example-invoice-drift.md"
@@ -319,7 +347,7 @@ $ npx markdownlint-cli2 "docs/example-invoice-drift.md"
 ...:74 error visimark-cycle ... [late_fees.base → late_fees.fee → late_fees.total → late_fees.base]
 ...:83 error visimark-vector... [`schedule.Amount` is a column, not a value — wrap it in an aggregate]
 
-Summary: 12 issues in 1 file
+Summary: 18 issues in 1 file   # the six anchor-bound totals are not shown above
 $ echo $?
 1
 ```
@@ -356,10 +384,11 @@ $ echo $?
   `visimark` dependency pin) as the eighth/ninth entry in its file list.
 - **The reported count differs from `check`'s footer, by design.**
   `visimark check docs/example-invoice-drift.md` prints `26 problems (21 stale,
-  5 errors)`; the same document under `recommended` is `12 issues`. The
+  5 errors)`; the same document under `recommended` is `18 issues`. The
   difference is exactly the eight prose anchors folded into the skipped
-  anchor-group rollup (§3) and the six `WARN`s plus one `NOTE` the advisory tag
-  switches off. **The exit code agrees in every case**, which is the property a
+  anchor-group rollup (§3). `WARN` and `NOTE` are advice: `check` does not count
+  them in that footer either, so the advisory tag changes which findings are
+  *reported*, not this arithmetic. **The exit code agrees in every case**, which is the property a
   CI gate depends on; only the headline number differs, and `docs/ci.md` says
   so rather than leaving a reader to discover it.
 - Fully reversible: deleting the package and its `release.yml` leg is undone by

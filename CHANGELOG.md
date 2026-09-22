@@ -21,6 +21,12 @@
   findings as `VFile` messages inside an existing `remark`/`remark-lint`
   pipeline. See [`remark-plugin-spec.md`](docs/design/remark-plugin-spec.md)
   and [#152](https://github.com/michal-niedzwiedzki/visimark/issues/152).
+- A `markdownlint` custom rule package, `markdownlint-rule-visimark`, reports
+  `visimark check` findings inside an existing `markdownlint`/`markdownlint-cli2`
+  run — one rule per finding kind, plus a `recommended` config fragment whose
+  exit code agrees with `check`'s. See
+  [`markdownlint-rule-spec.md`](docs/design/markdownlint-rule-spec.md)
+  and [#153](https://github.com/michal-niedzwiedzki/visimark/issues/153).
 
 ## 0.1.7 - 2026-09-22
 
