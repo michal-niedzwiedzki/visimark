@@ -43,4 +43,28 @@ const rules: Rule[] = CODES.map((code) => ({
   },
 }));
 
-export default rules;
+const ENGINE_ERROR_DESCRIPTION = "VisiMark could not analyse this document";
+
+/**
+ * Not built from `CODES`/`DESCRIPTIONS` — this does not correspond to a
+ * `FindingCode`, and folding it into `DESCRIPTIONS`'s `Record<FindingCode,
+ * …>` would break that type's deliberate exhaustiveness over the taxonomy.
+ * The other seventeen rules silently return when `findingsFor` reports a
+ * failure (see their `function` above); this is the one that reports it,
+ * exactly once per document regardless of how many of the eighteen rules run.
+ */
+const engineErrorRule: Rule = {
+  names: ["visimark-engine-error"],
+  description: ENGINE_ERROR_DESCRIPTION,
+  tags: ["visimark"], // never "visimark-advisory" — this is a hard failure, not a downgradable finding
+  parser: "micromark",
+  information: INFORMATION,
+  function: (params, onError) => {
+    const source = sourceFrom(params);
+    const result = findingsFor(source);
+    if (result.ok) return;
+    onError({ lineNumber: 1, detail: result.message });
+  },
+};
+
+export default [...rules, engineErrorRule];

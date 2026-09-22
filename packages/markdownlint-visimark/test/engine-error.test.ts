@@ -1,6 +1,8 @@
 import { afterEach, expect, mock, test } from "bun:test";
 import * as real from "visimark";
+import { lint } from "markdownlint/promise";
 import { findingsFor, parseCount, resetFindingsCache } from "../src/findings.js";
+import rules from "../src/index.js";
 
 const realAnalyze = real.analyze;
 
@@ -49,4 +51,51 @@ test("a document that fails does not poison a different document linted after it
   expect(findingsFor("broken")).toEqual({ ok: false, message: "boom" });
   const cleanResult = findingsFor("# Notes\n\nNothing to check here.\n");
   expect(cleanResult.ok && cleanResult.findings).toHaveLength(0);
+});
+
+const only = { default: false, visimark: true };
+
+type Reported = { line: number; rule: string; detail: string };
+
+async function run(strings: Record<string, string>): Promise<Record<string, Reported[]>> {
+  const results = await lint({ strings, customRules: rules, config: only });
+  const out: Record<string, Reported[]> = {};
+  for (const [name, errors] of Object.entries(results)) {
+    out[name] = errors.map((e) => ({
+      line: e.lineNumber,
+      rule: e.ruleNames[0]!,
+      detail: e.errorDetail!,
+    }));
+  }
+  return out;
+}
+
+const clean = `| Item | Qty | Rate |  Net |
+|------|----:|-----:|-----:|
+| pen  |   2 | 5.00 | 10.00 |
+
+\`\`\`vmark #lines
+Net = Qty * Rate
+\`\`\`
+`;
+
+test("analyze() throwing reports exactly one violation, under visimark-engine-error", async () => {
+  mock.module("visimark", () => ({ ...real, analyze: () => { throw new Error("boom") } }));
+  const report = await run({ doc: clean });
+  expect(report.doc).toEqual([
+    { line: 1, rule: "visimark-engine-error", detail: "boom" },
+  ]);
+});
+
+test("a non-Error thrown value still produces a readable detail", async () => {
+  mock.module("visimark", () => ({ ...real, analyze: () => { throw "boom" } }));
+  const report = await run({ doc: clean });
+  expect(report.doc).toEqual([
+    { line: 1, rule: "visimark-engine-error", detail: "boom" },
+  ]);
+});
+
+test("a successful analyze() never reports visimark-engine-error", async () => {
+  const report = await run({ doc: clean });
+  expect(report.doc).toEqual([]);
 });

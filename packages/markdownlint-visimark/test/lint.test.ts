@@ -311,7 +311,7 @@ test("the drift invoice reports eighteen violations: check's 26 less the folded 
   });
 });
 
-test("seventeen rules cost one analyze() and one source reconstruction per document", async () => {
+test("eighteen rules cost one analyze() and one source reconstruction per document", async () => {
   // Through the real parser, not a hand-built params. The plan's one-parse
   // property has to hold for the reconstruction too: `analyze()` was already
   // memoised, but rebuilding the source from the token stream seventeen times
