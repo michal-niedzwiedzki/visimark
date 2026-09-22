@@ -86,11 +86,11 @@ linter, and does not touch it.
 
   `originFor(finding)` returns `` `visimark:${ruleId(finding)}` `` — the
   `"source:ruleId"` string form `VFile#message` parses into
-  `message.source`/`message.ruleId` (§3).
+  `message.source`/`message.ruleId` ([§3](#3-the-machine-contract)).
 
 - **v1 takes no options.** `remarkLintVisimark()` is called with no
   arguments and accepts none; there is no rule-options parameter to suppress
-  non-fatal findings or otherwise configure behaviour (§8).
+  non-fatal findings or otherwise configure behaviour ([§8](#8-non-goals)).
 - **Dependency on the engine.** `visimark` is already published to npm (the
   existing `Publish the engine to npm` leg in `release.yml`). Unlike
   `packages/visimark-lsp` and `editors/vscode` — both `"private": true` /
@@ -100,7 +100,7 @@ linter, and does not touch it.
   `packages/remark-visimark/package.json` declares a real dependency, exact-
   pinned to match the engine release it was built against:
   `"dependencies": { "visimark": "0.1.7" }`, bumped in the same release
-  commit as every other version-carrying file (§5).
+  commit as every other version-carrying file ([§5](#5-compatibility)).
 - **New, small engine export.** `analyze`, `lineOf`, `isProblem` and
   `ERROR_CODES` are already public and reused as-is. One new export is added:
   `describeFinding(f: Finding): string` in
@@ -216,8 +216,8 @@ support" row) sits at source line 22 — confirmed with `analyze()` +
 | A failing `assert` | a copy of `docs/example-agent-budget.md` with `rates.budget`'s `default` lowered below `spent` | `{ reason: "assert spent <= rates.budget: 0.4266 <= 0.01 is false", fatal: true, source: "visimark", ruleId: "visimark-assert", place: { line: 65 } }` — confirmed against the working tree with the budget default edited to `0.01` |
 | Collapsed anchor-group `STALE` (the "N prose anchors bound to the values above" line, no `span`) | any document whose stale cell has ≥2 prose anchors | no `file.message()` call for that finding — nothing to attach a `Position` to; the underlying cell's own `STALE` finding (which does have a `span`) still reports |
 | `WARN` (unread binding) | a document with a defined-and-never-read name | `{ ..., fatal: undefined, ruleId: "visimark-warn" }` — visible under `remark --frail`, does not fail a plain `remark` run |
-| Document `unified().use(remarkParse).use(remarkLintVisimark)` with no `remark-gfm` | any document with a table | unaffected — the plugin ignores the host's `tree` and re-parses `file.value` with its own `locate()`, which already applies `remark-gfm` internally (§2.2) |
-| Plugin invoked with an option, e.g. `.use(remarkLintVisimark, { suppressWarnings: true })` | any document | the option is ignored — v1 accepts none (§2.1, §8) |
+| Document `unified().use(remarkParse).use(remarkLintVisimark)` with no `remark-gfm` | any document with a table | unaffected — the plugin ignores the host's `tree` and re-parses `file.value` with its own `locate()`, which already applies `remark-gfm` internally ([§2.2](#22-consumer-side-usage)) |
+| Plugin invoked with an option, e.g. `.use(remarkLintVisimark, { suppressWarnings: true })` | any document | the option is ignored — v1 accepts none ([§2.1](#21-the-package), [§8](#8-non-goals)) |
 
 The `assert` row is the acceptance test for the ASSERT reason-text shape,
 confirmed by running `analyze()` against a scratch copy of
@@ -276,7 +276,7 @@ confirmed by running `analyze()` against a scratch copy of
 - **The review workflow itself** — `docs/issue-runbook.md`,
   `.agents/commands/issue-review.md` — is unaffected; this is not a change to
   how issues are decided.
-- **The new `describeFinding` export** (§2.1) is available to any future
+- **The new `describeFinding` export** ([§2.1](#21-the-package)) is available to any future
   caller — the CLI's own `formatCheck` is not required to adopt it for this
   version, and does not.
 
@@ -293,11 +293,11 @@ no new syntax, no widened taxonomy entry.
 - **`docs/cli-reference.md`** — unaffected; this package exposes no CLI
   surface of its own (no `bin` entry).
 - **`docs/releasing.md`** — "Bump the version" step's file list gains
-  `packages/remark-visimark/package.json` (§5).
+  `packages/remark-visimark/package.json` ([§5](#5-compatibility)).
 - **`.github/workflows/ci.yml`** — the "every version-carrying file must
   agree" step's comment and extraction logic gain the sixth/seventh file
-  (§5).
-- **`.github/workflows/release.yml`** — the new publish leg (§5).
+  ([§5](#5-compatibility)).
+- **`.github/workflows/release.yml`** — the new publish leg ([§5](#5-compatibility)).
 - **`CHANGELOG.md`** — an `## Unreleased` → `### Added` entry.
 - **`README.md`** — no existing distribution-surface list names the
   composite Action, the pre-commit hook, or the VS Code extension together
@@ -321,9 +321,9 @@ no new syntax, no widened taxonomy entry.
   reclassify a code's severity, or otherwise configure behaviour beyond what
   `isProblem()` already decides. A future version may add a rule-options
   parameter; this one does not.
-- **No column position.** `Position` carries `{ line }` only (§3).
+- **No column position.** `Position` carries `{ line }` only ([§3](#3-the-machine-contract)).
 - **No engine entry point accepting a pre-parsed mdast tree** (option (b),
-  §2.2) — closed for this version.
+  [§2.2](#22-consumer-side-usage)) — closed for this version.
 - **No markdownlint counterpart.** Filed separately as #153 — different
   parser, different rule API, no shared AST, judged on its own.
 - **No change to `visimark`'s own CLI, exit codes, or `--json` shape.**
