@@ -4,6 +4,13 @@
 
 ### Added
 
+- **`NPV(rate, flows)`** — the fifteenth builtin (issue #157). The present value
+  of a cash-flow column at a per-period rate. Row 0 is not discounted; row `k`
+  is divided by `(1 + rate) ^ k`. A zero rate equals the sum of the column, and
+  a written result still declares its width. A blank cell, an empty column, a
+  non-column `flows`, or a rate of -1 or below, is `TYPE`.
+  See [`npv-spec.md`](docs/vocab/npv-spec.md).
+
 - **`PMT(rate, nper, pv)`** — the fourteenth builtin (issue #156). The instalment
   that repays a present amount over a positive whole number of periods at a
   per-period rate, paid at the end of each period. A zero rate is `pv / nper`.

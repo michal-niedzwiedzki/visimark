@@ -442,7 +442,7 @@ only test of the thing you actually care about.
 
 # Part 3 — The language
 
-The language is small. There are two kinds of binding, fourteen functions and a
+The language is small. There are two kinds of binding, fifteen functions and a
 handful of operators, and it is meant to stay that way. This part covers the
 shape of a document: columns, totals, anchors and sheets. Part 4 covers what
 goes inside a formula.
@@ -1050,7 +1050,7 @@ the function was meant to do. It describes what it does.
 
 ### The whole list, and a name you misspelled
 
-Bare `visimark ref` lists all fourteen:
+Bare `visimark ref` lists all fifteen:
 
 ```console
 $ visimark ref
@@ -3146,7 +3146,7 @@ the decision on it. The review process is
 |---|---|
 | [`ci.md`](ci.md) | Protect your Markdown numbers with CI — the Action, globs, annotations, pinning and rollout |
 | [`cli-reference.md`](cli-reference.md) | Every command, option, exit code and finding, in tables |
-| [`function-reference.md`](function-reference.md) | What each of the fourteen builtins does, with examples that run in CI |
+| [`function-reference.md`](function-reference.md) | What each of the fifteen builtins does, with examples that run in CI |
 | [`visimark-design.md`](visimark-design.md) | The normative specification, the deferred work, and the known tensions |
 
 Or ask the tool: `visimark ref NAME`.

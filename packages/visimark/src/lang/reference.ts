@@ -220,7 +220,11 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
       "present value of a cash-flow column; row 0 is undiscounted; an empty column is a TYPE error",
     params: [
       { name: "rate", type: "number", note: "the rate for one period; must be greater than -1" },
-      { name: "flows", type: "column", note: "cash flows in time order; the first row is period 0" },
+      {
+        name: "flows",
+        type: "column",
+        note: "cash flows in time order; the first row is period 0",
+      },
     ],
     returns: "number",
     precision: { from: "declared" },

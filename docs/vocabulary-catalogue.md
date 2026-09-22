@@ -1,6 +1,6 @@
 # VisiMark — design-decision catalogue
 
-The language ships **fourteen functions and a fixed operator set**
+The language ships **fifteen functions and a fixed operator set**
 ([`visimark-design.md` §4](visimark-design.md#4-syntax)). This file is the register of
 every proposed change to the language or its tooling — a mapper, operator, or
 aggregate (sections A–D); a language feature (section E); a tooling or process
@@ -134,9 +134,11 @@ The current set is `+ - * / ^`, comparison `== != < <= > >=`, and `and or not`
 
 ## C. Reducers (vector → scalar)
 
-Collapse one column to one value. Every reducer takes exactly one argument, a
-bare column reference — `SUM(Price * Qty)` is refused so every intermediate is a
-column the reader can see ([§4](visimark-design.md#4-syntax)). The current set is `SUM MIN MAX AVG COUNT`.
+Collapse one column to one value. A reducer has one column parameter, a bare
+column reference, and its other parameters are scalars — `SUM(Price * Qty)` is
+refused so every intermediate is a column the reader can see
+([§4](visimark-design.md#4-syntax)). `NPV(rate, flows)` is the first reducer
+with a scalar parameter. The current set is `SUM MIN MAX AVG COUNT NPV`.
 
 That last rule has a consequence worth stating plainly: because `SUM(IF(x > 0,
 1, 0))` is not expressible, **there is today no way to count or total a subset of
@@ -147,7 +149,6 @@ engine" is what [§14](visimark-design.md#14-deferred) prescribes over letting a
 
 | Name | What it does | Pros | Cons | Request | Status |
 |------|--------------|------|------|---------|--------|
-| `NPV(rate, flows)` | Present value of a cash-flow column at per-period `rate`. Row 0 is undiscounted; row `k` is divided by `(1 + rate) ^ k`. A blank cell, an empty column, a non-column `flows`, or a `rate` of -1 or below is `TYPE`. A zero rate equals the sum of the column. The binding declares a width, including at rate zero. | The brake-press note can name the present value without a period column that drifts off by one. The rate and the row order are already in the document. Declared precision is the existing rule for division. | First reduce with a scalar argument, so the shape check has to name which parameter is the column. Excel's `NPV` discounts the first row; this one does not. A written result still declares a width. | [#157](https://github.com/michal-niedzwiedzki/visimark/issues/157) | [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/157#issuecomment-5782258164) |
 | `COUNTNONBLANK(col)` | Number of rows whose cell is non-empty. | "How many line items have a delivered-date filled in" — real. The predicate is evaluated **inside** the reducer and never emits a `blank` that flows anywhere, so it is safe where `COALESCE` is not. Works on any column type. | Needs a defined notion of an empty input cell — which already exists. A different axis (presence) from the sign predicates. | — | `DEFERRED` |
 | `COUNTPOSITIVE(col)` / `COUNTNEGATIVE(col)` | Count rows by the sign of a numeric cell. | Dodges `COUNTIF`'s criteria-string mini-language entirely. Variance and reconciliation columns are the use case. | Numbers only (error on a date column — one extra type check each). `COUNTZERO` is their complement against `COUNT`. | — | `DEFERRED` |
 | `SUMPOSITIVE(col)` / `SUMNEGATIVE(col)` | Total the positive / negative cells of a column. | Splitting a ledger into debits and credits is **more common than counting** the entries; identical shape and cost to the count variants. | Numbers only. | — | `DEFERRED` |
@@ -276,6 +277,7 @@ the same time.
 
 | Name | Kind | Request | Landed | Released | Decision |
 |------|------|---------|--------|----------|----------|
+| `NPV(rate, flows)` | reducer | [#157](https://github.com/michal-niedzwiedzki/visimark/issues/157) | [#165](https://github.com/michal-niedzwiedzki/visimark/pull/165) | — | [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/157#issuecomment-5782258164) |
 | `PMT(rate, nper, pv)` | mapper | [#156](https://github.com/michal-niedzwiedzki/visimark/issues/156) | [#161](https://github.com/michal-niedzwiedzki/visimark/pull/161) | — | [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/156#issuecomment-5781382455) |
 | `EOMONTH(d, months)` | mapper | [#6](https://github.com/michal-niedzwiedzki/visimark/issues/6) | [#8](https://github.com/michal-niedzwiedzki/visimark/pull/8) | [v0.1.2](https://github.com/michal-niedzwiedzki/visimark/releases/tag/v0.1.2) | [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/6#issuecomment-5559247913) |
 | `SQRT(x)` | mapper | [#18](https://github.com/michal-niedzwiedzki/visimark/issues/18) | [#20](https://github.com/michal-niedzwiedzki/visimark/pull/20) | [v0.1.2](https://github.com/michal-niedzwiedzki/visimark/releases/tag/v0.1.2) | [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/18#issuecomment-5560992652) |

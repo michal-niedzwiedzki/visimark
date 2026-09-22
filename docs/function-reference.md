@@ -142,6 +142,39 @@ Number of rows.
 
 **See also:** `SUM`
 
+### `NPV(rate, flows)`
+
+Present value of a cash-flow column; row 0 is undiscounted; an empty column is a TYPE error.
+
+**Shape:** reduce, 2 arguments.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `rate` | number | the rate for one period; must be greater than -1 |
+| `flows` | column | cash flows in time order; the first row is period 0 |
+
+**Returns:** number.
+
+**Precision:** must be declared.
+
+**Errors**
+
+- A non-numeric `rate` — `TYPE`
+- A `rate` of -1 or below — `TYPE`
+- An empty column — `TYPE`
+- A non-numeric cell — `TYPE`
+- A non-column `flows` argument — `TYPE`
+
+**Examples**
+
+| Expression | Is |
+|---|---|
+| `NPV(0, t.Cash)` | `12000` |
+| `NPV(0.08, t.Cash)` | `-48000` |
+| `NPV(-0.5, t.Cash)` | `300` |
+
+**See also:** `SUM`, `AVG`
+
 ## Maps
 
 A map is scalar → scalar and runs once per row inside a column rule.
