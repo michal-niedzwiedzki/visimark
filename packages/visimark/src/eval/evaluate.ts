@@ -2,7 +2,17 @@ import { Decimal } from "decimal.js";
 import type { Expr, Ref } from "../lang/ast.js";
 import { addDays, daysBetween, eomonth } from "./dates.js";
 import { FUNCTIONS, callProblem, describeCallProblem, isReduce } from "./functions.js";
-import { bool, date, EvalError, num, roundToPlaces, str, Value, valueEquals } from "./value.js";
+import {
+  bool,
+  date,
+  EvalError,
+  MAX_SIGNIFICANT_DIGITS,
+  num,
+  roundToPlaces,
+  str,
+  Value,
+  valueEquals,
+} from "./value.js";
 
 export interface EvalEnv {
   scalar(ref: Ref): Value;
@@ -238,7 +248,10 @@ function irr(vec: Value[]): Value {
     if (v.isZero()) return 0;
     return v.isNeg() ? -1 : 1;
   };
-  let lo = new Decimal(-1).plus(new Decimal(10).pow(-30));
+  // The last rate above -1 that 40-digit arithmetic can tell from -1.
+  // A root closer than this rounds to -1 at every width the language can declare.
+  let lo = new Decimal(-1).plus(new Decimal(10).pow(-MAX_SIGNIFICANT_DIGITS));
+  if (!lo.gt(-1)) lo = new Decimal(-1).plus(new Decimal(10).pow(1 - MAX_SIGNIFICANT_DIGITS));
   let hi = new Decimal(1);
   const sLo = sign(lo);
   if (sLo === 0) return num(lo);
@@ -248,7 +261,7 @@ function irr(vec: Value[]): Value {
     guard++;
   }
   if (sign(hi) === 0) return num(hi);
-  if (sign(hi) === sLo) throw new EvalError("IRR did not determine a rate at precision 0");
+  if (sign(hi) === sLo) return num(lo);
   for (let i = 0; i < 400; i++) {
     const mid = lo.plus(hi).div(2);
     const sm = sign(mid);

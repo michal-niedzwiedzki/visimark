@@ -1098,6 +1098,26 @@ rate = IRR(Cash)
   expect(str("unit.rate").toString()).toBe("0.1");
 });
 
+test("IRR finds a root between -1 and -1+1e-30", () => {
+  const src = `
+| Cash |
+|-----:|
+| -1 |
+|  0.0000000000000000000000000000001 |
+
+\`\`\`vmark #near
+rate = IRR(Cash)
+\`\`\`
+`;
+  const r = run(src);
+  expect(r.findings.filter((f) => f.code !== "WARN")).toEqual([]);
+  const v = r.values.get("near.rate");
+  if (!v || v.t !== "num") throw new Error("near.rate");
+  expect(v.d.gt(-1)).toBe(true);
+  expect(v.d.toDecimalPlaces(4).toFixed(4)).toBe("-1.0000");
+  expect(v.d.toDecimalPlaces(18).toFixed(18)).toBe("-1.000000000000000000");
+});
+
 test("IRR bracket ends disagree only when the declared width cannot choose", () => {
   expect(irrEndsDisagree(new Decimal("0.12044"), new Decimal("0.12045"), 4)).toBe(true);
   expect(irrEndsDisagree(new Decimal("0.120441"), new Decimal("0.120444"), 4)).toBe(false);
