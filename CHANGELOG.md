@@ -17,6 +17,15 @@
 
 ### Added
 
+- **Percent display sigil on prose anchors** (issue #140) — `<!--vmark=sheet.scalar%-->`
+  asks `fmt` to print the stored ratio as a percent (× 100 at precision − 2,
+  with a leading minus when negative). The stored number does not change.
+  `check`'s verdict stays numeric. A `%` sigil on a date, string, or chart is
+  `TYPE`; mixed with a unit in the same span, `UNIT`; on a binding whose width
+  is below 2, `PRECISION`. Scientific `^` is [#142](https://github.com/michal-niedzwiedzki/visimark/issues/142).
+  See [`presentation-only-percent-display-sigil-spec.md`](docs/design/presentation-only-percent-display-sigil-spec.md)
+  and [#140](https://github.com/michal-niedzwiedzki/visimark/issues/140).
+
 - **Prose spellings for four functions** (issue #64) — `|x|` is `ABS(x)`, `⌊x⌋`
   is `FLOOR(x, 1)`, `⌈x⌉` is `CEILING(x, 1)` and `√(x)` is `SQRT(x)`, so a
   reconciliation reads `assert |variance| <= 0.05`. Each resolves to the same

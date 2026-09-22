@@ -123,6 +123,20 @@ collision, for identifier-shaped headers as much as for any other.
 Invoice total: **28659.00**<!--vmark=lines.gross_total-->
 ```
 
+An optional trailing `%` on the comment asks `fmt` to print that scalar as a
+percent — stored × 100 at precision − 2, with a leading minus when the ratio
+is negative — without changing the stored value:
+
+```markdown
+The engagement clears a margin of **40.26%**<!--vmark=lines.margin%-->
+```
+
+`check`'s verdict stays numeric: `40.26%` and `0.4026` agree when the stored
+value is `0.4026`. Two anchors of one scalar may disagree about the sigil;
+each comment is its own rendering. `%` mixed with a unit in the same span is
+`UNIT`. A date, a string, or a chart/image target with `%` is `TYPE`. A
+binding whose width is below 2 cannot support percent display (`PRECISION`).
+
 The anchor rewrites the text content of the inline node immediately preceding
 it. That node must be `strong`, `emphasis`, `inlineCode`, or a text node;
 anything else is an `ANCHOR` error. An anchor with nothing in front of it is
@@ -141,8 +155,9 @@ consulted.
 **A comment that announces itself as an anchor but does not parse is also an
 `ANCHOR` error.** Any HTML comment matching the loose prefix `<!--vmark=` is
 checked against the full anchor grammar; a mismatch — a hyphenated sheet id, a
-stray space, an empty name — is reported rather than silently treated as an
-ordinary comment. A comment that does not match the loose prefix at all is
+stray space, an empty name, a space before `%` — is reported rather than
+silently treated as an ordinary comment. The expected form is
+`<!--vmark=sheet.name-->` or `<!--vmark=sheet.name%-->`. A comment that does not match the loose prefix at all is
 unaffected, including the distinct `<!--vmark:no-formulas-->` marker, which
 uses `:` rather than `=`.
 
@@ -510,7 +525,9 @@ invoice's `**23300.00**<!--vmark=lines.net_total--> PLN` is unaffected: the
 anchored value is bare and `PLN` sits in the prose after the comment.
 
 `%` is not a unit. `23%` remains exactly `0.23` by the rule in section 4; a
-unit never scales the number it decorates.
+unit never scales the number it decorates. A trailing `%` on an *anchor
+comment* is a display request for that span ([§3](#3-document-model)); it
+does not declare write precision and does not change the stored number.
 
 ## 8. Evaluation
 
@@ -536,7 +553,9 @@ to be justified by profiling, not assumed.
 ## 9. Write-back
 
 The tool owns exactly three things: **computed cells**, **anchored values**, and
-**generated artifacts** ([§18](#18-generated-artifacts)). Everything else —
+**generated artifacts** ([§18](#18-generated-artifacts)). An anchored value
+with a `%` comment is still that second category: `fmt` applies a second
+rendering rule to the span it already owns. Everything else —
 input columns, prose, headings, table alignment, the blocks themselves — is
 human territory and is never touched. The sole exception is `fmt --fix-dates`,
 which is opt-in precisely because it writes to input.
@@ -590,15 +609,15 @@ justifies the project.
 |------|---------|--------------|
 | `STALE` | stored value **or artifact** disagrees with its formula | yes, by `fmt` |
 | `DATE` | not an ISO 8601 calendar date | only if decidable, with `--fix-dates` |
-| `UNIT` | a column mixes unit decorations, or a value is decorated on both sides | no |
+| `UNIT` | a column mixes unit decorations, a value is decorated on both sides, or a `%` display sigil shares a span with a unit | no |
 | `UNDEF` | unresolvable name | no |
 | `DUP` | a name is bound twice in one scope, or two header cells sharing text | no |
 | `VECTOR` | foreign column outside an aggregate | no |
 | `CYCLE` | circular dependency | no |
-| `TYPE` | illegal operand types, or a malformed call (name, arity, shape) | no |
+| `TYPE` | illegal operand types, a malformed call (name, arity, shape), or a `%` display sigil on a non-numeric scalar or a chart/image | no |
 | `SHEET` | column rules with no table, or an `assert` in a document-scope block | no |
 | `ANCHOR` | anchor with no rewritable target | no |
-| `PRECISION` | a numeric binding with no declared width and none derivable, or a value too large to carry the width it has ([§7](#7-numeric-semantics)) | no |
+| `PRECISION` | a numeric binding with no declared width and none derivable, a value too large to carry the width it has ([§7](#7-numeric-semantics)), or a `%` display sigil on a binding whose width is below 2 | no |
 | `ASSERT` | an `assert` statement evaluated false ([§17](#17-assertions)) | no |
 | `ARTIFACT` | a declared artifact cannot be built or written ([§18](#18-generated-artifacts)) | no |
 | `IMPORT` | a declared local import cannot be resolved: unstamped, missing file, malformed stamp, bad path, malformed CSV, or a column rule attempted on a read-only imported sheet ([§19](#19-declared-local-data-imports)) | no (except the stamp itself — see below) |
@@ -749,7 +768,11 @@ under a second `fmt`.
 ## 14. Deferred
 
 Month and partial-date types. Joining sheets by key. Per-column **output
-formats** — masks, thousands separators, anything beyond a width. Per-column
+formats** — masks, thousands separators, anything beyond a width. A trailing
+`%` on a *scalar prose anchor* is the one closed carve-out of that bucket
+([#140](https://github.com/michal-niedzwiedzki/visimark/issues/140));
+scientific display (`^`, `e+`, `×10ⁿ`) is [#142](https://github.com/michal-niedzwiedzki/visimark/issues/142).
+Per-column
 *precision* has landed as the `precision N` clause
 ([§7](#7-numeric-semantics)); a document- or sheet-scope default has not, and
 should not: it could only override a derivation or suppress a required
