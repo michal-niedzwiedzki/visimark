@@ -10,6 +10,10 @@
   hand-copying the recipe in [`ci.md`](docs/ci.md) chapter 23. Works on Node, Bun,
   or both. See [`pre-commit-hook-spec.md`](docs/design/pre-commit-hook-spec.md)
   and [#149](https://github.com/michal-niedzwiedzki/visimark/issues/149).
+- A `remark`/`unified` plugin, `remark-lint-visimark`, reports `visimark check`
+  findings as `VFile` messages inside an existing `remark`/`remark-lint`
+  pipeline. See [`remark-plugin-spec.md`](docs/design/remark-plugin-spec.md)
+  and [#152](https://github.com/michal-niedzwiedzki/visimark/issues/152).
 
 ## 0.1.7 - 2026-09-22
 
