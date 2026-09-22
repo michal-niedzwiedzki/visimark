@@ -1,7 +1,7 @@
 import type { Call, Expr, Ref } from "../lang/ast.js";
 import { closest } from "../report/levenshtein.js";
 import type { Assertion, Binding, Chart, DocModel, Sheet } from "../model/types.js";
-import { type CallProblem, callProblem, isReduce } from "./functions.js";
+import { type CallProblem, FUNCTIONS, callProblem } from "./functions.js";
 
 /**
  * A `Binding`-shaped view of an assertion, so it flows through the dependency
@@ -192,8 +192,28 @@ export function dependencies(model: DocModel, binding: Binding): DepInfo {
         if (problem) info.callErrors.push({ call: node, problem });
         // A malformed reduce still gates its arguments as one, so a column
         // reference inside it is not also reported as a stray vector.
-        const agg = isReduce(node.name);
-        for (const a of node.args) visit(a, inAggregate || agg);
+        // A well-formed reduce gates only its column parameter.
+        const spec = FUNCTIONS.get(node.name);
+        if (spec?.kind === "reduce") {
+          // NPV and IRR report a scalar in the column slot. The older reduces
+          // still fall through Unevaluable with no finding; the spec keeps that.
+          if (!problem && (node.name === "NPV" || node.name === "IRR")) {
+            const col = node.args[spec.column];
+            if (col?.type === "ref") {
+              const res = resolve(model, binding.sheetId, col);
+              if (res.kind === "scalar" || res.kind === "doc-scalar") {
+                info.callErrors.push({ call: node, problem: { kind: "not-column" } });
+              }
+            }
+          }
+          const malformed = info.callErrors.some((e) => e.call === node);
+          const column = spec.column;
+          node.args.forEach((a, i) => {
+            visit(a, inAggregate || malformed || i === column);
+          });
+          return;
+        }
+        for (const a of node.args) visit(a, inAggregate);
         return;
       }
       case "unary":

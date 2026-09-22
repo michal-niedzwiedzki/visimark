@@ -61,7 +61,10 @@ test("ref --json emits the structured envelope", async () => {
 test("ref --json with no name lists every function", async () => {
   const c = capture();
   expect(await runCli(["ref", "--json"], c.io)).toBe(0);
-  expect(JSON.parse(c.out()).functions).toHaveLength(14);
+  const functions = JSON.parse(c.out()).functions;
+  expect(functions).toHaveLength(16);
+  const names = functions.map((f: { name: string }) => f.name);
+  expect(names).toEqual(expect.arrayContaining(["IRR", "NPV", "PMT"]));
 });
 
 test("ref --json on an unknown name emits the error envelope", async () => {

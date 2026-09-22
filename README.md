@@ -252,7 +252,7 @@ flowchart LR
 | `visimark infer FILE...` | Works out which rules reproduce the numbers a document already has, and proposes them | `--write` inserts what it proposed | nothing, unless `--write` — and then it only ever inserts | `0` whatever it finds, because it is advisory · `2` bad usage or unreadable file |
 | `visimark eval FILE` | Prints the computed values — all of them, or one by name | `--get NAME`, `--json` | nothing | `0` · `2` bad usage, unreadable file, or no such name |
 | `visimark explain FILE` | Prints each sheet's inputs, rules and evaluation order | `#sheet` limits it to one sheet | nothing | `0` · `2` bad usage, unreadable file, or no such sheet |
-| `visimark ref [NAME]` | Prints what a builtin function does — signature, parameters, errors, worked examples — or lists all fourteen | `--json` | nothing | `0` · `2` no such function |
+| `visimark ref [NAME]` | Prints what a builtin function does — signature, parameters, errors, worked examples — or lists all sixteen | `--json` | nothing | `0` · `2` no such function |
 
 Every option, every exit code and every finding `check` can report is
 tabulated in [`docs/cli-reference.md`](docs/cli-reference.md).
