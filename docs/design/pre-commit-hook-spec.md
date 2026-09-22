@@ -45,27 +45,51 @@ who will never read the landing page.
 
 ## 2. The surface
 
-### 2.1 The file
+### 2.1 The files
 
-`.pre-commit-hooks.yaml`, new, at the repository root:
+The three-way dispatch — visimark-on-PATH, else `bunx`, else `npx`, else fail —
+is factored into one checked-in script, `scripts/precommit-visimark-check.sh`,
+rather than duplicated inline in two YAML `entry:` fields:
+
+```sh
+#!/bin/sh
+# Dispatch for the visimark pre-commit hook. Tries an already-on-PATH
+# `visimark` first (so this repo's own workspace build, and any consumer who
+# installed visimark globally, is used straight rather than re-fetched), then
+# Bun's bunx, then npm's npx. Both fetcher branches pin the same version so a
+# consumer's `rev:` pin stays coherent with the engine it runs — see
+# docs/design/pre-commit-hook-spec.md §5.
+if command -v visimark >/dev/null 2>&1; then
+  exec visimark check "$@"
+elif command -v bunx >/dev/null 2>&1; then
+  exec bunx visimark@0.1.7 check "$@"
+elif command -v npx >/dev/null 2>&1; then
+  exec npx --yes visimark@0.1.7 check "$@"
+else
+  echo "visimark: needs npx (Node) or bunx (Bun) on PATH" >&2
+  exit 127
+fi
+```
+
+`.pre-commit-hooks.yaml`, new, at the repository root, references it:
 
 ```yaml
 - id: visimark
   name: visimark check
   description: Recompute every formula in a Markdown document and fail if a number no longer agrees with it.
   language: system
-  entry: >-
-    sh -c 'if command -v visimark >/dev/null 2>&1; then
-      exec visimark check "$@";
-    elif command -v bunx >/dev/null 2>&1; then
-      exec bunx visimark@0.1.7 check "$@";
-    elif command -v npx >/dev/null 2>&1; then
-      exec npx --yes visimark@0.1.7 check "$@";
-    else
-      echo "visimark: needs npx (Node) or bunx (Bun) on PATH" >&2; exit 127;
-    fi' --
+  entry: sh scripts/precommit-visimark-check.sh
   files: \.md$
 ```
+
+A single script referenced by `entry:` — rather than the dispatch inlined as a
+YAML block scalar — means the dogfood config (§6) references the identical
+file instead of carrying a second copy that could drift from the published
+one, and a version bump touches one file, not two. `entry:` for a
+`language: system` hook resolves relative to the repository pre-commit has
+cloned (or, for the dogfood config, this checkout), so referencing a
+repo-relative script path is the same pattern many published pre-commit hooks
+already use — nothing pre-commit-specific is invented here.
 
 The three-way dispatch mirrors `action.yml`'s own preference order exactly —
 that file already tries `command -v visimark` before falling back to a
@@ -80,8 +104,10 @@ issue discussion on #149). Whichever branch runs, it lands on the same
 three branches differ only in *how* the package is obtained, never in what
 runs once it is.
 
-`0.1.7` inside `entry:` is hardcoded, matching the current release, and is
-bumped at every release alongside the other four version-carrying files (§5).
+`0.1.7` inside `scripts/precommit-visimark-check.sh` is hardcoded, matching the
+current release, and is bumped at every release alongside the other four
+version-carrying files (§5) — the script itself, not `.pre-commit-hooks.yaml`,
+is the fifth.
 
 ### 2.2 The hook id and defaults
 
@@ -186,29 +212,36 @@ implementation, not assumed from memory of pre-commit's internals.
 - **`ci.yml`'s "every version-carrying file must agree" step** currently checks
   four files (`packages/visimark/package.json`, `packages/visimark-lsp/package.json`,
   `editors/vscode/package.json`, `action.yml`'s `version` default) against each
-  other. `.pre-commit-hooks.yaml`'s hardcoded `entry:` version becomes a
-  **fifth** file that step must extract and compare, for the same reason
-  `action.yml` joined the first four: leaving it behind means a consumer who
-  pinned `rev: v0.1.7` keeps quietly running an older engine than the tag
-  implies, with nothing at run time to say so.
-- **`docs/releasing.md`'s "Bump the version" step** gains `.pre-commit-hooks.yaml`
-  as the fifth version-carrying file in its list.
+  other. `scripts/precommit-visimark-check.sh`'s hardcoded `visimark@0.1.7`
+  pins become a **fifth** file that step must extract and compare, for the same
+  reason `action.yml` joined the first four: leaving it behind means a
+  consumer who pinned `rev: v0.1.7` keeps quietly running an older engine than
+  the tag implies, with nothing at run time to say so.
+- **`docs/releasing.md`'s "Bump the version" step** gains
+  `scripts/precommit-visimark-check.sh` as the fifth version-carrying file in
+  its list.
 - Nothing about an installed extension, a running release, or a cached
   artifact is affected. This change is fully reversible — deleting
-  `.pre-commit-hooks.yaml` (or a bad version bump) is undone by a normal commit,
-  with no re-publish, re-pin, or migration needed on the consumer side beyond
-  moving their own `rev:`.
+  `.pre-commit-hooks.yaml` and `scripts/precommit-visimark-check.sh` (or a bad
+  version bump) is undone by a normal commit, with no re-publish, re-pin, or
+  migration needed on the consumer side beyond moving their own `rev:`.
 
 ## 6. Interaction with the rest of the tooling
 
 - **Dogfooding.** This repository adds its own `.pre-commit-config.yaml` at
-  the root, `repo: local`, referencing the new hook definition, running
-  against this repo's own tracked Markdown. This proves the hook works the
-  way `dogfood.yml`'s `self-check` job proves the composite Action works, and
-  exercises the PATH-first branch of the dispatch script (§2.1) against the
-  branch under test, the same way `dogfood.yml` wires `GITHUB_PATH` so the
-  Action's own `command -v visimark` resolves to `node_modules/.bin/visimark`
-  rather than the published package.
+  the root, `repo: local`, whose hook entry is the same
+  `entry: sh scripts/precommit-visimark-check.sh` as the published hook — one
+  script, referenced twice, so there is no second copy of the dispatch logic
+  to drift. Running it against this repo's own tracked Markdown proves the
+  hook works the way `dogfood.yml`'s `self-check` job proves the composite
+  Action works, and exercises the PATH-first branch of the dispatch script
+  (§2.1) against the branch under test, the same way `dogfood.yml` wires
+  `GITHUB_PATH` so the Action's own `command -v visimark` resolves to
+  `node_modules/.bin/visimark` rather than the published package. A CI job
+  (added in the implementation, named in the plan) runs
+  `pre-commit try-repo . visimark --files <fixture>` against both the clean
+  and the drift invoice, the way `dogfood.yml`'s existing two steps do for the
+  composite Action.
 - **The CI gate is unaffected and still authoritative.** A hook is the
   shorter local feedback loop; `docs/ci.md` chapter 23 already states "the
   hook saves a round trip, the gate is what actually enforces" — this remains
@@ -233,7 +266,7 @@ syntax, no widened taxonomy entry.
   no-install form, matching what this hook's dispatch actually does on a
   Bun-only machine.
 - **`docs/releasing.md`** — "Bump the version" step's file list gains
-  `.pre-commit-hooks.yaml` as the fifth entry (§5).
+  `scripts/precommit-visimark-check.sh` as the fifth entry (§5).
 - **`.github/workflows/ci.yml`** — the "every version-carrying file must
   agree" step's comment and extraction logic gain the fifth file.
 - **`CONTRIBUTING.md`** — a line noting this repository dogfoods its own
