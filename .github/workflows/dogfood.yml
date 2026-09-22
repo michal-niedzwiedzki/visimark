@@ -1,10 +1,11 @@
 name: dogfood
 
-# Runs the composite action in ./action.yml against this repo's own worked
-# examples, the same way an external consumer's workflow would call it. It
-# is not a substitute for the unit/acceptance suite — it exists to catch a
-# broken Action interface (bad inputs, bad shell quoting) that `bun test`
-# never exercises because it never runs the YAML.
+# Runs the composite action in ./action.yml (job self-check) and the
+# .pre-commit-hooks.yaml hook (job precommit-hook-self-check) against this
+# repo's own worked examples, the same way an external consumer would. Neither
+# is a substitute for the unit/acceptance suite — they exist to catch a broken
+# interface (bad inputs, bad shell quoting, a hook definition that doesn't
+# resolve) that `bun test` never exercises because it never runs the YAML.
 
 # Branch pushes are covered by `pull_request`; restricting `push` to master and
 # release tags stops every PR from running this workflow twice.
@@ -14,8 +15,8 @@ on:
     tags: ["v*"]
   pull_request:
 
-# The self-check job only checks out code and runs the Action against local
-# fixtures — it writes nothing back.
+# Both jobs only check out code and run the surface under test against local
+# fixtures — neither writes anything back.
 permissions:
   contents: read
 
@@ -81,3 +82,44 @@ jobs:
         run: |
           echo "::error::docs/example-quote-plain.md is supposed to fail visimark check with COVERAGE — it passed instead. Either rules were written into it, or the coverage rule regressed."
           exit 1
+
+  precommit-hook-self-check:
+    # Proves .pre-commit-hooks.yaml itself works, the way self-check above
+    # proves the composite Action works — same shape, a different surface.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: echo "${{ github.workspace }}/node_modules/.bin" >> "$GITHUB_PATH"
+
+      - name: the hook must run this branch's CLI, not the published package
+        run: |
+          resolved="$(command -v visimark || true)"
+          echo "visimark resolves to: ${resolved:-<nothing>}"
+          if [ "$resolved" != "${{ github.workspace }}/node_modules/.bin/visimark" ]; then
+            echo "::error::visimark does not resolve to this branch's build. Fix the PATH wiring rather than the assertion."
+            exit 1
+          fi
+
+      - run: pip install --user pre-commit
+      - run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: the clean invoice must pass through the published hook definition
+        run: pre-commit try-repo . visimark --files docs/example-invoice.md
+
+      - name: the drift invoice is supposed to fail through the published hook definition
+        id: drift
+        continue-on-error: true
+        run: pre-commit try-repo . visimark --files docs/example-invoice-drift.md
+
+      - name: fail the job if the drift example stopped failing under the hook
+        if: steps.drift.outcome != 'failure'
+        run: |
+          echo "::error::docs/example-invoice-drift.md is supposed to fail the visimark pre-commit hook — it passed instead."
+          exit 1
+
+      - name: the repo's own dogfood config must pass over its own tracked Markdown
+        run: pre-commit run --config .pre-commit-config.yaml --all-files
