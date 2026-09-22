@@ -3,7 +3,9 @@ import { locate } from "../../src/parse/document.js";
 import { build } from "../../src/model/build.js";
 import { check } from "../../src/eval/check.js";
 import { formatCheck } from "../../src/report/format.js";
+import { irrEndsDisagree } from "../../src/eval/evaluate.js";
 import { callProblem, FUNCTION_TABLE, FUNCTIONS, isReduce } from "../../src/eval/functions.js";
+import { Decimal } from "decimal.js";
 import type { Finding } from "../../src/model/types.js";
 
 const run = (src: string) => check(build(locate(src)));
@@ -1094,6 +1096,14 @@ rate = IRR(Cash)
   expect(places("neg.rate", 4)).toBe("-0.2254");
   expect(places("first.rate", 4)).toBe("-0.1367");
   expect(str("unit.rate").toString()).toBe("0.1");
+});
+
+test("IRR bracket ends disagree only when the declared width cannot choose", () => {
+  expect(irrEndsDisagree(new Decimal("0.12044"), new Decimal("0.12045"), 4)).toBe(true);
+  expect(irrEndsDisagree(new Decimal("0.120441"), new Decimal("0.120444"), 4)).toBe(false);
+  expect(irrEndsDisagree(new Decimal("0.1306623862918074852"), new Decimal("0.1306623862918074854"), 18)).toBe(
+    false,
+  );
 });
 
 test("IRR refuses empty, blank, zero, and the wrong number of sign changes", () => {

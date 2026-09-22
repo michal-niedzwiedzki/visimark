@@ -17,6 +17,11 @@ export function irrBand(d: Decimal): { lo: Decimal; hi: Decimal } | undefined {
   return irrBands.get(d);
 }
 
+/** True when the two ends of a bracket do not share a half-up rounding at `places`. */
+export function irrEndsDisagree(lo: Decimal, hi: Decimal, places: number): boolean {
+  return !roundToPlaces(lo, places).eq(roundToPlaces(hi, places));
+}
+
 export function evalExpr(expr: Expr, env: EvalEnv): Value {
   switch (expr.type) {
     case "num":
