@@ -4,6 +4,13 @@
 
 ### Added
 
+- **`PMT(rate, nper, pv)`** — the fourteenth builtin (issue #156). The instalment
+  that repays a present amount over a positive whole number of periods at a
+  per-period rate, paid at the end of each period. A zero rate is `pv / nper`.
+  A written result declares its width, as division does. A non-positive or
+  non-whole term, or a rate of -1 or below, is `TYPE`.
+  See [`pmt-spec.md`](docs/vocab/pmt-spec.md).
+
 - **A `.pre-commit-hooks.yaml` for the [pre-commit](https://pre-commit.com) framework** —
   a repository can now add `repo: https://github.com/michal-niedzwiedzki/visimark`,
   `rev: v0.1.7`, `hooks: [id: visimark]` to `.pre-commit-config.yaml` instead of

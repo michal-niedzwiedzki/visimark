@@ -369,4 +369,34 @@ Last day of the month `months` calendar months from `d`; `d`'s day is discarded.
 
 **See also:** `MIN`, `MAX`
 
+### `PMT(rate, nper, pv)`
+
+Instalment that repays `pv` to zero over `nper` periods at per-period rate `rate`.
+
+**Shape:** map, 3 arguments.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `rate` | number | the rate for one period; must be greater than -1 |
+| `nper` | number | a positive whole number of periods |
+| `pv` | number | the present amount repaid down to zero |
+
+**Returns:** number.
+
+**Precision:** must be declared.
+
+**Errors**
+
+- A non-numeric `rate`, `nper`, or `pv` — `TYPE`
+- A non-positive or non-whole `nper` — `TYPE`
+- A `rate` of -1 or below — `TYPE`
+
+**Examples**
+
+| Expression | Is |
+|---|---|
+| `PMT(0, 12, 1200)` | `100` |
+| `PMT(0.10, 1, 1000)` | `1100` |
+| `PMT(0, 4, 0)` | `0` |
+
 <!--vmark:no-formulas-->
