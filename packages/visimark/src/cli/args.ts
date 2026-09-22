@@ -17,7 +17,7 @@ export interface Refusal {
 
 const USAGE: Record<CommandName, string> = {
   check: "usage: visimark check FILE...",
-  fmt: "usage: visimark fmt FILE... [--fix-dates]",
+  fmt: "usage: visimark fmt FILE... [--fix-dates] [--no-artifacts]",
   infer: "usage: visimark infer FILE... [--write]",
   eval: "usage: visimark eval FILE [--scenario FILE|-] [--get NAME] [--json]",
   explain: "usage: visimark explain FILE [#sheet]",
@@ -39,6 +39,7 @@ interface OptionSpec {
 const OPTIONS: Record<string, OptionSpec> = {
   "--json": { commands: ALL, value: false },
   "--fix-dates": { commands: ["fmt"], value: false },
+  "--no-artifacts": { commands: ["fmt"], value: false },
   "--write": { commands: ["infer"], value: false },
   "--get": { commands: ["eval"], value: true, needsValue: "visimark: --get needs a name" },
   "--scenario": {

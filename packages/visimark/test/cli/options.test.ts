@@ -44,6 +44,27 @@ const REFUSED: [string, string[], string][] = [
     "visimark: --fix-dates is only valid with fmt",
   ],
   ["write on fmt", ["fmt", invoice, "--write"], "visimark: --write is only valid with infer"],
+  // docs/design/a-no-artifacts-flag-for-fmt-spec.md §4 rows 10-13
+  [
+    "no-artifacts on check",
+    ["check", invoice, "--no-artifacts"],
+    "visimark: --no-artifacts is only valid with fmt",
+  ],
+  [
+    "no-artifacts on infer",
+    ["infer", invoice, "--no-artifacts"],
+    "visimark: --no-artifacts is only valid with fmt",
+  ],
+  [
+    "= on no-artifacts",
+    ["fmt", drift, "--no-artifacts=1"],
+    "visimark: unknown option --no-artifacts=1 — `--no-artifacts` takes no value",
+  ],
+  [
+    "no-artifacts, close",
+    ["fmt", drift, "--no-artifact"],
+    "visimark: unknown option --no-artifact — did you mean `--no-artifacts`?",
+  ],
   ["get on check", ["check", invoice, "--get", "vat"], "visimark: --get is only valid with eval"],
   [
     "scenario on check",

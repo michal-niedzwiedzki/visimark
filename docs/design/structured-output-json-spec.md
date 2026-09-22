@@ -200,6 +200,7 @@ computed cells and anchors and writes artifacts
       "anchorsUpdated": 1,
       "datesFixed": 0,
       "artifacts": [{ "path": "charts/cost.svg" }],
+      "artifactsSkipped": 0,
       "findings": []
     }
   ],
@@ -210,6 +211,7 @@ computed cells and anchors and writes artifacts
     "anchorsUpdated": 1,
     "datesFixed": 0,
     "artifacts": 1,
+    "artifactsSkipped": 0,
     "problems": 0,
     "stale": 0,
     "errors": 0
@@ -221,6 +223,13 @@ computed cells and anchors and writes artifacts
 `unchanged` line). `artifacts[].path` is the path the document named.
 `changed` is true when the Markdown file was rewritten; writing only an
 artifact still lists that artifact and counts it in `summary.artifacts`.
+
+`--no-artifacts` ([`a-no-artifacts-flag-for-fmt-spec.md`](a-no-artifacts-flag-for-fmt-spec.md))
+writes no artifact, so `artifacts` is `[]` and `summary.artifacts` is `0`.
+`artifactsSkipped` reports how many were declined, per file and in the summary,
+which is what distinguishes a document that declares no chart from one whose
+charts were declined. It is **always present** and `0` without the flag, so a
+consumer sees one shape either way.
 
 `--fix-dates` still rewrites unambiguous dates; `datesFixed` reports how many.
 

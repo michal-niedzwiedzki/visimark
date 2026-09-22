@@ -169,15 +169,17 @@ installs. You only touch these in a release commit; see
 `## X.Y.Z - YYYY-MM-DD` heading in `CHANGELOG.md` and in
 `editors/vscode/CHANGELOG.md`; a separate CI step checks that each has one.
 
-**The built CLI must run under Node, not only Bun.** A separate job builds with
-Bun and then exercises `dist/` under Node against the worked examples, including
-the drift invoice, which is required to *fail*. It also feeds the parser a
-pathological deeply nested expression and requires a finding rather than a stack
-overflow.
+**The built CLI must run under Node, not only Bun**
+([`.agents/rules/runtime-parity.md`](.agents/rules/runtime-parity.md)). A
+separate job builds with Bun and then exercises `dist/` under Node against the
+worked examples, including the drift invoice, which is required to *fail*. It
+also feeds the parser a pathological deeply nested expression and requires a
+finding rather than a stack overflow.
 
-**A global install must work with only one runtime present.** Two smoke jobs
-install the packed tarball in a Node-only runner and a Bun-only container. The
-launcher has to work in both.
+**A global install must work with only one runtime present**
+([`.agents/rules/runtime-parity.md`](.agents/rules/runtime-parity.md)). Two
+smoke jobs install the packed tarball in a Node-only runner and a Bun-only
+container. The launcher has to work in both.
 
 **The repository's own documents must pass `visimark check`.** See the next
 section.

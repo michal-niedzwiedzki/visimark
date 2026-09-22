@@ -9,6 +9,11 @@ import { applyEdits, type Edit } from "./splice.js";
 
 export interface FmtOptions {
   fixDates?: boolean;
+  /** decline the write of generated artifacts: `fmt` still splices the
+   *  document, but returns no artifact for the caller to write. The finding is
+   *  unaffected — `check` still reports a missing or stale artifact as STALE.
+   *  See `docs/design/a-no-artifacts-flag-for-fmt-spec.md`. */
+  noArtifacts?: boolean;
   /** where the document lives and how to read the files around it — needed to
    *  resolve and write its artifacts. See `CheckOptions.doc`. */
   doc?: DocumentFile;
@@ -41,8 +46,11 @@ export interface FmtResult {
   /** import stamps added or corrected — never the CSV file itself */
   stampsUpdated: number;
   unfixable: Finding[];
-  /** artifacts that are stale or missing — the caller writes them */
+  /** artifacts that are stale or missing — the caller writes them. Always
+   *  empty under `FmtOptions.noArtifacts`. */
   artifacts: ArtifactWrite[];
+  /** how many artifacts `noArtifacts` declined; `0` when it is not set */
+  artifactsSkipped: number;
 }
 
 /** an edit together with the finding it resolves, so a diagnostic can be
@@ -232,6 +240,10 @@ export function fmt(source: string, opts: FmtOptions = {}): FmtResult {
     });
   }
 
+  // `noArtifacts` withholds the artifacts from the caller; it does not change
+  // what was found. `unfixable` above is untouched, which is what keeps the
+  // exit code the same — a chart's STALE finding is filtered by
+  // `FIXABLE_BY_FMT` whether or not its SVG is written.
   return {
     output,
     changed: output !== source,
@@ -240,7 +252,8 @@ export function fmt(source: string, opts: FmtOptions = {}): FmtResult {
     datesFixed,
     stampsUpdated,
     unfixable,
-    artifacts,
+    artifacts: opts.noArtifacts ? [] : artifacts,
+    artifactsSkipped: opts.noArtifacts ? artifacts.length : 0,
   };
 }
 
