@@ -124,10 +124,14 @@ hands the rule and call the already-public `analyze(source)`.
 > parsed from the document *before* that blanking and carries each comment's
 > original text with exact positions, and the blanking is length-preserving —
 > every non-whitespace character becomes one dot — so writing each `htmlFlow`
-> and `htmlText` token's text back over its own span restores the source byte
-> for byte. Each rule therefore declares `parser: "micromark"` rather than
-> `"none"`, and `markdownlint` parses each document once, shared across all
-> seventeen rules. See `packages/markdownlint-visimark/src/source.ts`.
+> and `htmlText` token's text back over its own span restores that comment —
+> except inside a fenced/indented code block or inline code span (VisiMark's
+> own parser is blind there too, so nothing is lost) and except a CRLF
+> document's multi-line comment (the length-preservation guard declines
+> rather than corrupting the offset; unreached today since no VisiMark
+> construct spans lines). Each rule therefore declares `parser: "micromark"`
+> rather than `"none"`, and `markdownlint` parses each document once, shared
+> across all seventeen rules. See `packages/markdownlint-visimark/src/source.ts`.
 
 **Front matter needs no handling in this package.** Verified against
 `markdownlint` v0.41.1's source and by running it: front matter is absent from

@@ -26,8 +26,22 @@ function collectHtml(tokens: readonly MicromarkToken[], into: MicromarkToken[]):
  * The micromark token stream is parsed from the document *before* that blanking
  * and carries each comment's original text with exact 1-based positions. The
  * blanking is length-preserving — every non-whitespace character becomes one
- * dot — so writing each token's text back over its own span restores the source
- * byte for byte, and every later span stays valid.
+ * dot — so writing each `htmlFlow`/`htmlText` token's text back over its own
+ * span restores that comment, with two exceptions, both harmless because
+ * VisiMark's own parser is blind to them too:
+ *
+ * - A comment inside a fenced code block, an indented code block, or an inline
+ *   code span never reaches here: micromark emits `codeFenced`/`codeText`
+ *   there, not `htmlFlow`/`htmlText`, and `collectHtml` only walks the latter
+ *   two. VisiMark's own anchor scanner never sees inside a code region either
+ *   — mdast parses fenced and inline code as opaque text, never as a nested
+ *   `html` node — so a comment there was never a binding to begin with.
+ * - A CRLF document's *multi-line* comment is left blanked. `token.text` is
+ *   sliced from the real source and keeps its `\r`s; the offsets below come
+ *   from `params.lines.join("\n")`, which drops them. The lengths then
+ *   disagree, the length-preservation guard (below) declines the write, and
+ *   the comment stays blanked rather than landing at a corrupted offset. No
+ *   VisiMark construct spans lines today, so this is unreached in practice.
  */
 /**
  * One entry, keyed on the `lines` array's identity. `markdownlint` freezes that

@@ -98,6 +98,65 @@ tags: [a, b]
 
 ${stale}`;
 
+const anchoredCRLF = anchored.replace(/\n/g, "\r\n");
+
+/**
+ * The anchor comment sits inside a fenced example, not a real vmark block —
+ * mdast never parses code-fence content into an `html` node, so neither
+ * `visimark`'s own anchor scanner nor markdownlint's micromark token walk
+ * ever sees it. `lines.Net` is therefore genuinely unbound: with advisory
+ * findings on, it reports as unused, not as a restored anchor.
+ */
+const anchorInFence = `\`\`\`vmark #lines
+Net = 2 * 5.00
+\`\`\`
+
+Illustration of a value anchor:
+
+\`\`\`text
+Net comes to **9.99**<!--vmark=lines.Net-->.
+\`\`\`
+`;
+
+/**
+ * The anchor comment spans three lines. `token.text` (sliced from the real,
+ * un-blanked source) keeps its `\r`s; the offset arithmetic in
+ * `rebuild()` is built from `params.lines.join("\n")`, which does not. The
+ * lengths disagree, `source.ts`'s length-preservation guard declines the
+ * write, and the comment stays blanked — `lines.Net` degrades to the same
+ * "unused" report as `anchorInFence`, on its own line, rather than either
+ * restoring garbage or throwing.
+ */
+const anchoredMultilineCRLF = `\`\`\`vmark #lines
+Net = 2 * 5.00
+\`\`\`
+
+Net comes to **9.99**<!--
+vmark=lines.Net
+-->.
+`.replace(/\n/g, "\r\n");
+
+test("a CRLF document reports the same lines as its LF twin", async () => {
+  const report = await run({ anchoredCRLF });
+  expect(report.anchoredCRLF).toEqual([
+    { line: 5, rule: "visimark-stale", detail: "lines.Net: stored 9.99 ≠ computed 10.00" },
+  ]);
+});
+
+test("an anchor inside a fenced code block is not restored, and is not a binding", async () => {
+  const report = await run({ anchorInFence }, only);
+  expect(report.anchorInFence).toEqual([
+    { line: 2, rule: "visimark-warn", detail: "lines.Net is defined and never read" },
+  ]);
+});
+
+test("the length-preservation guard declines rather than writing a bad offset", async () => {
+  const report = await run({ anchoredMultilineCRLF }, only);
+  expect(report.anchoredMultilineCRLF).toEqual([
+    { line: 2, rule: "visimark-warn", detail: "lines.Net is defined and never read" },
+  ]);
+});
+
 test("a stale cell reports one violation, on its own line", async () => {
   const report = await run({ stale });
   expect(report.stale).toEqual([
