@@ -55,6 +55,12 @@ describe("--write only ever inserts", () => {
     expect(out).toContain("```vmark #unnamed1\nNet = Qty * Rate\n```");
     expect(out).not.toContain("<!--vmark=unnamed1");
   });
+
+  test("inserted anchors never carry a percent sigil", () => {
+    const out = written(strippedClean);
+    expect(out).not.toMatch(/<!--vmark=[^>]+%-->/);
+    expect(out).toContain("<!--vmark=");
+  });
 });
 
 describe("--write inserts a proposed alias", () => {
