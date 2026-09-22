@@ -23,13 +23,15 @@ jobs:
           bun-version: latest
       - run: bun install --frozen-lockfile
 
-      # Four files carry the version and all four must agree. The three
+      # Five files carry the version and all five must agree. The three
       # manifests have to match because one tag publishes all of them, and a
       # mismatch ships a release under the wrong number or fails a leg midway
       # with the others already out. action.yml joins them because its `version`
       # default is what a consumer's `npx` actually installs: leave it behind
       # and every tag-pinned consumer silently keeps running an older engine
       # than the Action ref they pinned, with nothing at run time to tell them.
+      # scripts/precommit-visimark-check.sh joins them for the same reason — it
+      # is what a consumer's pinned `pre-commit` `rev:` actually runs.
       #
       # docs/releasing.md used to ask the releaser to eyeball this with grep.
       # A release checklist step that nothing enforces is a step that gets
@@ -43,15 +45,27 @@ jobs:
           # The `version` input's default, read without a YAML parser the repo
           # does not depend on: first `default:` after the `version:` key.
           pinned=$(awk '/^  version:/{f=1} f && /^    default:/{sub(/^    default: *"/,"");sub(/"[[:space:]]*$/,"");print;exit}' action.yml)
-          echo "engine=$engine lsp=$lsp vscode=$ext action.yml=$pinned"
+          # scripts/precommit-visimark-check.sh pins the same version twice
+          # (the bunx and npx branches) — both must agree with each other
+          # before either is compared with the engine.
+          precommit_versions=$(grep -oE 'visimark@[0-9]+\.[0-9]+\.[0-9]+' scripts/precommit-visimark-check.sh | sed 's/^visimark@//' | sort -u)
+          precommit_count=$(echo "$precommit_versions" | grep -c .)
+          echo "engine=$engine lsp=$lsp vscode=$ext action.yml=$pinned precommit-hook=$precommit_versions"
           if [ -z "$pinned" ]; then
             echo "::error::could not read the version default out of action.yml. The version input or its default line moved; fix this check rather than deleting it."
             exit 1
           fi
           fail=0
-          for pair in "packages/visimark-lsp/package.json:$lsp" "editors/vscode/package.json:$ext" "action.yml:$pinned"; do
+          if [ "$precommit_count" != "1" ]; then
+            echo "::error file=scripts/precommit-visimark-check.sh::expected exactly one visimark@<version> pin (the bunx and npx branches must agree), found: $(echo "$precommit_versions" | tr '\n' ' ')"
+            fail=1
+            precommit=""
+          else
+            precommit=$precommit_versions
+          fi
+          for pair in "packages/visimark-lsp/package.json:$lsp" "editors/vscode/package.json:$ext" "action.yml:$pinned" "scripts/precommit-visimark-check.sh:$precommit"; do
             file=${pair%%:*}; got=${pair#*:}
-            if [ "$got" != "$engine" ]; then
+            if [ -n "$got" ] && [ "$got" != "$engine" ]; then
               echo "::error file=$file::$file says $got but packages/visimark/package.json says $engine. Bump every version-carrying file in the release commit — see docs/releasing.md."
               fail=1
             fi
