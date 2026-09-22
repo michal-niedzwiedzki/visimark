@@ -103,16 +103,22 @@ test("the seventeen rules pay one analyze() call per document", () => {
 });
 
 test("a second document with different content invalidates the cache", () => {
-  expect(findingsFor(stale)).toHaveLength(1);
-  expect(findingsFor(clean)).toHaveLength(0);
+  const first = findingsFor(stale);
+  const second = findingsFor(clean);
+  expect(first.ok && first.findings).toHaveLength(1);
+  expect(second.ok && second.findings).toHaveLength(0);
   expect(parseCount()).toBe(2);
 });
 
 test("a second document with byte-identical content still reports, from the cache", () => {
   const first = findingsFor(stale);
   const second = findingsFor(stale.slice(0)); // equal content, one analyze() call
-  expect(second).toHaveLength(1);
-  expect(second[0]!.code).toBe(first[0]!.code);
+  expect(first.ok).toBe(true);
+  expect(second.ok).toBe(true);
+  if (first.ok && second.ok) {
+    expect(second.findings).toHaveLength(1);
+    expect(second.findings[0]!.code).toBe(first.findings[0]!.code);
+  }
   expect(parseCount()).toBe(1);
 });
 
@@ -124,6 +130,7 @@ test("prose with no table and no vmark block produces nothing", () => {
       calls++;
     });
   }
-  expect(findingsFor(prose)).toHaveLength(0);
+  const result = findingsFor(prose);
+  expect(result.ok && result.findings).toHaveLength(0);
   expect(calls).toBe(0);
 });

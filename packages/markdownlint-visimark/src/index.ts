@@ -25,7 +25,9 @@ const rules: Rule[] = CODES.map((code) => ({
   information: INFORMATION,
   function: (params, onError) => {
     const source = sourceFrom(params);
-    for (const finding of findingsFor(source)) {
+    const result = findingsFor(source);
+    if (!result.ok) return; // visimark-engine-error reports it once (Task 3)
+    for (const finding of result.findings) {
       if (finding.code !== code) continue;
       // The collapsed anchor-group rollup summarises stale prose anchors whose
       // own cells report with spans of their own; reporting it too would
