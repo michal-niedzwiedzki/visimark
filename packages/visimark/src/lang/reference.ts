@@ -310,6 +310,26 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
     ],
     see: ["MIN", "MAX"],
   },
+  PMT: {
+    summary: "instalment that repays `pv` to zero over `nper` periods at per-period rate `rate`",
+    params: [
+      { name: "rate", type: "number", note: "the rate for one period; must be greater than -1" },
+      { name: "nper", type: "number", note: "a positive whole number of periods" },
+      { name: "pv", type: "number", note: "the present amount repaid down to zero" },
+    ],
+    returns: "number",
+    precision: { from: "declared" },
+    errors: [
+      { when: "a non-numeric `rate`, `nper`, or `pv`", code: "TYPE" },
+      { when: "a non-positive or non-whole `nper`", code: "TYPE" },
+      { when: "a `rate` of -1 or below", code: "TYPE" },
+    ],
+    examples: [
+      { expr: "PMT(0, 12, 1200)", is: "100" },
+      { expr: "PMT(0.10, 1, 1000)", is: "1100" },
+      { expr: "PMT(0, 4, 0)", is: "0" },
+    ],
+  },
 };
 
 export type FnEntry = FnDoc & FnSpec & { name: FunctionName };
