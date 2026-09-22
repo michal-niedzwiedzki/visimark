@@ -16,6 +16,7 @@ import { dependencies, refText, resolve, topoOrder } from "./graph.js";
 import { resolveImports } from "../import/resolve.js";
 import type { ImportStatus } from "../model/types.js";
 import { derivePrecision, type Width } from "./precision.js";
+import { percentDisplay } from "./percent-display.js";
 import { applyUnit, cellPrecision, parseDecorated, type Unit } from "./units.js";
 import {
   EvalError,
@@ -578,21 +579,80 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
       const v = prec === null ? v0 : roundValue(v0, prec);
       values.set(binding.id, v);
 
-      if (anchorText !== undefined && prec !== null && !matchesStored(v, anchorText, prec)) {
-        staleScalars.add(binding.id);
-        if (!isCrossSheetAggregate(model, binding)) {
+      const mine = valueAnchorsOf(model, binding.id);
+      const percentMine = mine.filter((a) => a.percent);
+      let sigilBlocked = false;
+      if (percentMine.length > 0 && v.t !== "num") {
+        emit(
+          {
+            code: "TYPE",
+            sheetId: binding.sheetId,
+            name: binding.name,
+            message: "a % sigil is only legal on a numeric scalar",
+            span: percentMine[0]!.commentSpan,
+          },
+          { sheetId: binding.sheetId },
+        );
+        sigilBlocked = true;
+      }
+      if (prec !== null && prec < 2 && percentMine.length > 0 && v.t === "num") {
+        emit(
+          {
+            code: "PRECISION",
+            sheetId: binding.sheetId,
+            name: binding.name,
+            message: `percent display needs precision 2 or more; ${binding.name} has ${prec}`,
+            span: percentMine[0]!.commentSpan,
+          },
+          { sheetId: binding.sheetId },
+        );
+        sigilBlocked = true;
+      }
+      for (const a of percentMine) {
+        const text = model.source.slice(a.value!.start, a.value!.end);
+        const d = parseDecorated(text);
+        if (d.kind === "both-sides" || (d.kind === "number" && d.unit)) {
           emit(
             {
-              code: "STALE",
+              code: "UNIT",
               sheetId: binding.sheetId,
               name: binding.name,
-              stored: anchorText,
-              computed: applyUnit(showValue(v, prec), anchorUnit),
-              formula: formulaText(model, binding),
-              span: anchorValueSpanOf(model, binding.id) ?? binding.span,
+              message: "cannot mix a unit with percent display",
+              span: a.value ?? a.commentSpan,
             },
             { sheetId: binding.sheetId },
           );
+          sigilBlocked = true;
+        }
+      }
+
+      if (
+        !sigilBlocked &&
+        prec !== null &&
+        v.t === "num" &&
+        mine.length > 0
+      ) {
+        for (const a of mine) {
+          const text = model.source.slice(a.value!.start, a.value!.end);
+          if (matchesStored(v, text, prec)) continue;
+          staleScalars.add(binding.id);
+          if (!isCrossSheetAggregate(model, binding)) {
+            emit(
+              {
+                code: "STALE",
+                sheetId: binding.sheetId,
+                name: binding.name,
+                stored: text,
+                computed: a.percent
+                  ? percentDisplay(v, prec)
+                  : applyUnit(showValue(v, prec), anchorUnit),
+                formula: formulaText(model, binding),
+                span: { start: a.value!.start, end: a.value!.end },
+              },
+              { sheetId: binding.sheetId },
+            );
+          }
+          break;
         }
       }
     } catch (e) {
@@ -1026,13 +1086,10 @@ function isCrossSheetAggregate(model: DocModel, binding: Binding): boolean {
   return (res.kind === "column" || res.kind === "input-column") && res.sheetId !== binding.sheetId;
 }
 
-function anchorValueSpanOf(model: DocModel, id: string): Span | undefined {
-  for (const a of model.anchors) {
-    if (`${a.sheetId}.${a.name}` === id && a.value) {
-      return { start: a.value.start, end: a.value.end };
-    }
-  }
-  return undefined;
+function valueAnchorsOf(model: DocModel, id: string) {
+  return model.anchors.filter(
+    (a) => `${a.sheetId}.${a.name}` === id && a.value !== null && a.value.kind !== "image",
+  );
 }
 
 function anchorValueText(model: DocModel, id: string): string | undefined {

@@ -616,3 +616,85 @@ test("assert: a sheet with only an assert + a table does not trip COVERAGE", () 
   expect(r.findings.some((f) => f.code === "COVERAGE")).toBe(false);
   expect(r.findings).toEqual([]);
 });
+
+const percentDoc = (span: string, extra = "") => `Margin **${span}**<!--vmark=s.margin%-->.
+Bare **0.4026**<!--vmark=s.margin-->.
+
+\`\`\`vmark #s
+margin precision 4 = 0.4026
+${extra}
+\`\`\`
+`;
+
+test("a matching % span is not STALE", () => {
+  const r = run(percentDoc("40.26%"));
+  expect(r.findings.filter((f) => f.code === "STALE")).toEqual([]);
+  expect(r.exitCode).toBe(0);
+});
+
+test("a wrong % span is STALE with both sides in percent form", () => {
+  const r = run(percentDoc("41.55%"));
+  const stale = r.findings.find((f) => f.code === "STALE" && !f.anchorGroup)!;
+  expect(stale.stored).toBe("41.55%");
+  expect(stale.computed).toBe("40.26%");
+  expect(r.exitCode).toBe(1);
+});
+
+test("a decimal span on a % comment is not STALE when the number agrees", () => {
+  const r = run(percentDoc("0.4026"));
+  expect(r.findings.filter((f) => f.code === "STALE")).toEqual([]);
+  expect(r.exitCode).toBe(0);
+});
+
+test("precision below 2 on a % comment is PRECISION", () => {
+  const src = `X **1**<!--vmark=s.n%-->.
+
+\`\`\`vmark #s
+n precision 1 = 1
+\`\`\`
+`;
+  const r = run(src);
+  const p = r.findings.find((f) => f.code === "PRECISION")!;
+  expect(p.message).toBe("percent display needs precision 2 or more; n has 1");
+  expect(r.exitCode).toBe(1);
+});
+
+test("a % sigil on a date scalar is TYPE", () => {
+  const src = `Due **2026-03-31**<!--vmark=s.d%-->.
+
+\`\`\`vmark #s
+d = 2026-03-31
+\`\`\`
+`;
+  const r = run(src);
+  const t = r.findings.find((f) => f.code === "TYPE")!;
+  expect(t.message).toBe("a % sigil is only legal on a numeric scalar");
+});
+
+test("a unit in the same span as a % sigil is UNIT", () => {
+  const src = `X **$0.4026**<!--vmark=s.margin%-->.
+
+\`\`\`vmark #s
+margin precision 4 = 0.4026
+\`\`\`
+`;
+  const r = run(src);
+  const u = r.findings.find((f) => f.code === "UNIT")!;
+  expect(u.message).toBe("cannot mix a unit with percent display");
+});
+
+test("a % sigil on a chart image is TYPE", () => {
+  const src = `| Item | Price |
+|------|------:|
+| pen  |  5.00 |
+
+\`\`\`vmark #order
+chart cost as pie of Price labelled Item
+\`\`\`
+
+![c](charts/c.svg)<!--vmark=order.cost%-->
+`;
+  const r = run(src);
+  const t = r.findings.find((f) => f.code === "TYPE")!;
+  expect(t.message).toBe("a % sigil is only legal on a numeric scalar");
+});
