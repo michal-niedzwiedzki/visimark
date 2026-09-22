@@ -759,3 +759,240 @@ instalment precision 2 = PMT(0.01, 12)
   const t = run(src).findings.find((f) => f.code === "TYPE");
   expect(t?.message).toBe("PMT() takes 3 arguments, got 2");
 });
+
+const npvSheet = (rule: string, anchor: string) => `
+The present value is **${anchor}**<!--vmark=t.present-->.
+
+| Cash |
+|-----:|
+| -48000.00 |
+|  20000.00 |
+|  20000.00 |
+|  20000.00 |
+
+\`\`\`vmark #t
+${rule}
+\`\`\`
+`;
+
+test("NPV at 8% anchored 3541.94 with a declared width is clean", () => {
+  const r = run(npvSheet("present precision 2 = NPV(0.08, Cash)", "3541.94"));
+  expect(r.findings.filter((f) => f.code !== "WARN")).toEqual([]);
+  const small = `
+The present value is **-5.26**<!--vmark=t.present-->.
+
+| Cash |
+|-----:|
+| -1000.00 |
+|   400.00 |
+|   400.00 |
+|   400.00 |
+
+\`\`\`vmark #t
+present precision 2 = NPV(0.10, Cash)
+\`\`\`
+`;
+  expect(run(small).findings.filter((f) => f.code !== "WARN")).toEqual([]);
+});
+
+test("NPV anchored at the issue's 6000.00 is STALE, computed 3541.94", () => {
+  const r = run(npvSheet("present precision 2 = NPV(0.08, Cash)", "6000.00"));
+  const stale = r.findings.filter((f) => f.code === "STALE" && !f.anchorGroup);
+  expect(stale).toHaveLength(1);
+  expect(stale[0]!.computed).toBe("3541.94");
+});
+
+test("an anchored NPV with no declared width is PRECISION, and rate zero is too", () => {
+  const missing = run(npvSheet("present = NPV(0.08, Cash)", "3541.94"));
+  const prec = missing.findings.filter((f) => f.code === "PRECISION");
+  expect(prec).toHaveLength(1);
+  expect(prec[0]!.raw).toBe("NPV(0.08, Cash)");
+
+  const zero = run(npvSheet("present = NPV(0, Cash)", "12000.00"));
+  expect(zero.findings.filter((f) => f.code === "PRECISION")).toHaveLength(1);
+
+  const declared = run(npvSheet("present precision 2 = NPV(0, Cash)", "12000.00"));
+  expect(declared.findings.filter((f) => f.code !== "WARN")).toEqual([]);
+});
+
+test("an unanchored NPV is not PRECISION, and ROUND derives the width", () => {
+  const raw = `
+| Cash |
+|-----:|
+| -48000.00 |
+|  20000.00 |
+|  20000.00 |
+|  20000.00 |
+
+\`\`\`vmark #t
+raw = NPV(0.08, Cash)
+shown precision 2 = ROUND(raw, 2)
+\`\`\`
+
+**3541.94**<!--vmark=t.shown-->
+`;
+  const r = run(raw);
+  expect(r.findings.filter((f) => f.code !== "WARN")).toEqual([]);
+});
+
+test("a blank cell is TYPE, and the assertion is only the upstream NOTE", () => {
+  const src = `
+| Cash |
+|-----:|
+| -48000.00 |
+|  |
+|  20000.00 |
+
+\`\`\`vmark #t
+present precision 2 = NPV(0.08, Cash)
+assert present > 0
+\`\`\`
+`;
+  const r = run(src);
+  expect(r.findings.filter((f) => f.code === "TYPE").map((f) => f.message)).toEqual([
+    "NPV expects a number",
+  ]);
+  expect(r.findings.filter((f) => f.code === "NOTE").map((f) => f.message)).toEqual([
+    "1 assertion not verified (upstream errors)",
+  ]);
+});
+
+const irrAnchored = (rule: string, anchor: string, rows: string) => `
+The rate is **${anchor}**<!--vmark=t.rate-->.
+
+| Cash |
+|-----:|
+${rows}
+
+\`\`\`vmark #t
+${rule}
+\`\`\`
+`;
+
+const pressRows = `| -48000.00 |\n|  20000.00 |\n|  20000.00 |\n|  20000.00 |`;
+const twoRows = `| -1000.00 |\n|   600.00 |\n|   600.00 |`;
+
+test("IRR at precision 4 anchored 0.1204 is clean, and the percent anchor is 12.04%", () => {
+  const plain = run(irrAnchored("rate precision 4 = IRR(Cash)", "0.1204", pressRows));
+  expect(plain.findings.filter((f) => f.code !== "WARN")).toEqual([]);
+  const pct = `
+The series earns **12.04%**<!--vmark=t.rate-->.
+
+| Cash |
+|-----:|
+${pressRows}
+
+\`\`\`vmark #t
+rate precision 4 = IRR(Cash)
+\`\`\`
+`;
+  expect(run(pct).findings.filter((f) => f.code !== "WARN")).toEqual([]);
+});
+
+test("a stale IRR anchor names the rounded rate", () => {
+  const r = run(irrAnchored("rate precision 4 = IRR(Cash)", "0.1200", pressRows));
+  const stale = r.findings.filter((f) => f.code === "STALE" && !f.anchorGroup);
+  expect(stale).toHaveLength(1);
+  expect(stale[0]!.computed).toBe("0.1204");
+});
+
+test("an anchored IRR with no precision clause is PRECISION", () => {
+  const r = run(irrAnchored("rate = IRR(Cash)", "0.1204", pressRows));
+  const p = r.findings.filter((f) => f.code === "PRECISION");
+  expect(p).toHaveLength(1);
+  expect(p[0]!.raw).toBe("IRR(Cash)");
+});
+
+test("an unanchored IRR and ROUND(IRR, 4) are clean", () => {
+  const raw = `
+| Cash |
+|-----:|
+${pressRows}
+
+\`\`\`vmark #t
+raw = IRR(Cash)
+shown = ROUND(IRR(Cash), 4)
+\`\`\`
+
+Shown **0.1204**<!--vmark=t.shown-->.
+`;
+  expect(run(raw).findings.filter((f) => f.code !== "WARN")).toEqual([]);
+});
+
+test("legal widths of the two-period series are the half-up root", () => {
+  const at2 = run(irrAnchored("rate precision 2 = IRR(Cash)", "0.13", twoRows));
+  expect(at2.findings.filter((f) => f.code !== "WARN")).toEqual([]);
+  const at4 = run(irrAnchored("rate precision 4 = IRR(Cash)", "0.1307", twoRows));
+  expect(at4.findings.filter((f) => f.code !== "WARN")).toEqual([]);
+  const at18 = run(irrAnchored("rate precision 18 = IRR(Cash)", "0.130662386291807485", twoRows));
+  expect(at18.findings.filter((f) => f.code !== "WARN")).toEqual([]);
+});
+
+test("IRR shape errors and a scalar column argument", () => {
+  const shape = run(`
+| Cash |
+|-----:|
+| -100 |
+|  110 |
+
+\`\`\`vmark #t
+rate precision 4 = IRR(Cash * 1)
+\`\`\`
+`);
+  expect(shape.findings.find((f) => f.code === "TYPE")?.message).toBe(
+    "IRR() takes a column reference, not an expression",
+  );
+  const arity = run(`
+\`\`\`vmark #t
+rate precision 4 = IRR()
+\`\`\`
+`);
+  expect(arity.findings.find((f) => f.code === "TYPE")?.message).toBe(
+    "IRR() takes 1 argument, got 0",
+  );
+  const scalar = run(`
+\`\`\`vmark #t
+known precision 2 = 0.08
+rate precision 4 = IRR(known)
+\`\`\`
+`);
+  expect(scalar.findings.find((f) => f.code === "TYPE")?.message).toBe("IRR() expects a column");
+});
+
+test("a computed cash column with one bad row leaves IRR silent", () => {
+  const src = `
+| n | Cash |
+|--:|-----:|
+| 1 |    0 |
+| 0 |    0 |
+| 1 |    0 |
+
+\`\`\`vmark #t
+Cash = 1 / n
+rate precision 4 = IRR(Cash)
+\`\`\`
+`;
+  const r = run(src);
+  expect(r.findings.some((f) => f.message?.includes("IRR"))).toBe(false);
+  expect(r.findings.some((f) => f.code === "TYPE")).toBe(true);
+});
+
+test("a blank in the cash column makes the assert a NOTE", () => {
+  const src = `
+| Cash |
+|-----:|
+| -100 |
+|      |
+|  110 |
+
+\`\`\`vmark #t
+rate precision 4 = IRR(Cash)
+assert rate > 0
+\`\`\`
+`;
+  const r = run(src);
+  expect(r.findings.filter((f) => f.code === "TYPE")).toHaveLength(1);
+  expect(r.findings.find((f) => f.code === "TYPE")?.message).toBe("IRR expects a number");
+  expect(r.findings.some((f) => f.code === "NOTE")).toBe(true);
+  expect(r.findings.some((f) => f.code === "ASSERT")).toBe(false);
+});

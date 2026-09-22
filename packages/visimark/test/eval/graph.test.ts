@@ -151,3 +151,37 @@ test("an aggregate over a column in an assertion is a clean dependency", () => {
   const info = dependencies(m, assertionNode(a));
   expect(info.vectorRefs).toEqual([]);
 });
+
+test("NPV gates the flows argument and not the rate", () => {
+  const src = `
+| Cash |
+|-----:|
+|   10 |
+
+\`\`\`vmark #flow
+Cash = 10
+\`\`\`
+
+| Rate |
+|-----:|
+| 0.08 |
+
+\`\`\`vmark #here
+hurdle = 0.08
+present = NPV(hurdle, flow.Cash)
+bad = NPV(Rate, flow.Cash)
+\`\`\`
+`;
+  const model = build(locate(src));
+  const present = model.sheets.get("here")!.scalars.get("present")!;
+  const presentInfo = dependencies(model, present);
+  expect(presentInfo.vectorRefs).toEqual([]);
+  expect(presentInfo.callErrors).toEqual([]);
+  expect(presentInfo.deps.has("flow.Cash")).toBe(true);
+
+  const bad = model.sheets.get("here")!.scalars.get("bad")!;
+  const badInfo = dependencies(model, bad);
+  expect(badInfo.vectorRefs.map((r) => r.name)).toEqual(["Rate"]);
+  expect(badInfo.callErrors).toEqual([]);
+  expect(badInfo.deps.has("flow.Cash")).toBe(true);
+});

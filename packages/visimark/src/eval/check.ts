@@ -10,7 +10,7 @@ import {
   type Sheet,
 } from "../model/types.js";
 import { closest } from "../report/levenshtein.js";
-import { evalExpr, type EvalEnv } from "./evaluate.js";
+import { evalExpr, irrBand, irrEndsDisagree, type EvalEnv } from "./evaluate.js";
 import { describeCallProblem, FUNCTIONS, isReduce } from "./functions.js";
 import { dependencies, refText, resolve, topoOrder } from "./graph.js";
 import { resolveImports } from "../import/resolve.js";
@@ -417,6 +417,31 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
     );
   }
 
+  function rejectUndeterminedIrr(
+    binding: Binding,
+    v0: Value,
+    prec: number | null,
+    rowLabelText?: string,
+  ): boolean {
+    if (prec === null || v0.t !== "num") return false;
+    const band = irrBand(v0.d);
+    if (!band) return false;
+    if (!irrEndsDisagree(band.lo, band.hi, prec)) return false;
+    emit(
+      {
+        code: "PRECISION",
+        sheetId: binding.sheetId,
+        name: binding.name,
+        ...(rowLabelText === undefined ? {} : { rowLabel: rowLabelText }),
+        message: `IRR did not determine a rate at precision ${prec}`,
+        span: binding.span,
+      },
+      { sheetId: binding.sheetId },
+    );
+    unevaluable.add(binding.id);
+    return true;
+  }
+
   function evalColumn(binding: Binding, sheet: Sheet, table: RawTable): void {
     const colId = `${sheet.id}.${binding.name}`;
     const idx = sheet.columnIndex.get(binding.name)!;
@@ -458,6 +483,7 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
           unevaluable.add(binding.id);
           return;
         }
+        if (rejectUndeterminedIrr(binding, v0, prec, rowLabel(table, r))) return;
         const v = prec === null ? v0 : roundValue(v0, prec);
         out.push(v);
         const cell = table.rows[r]!.cells[idx];
@@ -576,6 +602,7 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
         unevaluable.add(binding.id);
         return;
       }
+      if (rejectUndeterminedIrr(binding, v0, prec)) return;
       const v = prec === null ? v0 : roundValue(v0, prec);
       values.set(binding.id, v);
 
@@ -1075,7 +1102,9 @@ function formulaText(model: DocModel, binding: Binding): string | undefined {
 function isCrossSheetAggregate(model: DocModel, binding: Binding): boolean {
   const e = binding.expr;
   if (e.type !== "call" || !isReduce(e.name)) return false;
-  const arg = e.args[0];
+  const spec = FUNCTIONS.get(e.name);
+  if (!spec || spec.kind !== "reduce") return false;
+  const arg = e.args[spec.column];
   if (!arg || arg.type !== "ref") return false;
   const res = resolve(model, binding.sheetId, arg);
   return (res.kind === "column" || res.kind === "input-column") && res.sheetId !== binding.sheetId;

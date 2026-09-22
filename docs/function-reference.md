@@ -142,6 +142,73 @@ Number of rows.
 
 **See also:** `SUM`
 
+### `NPV(rate, flows)`
+
+Present value of a cash-flow column; row 0 is undiscounted; an empty column is a TYPE error.
+
+**Shape:** reduce, 2 arguments.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `rate` | number | the rate for one period; must be greater than -1 |
+| `flows` | column | cash flows in time order; the first row is period 0 |
+
+**Returns:** number.
+
+**Precision:** must be declared.
+
+**Errors**
+
+- A non-numeric `rate` — `TYPE`
+- A `rate` of -1 or below — `TYPE`
+- An empty column — `TYPE`
+- A non-numeric cell — `TYPE`
+- A non-column `flows` argument — `TYPE`
+
+**Examples**
+
+| Expression | Is |
+|---|---|
+| `NPV(0, t.Cash)` | `12000` |
+| `NPV(0.08, t.Cash)` | `-48000` |
+| `NPV(-0.5, t.Cash)` | `300` |
+
+**See also:** `SUM`, `AVG`
+
+### `IRR(flows)`
+
+Rate at which a cash-flow column has present value zero; row 0 is undiscounted.
+
+**Shape:** reduce, 1 argument.
+
+| Parameter | Type | Meaning |
+|---|---|---|
+| `flows` | column | cash flows in time order; the first row is period 0; exactly one sign change |
+
+**Returns:** number.
+
+**Precision:** must be declared.
+
+**Errors**
+
+- An empty column — `TYPE`
+- A non-numeric cell — `TYPE`
+- An all-zero column — `TYPE`
+- A column with no sign change — `TYPE`
+- A column with more than one sign change — `TYPE`
+- A rate not determined at the declared width — `PRECISION`
+- A non-column `flows` argument — `TYPE`
+
+**Examples**
+
+| Expression | Is |
+|---|---|
+| `IRR(t.Cash)` | `0.1` |
+| `IRR(t.Cash)` | `0.1` |
+| `IRR(t.Cash)` | `0` |
+
+**See also:** `NPV`, `PMT`
+
 ## Maps
 
 A map is scalar → scalar and runs once per row inside a column rule.

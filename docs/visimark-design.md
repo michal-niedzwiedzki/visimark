@@ -302,9 +302,9 @@ unrelated restrictions all follow from this one:
 
 ### Builtin functions
 
-Fourteen, chosen to cover the examples and the catalogued additions a real
+Sixteen, chosen to cover the examples and the catalogued additions a real
 document needed (`EOMONTH`, issue #6; `SQRT`, issue #18; `FLOOR`, issue #53;
-`CEILING`, issue #54; `PMT`, issue #156).
+`CEILING`, issue #54; `PMT`, issue #156; `NPV`, issue #157; `IRR`, issue #158).
 Each is declared with its shape and its exact argument count, in one table in
 `eval/functions.ts` —
 the single home for a classification the dependency walk, the evaluator and the
@@ -328,6 +328,8 @@ derivation the engine actually performs.
 | `MAX(col)` | reduce | 1 | the width of `col` | greatest value; a column mixing numbers and dates is a `TYPE` error |
 | `AVG(col)` | reduce | 1 | **must be declared** | arithmetic mean; an empty column is a `TYPE` error |
 | `COUNT(col)` | reduce | 1 | always 0 | number of rows |
+| `NPV(rate, flows)` | reduce | 2 | **must be declared** | present value of a cash-flow column; row 0 is undiscounted; an empty column is a TYPE error; a non-numeric `rate` is a `TYPE` error; a `rate` of -1 or below is a `TYPE` error; an empty column is a `TYPE` error; a non-numeric cell is a `TYPE` error; a non-column `flows` argument is a `TYPE` error |
+| `IRR(flows)` | reduce | 1 | **must be declared** | rate at which a cash-flow column has present value zero; row 0 is undiscounted; an empty column is a `TYPE` error; a non-numeric cell is a `TYPE` error; an all-zero column is a `TYPE` error; a column with no sign change is a `TYPE` error; a column with more than one sign change is a `TYPE` error; a rate not determined at the declared width is a `PRECISION` error; a non-column `flows` argument is a `TYPE` error |
 | `ROUND(x, places)` | map | 2 | the value of `places` | half-up to `places` decimals |
 | `ABS(x)` · `\|x\|` | map | 1 | the width of `x` | absolute value |
 | `MOD(x, y)` | map | 2 | the wider of `x` and `y` | remainder; a zero divisor is a `TYPE` error |
@@ -350,8 +352,9 @@ yields one finding, as section 8 requires. An unrecognised name is a `TYPE`
 error carrying a did-you-mean suggestion, bounded by edit distance so that a
 name unlike anything builtin is reported without a misleading guess.
 
-Every reduce takes exactly one argument by construction, which is the shape
-rule restated as a number: there is nothing for a second column to mean.
+A reduce has one column parameter, a bare column reference, and its other
+parameters are scalars. `NPV` is the first with a scalar parameter. There is
+still nothing for a second column to mean.
 
 The language has no `%` operator; `MOD(x, y)` is how a remainder is written.
 
@@ -778,7 +781,7 @@ Per-column
 *precision* has landed as the `precision N` clause
 ([§7](#7-numeric-semantics)); a document- or sheet-scope default has not, and
 should not: it could only override a derivation or suppress a required
-declaration. Per-row exceptions. A function library beyond the fourteen —
+declaration. Per-row exceptions. A function library beyond the sixteen —
 proposals and the decision on each are tracked in
 [`vocabulary-catalogue.md`](vocabulary-catalogue.md). Incremental reparse.
 
