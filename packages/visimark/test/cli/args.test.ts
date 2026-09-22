@@ -106,7 +106,7 @@ describe("parseArgs accepts", () => {
 });
 
 test("usageLine returns the strings the commands print today", () => {
-  expect(usageLine("fmt")).toBe("usage: visimark fmt FILE... [--fix-dates]");
+  expect(usageLine("fmt")).toBe("usage: visimark fmt FILE... [--fix-dates] [--no-artifacts]");
   expect(usageLine("eval")).toBe(
     "usage: visimark eval FILE [--scenario FILE|-] [--get NAME] [--json]",
   );

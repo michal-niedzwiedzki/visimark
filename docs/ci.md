@@ -933,6 +933,14 @@ Do not "fix" this by running `fmt` in CI to regenerate the file — see chapter 
 Commit the SVG. It is data, not output: `check` proves its provenance, which is
 the only claim that can be verified about a picture.
 
+`fmt --no-artifacts` declines the artifact write for a caller that must not
+touch files it did not name — a read-only checkout, a sandboxed build, a job
+that runs `fmt` to diff the result rather than keep it. It is **not** a way to
+stop committing charts. It declines a write, never a verdict: `check` still
+reports every missing or stale artifact as `STALE`, still counts it, and still
+exits `1`. A repository that gitignores its SVGs still fails this way, and
+still should.
+
 ## 20. Reading values out of a document in CI
 
 A checked document is not only a thing CI verifies. It is a thing CI can

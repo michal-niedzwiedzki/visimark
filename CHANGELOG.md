@@ -4,6 +4,17 @@
 
 ### Added
 
+- **`fmt --no-artifacts`** (issue #168). Declines the write of generated
+  artifacts — the SVGs a `chart` statement declares — and nothing else.
+  Computed cells, anchored values and import stamps are still spliced, and
+  `--fix-dates` still applies. `check` is unaffected: a missing or stale
+  artifact is still `STALE`, still counted, still exit `1`. The summary line
+  names the count (`unchanged, 5 artifacts skipped`), and `fmt --json` gains an
+  always-present `artifactsSkipped`, per file and in the summary. For a caller
+  that must not touch files it did not name; not a way to stop committing
+  charts.
+  See [`a-no-artifacts-flag-for-fmt-spec.md`](docs/design/a-no-artifacts-flag-for-fmt-spec.md).
+
 - **`IRR(flows)`** — the sixteenth builtin (issue #158). The rate at which a
   cash-flow column has present value zero, using `NPV`'s period index: row 0
   is not discounted. Exactly one sign change among the non-zero cells. No

@@ -132,6 +132,7 @@ export function cmdFmt(args: string[], out: Writer, err: Writer): number {
     return 2;
   }
   const fixDates = flags.has("fix-dates");
+  const noArtifacts = flags.has("no-artifacts");
   const fileEntries: object[] = [];
   let exit: 0 | 1 | 2 = 0;
   let filesChanged = 0;
@@ -139,6 +140,7 @@ export function cmdFmt(args: string[], out: Writer, err: Writer): number {
   let anchorsUpdated = 0;
   let datesFixed = 0;
   let artifactCount = 0;
+  let artifactsSkipped = 0;
   let problems = 0;
   let stale = 0;
   let errors = 0;
@@ -153,7 +155,7 @@ export function cmdFmt(args: string[], out: Writer, err: Writer): number {
       exit = 2;
       continue;
     }
-    const r = fmt(source, { fixDates, doc: onDisk(path) });
+    const r = fmt(source, { fixDates, noArtifacts, doc: onDisk(path) });
     // a generated artifact is written whole; the document itself is spliced.
     // `mkdirSync` still resolves a path - it has to, since the artifact's
     // directory may not exist yet - but nothing is decided by it: the open
@@ -174,6 +176,13 @@ export function cmdFmt(args: string[], out: Writer, err: Writer): number {
       continue;
     }
     if (r.changed) writeFileSync(path, r.output);
+    // `--no-artifacts` declined a write the caller can still see the cost of:
+    // the count is named so a run that touched nothing is distinguishable from
+    // one that left five charts alone. It never implies the charts are fine —
+    // `check` still reports every one of them.
+    const skippedBit = r.artifactsSkipped
+      ? `${r.artifactsSkipped} artifact${r.artifactsSkipped === 1 ? "" : "s"} skipped`
+      : "";
     if (!json) {
       if (r.changed || r.artifacts.length > 0) {
         const bits = [
@@ -183,8 +192,11 @@ export function cmdFmt(args: string[], out: Writer, err: Writer): number {
           r.artifacts.length
             ? `${r.artifacts.length} artifact${r.artifacts.length === 1 ? "" : "s"}`
             : "",
+          skippedBit,
         ].filter(Boolean);
         out(`${path}: updated ${bits.join(", ")}`);
+      } else if (skippedBit) {
+        out(`${path}: unchanged, ${skippedBit}`);
       } else {
         out(`${path}: unchanged`);
       }
@@ -201,6 +213,7 @@ export function cmdFmt(args: string[], out: Writer, err: Writer): number {
         anchorsUpdated: r.anchorsUpdated,
         datesFixed: r.datesFixed,
         artifacts: r.artifacts.map((a) => ({ path: a.path })),
+        artifactsSkipped: r.artifactsSkipped,
         findings: r.unfixable.map((f) => publicFinding(path, f)),
       });
       if (r.changed) filesChanged++;
@@ -208,6 +221,7 @@ export function cmdFmt(args: string[], out: Writer, err: Writer): number {
       anchorsUpdated += r.anchorsUpdated;
       datesFixed += r.datesFixed;
       artifactCount += r.artifacts.length;
+      artifactsSkipped += r.artifactsSkipped;
       problems += summary.problems;
       stale += summary.stale;
       errors += summary.errors;
@@ -227,6 +241,7 @@ export function cmdFmt(args: string[], out: Writer, err: Writer): number {
         anchorsUpdated,
         datesFixed,
         artifacts: artifactCount,
+        artifactsSkipped,
         problems,
         stale,
         errors,

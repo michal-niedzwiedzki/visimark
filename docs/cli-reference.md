@@ -18,7 +18,7 @@ and WSL provide it, plain PowerShell does not).
 | Command | What it does | Reads | Writes | Fails the run when |
 |---|---|---|---|---|
 | `visimark check FILE...` | Recomputes every formula and reports each number that no longer agrees with it | the files you name | nothing, ever | the document has at least one problem |
-| `visimark fmt FILE...` | Repairs stale numbers in place, by splicing the bytes of each value it owns, and writes any stale or missing generated artifact | the files you name | computed cells and anchored values, in place; generated artifacts, whole | a problem it cannot repair remains |
+| `visimark fmt FILE...` | Repairs stale numbers in place, by splicing the bytes of each value it owns, and writes any stale or missing generated artifact | the files you name | computed cells and anchored values, in place; generated artifacts, whole — the artifact write is declinable with `--no-artifacts` | a problem it cannot repair remains |
 | `visimark infer FILE...` | Works out which rules reproduce the numbers a document already has, and proposes them | the files you name | nothing, unless `--write` | never — it is advisory |
 | `visimark eval FILE` | Prints the computed values, so a script can read one out | one file | nothing | never |
 | `visimark explain FILE` | Prints each sheet's inputs, rules, evaluation order, assertions and charts | one file | nothing | never |
@@ -45,6 +45,7 @@ exits `0`. `visimark --help` (also `-h` or `help`) prints the usage summary.
 | Option | Command | What it does |
 |---|---|---|
 | `--fix-dates` | `fmt` | Also rewrites non-ISO dates that have only one reading. `15.10.2026` becomes `2026-10-15`; `11/12/2026` is left alone and still reported, because it is two different dates depending on who wrote it. |
+| `--no-artifacts` | `fmt` | Declines the write of generated artifacts — the SVGs a `chart` statement declares. Every other repair is unaffected: computed cells, anchored values and import stamps are still spliced, and `--fix-dates` still applies. It does **not** change what `check` reports: a missing or stale artifact is still `STALE`, still counted, still exit `1`. For a caller that must not touch files it did not name — a read-only checkout, a sandboxed build, a CI job that runs `fmt` to diff the result rather than keep it. It is not a way to stop committing charts; see [`ci.md` §19](ci.md). |
 | `--write` | `infer` | Inserts what it proposed: a `vmark` block after each table, an anchor after each matched figure, or the `no-formulas` marker if there was nothing to derive. It only ever inserts — no existing byte is rewritten. |
 | `--get NAME` | `eval` | Prints one value instead of all of them. Takes `sheet.name` or a bare `name` when it is unambiguous. |
 | `--scenario FILE` | `eval` | Evaluates the document with the `param` values in `FILE` in place of their defaults, and writes nothing. `-` reads the scenario from stdin. `FILE` is a flat JSON object whose keys name declared params (`sheet.name`, or a bare `name` when unambiguous) and whose values are strings holding a number literal, such as `{ "tax": "12.5%" }`. An unknown key, a JSON number, a value wider than the param's `precision`, or a bare value for a percent param is an error. The values are followed by a `scenario:` block listing every param, and a false `assert` says whether it holds on the defaults. Every other command refuses `--scenario` with exit `2`. The rules are in [`design/scenario-params-spec.md`](design/scenario-params-spec.md). |
@@ -60,7 +61,7 @@ both exit `2`, before any file is read or written. Under `--json` the refusal is
 | Command | Options and arguments |
 |---|---|
 | `check` | `FILE...`, `--json` |
-| `fmt` | `FILE...`, `--fix-dates`, `--json` |
+| `fmt` | `FILE...`, `--fix-dates`, `--no-artifacts`, `--json` |
 | `infer` | `FILE...`, `--write`, `--json` |
 | `eval` | one `FILE`, `--get NAME`, `--scenario FILE`, `--json` |
 | `explain` | one `FILE`, `#sheet` (repeatable), `--json` |

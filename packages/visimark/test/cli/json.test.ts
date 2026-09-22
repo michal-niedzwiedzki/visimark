@@ -1,9 +1,9 @@
 import { expect, test } from "bun:test";
 import { createRequire } from "node:module";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { assertFailPath, cleanPath, drift, driftPath } from "../examples.js";
+import { assertFailPath, chartsPath, cleanPath, drift, driftPath } from "../examples.js";
 import { runCli } from "../../src/cli/main.js";
 
 const version = (createRequire(import.meta.url)("../../package.json") as { version: string })
@@ -330,4 +330,46 @@ test("explain --json lists an aliased column's header", async () => {
   expect(networkSheet?.aliases).toEqual([
     { symbol: "bpu", header: "Bandwidth per Unit (TB/s, full-duplex)" },
   ]);
+});
+
+// docs/design/a-no-artifacts-flag-for-fmt-spec.md §3 — the `--json` envelope.
+// `artifactsSkipped` is always present, so a consumer sees one shape whether or
+// not the flag was given.
+
+test("fmt --json --no-artifacts: artifacts empty, artifactsSkipped counts them", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "vm-json-na-"));
+  const p = join(dir, "example-charts.md");
+  writeFileSync(p, readFileSync(chartsPath, "utf8"));
+
+  const c = capture();
+  const code = await runCli(["fmt", p, "--no-artifacts", "--json"], c.io);
+
+  expect(code).toBe(0);
+  expect(c.err()).toBe("");
+  const j = parseOut(c);
+  expect(j.command).toBe("fmt");
+  expect(j.status).toBe("ok");
+  const file = (j.files as Record<string, unknown>[])[0]!;
+  expect(file.artifacts).toEqual([]);
+  expect(file.artifactsSkipped).toBe(5);
+  expect(j.summary).toMatchObject({ artifacts: 0, artifactsSkipped: 5 });
+  // nothing was written beside the document
+  expect(existsSync(join(dir, "charts"))).toBe(false);
+});
+
+test("fmt --json without the flag: artifacts listed, artifactsSkipped present and 0", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "vm-json-na2-"));
+  const p = join(dir, "example-charts.md");
+  writeFileSync(p, readFileSync(chartsPath, "utf8"));
+
+  const c = capture();
+  const code = await runCli(["fmt", p, "--json"], c.io);
+
+  expect(code).toBe(0);
+  const j = parseOut(c);
+  const file = (j.files as Record<string, unknown>[])[0]!;
+  expect((file.artifacts as unknown[]).length).toBe(5);
+  // always present, so the shape does not depend on the flag
+  expect(file.artifactsSkipped).toBe(0);
+  expect(j.summary).toMatchObject({ artifacts: 5, artifactsSkipped: 0 });
 });
