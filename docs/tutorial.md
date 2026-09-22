@@ -11,30 +11,38 @@ VisiMark. The language is kept simple on purpose, so that it reads the same way
 for everyone.
 
 Every command output in this tutorial is a real transcript. Nothing is invented.
-They were captured with `visimark 0.1.5`.
+Most were captured with `visimark 0.1.5` or `0.1.6`. Two features are newer
+than the last release, and the chapters that teach them say so: percent display
+on an anchor (chapter 15) and the maths spellings `|x|`, `⌊x⌋`, `⌈x⌉` and
+`√(x)` (chapter 12). Their transcripts come from the development build, and
+the features ship in the next release.
 
 ## How to read this
 
-There are 28 short chapters in seven parts. They are meant to be read in order:
+There are 33 short chapters in nine parts. They are meant to be read in order:
 each one exists because the one before it left a problem open.
 
 | Part | Chapters | What you get |
 |---|---|---|
 | 1. The problem | 1–2 | Why this tool exists |
 | 2. First contact | 3–5 | A working document on your machine |
-| 3. The language | 6–16 | Everything you can write |
-| 4. Other people's documents | 17–19 | How to adopt it on files you did not write |
-| 5. Beyond one file | 20–21 | CSV rows and charts |
-| 6. Automation | 22–25 | CI, scripts, agents, your editor |
-| 7. Putting it together | 26–28 | A full document, unaided |
+| 3. The language | 6–10 | Columns, totals, anchors and sheets: the shape of a document |
+| 4. Numbers and functions | 11–19 | Functions, notation, `ref`, precision, percent, units, dates, assertions |
+| 5. Other people's documents | 20–22 | How to adopt it on files you did not write |
+| 6. Beyond one file | 23–24 | CSV rows and charts |
+| 7. Automation | 25–28 | CI, scripts, agents, your editor |
+| 8. Modelling | 29–30 | What-if runs that never edit the document |
+| 9. Putting it together | 31–33 | A full document, unaided |
 
-Two finished documents come with this tutorial. You can run the tool against
+Three finished documents come with this tutorial. You can run the tool against
 them right now:
 
 - [`tutorial/order.md`](tutorial/order.md) — the small document built in
-  chapters 4 to 16.
+  chapters 4 to 19.
+- [`tutorial/runway.md`](tutorial/runway.md) — the model used in chapters 29
+  and 30.
 - [`tutorial/capstone.md`](tutorial/capstone.md) — the full quote built in
-  chapter 26.
+  chapter 31.
 
 ---
 
@@ -173,6 +181,7 @@ document that contradicts itself can stop a merge.
 - Read every error the checker can produce, and know what fixes each one.
 - Fail a build when a document's numbers drift.
 - Read values out of a document from a script, with no export step.
+- Ask a document what-if questions without editing it.
 
 ---
 
@@ -231,9 +240,13 @@ Six commands. Only one of them matters most of the time.
 | `check` | Recomputes everything and reports what disagrees | **Never.** It is read-only. |
 | `fmt` | Repairs the numbers it owns, in place | Yes — computed cells and anchors only |
 | `infer` | Works out the rules a document's existing numbers imply | Only with `--write`, and only by inserting |
-| `eval` | Prints the computed values, for a script to read | No |
+| `eval` | Prints the computed values, for a script to read, and runs what-if scenarios | No |
 | `explain` | Prints each sheet's inputs, rules and evaluation order | No |
 | `ref` | Prints what a builtin function does | No — it reads no file at all |
+
+The help screen is a summary. It does not list `eval --scenario`, the what-if
+option that Part 8 teaches. Every option of every command is in
+[`cli-reference.md`](cli-reference.md).
 
 ### The three exit codes
 
@@ -340,7 +353,7 @@ The report has a fixed shape:
   code    what it is        which row                 stored ≠ correct   the rule
 ```
 
-- **code** — the kind of problem. Chapter 18 covers all of them.
+- **code** — the kind of problem. Chapter 21 covers all of them.
 - **what it is** — `sheet.name`.
 - **which row** — the first cell of that row, so you can find it.
 - **stored ≠ correct** — what the file says, then what the formula says.
@@ -429,9 +442,10 @@ only test of the thing you actually care about.
 
 # Part 3 — The language
 
-Everything in this part is small. There are thirteen functions, five operators
-and two kinds of binding. That is the whole language, and it is meant to stay
-that way.
+The language is small. There are two kinds of binding, thirteen functions and a
+handful of operators, and it is meant to stay that way. This part covers the
+shape of a document: columns, totals, anchors and sheets. Part 4 covers what
+goes inside a formula.
 
 ## 6. Columns: one rule for every row
 
@@ -496,7 +510,7 @@ VisiMark owns exactly three things in your file:
 
 1. **Computed cells** — cells in a column that has a rule.
 2. **Anchored values** — the text in front of a `<!--vmark=…-->` comment.
-3. **Generated artifacts** — chart files, covered in chapter 21.
+3. **Generated artifacts** — chart files, covered in chapter 24.
 
 Everything else is yours: prose, headings, input columns, table layout, the
 formulas themselves.
@@ -635,40 +649,12 @@ signal.
 This is also the second reason for chapter 5's habit: change an input, and the
 column that never updates is the column that was never wired up.
 
-### What-if runs: `param`
+### A scalar someone may want to vary
 
-Sometimes you want to ask *what would this come to if the tax rate were 12.5%?*
-without editing the document. Editing it means `fmt` rewrites every figure
-downstream, and you get a diff for a question you never meant to commit.
-
-Declare the knob as a `param` instead of a plain scalar:
-
-````markdown
-```vmark #order
-param vat precision 3 = default 19%
-gross precision 2 = SUM(Net) * (1 + vat)
-```
-````
-
-Everywhere except one command, `vat` is exactly `vat precision 3 = 19%`:
-`check`, `fmt` and plain `eval` all see the default. The `precision` clause is
-required, because a value arriving from outside has no width the document
-could derive.
-
-The one exception is `eval --scenario`. Write the other value in a JSON file,
-as a string:
-
-```console
-$ cat cheaper.json
-{ "vat": "12.5%" }
-$ visimark eval --scenario cheaper.json order.md
-```
-
-`eval` prints the values computed with 12.5%, then a `scenario:` block listing
-each param, its value and its default. It writes nothing. A misspelled key, a
-value wider than the declared precision, a JSON number such as `12.5`, or a
-bare `"12.5"` for a percent param is refused with exit `2`, so a what-if cannot
-quietly run with the wrong input. Every other command refuses `--scenario`.
+A scalar such as `vat_rate = 23%` is fixed in the text. If you want to ask
+*what would this come to at 8%?*, do not edit the number and put it back
+later. Declare it a `param`, and ask the question with `eval --scenario`. The
+document never changes. Part 8 covers this in full.
 
 ## 9. Anchors: a number inside a sentence
 
@@ -708,16 +694,31 @@ The text in front of the comment states a value. It never decides one.
 So writing `**0**` as a placeholder does not mean "zero decimals". Whatever you
 type is replaced at the binding's own width.
 
-### An anchor can start empty
+### Always give an anchor a placeholder
 
-`fmt` will seed it:
+The anchor rewrites the element directly in front of it. With `**0**` in front,
+that element is the bold text, which is what you want. With plain prose in
+front, it is the last word of that prose:
 
-```markdown
+```console
+$ tail -1 seed.md
 Net of tax it comes to <!--vmark=order.net_total--> PLN.
+$ visimark fmt seed.md
+seed.md: updated 1 anchor
+$ tail -1 seed.md
+Net of tax it comes 158.00 <!--vmark=order.net_total--> PLN.
 ```
 
-This is legal authoring syntax. `fmt` fills it in. What `fmt` never does is
-*invent* an anchor — you decide where a value appears in your prose.
+The word `to` was replaced by the number. So write a placeholder, and make it
+bold: `**0**<!--vmark=order.net_total-->`. The placeholder's digits do not
+matter. What `fmt` never does is *invent* an anchor — you decide where a value
+appears in your prose.
+
+### Print a ratio as a percent
+
+A stored ratio such as `0.3988` reads better in a sentence as `39.88%`. Add `%`
+to the end of the anchor name, `<!--vmark=lines.margin%-->`, and `fmt` writes
+the percent. The stored value does not change. Chapter 15 covers it.
 
 ### Put the currency outside the anchor
 
@@ -806,6 +807,16 @@ A block owns the table immediately above it, ignoring blank lines. A *paragraph*
 in between does detach it. If you see a `SHEET` error, look for prose that
 wandered between a table and its block.
 
+---
+
+# Part 4 — Numbers and functions
+
+Part 3 gave a document its shape. This part is about what goes inside a
+formula: the functions, the maths spellings some of them have, the command that
+tells you what each one does, and the rules for how wide a number is written.
+It ends with the kinds of values a cell can hold — percentages, currencies,
+dates — and with assertions.
+
 ## 11. Functions that run per row
 
 An aggregate collapses a column. A **map** does the opposite job: it runs once
@@ -814,11 +825,11 @@ per row, inside a column rule, and turns one value into one value.
 | Function | What it does |
 |---|---|
 | `ROUND(x, places)` | Round to `places` decimals. Ties go away from zero. |
-| `ABS(x)` | Drop the sign. Also written `\|x\|`. |
-| `MOD(x, y)` | Remainder. Zero divisor is an error. |
-| `SQRT(x)` | Square root. Negative input is an error. Also written `√(x)`. |
-| `FLOOR(x, s)` | Largest multiple of `s` not above `x`. `⌊x⌋` is the whole-number floor, `FLOOR(x, 1)`. |
-| `CEILING(x, s)` | Smallest multiple of `s` not below `x`. `⌈x⌉` is the whole-number ceiling, `CEILING(x, 1)`. |
+| `ABS(x)` | Drop the sign. Also written `\|x\|` (chapter 12). |
+| `MOD(x, y)` | Remainder. A zero divisor is a `TYPE` error. |
+| `SQRT(x)` | Square root. A negative input is a `TYPE` error. Also written `√(x)`. |
+| `FLOOR(x, s)` | Largest multiple of `s` not above `x`. `⌊x⌋` is `FLOOR(x, 1)`. |
+| `CEILING(x, s)` | Smallest multiple of `s` not below `x`. `⌈x⌉` is `CEILING(x, 1)`. |
 | `IF(cond, a, b)` | `a` when `cond` is true, otherwise `b`. |
 | `EOMONTH(d, months)` | Last day of the month `months` away from `d`. |
 
@@ -834,11 +845,14 @@ row. This is legal and useful.
 ### Operators
 
 `+` `-` `*` `/` `^`, the comparisons `==` `!=` `<` `<=` `>` `>=`, and the words
-`and`, `or`, `not`. Division by zero is an error, not a value.
+`and`, `or`, `not`. Division by zero is a `TYPE` error, not a value: `fmt` never
+writes `Infinity` into your document.
 
-Two characters are missing on purpose. `|` would collide with table syntax, and
-`%` is postfix only, so that `23%` can never be ambiguous. Use `MOD()` for
-modulo.
+`%` is not an operator. It is postfix only and belongs to a number, so that
+`23%` can never be ambiguous. Use `MOD()` for a remainder.
+
+`|` is not an operator either. It is the absolute-value bracket, `|x|`, which
+chapter 12 covers.
 
 Equality is `==`. A single `=` only ever binds a name.
 
@@ -869,55 +883,526 @@ The reason is that a stored value must be a number, a date or a string — nothi
 else. If a cell could hold a boolean, then the English word `true` in an input
 column would silently change type.
 
-### Look functions up. Do not guess.
+## 12. Maths notation: `|x|`, `⌊x⌋`, `⌈x⌉`, `√(x)`
 
-`visimark ref` prints the exact behaviour of any builtin, including its errors
-and worked examples. Every example it prints is executed against the engine in
-CI, so what it says is what the engine does.
+*New after 0.1.6: this ships in the next release.*
 
-```console
-$ visimark ref EOMONTH
-EOMONTH(d, months) — map, 2 arguments
+A formula is read by people who know maths but have never learned a function
+call. `ABS(variance) <= 0.05` makes them stop and think. `|variance| <= 0.05` does
+not. So five functions can also be written the way a textbook writes them:
 
-  Last day of the month `months` calendar months from `d`; `d`'s day is discarded.
+| Written | Is exactly |
+|---|---|
+| `\|x\|` | `ABS(x)` |
+| `⌊x⌋` | `FLOOR(x, 1)` |
+| `⌈x⌉` | `CEILING(x, 1)` |
+| `√(x)` | `SQRT(x)` |
+| `Σ(col)` or `∑(col)` | `SUM(col)` |
 
-  d        date     the date whose month starts the count
-  months   number   whole number of months to move; may be negative
+(The `\|` above is only because this is a Markdown table. Inside a `vmark`
+block you write a plain `|`.)
 
-  returns    date
-  precision  not applicable — the result is a date
+Each spelling turns into the function call before anything else happens. There
+is nothing new to learn about what it does: the same result, the same
+precision, the same errors. Both spellings are legal, and you can mix them in
+one block.
 
-  errors
-    a non-whole `months`            TYPE
-    a result outside years 1–9999   DATE
+### An example
 
-  examples
-    EOMONTH(2026-01-15, 0)   = 2026-01-31
-    EOMONTH(2026-01-31, 1)   = 2026-02-28
-    EOMONTH(2024-01-31, 1)   = 2024-02-29
-    EOMONTH(2026-01-15, -1)  = 2025-12-31
+A packing list, where every box holds twelve:
 
-  see also  MIN, MAX
+````markdown
+| Item      | Qty | Boxes | Loose |
+|-----------|----:|------:|------:|
+| Widgets   |  40 |     4 |     4 |
+| Gadgets   |  12 |     1 |     0 |
+| Sprockets |  30 |     3 |     6 |
+
+```vmark #packing
+Boxes = ⌈Qty / 12⌉
+Loose = Qty - ⌊Qty / 12⌋ * 12
+
+boxes_total = Σ(Boxes)
 ```
 
-Bare `visimark ref` lists all thirteen. `--json` gives the machine-readable
-form. The same content is in
+The order ships in **8**<!--vmark=packing.boxes_total--> boxes of twelve.
+````
+
+`fmt` filled in the `Boxes` and `Loose` columns and the `8`. Look at what
+`explain` says about the widths:
+
+```console
+$ visimark explain packing.md
+#packing
+  inputs:  Item, Qty
+  rules:
+    Boxes = ⌈Qty / 12⌉              precision 0 (derived)
+    Loose = Qty - ⌊Qty / 12⌋ * 12   precision 0 (derived)
+  scalars:
+    boxes_total = Σ(Boxes)   precision 0 (derived)
+  order:   Boxes → Loose → boxes_total
+```
+
+`Qty / 12` is a division, and a division alone has no width (chapter 14). But
+`⌈…⌉` rounds up to a whole number, so the result has a width of 0, and no
+`precision` clause is needed. `explain` prints each rule the way you wrote it.
+
+### The rules
+
+**`√` needs parentheses.** Write `√(x)`, never `√x`. The parentheses show
+exactly what is under the root.
+
+**`√(x)` still needs a precision**, exactly like `SQRT(x)`, because a square
+root has no natural width:
+
+```console
+  PRECISION s.R               `√(x)` has no derivable precision
+            declare the width: `R precision N = …`
+```
+
+**`⌊x⌋` and `⌈x⌉` always round to a whole number.** For another step, such as
+the nearest 0.05, use the function: `FLOOR(x, 0.05)`.
+
+**A pair must match.** `⌊x⌉` opens a floor and closes a ceiling, and it is an
+error:
+
+```console
+  TYPE    packing.Loose     expected `⌋`
+```
+
+**Bars nest.** `||a - b| - 1|` is `ABS(ABS(a - b) - 1)`. A `|` that starts a
+value opens a pair, and a `|` that follows a complete value closes one.
+
+**The tools keep your spelling.** `fmt` never rewrites `|x|` to `ABS(x)` or the
+other way round, and `explain` prints what you wrote. `infer` proposes rules
+with the function names.
+
+**`ref` knows the function names only.** `visimark ref ABS` works;
+`visimark ref '|'` does not. The spellings are listed under each function in
 [`function-reference.md`](function-reference.md).
 
-This is a habit worth building, and it matters more than it sounds. Rounding
-direction, what `FLOOR` does to a negative number, what `EOMONTH` does to
-31 January — these are exactly the details that produce a document that is
-plausible and wrong.
+### When to use which
 
-## 12. Percent, currency and units
+Use the notation where a reader already knows the symbol: a tolerance
+(`|variance| <= 0.05`), a whole number of boxes (`⌈Qty / 12⌉`), a distance
+(`√(dx^2 + dy^2)`). Use the function name where the function takes a second
+argument that matters, such as `ROUND(x, 2)` or `FLOOR(x, 0.05)`.
 
-### Percent
+The glyphs are ordinary Unicode characters: `⌊` U+230A, `⌋` U+230B, `⌈` U+2308,
+`⌉` U+2309, `√` U+221A, `Σ` U+03A3. Look-alikes, such as the full-width `｜`,
+are refused rather than guessed.
+
+## 13. Look it up: `visimark ref`
+
+What does `FLOOR` do to a negative number? Does `ROUND` send `2.5` up or to the
+nearest even number? What does `EOMONTH` do to 31 January? These details are
+exactly how a document ends up plausible and wrong. Do not guess them, and do
+not trust your memory of another tool. Ask:
+
+```console
+$ visimark ref FLOOR
+FLOOR(x, s) — map, 2 arguments
+
+  Greatest multiple of `s` that does not exceed `x`, toward −∞.
+
+  x        number   the value to round down
+  s        number   the positive step to round to
+
+  returns    number
+  precision  the width of `s`
+
+  errors
+    a non-positive `s`   TYPE
+
+  examples
+    FLOOR(7, 3)   = 6
+    FLOOR(-7, 3)  = -9
+
+  see also  CEILING, ROUND
+```
+
+`ref` is the only command that reads no file. It answers about the language,
+not about a document, so you can run it anywhere.
+
+### How to read an entry
+
+- **The first line** — the call shape, whether it is a *map* (one value in,
+  one value out, per row) or a *reduce* (a whole column in, one value out),
+  and how many arguments it takes.
+- **The summary** — one sentence. `toward −∞` is the answer to the negative
+  number question: `FLOOR(-7, 3)` is `-9`, not `-6`.
+- **The parameters** — each name, its type and what it means.
+- **`returns`** — a number or a date.
+- **`precision`** — how wide the result is written. This is the line to read
+  when `check` reports a `PRECISION` finding (chapter 14). For `FLOOR` it is
+  the width of the step. For `AVG` and `SQRT` it says `must be declared`.
+- **`rounding`** — present when rounding is the point. `ref ROUND` says
+  `Ties round away from zero (half-up), not to even.`
+- **`errors`** — every input the function refuses, and the finding code you get.
+- **`examples`** — worked cases.
+- **`see also`** — related functions.
+
+### The examples are tests
+
+Every example `ref` prints is run against the engine in CI. If the engine and
+the reference ever disagree, the build fails. So `ref` does not describe what
+the function was meant to do. It describes what it does.
+
+### The whole list, and a name you misspelled
+
+Bare `visimark ref` lists all thirteen:
+
+```console
+$ visimark ref
+SUM(col)             reduce, 1 argument
+MIN(col)             reduce, 1 argument
+MAX(col)             reduce, 1 argument
+AVG(col)             reduce, 1 argument
+COUNT(col)           reduce, 1 argument
+ROUND(x, places)     map, 2 arguments
+ABS(x)               map, 1 argument
+MOD(x, y)            map, 2 arguments
+SQRT(x)              map, 1 argument
+FLOOR(x, s)          map, 2 arguments
+CEILING(x, s)        map, 2 arguments
+IF(cond, a, b)       map, 3 arguments
+EOMONTH(d, months)   map, 2 arguments
+```
+
+A name that is not a builtin exits `2`, with a suggestion when one is close:
+
+```console
+$ visimark ref FLORR
+visimark: unknown function `FLORR` — did you mean `FLOOR`?
+$ echo $?
+2
+```
+
+Names are upper case. `visimark ref floor` is refused too.
+
+### For a program: `--json`
+
+```console
+$ visimark ref FLOOR --json
+{
+  "command": "ref",
+  "visimark": "0.1.6",
+  "status": "ok",
+  "function": {
+    "name": "FLOOR",
+    "kind": "map",
+    "arity": 2,
+    "signature": "FLOOR(x, s)",
+    "summary": "greatest multiple of `s` that does not exceed `x`, toward −∞",
+    "params": [
+      { "name": "x", "type": "number", "note": "the value to round down" },
+      { "name": "s", "type": "number", "note": "the positive step to round to" }
+    ],
+    "returns": "number",
+    "precision": {
+      "from": "argument-scale",
+      "param": "s",
+      "text": "the width of `s`"
+    },
+    …
+```
+
+The JSON above is shortened and re-indented. An agent that writes formulas
+should read this before it uses a function it is not sure about (chapter 27).
+
+### The same content, in three other places
+
+The same reference, from the same source, is in
+[`function-reference.md`](function-reference.md), in the hover text of the VS
+Code extension (chapter 28), and in the playground. None of them is a copy
+someone keeps up to date by hand.
+
+## 14. Precision: how wide a number is written
+
+A number has to be written with some number of decimals. VisiMark does not have
+a setting for that, and it never reads it from your prose. The width belongs to
+the binding that produces the number, and it comes from one of three places:
+
+1. **Declared** — you wrote `precision N` on the binding.
+2. **Derived** — the arithmetic decides it, for the operations where that is
+   exact.
+3. **Neither** — a `PRECISION` error. The tool does not guess.
+
+Most of the time the width is derived and you never think about it. This
+chapter is about the times you do.
+
+### Where width comes from
+
+| Construct | Width of the result |
+|---|---|
+| A number literal, such as `12.50` | The decimals as written: 2 |
+| A percent literal, such as `23%` or `12.5%` | The written decimals plus 2: `23%` is 2, `12.5%` is 3 |
+| An input column | The most decimals in any of its cells |
+| `+` `-` | The wider of the two operands |
+| `*` | The two widths added together |
+| `^` with a whole-number exponent | The base's width times the exponent |
+| `SUM` `MIN` `MAX` | The width of the column |
+| `COUNT` | Always 0 |
+| `ROUND(x, places)` | The value of `places` |
+| `FLOOR(x, s)` / `CEILING(x, s)` | The width of `s` — so `⌊x⌋` and `⌈x⌉` are 0 |
+| `ABS(x)`, `\|x\|` | The width of `x` |
+| `MOD(x, y)` | The wider of the two |
+| `IF(c, a, b)` | The wider of `a` and `b` |
+| `/` `AVG` `SQRT` `√` | **Nothing. You must declare it.** |
+
+Every rule in this table has the same reason: the exact result always fits in
+that width. So **a derived width never drops a digit.** Only a declared width
+can, and only because you asked it to.
+
+You never have to learn this table by heart. `visimark ref NAME` prints the
+`precision` line for any function (chapter 13), and `visimark explain` prints
+the width of every binding and says whether it was `derived` or `declared`
+(chapter 22).
+
+### The three that bound nothing
+
+Division, `AVG` and `SQRT` produce a result whose decimals do not follow from
+their inputs. `10 / 3` has no natural width. So a binding that uses one must say
+how wide it writes:
+
+```
+avg_line precision 2 = net_total / line_count
+```
+
+`N` runs from 0 to 18. Not declaring it is an error:
+
+```console
+  PRECISION s.per_item        `total / COUNT(Net)` has no derivable precision
+            declare the width: `per_item precision N = …`
+```
+
+`fmt` will not guess for you. Take the width from what the document already
+shows, or decide it.
+
+There is a second way out: wrap the division in something that does have a
+width. `ROUND(net_total / line_count, 2)` has width 2, and `⌈Qty / 12⌉` has
+width 0 (chapter 12). Neither needs a `precision` clause, and the rounding is
+written where a reader can see it.
+
+### A value nobody writes needs no width
+
+The finding only appears when a value has to be **written** somewhere — into a
+cell or an anchor. A scalar with no anchor is a working value. It keeps full
+precision, and it needs no declaration.
+
+### Rounding happens where a value is named
+
+A declared width is not only a display setting. The value is rounded, half-up,
+at the binding, and every formula that reads it gets the rounded value. Here is
+the same third, once unnamed and once named at two decimals:
+
+````markdown
+```vmark #s
+exact = 10 / 3
+named precision 2 = 10 / 3
+
+from_exact precision 2 = exact * 3
+from_named precision 2 = named * 3
+```
+
+From the exact third: **10.00**<!--vmark=s.from_exact-->. From the named one:
+**9.99**<!--vmark=s.from_named-->.
+````
+
+`exact` has no anchor, so it keeps every digit, and three of it is `10.00`.
+`named` was rounded to `3.33` when it was named, and three of that is `9.99`.
+
+Both answers are correct. They answer different questions. So choose the width
+of an intermediate value on purpose. On an invoice, rounding each line's VAT
+to the grosz *before* adding the lines up is often what the accountant
+expects. In an engineering calculation, it is usually a mistake.
+
+### Declare it even when you do not have to
+
+Multiplication adds widths. That surprises people:
+
+```
+vat = total * vat_rate
+```
+
+`total` has 2 decimals, `vat_rate` (`23%`) has 2, so `vat` is written with
+**four**: `36.3400`. That is arithmetically honest and, on an invoice, wrong.
+
+Two ways to fix it, and the second is usually better:
+
+```
+vat precision 2 = total * vat_rate      # declare the width
+VAT = ROUND(Net * vat_rate, 2)          # round on purpose
+```
+
+Prefer `ROUND` on money. It makes the rounding a stated decision in the
+document, rather than a display width.
+
+Declaring a width electively is good practice anywhere a column holds money and
+must stay at two decimals even if an input later gains a third.
+
+### The ceiling
+
+`N` stops at 18. The engine works with 40 significant digits, so a value with
+a very long whole part cannot also carry 18 decimals. The tool reports that
+instead of printing digits it never computed:
+
+```console
+  PRECISION s.big             this value is too large to carry 18 decimals: 18 decimals past its integer digits exceeds the 40-significant-digit working precision
+```
+
+No document about money comes close to this. It exists so that the tool never
+prints a number it cannot stand behind.
+
+### Prose never decides a width
+
+Writing `**0**` in front of an anchor does not request zero decimals. The anchor
+is an output. If you want fewer decimals, change the binding.
+
+Two later features build on the binding's width. Percent display in prose shows
+`N − 2` decimals (chapter 15). And a `param`, a value that a what-if run may
+replace, must always declare its width (chapter 29).
+
+## 15. Percent: a value, and a way to print one
+
+A percent shows up in two different places, and they work differently. In a
+formula or a cell, `23%` is a **value**. In a sentence, `39.88%` is a **way of
+printing** a value. Keep the two apart and nothing here is surprising.
+
+### In a formula or a cell, a percent is a number
 
 `23%` is a number exactly equal to `0.23`. It is not a display setting.
 
 ```
 vat_rate = 23%
 ```
+
+An input cell may hold `23%` too, and it is read the same way. `%` is not a
+unit (chapter 16), so it is never carried through a formula. `Net * 23%` is
+simply `Net * 0.23`.
+
+Its width is the written decimals plus two: `23%` is 2 decimals, `12.5%` is 3
+(chapter 14).
+
+### A computed cell is always written as a decimal
+
+Suppose you want a column that shows each line's share of the total, and you
+write the placeholders as percentages:
+
+````markdown
+| Stage     |      Net |     Cost |  Share |
+|-----------|---------:|---------:|-------:|
+| Discovery |  5400.00 |  3100.00 |   0.0% |
+| Mapping   | 11900.00 |  7300.00 |   0.0% |
+
+```vmark #lines
+Share precision 4 = Net / net_total
+
+net_total  = SUM(Net)
+cost_total = SUM(Cost)
+margin precision 4 = (net_total - cost_total) / net_total
+```
+````
+
+`fmt` writes `0.3121` and `0.6879` into `Share`. A computed cell is always a
+plain decimal. Percent display exists only in prose.
+
+### In a sentence: add `%` to the anchor
+
+*New after 0.1.6: this ships in the next release.*
+
+Put `%` directly after the name inside the anchor comment:
+
+```markdown
+The engagement clears a margin of **0**<!--vmark=lines.margin%-->, or
+**0**<!--vmark=lines.margin--> as a ratio.
+```
+
+```console
+$ visimark fmt margin.md
+margin.md: updated 2 cells, 2 anchors
+```
+
+```markdown
+The engagement clears a margin of **39.88%**<!--vmark=lines.margin%-->, or
+**0.3988**<!--vmark=lines.margin--> as a ratio.
+```
+
+Both anchors show the same stored value, `0.3988`. The `%` is a request for
+one span only: *print this one as a percent*. Nothing else changes — not the
+stored value, not any formula, not what `eval` reports.
+
+The rule is simple. `fmt` multiplies the stored value by 100, writes it with
+**two fewer decimals than the binding's width**, and adds `%`:
+
+| Binding | Stored | Written with `%` |
+|---|---|---|
+| `margin precision 4 = …` | `0.3988` | `39.88%` |
+| `rate precision 3 = 12.5%` | `0.125` | `12.5%` |
+| `share precision 2 = …` | `0.40` | `40%` |
+| `loss precision 2 = -5%` | `-0.05` | `-5%` |
+| `over precision 2 = 150%` | `1.50` | `150%` |
+
+So the width of the binding decides how many decimals the percent shows. If you
+want `39.9%`, declare `precision 3`. Do not edit the text in front of the
+anchor.
+
+### How `check` reads it
+
+`check` compares numbers, not spellings. `39.88%` and `0.3988` are the same
+number, so either text is clean, with or without `%` on the anchor.
+
+`fmt` is stricter: it always writes the anchor's own form. Here both spans
+agree with the stored `0.3988`, and `check` reports nothing, but `fmt` still
+rewrites them:
+
+```console
+$ tail -1 c.md
+A **0.3988**<!--vmark=s.m%-->. B **39.88%**<!--vmark=s.m-->.
+$ visimark fmt c.md
+c.md: updated 2 anchors
+$ tail -1 c.md
+A **39.88%**<!--vmark=s.m%-->. B **0.3988**<!--vmark=s.m-->.
+```
+
+So if you type a percent by hand in front of an anchor without `%`, the next
+`fmt` turns it back into a decimal. The `%` belongs on the anchor, not in the
+text.
+
+A wrong number is `STALE` as usual, and the report shows the percent form:
+
+```console
+  STALE   s.rate                                      13.5% ≠ 12.5%
+```
+
+### What the `%` refuses
+
+| You wrote | Finding |
+|---|---|
+| `%` on a binding narrower than 2 decimals | `PRECISION` — `percent display needs precision 2 or more; a has 1` |
+| `%` on a date or a string | `TYPE` — `a % sigil is only legal on a numeric scalar` |
+| `%` on a chart image | `TYPE`, the same message |
+| `%` with a currency in the same span, such as `**$0.25**` | `UNIT` — `cannot mix a unit with percent display` |
+| a space before the `%`, as in `lines.margin %` | `ANCHOR` — the comment is malformed |
+
+`fmt` leaves a span alone while any of these is reported.
+
+Two things the tools never do: `fmt` never adds `%` to an anchor you wrote
+without one, and `infer --write` never proposes one. Whether a ratio reads
+better as a percent is your call.
+
+### A percent in a what-if
+
+A percent value also matters in Part 8. A `param` whose default is written as a
+percent, such as `param vat_rate precision 2 = default 23%`, only accepts a
+percent from a scenario. The capstone (chapter 31) uses such a `param` and
+prints it with a `%` anchor.
+
+## 16. Currency and units
+
+A currency or unit is decoration around a number. It is not part of the value,
+and `%` is not one of them (chapter 15). In prose, keep it outside the anchor
+(chapter 9).
 
 ### Decoration in a cell
 
@@ -951,7 +1436,7 @@ one would be worse than refusing.
 `1,800.00` does not parse. Write `1800.00`. A comma means different things in
 different countries, and no amount of care catches that by reading.
 
-## 13. Dates
+## 17. Dates
 
 A date is `YYYY-MM-DD`. Ten characters. ISO 8601. Nothing else is a date.
 
@@ -1017,82 +1502,7 @@ late_count = SUM(Late)
 
 Every number in `Days` and `Late` was written by `fmt`.
 
-## 14. Precision: how wide a number is written
-
-A number has to be written with some number of decimals. VisiMark does not have
-a setting for that, and it never reads it from your prose. The width comes from
-the arithmetic.
-
-### Where width comes from
-
-| Operation | Width of the result |
-|---|---|
-| `+` `-` | The wider of the two operands |
-| `*` | The two widths added together |
-| `^` | The base's width times the exponent |
-| `SUM` `MIN` `MAX` | The width of the column |
-| `COUNT` | Always 0 |
-| `ROUND(x, places)` | The value of `places` |
-| `FLOOR(x, s)` / `CEILING(x, s)` | The width of `s` |
-| `ABS(x)` | The width of `x` |
-| `MOD(x, y)` | The wider of the two |
-| `IF(c, a, b)` | The wider of `a` and `b` |
-| `/` `AVG` `SQRT` | **Nothing. You must declare it.** |
-
-### The three that bound nothing
-
-Division, `AVG` and `SQRT` produce a result whose decimals do not follow from
-their inputs. `10 / 3` has no natural width. So a binding that uses one must say
-how wide it writes:
-
-```
-avg_line precision 2 = net_total / line_count
-```
-
-`N` runs from 0 to 18. Not declaring it is an error:
-
-```console
-  PRECISION s.per_item        `total / COUNT(Net)` has no derivable precision
-            declare the width: `per_item precision N = …`
-```
-
-`fmt` will not guess for you. Take the width from what the document already
-shows, or decide it.
-
-The finding only appears when a value has to be **written** somewhere — into a
-cell or an anchor. An intermediate value that nobody materialises keeps full
-precision and needs no declaration.
-
-### Declare it even when you do not have to
-
-Multiplication adds widths. That surprises people:
-
-```
-vat = total * vat_rate
-```
-
-`total` has 2 decimals, `vat_rate` (`23%`) has 2, so `vat` is written with
-**four**: `36.3400`. That is arithmetically honest and, on an invoice, wrong.
-
-Two ways to fix it, and the second is usually better:
-
-```
-vat precision 2 = total * vat_rate      # declare the width
-VAT = ROUND(Net * vat_rate, 2)          # round on purpose
-```
-
-Prefer `ROUND` on money. It makes the rounding a stated decision in the
-document, rather than a display width.
-
-Declaring a width electively is good practice anywhere a column holds money and
-must stay at two decimals even if an input later gains a third.
-
-### Prose never decides a width
-
-Writing `**0**` in front of an anchor does not request zero decimals. The anchor
-is an output. If you want fewer decimals, change the binding.
-
-## 15. Headers that are not names
+## 18. Headers that are not names
 
 A column rule's name is normally the header text itself, so it normally has to
 be a plain identifier. Real headers are not:
@@ -1136,7 +1546,7 @@ The quoted text must be byte-for-byte identical to the header cell's printed
 text. No trimming, no case folding. If it does not match any header, that is an
 `UNDEF` error with a suggestion — never a silently created scalar.
 
-## 16. Assertions: facts that must stay true
+## 19. Assertions: facts that must stay true
 
 Some things are not numbers to compute, but statements that must hold. A
 schedule must cover the invoice. Shares must add to 100%. A span must stay
@@ -1199,9 +1609,9 @@ review.
 
 ---
 
-# Part 4 — Documents you did not write
+# Part 5 — Documents you did not write
 
-## 17. `infer`: wiring up a table that already has numbers
+## 20. `infer`: wiring up a table that already has numbers
 
 Most adoption does not start with an empty file. It starts with a quote, a
 budget or an estimate that somebody already wrote the ordinary way. All the
@@ -1324,7 +1734,7 @@ $ visimark check quote.md        # MUST fail now. If it does not, nothing is wir
 $ git checkout quote.md
 ```
 
-## 18. Reading `check`: every finding
+## 21. Reading `check`: every finding
 
 Findings come in two classes. **Problems** are counted in the `N problems` line
 and make the run fail. **Advice** is printed and costs nothing.
@@ -1350,7 +1760,7 @@ chart file that no longer matches its data, including one that is missing.
 See chapter 5. Also reported when a document carries a `no-formulas` marker that
 its own rules now contradict.
 
-**`DATE` — a date is not ISO 8601.** See chapter 13. `fmt --fix-dates` fixes the
+**`DATE` — a date is not ISO 8601.** See chapter 17. `fmt --fix-dates` fixes the
 unambiguous ones.
 
 **`UNIT` — one column means two things.**
@@ -1398,6 +1808,11 @@ The whole path is printed, so you can see where to cut it.
   TYPE    plan.Flag         a boolean cannot be stored; wrap it in `IF()` to produce a number or a string
 ```
 
+Other causes: a division by zero, a mismatched bracket such as `⌊x⌉`
+(chapter 12), a `%` anchor on a date or a string (chapter 15), and a `param`
+whose default is not a plain number (chapter 29). A formula that does not parse
+at all is reported as `TYPE` too.
+
 **`SHEET` — a block's relationship to its table is broken.**
 
 ```console
@@ -1413,6 +1828,11 @@ Usually a paragraph wandered between the table and the block.
             declare the width: `per_item precision N = …`
 ```
 
+Also reported for a `%` anchor on a binding narrower than two decimals
+(chapter 15), a `param` with no `precision` clause or a default wider than it
+(chapter 29), and a value too large to carry its declared decimals
+(chapter 14).
+
 **`ASSERT` — an `assert` statement is false.**
 
 ```console
@@ -1421,14 +1841,14 @@ Usually a paragraph wandered between the table and the block.
 ```
 
 **`ANCHOR` — an anchor has nothing it can rewrite**, or a comment that announces
-itself as an anchor does not parse. A hyphenated sheet id, a stray space or an
-empty name is reported rather than silently ignored.
+itself as an anchor does not parse. A hyphenated sheet id, a stray space (also
+before a `%`) or an empty name is reported rather than silently ignored.
 
-**`IMPORT` — a declared CSV import cannot be resolved.** See chapter 20.
+**`IMPORT` — a declared CSV import cannot be resolved.** See chapter 23.
 
 **`ARTIFACT` — a declared chart cannot be built or written.** A pie of negative
 values, a series that is blank or not numeric, an unknown chart type, or a path
-outside the document's directory. See chapter 21.
+outside the document's directory. See chapter 24.
 
 ### The advice
 
@@ -1466,7 +1886,7 @@ question only a person can answer. Do not paper over a `DATE`, `UNIT`, `CYCLE`,
 a finding complains about is the one move that turns a caught error into a
 hidden one.
 
-## 19. `explain`, and reviewing a VisiMark diff
+## 22. `explain`, and reviewing a VisiMark diff
 
 ### `explain` answers "what is this document doing?"
 
@@ -1504,6 +1924,10 @@ Four things worth reading here:
   arithmetic or you chose it.
 - **`assertions`** — the claims this document makes about itself.
 
+A document with `param` lines also gets a `params:` list in each sheet: the
+assumptions a what-if run may change, with their widths and defaults
+(chapter 29).
+
 Pass `#sheet` to limit it to one sheet.
 
 ### What to look at in review
@@ -1532,12 +1956,12 @@ everything.
 
 ---
 
-# Part 5 — Beyond one file
+# Part 6 — Beyond one file
 
-The core of VisiMark is finished at chapter 19. These two chapters are features
+The core of VisiMark is finished at chapter 22. These two chapters are features
 you may never need. Read them when you do.
 
-## 20. Rows from a CSV
+## 23. Rows from a CSV
 
 Sometimes the rows are produced by another system and it makes no sense to paste
 them into the document. A sheet can take its rows from a local CSV file instead
@@ -1616,7 +2040,7 @@ stamp on the file, and nothing more.
 
 A binding that shadows an imported column is an `IMPORT` error.
 
-## 21. Charts as generated artifacts
+## 24. Charts as generated artifacts
 
 A `chart` statement declares a picture drawn from columns of its own sheet.
 
@@ -1673,12 +2097,12 @@ across segments. An invoice does not need one.
 
 ---
 
-# Part 6 — Automation
+# Part 7 — Automation
 
 This is the payoff. Everything so far was about making a document checkable. Now
 the check runs without you, and other programs read the document.
 
-## 22. In CI
+## 25. In CI
 
 The whole point of `check` is that it runs somewhere other than a human's
 judgment. This chapter is the short version;
@@ -1760,7 +2184,7 @@ look.
 Do not run `fmt` in CI and commit the result. That would repair the drift
 automatically, and the whole value of this tool is that a human sees the drift
 and decides whether the input or the formula was wrong. `fmt` belongs on a
-developer's machine, or behind format-on-save in an editor (chapter 25).
+developer's machine, or behind format-on-save in an editor (chapter 28).
 
 The one reasonable exception is a job that runs `fmt` and then fails if the file
 changed — a "you forgot to run fmt" check. That still puts the decision on a
@@ -1774,7 +2198,7 @@ The report already says it, but this is the short version:
   those new numbers are what you meant.
 - **`COVERAGE`** — run `visimark infer FILE` and read the proposal.
 - **Anything else** — a person has to answer it. The finding says which person
-  question it is. Chapter 18 is the full list.
+  question it is. Chapter 21 is the full list.
 
 ### Machine-readable output
 
@@ -1809,7 +2233,7 @@ An option a command does not accept is refused, not ignored: `--jsonn` exits `2`
 with a did-you-mean, and so does `--fix-dates` on `check`. Nothing is read or
 written first.
 
-## 23. Knowledge extraction: a document a machine can read
+## 26. Knowledge extraction: a document a machine can read
 
 A VisiMark document is not only checkable. It is queryable. `visimark eval`
 prints the computed values, so a script can act on them.
@@ -1918,7 +2342,13 @@ See [`example-executable-documentation.md`](example-executable-documentation.md)
 - **Key order in the JSON.**
 - **Findings being absent.** Check the exit code.
 
-## 24. Working with an AI agent
+### The next question: what if?
+
+`eval` answers *what does this document say?* The next question a script or an
+agent asks is *what would it say if one assumption changed?* That is also
+`eval`, with a scenario, and it is Part 8.
+
+## 27. Working with an AI agent
 
 This format was designed with agents in mind, and the reason is narrow and
 specific.
@@ -1958,6 +2388,7 @@ These are the excuses that show up in practice — from agents and from people.
 | "The document already has numbers, I will write the same rules by hand" | Run `infer` first. Hand-authoring re-does its work and can introduce the exact mistake the tool exists to catch. |
 | "The date format is obvious from context" | `11/12/2026` is two different dates. |
 | "I will widen the anchor to get more decimals" | The anchor is an output. Change the binding's `precision N`. |
+| "I will change the rate, look at the total, and put it back" | That edit rewrites every figure below it and can be committed by accident. Declare a `param` and ask with `eval --scenario` (chapter 30). |
 
 ### The review loop
 
@@ -1973,14 +2404,14 @@ Step 4 is the change worth having. Reviewing an agent's arithmetic is slow and
 unreliable. Reviewing an agent's *inputs and rules* is fast, and it is a
 question you can actually answer.
 
-## 25. In the editor
+## 28. In the editor
 
 The CLI is the product, and everything works without an editor. But there is a
 language server wrapping the same engine, and a VS Code client for it.
 
 What you get:
 
-- **Live diagnostics** — the findings from chapter 18, as you type.
+- **Live diagnostics** — the findings from chapter 21, as you type.
 - **`fmt` behind format-on-save** — using the editor's own setting, so it
   behaves like every other formatter you have.
 - **Quick fixes** — for the findings that have one.
@@ -2008,14 +2439,429 @@ anything.
 
 ---
 
-# Part 7 — Putting it together
+# Part 8 — Modelling
 
-## 26. Capstone: a quote, end to end
+A document computes one answer from one set of numbers. People keep asking the
+second question: *what would this come to if…?* What if we hire four people
+instead of two? What if the customer pays no VAT? What if the raise is 5.5%?
+
+Without help, there is one way to ask: edit the number, run `fmt`, read the
+result, and put the edit back. That edit is the problem. It rewrites every
+figure below it, and it leaves a diff for a question nobody meant to commit.
+Forget to put it back, and the document now says something nobody decided.
+
+VisiMark splits this in two. The document says **which** numbers are
+assumptions (chapter 29). `eval` answers the what-if **without writing
+anything** (chapter 30).
+
+## 29. Parameters: the assumptions a reader may vary
+
+The example for this part is [`tutorial/runway.md`](tutorial/runway.md), a
+small plan for how long a company's cash lasts:
+
+````markdown
+| Team        | Heads |   Salary |     Cost |
+|-------------|------:|---------:|---------:|
+| Engineering |     6 | 11000.00 | 67980.00 |
+| Sales       |     3 |  9000.00 | 27810.00 |
+| Operations  |     2 |  7500.00 | 15450.00 |
+
+```vmark #team
+param raise precision 3 = default 3%
+
+Cost = ROUND(Heads * Salary * (1 + raise), 2)
+
+headcount = SUM(Heads)
+payroll   = SUM(Cost)
+```
+
+The team of **11**<!--vmark=team.headcount--> people costs
+**111240.00**<!--vmark=team.payroll--> PLN a month, after a
+**3.0%**<!--vmark=team.raise%--> raise.
+
+```vmark #runway
+param cash      precision 2 = default 2000000.00
+param overhead  precision 2 = default 21000.00
+param new_hires precision 0 = default 2
+param hire_cost precision 2 = default 10500.00
+
+burn = team.payroll + overhead + new_hires * hire_cost
+months precision 1 = cash / burn
+
+assert months >= 12
+```
+
+With **2**<!--vmark=runway.new_hires--> new hires the company spends
+**153240.00**<!--vmark=runway.burn--> PLN a month, so the cash lasts
+**13.1**<!--vmark=runway.months--> months. The plan requires at least twelve.
+````
+
+### The shape of a `param`
+
+```
+param raise precision 3 = default 3%
+```
+
+Read it aloud: *a parameter, `raise`, three decimals wide, which is 3% unless a
+scenario says otherwise.* Every part is required, in this order:
+
+- **`param`** — this value may be supplied from outside.
+- **the name** — a plain identifier. A `param` is a scalar, never a column.
+- **`precision N`** — required, even where a plain scalar would derive its
+  width. A value that arrives from outside has no width the document could
+  work out. The width is also the limit on what a scenario may bring
+  (chapter 30).
+- **`default` and a number** — the value the document uses. It must be a plain
+  number, such as `2`, `10500.00` or `3%`. It cannot be a formula, a name, a
+  date or a string. A value you compute is an ordinary binding, not a `param`.
+
+### The default is the document
+
+Everywhere except one place, `param raise precision 3 = default 3%` behaves
+exactly like `raise precision 3 = 3%`. `check`, `fmt`, `infer`, `explain` and a
+plain `eval` all use the default. So every stored cell, every anchor and every
+chart in the file shows the default's numbers, and that is what `check`
+verifies and what a reviewer reads.
+
+This is the one rule the whole part follows from: **the defaults are the
+document. A scenario is only a view of it.**
+
+A `param` behaves like any other scalar. Formulas read it, locally or as
+`team.raise`. An assertion can read it. An anchor can show it, and the anchor
+always shows the default. Above, `**3.0%**<!--vmark=team.raise%-->` prints the
+default raise as a percent (chapter 15). It shows one decimal because `raise`
+is three decimals wide.
+
+### Choosing the width
+
+The width is a promise about what a scenario may bring. `raise` is declared
+three decimals wide, so a scenario may ask about `5.5%` (`0.055`) but not
+`5.25%` (`0.0525`). Declare the width that covers every question you expect to
+ask. It is also the width the default is written at: the default must fit, so
+`param raise precision 1 = default 3%` is an error, because `3%` is `0.03`.
+
+### What a reader sees
+
+`explain` lists the params apart from the other scalars, with their widths and
+defaults as written:
+
+```console
+$ visimark explain runway.md
+#team
+  inputs:  Team, Heads, Salary
+  rules:
+    Cost = ROUND(Heads * Salary * (1 + raise), 2)   precision 2 (derived)
+  scalars:
+    headcount = SUM(Heads)   precision 0 (derived)
+    payroll = SUM(Cost)      precision 2 (derived)
+  params:
+    raise   precision 3   default 3%
+  order:   raise → Cost → headcount → payroll
+
+#runway  (no table)
+  scalars:
+    burn = team.payroll + overhead + new_hires * hire_cost   precision 2 (derived)
+    months = cash / burn                                     precision 1 (declared)
+  params:
+    cash        precision 2   default 2000000.00
+    overhead    precision 2   default 21000.00
+    new_hires   precision 0   default 2
+    hire_cost   precision 2   default 10500.00
+  order:   cash → overhead → new_hires → hire_cost → burn → months
+  assertions:
+    months >= 12
+```
+
+That `params:` list is the document's answer to *what here is an assumption?*
+It is worth reading in every review. Everything else in the document follows
+from the inputs, the params and the rules.
+
+### Mistakes, and what they report
+
+```console
+  PRECISION s.raise           param raise declares no width
+            write `param raise precision N = default …`
+```
+
+```console
+  PRECISION s.raise           default 3% has 2 decimals; param raise declares 1
+```
+
+```console
+  TYPE    s.raise           expected `default` after `=` in a param
+```
+
+```console
+  TYPE    s.raise           a param default must be a number literal
+```
+
+A `param` with the same name as a column of its sheet is a `DUP` error, and one
+nothing reads gets the usual `WARN`.
+
+### `param` is not a reserved word
+
+`param` and `default` are only keywords in exactly this statement. `param = 5`
+still binds a scalar called `param`, and `default = 3` still binds one called
+`default`. No older document changes meaning.
+
+### What should be a `param`?
+
+A number someone will ask a *what if* about: a rate, a price, a headcount, a
+budget, a growth assumption. Not every constant. A `param` announces "this may
+vary", so an unmarked constant tells the reader something too: this one is
+settled.
+
+A number that differs from row to row stays an input column. A `param` is one
+number for the whole sheet.
+
+## 30. Scenarios: asking what-if without editing
+
+A **scenario** is a small JSON file that gives some params other values:
+
+```console
+$ cat four-hires.json
+{ "new_hires": "4" }
+```
+
+Pass it to `eval`:
+
+```console
+$ visimark eval --scenario four-hires.json runway.md
+team.raise        0.03
+team.headcount    11
+team.payroll      111240
+runway.cash       2000000
+runway.overhead   21000
+runway.new_hires  4
+runway.hire_cost  10500
+runway.burn       174240
+runway.months     11.5
+team.Cost         67980, 27810, 15450
+scenario: four-hires.json
+  team.raise        0.03     default
+  runway.cash       2000000  default
+  runway.overhead   21000    default
+  runway.new_hires  4        scenario  (default 2)
+  runway.hire_cost  10500    default
+  ASSERT  #runway   months >= 12
+          11.5 >= 12   is false under scenario (holds on defaults)
+$ echo $?
+1
+```
+
+Read it from the top.
+
+- **The values** are computed with four hires. The whole document is
+  evaluated again, in the same order, with the same rounding and the same
+  functions. Only the params differ.
+- **The `scenario:` block** lists every param, where its value came from, and
+  the default it replaced. The answer always says which question it answers.
+- **The assertion** is checked under the scenario. With four hires the cash
+  lasts 11.5 months, and the plan says twelve.
+- **`(holds on defaults)`** tells you the assertion is true for the document
+  as written. It is this scenario that breaks it. The other endings are
+  `(also false on defaults)` — the document was already broken — and
+  `(unverified on defaults)`.
+- **Exit code `1`**, because an assertion is false. The values are still
+  printed first.
+
+Now look at the file:
+
+```console
+$ git status --short runway.md
+$
+```
+
+Nothing changed. `eval` never writes, with or without a scenario.
+
+### Change several things at once
+
+```console
+$ cat leaner.json
+{ "raise": "5.5%", "hire_cost": "9800.00" }
+$ visimark eval --scenario leaner.json runway.md
+team.raise        0.055
+team.headcount    11
+team.payroll      113940
+runway.cash       2000000
+runway.overhead   21000
+runway.new_hires  2
+runway.hire_cost  9800
+runway.burn       154540
+runway.months     12.9
+team.Cost         69630, 28485, 15825
+scenario: leaner.json
+  team.raise        0.055    scenario  (default 0.03)
+  runway.cash       2000000  default
+  runway.overhead   21000    default
+  runway.new_hires  2        default
+  runway.hire_cost  9800     scenario  (default 10500)
+$ echo $?
+0
+```
+
+A param the scenario does not mention keeps its default. An empty object, `{}`,
+is a valid scenario and gives the same values as a plain `eval`.
+
+Notice that `team.Cost` changed too. A `param` feeds column rules like any
+other scalar, so every row moves.
+
+`eval` prints values in their shortest exact form: `2000000`, not
+`2000000.00`, and `0.03`, not `3%`. That is the same as a plain `eval`
+(chapter 26).
+
+### The rules for a scenario file
+
+**Keys** name declared params: `sheet.name`, or just `name` when only one param
+in the document has that name.
+
+**Values are strings.** `"4"`, not `4`. A JSON number passes through a binary
+float in almost every program that writes JSON, and money does not survive
+that. A string keeps the exact decimal text.
+
+**A percent param takes a percent.** `raise` has a percent default, so the
+value must be `"5.5%"`. A bare `"5.5"` would mean 550%, and it is refused
+instead of believed.
+
+**A value must fit the declared width.** It is never rounded to fit.
+
+Every mistake stops the run with exit `2` before anything is evaluated, and
+says what is wrong:
+
+```console
+visimark: scenario key new_hire names no param; did you mean new_hires?
+visimark: scenario value for new_hires must be a string: write "4"
+visimark: raise is a percent; write "5.5%"
+visimark: scenario value for raise has 4 decimals; raise declares 3
+visimark: scenario key burn is a rule, not a param
+visimark: scenario key Salary is a column, not a param
+visimark: scenario value for cash is not a number: "2,000,000.00"
+```
+
+This strictness is the point. A misspelled key that was quietly ignored would
+give you an answer that looks right and ignores your question.
+
+### Only `eval` accepts a scenario
+
+```console
+$ visimark check --scenario four-hires.json runway.md
+visimark: --scenario is only valid with eval
+$ echo $?
+2
+```
+
+`check`, `fmt`, `infer`, `explain` and `ref` refuse `--scenario`. A `fmt` that
+quietly ignored it would let you think a scenario had been written into the
+document. So `check` always answers about the document as written, and two
+people who run it on the same commit always get the same answer.
+
+### One value, and scenarios from a program
+
+`--get` works with a scenario and prints just the one value:
+
+```console
+$ visimark eval --scenario four-hires.json runway.md --get runway.months
+11.5
+```
+
+The failed assertion is still reported, but on stderr, so stdout holds only the
+number. The exit code is still `1`.
+
+`--scenario -` reads the scenario from stdin, so a script needs no temporary
+files. This loop asks the same question for zero to five hires:
+
+```console
+$ for n in 0 1 2 3 4 5; do
+>   printf '%s hires: ' $n
+>   echo "{ \"new_hires\": \"$n\" }" |
+>     visimark eval --scenario - runway.md --get runway.months 2>/dev/null
+> done
+0 hires: 15.1
+1 hires: 14
+2 hires: 13.1
+3 hires: 12.2
+4 hires: 11.5
+5 hires: 10.8
+```
+
+The plan holds up to three hires. That table was produced by the document's
+own rules, not by a copy of them in a spreadsheet.
+
+### For a program: `--json`
+
+Under `--json` the scenario comes back with the values, and a failed assertion
+carries a `defaults` field with `pass`, `fail` or `unverified`:
+
+```json
+{
+  "command": "eval",
+  "visimark": "0.1.6",
+  "status": "problems",
+  "file": "runway.md",
+  "scenario": {
+    "file": "four-hires.json",
+    "params": {
+      "team.raise": { "value": "0.03", "default": "0.03", "source": "default" },
+      "runway.cash": { "value": "2000000", "default": "2000000", "source": "default" },
+      "runway.overhead": { "value": "21000", "default": "21000", "source": "default" },
+      "runway.new_hires": { "value": "4", "default": "2", "source": "scenario" },
+      "runway.hire_cost": { "value": "10500", "default": "10500", "source": "default" }
+    }
+  },
+  "values": {
+    "runway.burn": "174240",
+    "runway.months": "11.5",
+    …
+  },
+  "assertions": [
+    {
+      "sheet": "runway",
+      "source": "assert months >= 12",
+      "holds": false,
+      "operands": { "months": "11.5" },
+      "substituted": "11.5 >= 12",
+      "defaults": "pass"
+    }
+  ],
+  "charts": []
+}
+```
+
+The JSON above is shortened and re-indented. `"defaults": "pass"` is the
+machine form of `(holds on defaults)`.
+
+### Why this is safe to hand to an agent
+
+An agent that plans work can ask the document before it acts: *would this plan
+still fit the budget?* It runs a scenario, reads the exit code and the
+`defaults` field, and decides. It never needs write access to the document, and
+it cannot change the answer by editing a number, because the document it asks
+is the one a person reviewed.
+[`example-agent-budget.md`](example-agent-budget.md) does exactly this with a
+spending cap.
+
+### What a scenario is not
+
+- **Not a way to change the document.** To adopt a scenario's values, edit
+  the defaults, run `fmt`, and commit that diff for review like any other
+  change.
+- **Not a stored variant.** VisiMark does not keep a list of named scenarios in
+  the document. The scenario files are yours: keep them next to the document,
+  or build them in a script.
+- **Not a way to vary a formula.** Only `param` values vary. The rules are the
+  same in every scenario.
+
+---
+
+# Part 9 — Putting it together
+
+## 31. Capstone: a quote, end to end
 
 Now build a real document from nothing, using everything. The finished file is
 [`tutorial/capstone.md`](tutorial/capstone.md). It is a consulting quote with
-line items, VAT, a payment schedule derived from the total, and a reconciliation
-that proves the instalments add up.
+line items, VAT, a payment schedule derived from the total, a reconciliation
+that proves the instalments add up, and a VAT rate you can ask what-if
+questions about.
 
 Follow along. Every command is shown.
 
@@ -2041,7 +2887,7 @@ table still lines up after `fmt`.
 ```vmark #lines
 "Effort (man-days)" is days
 
-vat_rate = 23%
+param vat_rate precision 2 = default 23%
 
 Net   = days * Rate
 VAT   = ROUND(Net * vat_rate, 2)
@@ -2055,9 +2901,11 @@ day_rate_avg precision 2 = net_total / effort_total
 ```
 ````
 
-Four decisions are visible here, and each one is a chapter you have read:
+Five decisions are visible here, and each one is a chapter you have read:
 
-- The alias (chapter 15) lets the header stay as written.
+- The alias (chapter 18) lets the header stay as written.
+- The VAT rate is a `param` (chapter 29). It is 23% in the document, and a
+  what-if run may try another rate. Its width, 2, allows any whole percent.
 - `ROUND(…, 2)` on VAT (chapter 14) keeps money at two decimals, as a stated
   decision rather than an accident of widths.
 - `day_rate_avg` divides, so it declares its width (chapter 14).
@@ -2068,12 +2916,14 @@ Four decisions are visible here, and each one is a chapter you have read:
 ```markdown
 The engagement is **0**<!--vmark=lines.effort_total--> man-days at an
 average of **0.00**<!--vmark=lines.day_rate_avg--> PLN per day. Net of tax it
-comes to **0.00**<!--vmark=lines.net_total--> PLN. VAT at 23% adds
-**0.00**<!--vmark=lines.vat_total--> PLN, giving a total of
-**0.00**<!--vmark=lines.gross_total--> PLN gross.
+comes to **0.00**<!--vmark=lines.net_total--> PLN. VAT at
+**0**<!--vmark=lines.vat_rate%--> adds **0.00**<!--vmark=lines.vat_total-->
+PLN, giving a total of **0.00**<!--vmark=lines.gross_total--> PLN gross.
 ```
 
-Currency stays outside the anchors (chapter 9).
+Currency stays outside the anchors (chapter 9). The rate is not typed into the
+sentence: the `%` anchor prints the `param` as a percent (chapter 15), so the
+sentence cannot disagree with the rate the formulas use.
 
 ### Step 4 — the schedule, a second sheet
 
@@ -2095,7 +2945,7 @@ assert share_sum == 1
 ````
 
 `lines.gross_total` crosses sheets and is qualified (chapter 10). Dates are ISO
-(chapter 13). The assertion says the shares must be a whole (chapter 16).
+(chapter 17). The assertion says the shares must be a whole (chapter 19).
 
 ### Step 5 — the reconciliation, a sheet with no table
 
@@ -2111,12 +2961,14 @@ assert |variance| <= 0.05
 
 Rounding each instalment can leave a few grosz of remainder. The tolerance is
 written down where a reviewer can argue with it, instead of being assumed.
+`|variance|` is the absolute value, written the way a reader expects
+(chapter 12).
 
 ### Step 6 — fill it in
 
 ```console
 $ visimark fmt capstone.md
-capstone.md: updated 15 cells, 9 anchors
+capstone.md: updated 15 cells, 10 anchors
 
 $ visimark check capstone.md
 capstone.md
@@ -2201,13 +3053,50 @@ document that says what *should* be true, rather than what is.
 
 ```console
 $ visimark eval capstone.md --get lines.gross_total
-36100.50
+36100.5
 ```
 
-You are done. That document now computes itself, states its own invariants,
-fails a build when it drifts, and answers a script.
+`eval` prints the shortest exact form, `36100.5`. The document shows
+`36100.50` because the binding is two decimals wide. They are the same number.
 
-## 27. What VisiMark refuses to do
+### Step 11 — ask a what-if
+
+The customer is a company in Prague. If the sale falls under the EU reverse
+charge, the quote carries no Polish VAT. What would the quote and the schedule
+come to then? Do not edit the rate. Ask:
+
+```console
+$ cat reverse-charge.json
+{ "vat_rate": "0%" }
+$ visimark eval --scenario reverse-charge.json capstone.md
+lines.vat_rate      0
+lines.effort_total  33
+lines.net_total     29350
+lines.vat_total     0
+lines.gross_total   29350
+lines.day_rate_avg  889.39
+schedule.covered    29350
+schedule.share_sum  1
+recon.invoiced      29350
+recon.scheduled     29350
+recon.variance      0
+lines.Net           5400, 11900, 7650, 4400
+lines.VAT           0, 0, 0, 0
+lines.Gross         5400, 11900, 7650, 4400
+schedule.Amount     7337.5, 13207.5, 8805
+scenario: reverse-charge.json
+  lines.vat_rate  0  scenario  (default 0.23)
+```
+
+The whole chain follows the one changed assumption: VAT, gross, every
+instalment and the reconciliation. Both assertions still hold, so the exit
+code is `0`. And `capstone.md` has not changed by a single byte.
+
+You are done. That document now computes itself, states its own invariants,
+fails a build when it drifts, answers a script, and answers a what-if without
+being edited.
+
+## 32. What VisiMark refuses to do
 
 Knowing the limits saves you from fighting them.
 
@@ -2249,7 +3138,7 @@ change, go through
 the decision on it. The review process is
 [`issue-runbook.md`](issue-runbook.md).
 
-## 28. Where to go next
+## 33. Where to go next
 
 ### Reference
 
@@ -2272,15 +3161,15 @@ Or ask the tool: `visimark ref NAME`.
 | [`example-charts.md`](example-charts.md) | Generated chart artifacts. |
 | [`example-structural-check.md`](example-structural-check.md) | An engineering calculation, and a transposed digit caught before the framer sees it. |
 | [`example-ci-sharding.md`](example-ci-sharding.md) | A document a build tool reads. |
-| [`example-agent-budget.md`](example-agent-budget.md) | A spending cap an agent cannot talk itself out of. |
-| [`example-executable-documentation.md`](example-executable-documentation.md) | A capacity decision that stopped being a second source of truth. |
+| [`example-agent-budget.md`](example-agent-budget.md) | A spending cap an agent cannot talk itself out of, and a what-if run against it. |
+| [`example-executable-documentation.md`](example-executable-documentation.md) | A capacity decision that stopped being a second source of truth, with ratios printed as percents. |
 
 ### Try it without installing
 
 [`playground.html`](playground.html) runs the real engine in your browser, with
 a live preview and a knowledge panel.
 
-### The five things worth remembering
+### The six things worth remembering
 
 1. **Never write a number that another number implies.** Write the rule.
 2. **A green check proves agreement, not derivation.** Change an input and watch
@@ -2289,5 +3178,7 @@ a live preview and a knowledge panel.
 4. **`fmt` repairs stale values and nothing else.** Every other finding is a
    question for a person.
 5. **Look functions up.** `visimark ref NAME`. Do not guess.
+6. **Ask what-if with a scenario, not an edit.** Declare the assumption a
+   `param`, and run `eval --scenario`.
 
 <!--vmark:no-formulas-->

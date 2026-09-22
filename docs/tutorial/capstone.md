@@ -21,7 +21,7 @@ person: every derived cell and every bold figure in the prose was written by
 ```vmark #lines
 "Effort (man-days)" is days
 
-vat_rate = 23%
+param vat_rate precision 2 = default 23%
 
 Net   = days * Rate
 VAT   = ROUND(Net * vat_rate, 2)
@@ -36,9 +36,9 @@ day_rate_avg precision 2 = net_total / effort_total
 
 The engagement is **33**<!--vmark=lines.effort_total--> man-days at an
 average of **889.39**<!--vmark=lines.day_rate_avg--> PLN per day. Net of tax it
-comes to **29350.00**<!--vmark=lines.net_total--> PLN. VAT at 23% adds
-**6750.50**<!--vmark=lines.vat_total--> PLN, giving a total of
-**36100.50**<!--vmark=lines.gross_total--> PLN gross.
+comes to **29350.00**<!--vmark=lines.net_total--> PLN. VAT at
+**23%**<!--vmark=lines.vat_rate%--> adds **6750.50**<!--vmark=lines.vat_total-->
+PLN, giving a total of **36100.50**<!--vmark=lines.gross_total--> PLN gross.
 
 ## Payment schedule
 

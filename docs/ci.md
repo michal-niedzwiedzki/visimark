@@ -632,7 +632,7 @@ broken. It disappears when the real problem above it is fixed.
 Changing the number a finding complains about is the one move that turns a
 caught error into a hidden one.
 
-The full list, with an example of each, is chapter 18 of the tutorial and
+The full list, with an example of each, is chapter 21 of the tutorial and
 [`cli-reference.md`](cli-reference.md).
 
 ## 14. Annotations on the diff
@@ -826,7 +826,7 @@ the documents are being corrected by a process nobody is reading.
 
 **Behind format-on-save in an editor.** There is a language server and a VS Code
 client; `fmt` runs as an ordinary formatter, so it behaves like every other
-formatter you have. See chapter 25 of the tutorial.
+formatter you have. See chapter 28 of the tutorial.
 
 A local Git hook is the third option, and chapter 23 has one.
 
