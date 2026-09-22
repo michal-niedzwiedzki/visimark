@@ -267,7 +267,7 @@ That is fine, and it is normal in this repository. Credit it honestly:
 
 Do not copy a trailer out of an old commit, a plan or a command file: name the
 model that wrote *this* change. The full rule is
-[`.claude/rules/ai-attribution.md`](.claude/rules/ai-attribution.md).
+[`.agents/rules/ai-attribution.md`](.agents/rules/ai-attribution.md).
 
 The same standard applies to the content: an agent is reliable at writing
 formulas and unreliable at arithmetic, so let `visimark fmt` compute every

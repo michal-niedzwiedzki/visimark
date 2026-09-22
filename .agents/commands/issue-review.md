@@ -7,7 +7,7 @@ allowed-tools: Bash(gh:*), Bash(git:*), Bash(bunx:*), Bash(mktemp:*), Bash(cat:*
 You are running the **pre-review** stage of the issue-review workflow.
 
 Read first, every run:
-- `.claude/rules/ai-attribution.md` — commit / PR trailer for **this** session (never copy a hardcoded Claude line)
+- `.agents/rules/ai-attribution.md` — commit / PR trailer for **this** session (never copy a hardcoded Claude line)
 - `docs/superpowers/specs/2026-09-06-vocabulary-review-workflow-design.md` — the design
 - `docs/vocabulary-catalogue.md` — the register you will add a row to, its four vocabulary criteria, the six-template table in its preface, and sections E–F
 - `docs/issue-runbook.md` — **Six kinds, three tracks**, and **Front-loading**: what this stage must leave settled for `/issue-decide`
@@ -455,7 +455,7 @@ discovered during implementation.
 2. `git switch -c <branch> origin/master` — `<branch>` is `vocab/issue-<n>-<slug>` (VOCAB) or `issue/<n>-<slug>` (LANGUAGE, TOOLING, or a promoted BUG).
 3. Add the row to the correct section table in `docs/vocabulary-catalogue.md` — A–D vocabulary, E language features (what a document means), F tooling / CLI / process (what a machine sees) — Status cell empty (rendered as ` ` — the row still has the right number of `|`), Request `[#<n>](<url>)`.
 4. `git add docs/vocabulary-catalogue.md`
-5. `git commit -m "$(printf 'docs: catalogue #%s (%s) as NEW\n\n%s' <n> '<name>' '<attribution-trailer>')"` — `<attribution-trailer>` from `.claude/rules/ai-attribution.md` for this session.
+5. `git commit -m "$(printf 'docs: catalogue #%s (%s) as NEW\n\n%s' <n> '<name>' '<attribution-trailer>')"` — `<attribution-trailer>` from `.agents/rules/ai-attribution.md` for this session.
 6. `git push -u origin HEAD`
 7. `gh pr create --base master --title "Catalogue #<n>: <name> (NEW)" --body "$(printf '<one-paragraph summary of the request>\n\nDecision to follow on #%s.' <n>)"` — no `Generated with Claude Code` footer unless this session is Claude Code (same rule).
 8. `git switch -`

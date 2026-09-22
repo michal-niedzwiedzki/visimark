@@ -7,7 +7,7 @@ allowed-tools: Bash(gh:*), Bash(git:*), Bash(bun:*), Bash(bunx:*), Bash(mktemp:*
 You are running the **decision** stage of the issue-review workflow.
 
 Read first, every run:
-- `.claude/rules/ai-attribution.md` — commit / PR trailer for **this** session (never copy a hardcoded Claude line)
+- `.agents/rules/ai-attribution.md` — commit / PR trailer for **this** session (never copy a hardcoded Claude line)
 - `docs/superpowers/specs/2026-09-06-vocabulary-review-workflow-design.md` — the design
 - `docs/vocabulary-catalogue.md` — the register, its four vocabulary criteria, its status values, the six-template table in its preface, and the E/F line
 - `docs/issue-runbook.md` — **Six kinds, three tracks**, and **Front-loading**: this stage owes the plan writer a spec with nothing left to invent
@@ -228,7 +228,7 @@ git add docs/vocabulary-catalogue.md
 git commit -m "$(printf 'docs: decide #%s (%s) — %s\n\n%s' <n> '<name>' <VERDICT> '<attribution-trailer>')"
 git push -u origin HEAD
 ```
-`<attribution-trailer>` is the `Co-Authored-By:` line from `.claude/rules/ai-attribution.md` for this session.
+`<attribution-trailer>` is the `Co-Authored-By:` line from `.agents/rules/ai-attribution.md` for this session.
 
 - **New branch** → `gh pr create --base master --title "Catalogue #<n>: <name> (<VERDICT>)" --body "$(printf '%s\n\n%s\n\nDeciding comment: %s' '<the decision>' '<the reason>' '<comment-url>')"` — no vendor footer unless the attribution rule says this session owns one.
 - **Existing review PR** → the push updates it; `gh pr edit <num> --title "Catalogue #<n>: <name> (<VERDICT>)"` and append the decision to its body with `gh pr edit <num> --body ...`.
@@ -320,7 +320,7 @@ Ask the maintainer via `AskUserQuestion` — "Write the implementation plan now?
   `Tech Stack`, a `Spec:` link to the spec file, `Global Constraints`,
   then checkbox `Task` sections each with `Files`, `Interfaces`, and `Step`s.
   Global Constraints must require the commit trailer from
-  `.claude/rules/ai-attribution.md`; do not hardcode a vendor name into the
+  `.agents/rules/ai-attribution.md`; do not hardcode a vendor name into the
   plan.
 
   **While drafting, do not silently fill a gap the spec does not settle.** Any

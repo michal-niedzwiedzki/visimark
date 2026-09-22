@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
-# Stop hook: once Claude finishes a batch of work, format every changed JS/TS
-# file with oxfmt and run `oxlint --fix` over them. Anything oxlint still flags
-# is surfaced to the user. This never blocks and never sends Claude back —
-# formatting between individual edits was too noisy, so it runs once at the end.
+# Stop hook: once a session finishes a batch of work, format every changed
+# JS/TS file with oxfmt and run `oxlint --fix` over them. Anything oxlint
+# still flags is surfaced to the user. This never blocks and never sends the
+# agent back — formatting between individual edits was too noisy, so it runs
+# once at the end.
 #
-# Wired up in .claude/settings.json. Mirrors `bun run format` / `bun run lint`,
-# scoped to the files that changed this session.
+# Canonical path: .agents/hooks/format-and-lint.sh
+# Wired from .claude/settings.json (Claude Code, and Grok via Claude hook
+# compat). Mirrors `bun run format` / `bun run lint`, scoped to the files
+# that changed this session.
 set -euo pipefail
 
 root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0

@@ -7,7 +7,7 @@ constraints, recorded as a comment that
 [`vocabulary-catalogue.md`](vocabulary-catalogue.md) then links, and catalogued
 through one pull request to `master`. Three slash commands carry the
 mechanics; every judgement call is yours. Commits the agent makes are
-attributed per [`.claude/rules/ai-attribution.md`](../.claude/rules/ai-attribution.md).
+attributed per [`.agents/rules/ai-attribution.md`](../.agents/rules/ai-attribution.md).
 
 **The work moves forward, not back.** Each stage exists to leave the next one
 with nothing to discover: the template answers what the pre-review would
