@@ -46,6 +46,7 @@ test("every builtin declares a kind and an arity", () => {
     "MAX",
     "MIN",
     "MOD",
+    "PMT",
     "ROUND",
     "SQRT",
     "SUM",
@@ -592,7 +593,7 @@ test("the function table and the exported map agree", () => {
   const fromTable = Object.keys(FUNCTION_TABLE).sort();
   const fromMap = [...FUNCTIONS.keys()].sort();
   expect(fromMap).toEqual(fromTable);
-  expect(fromTable).toHaveLength(13);
+  expect(fromTable).toHaveLength(14);
 });
 
 // ---- prose notation for unary vocabulary (#64) ------------------------------
@@ -678,4 +679,62 @@ test("did-you-mean never suggests a prose spelling", () => {
   const ts = typeFindings(run(withColumnRule("ABSS(Qty)")).findings);
   expect(ts[0]!.suggestion).toBe("ABS");
   expect([...FUNCTIONS.keys()].filter((k) => /[|⌊⌋⌈⌉√]/.test(k))).toEqual([]);
+});
+
+// ---- PMT ------------------------------------------------------------
+
+test("PMT is a map of arity 3", () => {
+  expect(FUNCTIONS.get("PMT")).toEqual({ kind: "map", arity: 3 });
+  expect(isReduce("PMT")).toBe(false);
+  expect(callProblem("PMT", [{ type: "num" }, { type: "num" }, { type: "num" }])).toBeNull();
+  expect(callProblem("PMT", [])).toEqual({ kind: "arity", expected: 3, got: 0 });
+  expect(callProblem("PMT", [{ type: "num" }, { type: "num" }])).toEqual({
+    kind: "arity",
+    expected: 3,
+    got: 2,
+  });
+  expect(
+    callProblem("PMT", [{ type: "num" }, { type: "num" }, { type: "num" }, { type: "num" }]),
+  ).toEqual({ kind: "arity", expected: 3, got: 4 });
+});
+
+test("PMT exact cases and the two full working values", () => {
+  const src = `
+\`\`\`vmark #s
+zero = PMT(0, 12, 1200)
+one = PMT(0.10, 1, 1000)
+none = PMT(0, 4, 0)
+loan = PMT(0.01, 12, 10000)
+press = PMT(0.005, 36, 48000)
+neg = PMT(0.01, 12, -10000)
+shown precision 2 = ROUND(loan, 2)
+\`\`\`
+`;
+  const r = run(src);
+  expect(r.findings.filter((f) => f.code !== "WARN")).toEqual([]);
+  const str = (name: string) => {
+    const v = r.values.get(`s.${name}`);
+    if (!v || v.t !== "num") throw new Error(name);
+    return v.d.toString();
+  };
+  expect(str("zero")).toBe("100");
+  expect(str("one")).toBe("1100");
+  expect(str("none")).toBe("0");
+  expect(str("loan")).toBe("888.4878867834170733998783122788652898045");
+  expect(str("press")).toBe("1460.252997674645676629785549680054151698");
+  expect(str("neg")).toBe("-888.4878867834170733998783122788652898045");
+  expect(str("shown")).toBe("888.49");
+});
+
+test("PMT rejects a non-number, a bad term, then a bad rate, in that order", () => {
+  const msg = (rule: string) => typeFindings(run(withScalar(rule)).findings)[0]?.message;
+  expect(msg('PMT("x", 12, 1)')).toBe("PMT expects a number");
+  expect(msg('PMT(0.01, "x", 1)')).toBe("PMT expects a number");
+  expect(msg("PMT(0.01, 12, 2026-01-01)")).toBe("PMT expects a number");
+  expect(msg("PMT(0.01, 0, 1)")).toBe("PMT expects a positive whole number of periods");
+  expect(msg("PMT(0.01, -12, 1)")).toBe("PMT expects a positive whole number of periods");
+  expect(msg("PMT(0.01, 12.5, 1)")).toBe("PMT expects a positive whole number of periods");
+  expect(msg("PMT(-1, 12, 1)")).toBe("PMT rate must be greater than -1");
+  expect(msg("PMT(-1.5, 12, 1)")).toBe("PMT rate must be greater than -1");
+  expect(msg("PMT(-1, 1.5, 1)")).toBe("PMT expects a positive whole number of periods");
 });
