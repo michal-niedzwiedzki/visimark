@@ -47,6 +47,7 @@ export const FUNCTION_TABLE = {
   CEILING: { kind: "map", arity: 2 },
   IF: { kind: "map", arity: 3 },
   EOMONTH: { kind: "map", arity: 2 },
+  PMT: { kind: "map", arity: 3 },
 } as const satisfies Record<string, FnSpec>;
 
 /** Every builtin function name, as a type. */

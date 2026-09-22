@@ -698,3 +698,64 @@ chart cost as pie of Price labelled Item
   const t = r.findings.find((f) => f.code === "TYPE")!;
   expect(t.message).toBe("a % sigil is only legal on a numeric scalar");
 });
+
+test("an anchored PMT at precision 2 matches 888.49", () => {
+  const src = `Instalment **888.49**<!--vmark=s.instalment-->.
+
+\`\`\`vmark #s
+instalment precision 2 = PMT(0.01, 12, 10000)
+\`\`\`
+`;
+  expect(run(src).findings).toEqual([]);
+});
+
+test("an anchored PMT with no declared width is PRECISION", () => {
+  const src = `Instalment **888.49**<!--vmark=s.instalment-->.
+
+\`\`\`vmark #s
+instalment = PMT(0.01, 12, 10000)
+\`\`\`
+`;
+  const p = run(src).findings.find((f) => f.code === "PRECISION");
+  expect(p?.raw).toBe("PMT(0.01, 12, 10000)");
+  expect(p?.message).toBeUndefined();
+});
+
+test("ROUND(PMT(...), 2) needs no precision clause", () => {
+  const src = `Instalment **888.49**<!--vmark=s.shown-->.
+
+\`\`\`vmark #s
+shown = ROUND(PMT(0.01, 12, 10000), 2)
+\`\`\`
+`;
+  expect(run(src).findings).toEqual([]);
+});
+
+test("one bad term is a TYPE on that row and the other row still verifies", () => {
+  const src = `
+| Loan | Rate | Term | Principal | Instalment |
+|------|-----:|-----:|----------:|-----------:|
+| ok   | 0.01 |   12 |  10000.00 |     888.49 |
+| bad  | 0.01 |   -1 |  10000.00 |       0.00 |
+
+\`\`\`vmark #loans
+Instalment precision 2 = PMT(Rate, Term, Principal)
+\`\`\`
+`;
+  const r = run(src);
+  const types = r.findings.filter((f) => f.code === "TYPE");
+  expect(types).toHaveLength(1);
+  expect(types[0]!.rowLabel).toBe("bad");
+  expect(types[0]!.message).toBe("PMT expects a positive whole number of periods");
+  expect(r.findings.some((f) => f.code === "NOTE" || f.code === "STALE")).toBe(false);
+});
+
+test("PMT() with two arguments is one static TYPE", () => {
+  const src = `
+\`\`\`vmark #s
+instalment precision 2 = PMT(0.01, 12)
+\`\`\`
+`;
+  const t = run(src).findings.find((f) => f.code === "TYPE");
+  expect(t?.message).toBe("PMT() takes 3 arguments, got 2");
+});

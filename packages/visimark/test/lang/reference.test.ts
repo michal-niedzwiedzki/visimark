@@ -62,8 +62,8 @@ test("describeFunction is case-sensitive and returns null for an unknown name", 
   expect(describeFunction("NOPE")).toBeNull();
 });
 
-test("functionNames lists all thirteen", () => {
-  expect(functionNames()).toHaveLength(13);
+test("functionNames lists all fourteen", () => {
+  expect(functionNames()).toHaveLength(14);
 });
 
 // The `Precision` column of the design-doc table, the `precision` line in

@@ -171,6 +171,21 @@ function evalCall(expr: Extract<Expr, { type: "call" }>, env: EvalEnv): Value {
       }
       return date(eomonth(d, months.toNumber()));
     }
+    case "PMT": {
+      const rate = asNum(vals[0]!, "PMT");
+      const nper = asNum(vals[1]!, "PMT");
+      const pv = asNum(vals[2]!, "PMT");
+      if (!nper.isInteger() || !nper.gt(0)) {
+        throw new EvalError("PMT expects a positive whole number of periods");
+      }
+      if (!rate.gt(-1)) {
+        throw new EvalError("PMT rate must be greater than -1");
+      }
+      if (rate.isZero()) return num(pv.div(nper));
+      const growth = rate.plus(1).pow(nper);
+      const instalment = pv.times(rate).times(growth).div(growth.minus(1));
+      return num(instalment.isZero() ? new Decimal(0) : instalment);
+    }
     default:
       throw new EvalError(`unknown function \`${name}\``);
   }

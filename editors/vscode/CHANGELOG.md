@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- The engine now recognises `PMT(rate, nper, pv)`. A call that used to be
+  reported as an unknown function is evaluated, and a missing width on a
+  written result is the existing `PRECISION` diagnostic.
+
 ## 0.1.7 - 2026-09-22
 
 - Hover on a function written as `Σ(x)`, `√(x)`, `|x|`, `⌊x⌋` or `⌈x⌉` now

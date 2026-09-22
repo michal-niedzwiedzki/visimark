@@ -40,10 +40,12 @@ test("powers multiply by a non-negative integer exponent, and nothing else", () 
   expect(P("two ^ zero")).toBeNull();
 });
 
-test("division, AVG and SQRT are not derivable", () => {
+test("division, AVG, SQRT and PMT are not derivable", () => {
   expect(P("four / two")).toBeNull();
   expect(P("AVG(two)")).toBeNull();
   expect(P("SQRT(four)")).toBeNull();
+  expect(P("PMT(two, two, two)")).toBeNull();
+  expect(P("ROUND(PMT(two, two, two), 2)")).toBe(2);
 });
 
 test("reduces are closed over their column's scale", () => {

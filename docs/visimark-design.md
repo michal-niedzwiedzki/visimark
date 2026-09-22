@@ -302,9 +302,9 @@ unrelated restrictions all follow from this one:
 
 ### Builtin functions
 
-Thirteen, chosen to cover the examples and the catalogued additions a real
+Fourteen, chosen to cover the examples and the catalogued additions a real
 document needed (`EOMONTH`, issue #6; `SQRT`, issue #18; `FLOOR`, issue #53;
-`CEILING`, issue #54).
+`CEILING`, issue #54; `PMT`, issue #156).
 Each is declared with its shape and its exact argument count, in one table in
 `eval/functions.ts` —
 the single home for a classification the dependency walk, the evaluator and the
@@ -336,6 +336,7 @@ derivation the engine actually performs.
 | `CEILING(x, s)` · `⌈x⌉` | map | 2 | the width of `s` | least multiple of `s` that is not less than `x`, toward +∞; a non-positive `s` is a `TYPE` error |
 | `IF(cond, a, b)` | map | 3 | the wider of `a` and `b` | returns `a` or `b`; a non-boolean `cond` is a `TYPE` error |
 | `EOMONTH(d, months)` | map | 2 | not applicable — the result is a date | last day of the month `months` calendar months from `d`; `d`'s day is discarded; a non-whole `months` is a `TYPE` error; a result outside years 1–9999 is a `DATE` error |
+| `PMT(rate, nper, pv)` | map | 3 | **must be declared** | instalment that repays `pv` to zero over `nper` periods at per-period rate `rate`; a non-numeric `rate`, `nper`, or `pv` is a `TYPE` error; a non-positive or non-whole `nper` is a `TYPE` error; a `rate` of -1 or below is a `TYPE` error |
 
 Parameters, precision and worked examples for each are in
 [`function-reference.md`](function-reference.md), or `visimark ref NAME`.
@@ -776,7 +777,7 @@ Per-column
 *precision* has landed as the `precision N` clause
 ([§7](#7-numeric-semantics)); a document- or sheet-scope default has not, and
 should not: it could only override a derivation or suppress a required
-declaration. Per-row exceptions. A function library beyond the thirteen —
+declaration. Per-row exceptions. A function library beyond the fourteen —
 proposals and the decision on each are tracked in
 [`vocabulary-catalogue.md`](vocabulary-catalogue.md). Incremental reparse.
 

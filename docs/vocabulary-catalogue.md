@@ -1,6 +1,6 @@
 # VisiMark — design-decision catalogue
 
-The language ships **thirteen functions and a fixed operator set**
+The language ships **fourteen functions and a fixed operator set**
 ([`visimark-design.md` §4](visimark-design.md#4-syntax)). This file is the register of
 every proposed change to the language or its tooling — a mapper, operator, or
 aggregate (sections A–D); a language feature (section E); a tooling or process
@@ -109,7 +109,6 @@ number, a date, or a string — never a boolean ([§4](visimark-design.md#4-synt
 
 | Name | What it does | Pros | Cons | Request | Status |
 |------|--------------|------|------|---------|--------|
-| `PMT(rate, nper, pv)` | The instalment that repays `pv` to zero over `nper` periods at per-period rate `rate`, paid at period end. A zero rate is `pv / nper`. A non-positive or non-whole `nper`, or a `rate` of -1 or below, is `TYPE`. | The brake-press quote can name the instalment. The zero-rate case cannot be written with `IF`, because both arms are evaluated and the general form divides by zero. Declared precision is the existing rule for division. | Ordinary annuity only: no future value, no payment-in-advance flag. A written result still declares a width. | [#156](https://github.com/michal-niedzwiedzki/visimark/issues/156) | [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/156#issuecomment-5781382455) |
 | `TEXT(n, places)` | Format a number as a string with exactly `places` decimals: `TEXT(5.5, 2)` → `"5.50"`. | The safe half of string concatenation — an explicit format instead of a guessed one. Cheap, map-shaped. | One more name in the did-you-mean space. Only useful alongside `&`. | — | `DEFERRED` |
 | `YEAR(d)` / `MONTH(d)` / `DAY(d)` | Integer field of a date. | Pure, config-free, unambiguous (date → integer). Pairs with `&` for reference numbers. | Thin on its own without `&`. | — | `DEFERRED` |
 | `TRUNC(x, places)` | Drop decimals past `places` without rounding. | Distinct from `ROUND`; occasionally the correct operation (tax floors). | Overlaps `ROUND`; easy to reach for by mistake. | — | `DEFERRED` |
@@ -276,6 +275,7 @@ the same time.
 
 | Name | Kind | Request | Landed | Released | Decision |
 |------|------|---------|--------|----------|----------|
+| `PMT(rate, nper, pv)` | mapper | [#156](https://github.com/michal-niedzwiedzki/visimark/issues/156) | [#161](https://github.com/michal-niedzwiedzki/visimark/pull/161) | — | [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/156#issuecomment-5781382455) |
 | `EOMONTH(d, months)` | mapper | [#6](https://github.com/michal-niedzwiedzki/visimark/issues/6) | [#8](https://github.com/michal-niedzwiedzki/visimark/pull/8) | [v0.1.2](https://github.com/michal-niedzwiedzki/visimark/releases/tag/v0.1.2) | [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/6#issuecomment-5559247913) |
 | `SQRT(x)` | mapper | [#18](https://github.com/michal-niedzwiedzki/visimark/issues/18) | [#20](https://github.com/michal-niedzwiedzki/visimark/pull/20) | [v0.1.2](https://github.com/michal-niedzwiedzki/visimark/releases/tag/v0.1.2) | [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/18#issuecomment-5560992652) |
 | `assert` statements | language feature | [#27](https://github.com/michal-niedzwiedzki/visimark/issues/27) | [#32](https://github.com/michal-niedzwiedzki/visimark/pull/32) | [v0.1.2](https://github.com/michal-niedzwiedzki/visimark/releases/tag/v0.1.2) | [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/27#issuecomment-5570701059) |
