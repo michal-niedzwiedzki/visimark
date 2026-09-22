@@ -112,6 +112,43 @@ Gap precision 2 = ${prose}
   }
 });
 
+test("fmt writes percent form on a % comment and is idempotent", () => {
+  const src = `Margin **0.4155**<!--vmark=s.margin%-->.
+
+\`\`\`vmark #s
+margin precision 4 = 0.4026
+\`\`\`
+`;
+  const once = fmt(src, {});
+  expect(once.changed).toBe(true);
+  expect(once.output).toContain("**40.26%**<!--vmark=s.margin%-->");
+  expect(fmt(once.output, {}).output).toBe(once.output);
+  expect(check(build(locate(once.output))).exitCode).toBe(0);
+});
+
+test("fmt without % rewrites a percent-shaped span to toFixed", () => {
+  const src = `Reserved **20.00%**<!--vmark=s.x-->.
+
+\`\`\`vmark #s
+x precision 2 = 20%
+\`\`\`
+`;
+  const once = fmt(src, {});
+  expect(once.output).toContain("**0.20**<!--vmark=s.x-->");
+  expect(once.output).not.toContain("20.00%");
+});
+
+test("fmt does not rewrite a % span that is PRECISION", () => {
+  const src = `X **1**<!--vmark=s.n%-->.
+
+\`\`\`vmark #s
+n precision 1 = 1
+\`\`\`
+`;
+  const once = fmt(src, {});
+  expect(once.output).toBe(src);
+});
+
 function diffLines(a: string, b: string): number {
   const la = a.split("\n");
   const lb = b.split("\n");

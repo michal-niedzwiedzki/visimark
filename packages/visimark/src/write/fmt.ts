@@ -1,6 +1,7 @@
 import { locate } from "../parse/document.js";
 import { build } from "../model/build.js";
 import { check, type CheckResult, matchesStored, roundValue, showValue } from "../eval/check.js";
+import { percentDisplay } from "../eval/percent-display.js";
 import type { DocumentFile } from "../fs/reader.js";
 import type { DocModel, Finding } from "../model/types.js";
 import { applyUnit } from "../eval/units.js";
@@ -88,6 +89,12 @@ export function planFmt(model: DocModel, result: CheckResult, opts: FmtOptions):
     }
   }
 
+  const sigilBlocked = new Set(
+    result.findings
+      .filter((f) => f.code === "PRECISION" || f.code === "TYPE" || f.code === "UNIT")
+      .map((f) => `${f.sheetId ?? ""}.${f.name ?? ""}`),
+  );
+
   // 2. anchored scalar values
   for (const a of model.anchors) {
     if (!a.value) continue;
@@ -102,13 +109,17 @@ export function planFmt(model: DocModel, result: CheckResult, opts: FmtOptions):
     // placeholder in prose round the stored value.
     const prec = result.scalarPrecision.get(id);
     if (prec === undefined) continue;
+    if (a.percent && sigilBlocked.has(id)) continue;
     const unit = result.scalarUnits.get(id) ?? null;
     const rounded = roundValue(v, prec);
-    if (!matchesStored(rounded, current, prec)) {
+    const wanted = a.percent
+      ? percentDisplay(rounded, prec)
+      : applyUnit(showValue(rounded, prec), unit);
+    if (current !== wanted) {
       edits.push({
         start: a.value.start,
         end: a.value.end,
-        text: applyUnit(showValue(rounded, prec), unit),
+        text: wanted,
         finding: findingFor(a.value.start, a.value.end),
       });
     }
