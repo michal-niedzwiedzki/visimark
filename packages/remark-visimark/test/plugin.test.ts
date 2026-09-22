@@ -68,14 +68,19 @@ test("file.value as a Buffer is handled the same as a string", async () => {
   expect(file.messages[0]!.ruleId).toBe("visimark-stale");
 });
 
-test("registering the plugin twice reports every finding twice", async () => {
+test("registering the plugin twice reports every finding once, not twice", async () => {
+  // unified deduplicates .use() calls by attacher function reference — two
+  // registrations of the same no-argument plugin (directly, or via two
+  // presets that both include it) merge into one attacher entry rather than
+  // running twice. This is unified's own documented "reconfigure" behavior,
+  // not something this plugin's transform body can or should work around.
   const file = await unified()
     .use(remarkParse)
     .use(remarkStringify)
     .use(remarkLintVisimark)
     .use(remarkLintVisimark)
     .process(new VFile({ value: stale }));
-  expect(file.messages).toHaveLength(2);
+  expect(file.messages).toHaveLength(1);
 });
 
 test("the host's own parsed tree is ignored — no remark-gfm needed for a table to be seen", async () => {
