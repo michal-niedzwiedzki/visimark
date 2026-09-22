@@ -898,9 +898,19 @@ present = 1
 value = NPV(0.08, present)
 \`\`\`
 `;
-  expect(typeFindings(run(scalar).findings).map((f) => f.message)).toContain(
-    "NPV() expects a column",
-  );
+  const scalarFindings = typeFindings(run(scalar).findings).map((f) => f.message);
+  expect(scalarFindings).toContain("NPV() expects a column");
+
+  const sumScalar = `
+| Cash |
+|-----:|
+|   10 |
+\`\`\`vmark #t
+present = 1
+total = SUM(present)
+\`\`\`
+`;
+  expect(typeFindings(run(sumScalar).findings).map((f) => f.message)).toEqual([]);
 
   const twoCols = `
 | Cash | Flows |
