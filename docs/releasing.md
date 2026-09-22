@@ -85,13 +85,14 @@ and builds from it.
    run on every push to `master`. Wait for both before tagging — `release.yml`
    checks out the tag, not your working tree, so an unpushed or red commit
    cannot be in the release.
-3. **Bump the version** to the same `X.Y.Z` in all five version-carrying files:
+3. **Bump the version** to the same `X.Y.Z` in all six version-carrying files:
    ```
    packages/visimark/package.json
    packages/visimark-lsp/package.json
    editors/vscode/package.json
    action.yml                                # the `version` input's default
    scripts/precommit-visimark-check.sh       # both visimark@ pins inside it
+   packages/remark-visimark/package.json     # its own version AND its visimark dependency pin
    ```
    They must match each other and the tag exactly. `action.yml` is in the list
    because its default is what a consumer's `npx` installs: leave it behind and
@@ -99,8 +100,8 @@ and builds from it.
    `scripts/precommit-visimark-check.sh` joins them for the same reason — it is
    what a consumer's pinned `pre-commit` `rev:` actually runs. No hand-run
    `grep` needed any more — `ci.yml`'s "every version-carrying file must agree"
-   step fails the build if you miss one, so step 6's green CI is the
-   confirmation.
+   step fails the build if you miss one of these seven values, so step 6's
+   green CI is the confirmation.
 4. **Write the changelog** — see [Preparing the changelog](#preparing-the-changelog).
    `ci.yml`'s "every release must have a changelog entry" step fails the build if
    `CHANGELOG.md` or `editors/vscode/CHANGELOG.md` has no dated
