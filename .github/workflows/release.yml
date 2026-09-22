@@ -275,11 +275,25 @@ jobs:
             fi
           done
 
-          # Registries can lag a few seconds behind a publish they have already
-          # accepted, so each check gets a handful of attempts. This is a last
-          # line of defence, not a poll: still absent after this and the release
-          # really is incomplete.
-          retry() { for _ in 1 2 3 4 5; do if "$@"; then return 0; fi; sleep 15; done; return 1; }
+          # Registries can lag behind a publish they have already accepted —
+          # npm has settled in low tens of seconds, the Marketplace slower —
+          # so each check is retried with backoff over roughly ten minutes
+          # before it is trusted. This is a last line of defence, not a poll:
+          # still absent after ~10 minutes and the release really is
+          # incomplete. The original 5 x 15s (75s ceiling) read a leg that was
+          # still settling as one that had failed, twice in two runs.
+          retry() {
+            local delays=(15 15 30 30 60 60 60 90 90 90) # ~540s of backoff across 10 attempts
+            if "$@"; then return 0; fi
+            local attempt=1 d
+            for d in "${delays[@]}"; do
+              attempt=$((attempt + 1))
+              echo "::warning::attempt $attempt still doesn't see it — could be a slow registry, not a failure; retrying in ${d}s..." >&2
+              sleep "$d"
+              if "$@"; then return 0; fi
+            done
+            return 1
+          }
 
           on_npm() { npm view "visimark@$ENGINE_VERSION" version >/dev/null 2>&1; }
           on_marketplace() {
@@ -291,21 +305,21 @@ jobs:
           if retry on_npm; then
             echo "npm has visimark@$ENGINE_VERSION."
           else
-            echo "::error::npm does not have visimark@$ENGINE_VERSION. The release is incomplete — fix the npm leg and re-run this workflow; do not publish by hand (see docs/releasing.md)."
+            echo "::error::npm still does not have visimark@$ENGINE_VERSION after ~10 minutes of retries — this is absence, not lag. Fix the npm leg and re-run this workflow; do not publish by hand (see docs/releasing.md)."
             fail=1
           fi
 
           if retry on_marketplace; then
             echo "The Marketplace has $EXT_NS.$EXT_NAME@$EXT_VERSION."
           else
-            echo "::error::the VS Code Marketplace does not list $EXT_NS.$EXT_NAME@$EXT_VERSION. A first publish for a publisher can sit in verification for a while — check the publisher hub before assuming a credential problem — then fix the cause and re-run this workflow. Fix this check rather than deleting it: it is the only thing that noticed v0.1.3 was half-published."
+            echo "::error::the VS Code Marketplace still does not list $EXT_NS.$EXT_NAME@$EXT_VERSION after ~10 minutes of retries — this is absence, not lag. A first publish for a publisher can sit in verification for a while — check the publisher hub before assuming a credential problem — then fix the cause and re-run this workflow. Fix this check rather than deleting it: it is the only thing that noticed v0.1.3 was half-published."
             fail=1
           fi
 
           if retry on_ovsx; then
             echo "Open VSX has $EXT_NS.$EXT_NAME@$EXT_VERSION."
           else
-            echo "::error::Open VSX does not have $EXT_NS.$EXT_NAME@$EXT_VERSION. The release is incomplete — fix the Open VSX leg and re-run this workflow (see docs/releasing.md)."
+            echo "::error::Open VSX still does not have $EXT_NS.$EXT_NAME@$EXT_VERSION after ~10 minutes of retries — this is absence, not lag. Fix the Open VSX leg and re-run this workflow (see docs/releasing.md)."
             fail=1
           fi
 
