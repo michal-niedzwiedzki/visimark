@@ -119,8 +119,8 @@ export function inferColumnUnit(cellTexts: (string | undefined)[]): ColumnUnit {
 export function numericValue(text: string): Decimal | null {
   const t = text.trim();
   if (/^-?\d+(?:\.\d+)?$/.test(t)) return new Decimal(t);
-  const pm = /^(\d+(?:\.\d+)?)%$/.exec(t);
-  if (pm) return new Decimal(pm[1]!).div(100);
+  const pm = /^(-?)(\d+(?:\.\d+)?)%$/.exec(t);
+  if (pm) return new Decimal((pm[1] ?? "") + pm[2]!).div(100);
   const dec = parseDecorated(t);
   return dec.kind === "number" ? new Decimal(dec.num) : null;
 }
@@ -139,8 +139,8 @@ export function numericValue(text: string): Decimal | null {
  */
 export function cellPrecision(text: string): number | null {
   if (numericValue(text) === null) return null;
-  const pm = /^\s*(\d+(?:\.(\d+))?)%\s*$/.exec(text);
-  if (pm) return (pm[2]?.length ?? 0) + 2;
+  const pm = /^\s*(-?)(\d+(?:\.(\d+))?)%\s*$/.exec(text);
+  if (pm) return (pm[3]?.length ?? 0) + 2;
   return decimalPlaces(text, 0);
 }
 

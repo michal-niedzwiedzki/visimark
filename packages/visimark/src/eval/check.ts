@@ -82,7 +82,7 @@ export interface CheckResult {
   exitCode: 0 | 1;
 }
 
-const PERCENT_RE = /^(\d+(?:\.\d+)?)%$/;
+const PERCENT_RE = /^(-?)(\d+(?:\.\d+)?)%$/;
 
 export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
   // Imported sheets must be resolved — their table, column index, and input
@@ -917,8 +917,9 @@ export function matchesStored(v: Value, storedText: string, places: number): boo
     if (dec.kind === "number") {
       return roundToPlaces(new Decimal(dec.num), places).equals(roundToPlaces(v.d, places));
     }
-    if (!PERCENT_RE.test(t)) return false;
-    const stored = new Decimal(PERCENT_RE.exec(t)![1]!).div(100);
+    const pm = PERCENT_RE.exec(t);
+    if (!pm) return false;
+    const stored = new Decimal((pm[1] ?? "") + pm[2]!).div(100);
     return roundToPlaces(stored, places).equals(roundToPlaces(v.d, places));
   }
   if (v.t === "date") return t === v.iso;
