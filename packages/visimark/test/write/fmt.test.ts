@@ -1,5 +1,9 @@
 import { expect, test } from "bun:test";
-import { clean, drift } from "../examples.js";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { charts, clean, drift } from "../examples.js";
+import { onDisk } from "../../src/fs/node-reader.js";
 import { fmt } from "../../src/write/fmt.js";
 import { locate } from "../../src/parse/document.js";
 import { build } from "../../src/model/build.js";
@@ -158,3 +162,57 @@ function diffLines(a: string, b: string): number {
   }
   return n;
 }
+
+// docs/design/a-no-artifacts-flag-for-fmt-spec.md §3 — the engine gate.
+
+test("noArtifacts withholds the artifacts and counts them, changing nothing else", () => {
+  const dir = mkdtempSync(join(tmpdir(), "vm-fmt-na-"));
+  const p = join(dir, "example-charts.md");
+  writeFileSync(p, charts);
+  const doc = onDisk(p);
+
+  const plain = fmt(charts, { doc });
+  const declined = fmt(charts, { doc, noArtifacts: true });
+
+  // the five missing artifacts are found either way — one is withheld
+  expect(plain.artifacts).toHaveLength(5);
+  expect(plain.artifactsSkipped).toBe(0);
+  expect(declined.artifacts).toEqual([]);
+  expect(declined.artifactsSkipped).toBe(5);
+
+  // every other member of the result is untouched by the flag
+  expect(declined.output).toBe(plain.output);
+  expect(declined.changed).toBe(plain.changed);
+  expect(declined.cellsUpdated).toBe(plain.cellsUpdated);
+  expect(declined.anchorsUpdated).toBe(plain.anchorsUpdated);
+  expect(declined.datesFixed).toBe(plain.datesFixed);
+  expect(declined.stampsUpdated).toBe(plain.stampsUpdated);
+
+  rmSync(dir, { recursive: true, force: true });
+});
+
+/**
+ * The regression that keeps `fmt --no-artifacts` at exit `0`.
+ *
+ * `cmdFmt` raises the exit code to `1` when `unfixable` is non-empty, and a
+ * chart's STALE finding is excluded from it by `FIXABLE_BY_FMT` — before the
+ * write loop runs, and so regardless of whether the SVG was written. That is
+ * load-bearing for the flag but holds only incidentally, which is why it is
+ * pinned here: move STALE out of `FIXABLE_BY_FMT` and `fmt --no-artifacts`
+ * silently starts failing the builds it exists to serve.
+ */
+test("a chart's STALE finding is never in the unfixable remainder", () => {
+  const dir = mkdtempSync(join(tmpdir(), "vm-fmt-na2-"));
+  const p = join(dir, "example-charts.md");
+  writeFileSync(p, charts);
+  const doc = onDisk(p);
+
+  // the document really does have five stale charts to be tempted by
+  const found = check(build(locate(charts)), { doc });
+  expect(found.findings.filter((f) => f.code === "STALE")).toHaveLength(5);
+
+  expect(fmt(charts, { doc }).unfixable).toEqual([]);
+  expect(fmt(charts, { doc, noArtifacts: true }).unfixable).toEqual([]);
+
+  rmSync(dir, { recursive: true, force: true });
+});
