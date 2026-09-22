@@ -324,6 +324,10 @@ is a failure, which is why the `<!--vmark:no-formulas-->` marker above belongs
 in the file rather than in this workflow — the decision is about a document,
 not about a CI run.
 
+A project already on `remark`/`remark-lint` adds the same checks with
+[`remark-lint-visimark`](https://www.npmjs.com/package/remark-lint-visimark)
+instead — see [`docs/ci.md` chapter 24](docs/ci.md#24-the-remarkunified-plugin).
+
 ## Diffable by construction
 
 An `.xlsx` is a zip of XML: change one cell and code review can tell you the

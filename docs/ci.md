@@ -1128,9 +1128,43 @@ CI job.
 
 ---
 
+## 24. The `remark`/`unified` plugin
+
+A project already running [`remark`](https://remark.js.org)/`remark-lint` —
+Docusaurus, Astro, or any other `unified`-based Markdown toolchain — adds
+VisiMark findings to that same pipeline with `remark-lint-visimark`:
+
+```json
+{ "plugins": ["remark-preset-lint-recommended", "remark-lint-visimark"] }
+```
+
+```console
+$ npx remark docs/ --frail
+docs/quote.md
+  12:1  error  0.4266 <= 2.00 is false  visimark-assert  visimark
+
+1 error
+$ echo $?
+1
+```
+
+`--frail` is `remark-cli`'s own flag, not this plugin's: a `STALE` cell or any
+other check-failing finding is always fatal and fails a plain `remark` run;
+advisory findings (`WARN`, `NOTE`) are reported but only fail the run under
+`--frail`, the same severity split `check`'s own exit code already uses.
+
+The plugin takes no options, reports a line but no column, and does no
+autofix — see the package's own
+[README](https://github.com/michal-niedzwiedzki/visimark/tree/master/packages/remark-visimark)
+for the full contract. Like the other entries in this part, it only ever runs
+`check`; `fmt`, `infer`, `explain`, `eval` and `--json` are unaffected and
+unavailable through it.
+
+---
+
 # Part 7 — Rolling it out
 
-## 24. Turning it on in a repository that already has documents
+## 25. Turning it on in a repository that already has documents
 
 Adding a blocking check to a repository full of unchecked documents will produce
 a wall of `COVERAGE` findings on the first run, and a strong urge to delete the
@@ -1180,7 +1214,7 @@ check: point it at the directory you have finished — `files: "quotes/**/*.md"`
 and widen it as you go. A narrow blocking check is worth more than a wide
 advisory one.
 
-## 25. Troubleshooting
+## 26. Troubleshooting
 
 | Symptom | Cause | Fix |
 |---|---|---|
@@ -1211,7 +1245,7 @@ environment variable, no network call and no clock, so a local run and a CI run
 on the same bytes give the same answer. If they differ, the bytes differ — check
 what your workflow actually checked out.
 
-## 26. The checklist
+## 27. The checklist
 
 The complete workflow, with everything this guide recommends:
 

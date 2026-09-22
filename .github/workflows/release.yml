@@ -116,6 +116,19 @@ jobs:
             npm publish --provenance --access public
           fi
 
+      - name: Publish the remark plugin to npm
+        id: remark-plugin
+        continue-on-error: true
+        working-directory: packages/remark-visimark
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if npm view "remark-lint-visimark@$ENGINE_VERSION" version >/dev/null 2>&1; then
+            echo "remark-lint-visimark@$ENGINE_VERSION is already on npm; skipping."
+          else
+            npm publish --provenance --access public
+          fi
+
       - name: Package the extension
         id: package
         continue-on-error: true
@@ -249,6 +262,7 @@ jobs:
       - name: every leg must have landed
         env:
           NPM_OUTCOME: ${{ steps.npm.outcome }}
+          REMARK_PLUGIN_OUTCOME: ${{ steps.remark-plugin.outcome }}
           PACKAGE_OUTCOME: ${{ steps.package.outcome }}
           MARKETPLACE_OUTCOME: ${{ steps.marketplace.outcome }}
           OVSX_OUTCOME: ${{ steps.ovsx.outcome }}
@@ -263,6 +277,7 @@ jobs:
           # steps skip on a dispatch with no tag, which is documented behaviour.
           for pair in \
             "Publish the engine to npm=$NPM_OUTCOME" \
+            "Publish the remark plugin to npm=$REMARK_PLUGIN_OUTCOME" \
             "Package the extension=$PACKAGE_OUTCOME" \
             "Publish to the VS Code Marketplace=$MARKETPLACE_OUTCOME" \
             "Publish to Open VSX=$OVSX_OUTCOME" \
