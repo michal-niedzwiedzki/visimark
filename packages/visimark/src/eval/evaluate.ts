@@ -1,7 +1,7 @@
 import { Decimal } from "decimal.js";
 import type { Expr, Ref } from "../lang/ast.js";
 import { addDays, daysBetween, eomonth } from "./dates.js";
-import { callProblem, describeCallProblem, isReduce } from "./functions.js";
+import { FUNCTIONS, callProblem, describeCallProblem, isReduce } from "./functions.js";
 import { bool, date, EvalError, num, roundToPlaces, str, Value, valueEquals } from "./value.js";
 
 export interface EvalEnv {
@@ -114,11 +114,17 @@ function evalCall(expr: Extract<Expr, { type: "call" }>, env: EvalEnv): Value {
   if (problem) throw new EvalError(describeCallProblem(name, problem));
 
   if (isReduce(name)) {
-    const arg = args[0];
+    const spec = FUNCTIONS.get(name);
+    const col = spec?.kind === "reduce" ? spec.column : 0;
+    const arg = args[col];
     // `callProblem` has already established this, but the narrowing is what
     // lets the vector lookup be typed rather than cast.
     if (!arg || arg.type !== "ref") {
       throw new EvalError(describeCallProblem(name, { kind: "shape" }));
+    }
+    if (name === "NPV") {
+      const rate = evalExpr(args[0]!, env);
+      return npv(rate, env.vector(arg));
     }
     return aggregate(name, env.vector(arg));
   }
@@ -189,6 +195,18 @@ function evalCall(expr: Extract<Expr, { type: "call" }>, env: EvalEnv): Value {
     default:
       throw new EvalError(`unknown function \`${name}\``);
   }
+}
+
+function npv(rate: Value, vec: Value[]): Value {
+  const r = asNum(rate, "NPV");
+  if (!r.gt(-1)) throw new EvalError("NPV rate must be greater than -1");
+  if (vec.length === 0) throw new EvalError("NPV() of an empty column");
+  let sum = new Decimal(0);
+  for (let k = 0; k < vec.length; k++) {
+    const flow = asNum(vec[k]!, "NPV");
+    sum = sum.plus(flow.div(r.plus(1).pow(k)));
+  }
+  return num(sum.isZero() ? new Decimal(0) : sum);
 }
 
 function aggregate(name: string, vec: Value[]): Value {

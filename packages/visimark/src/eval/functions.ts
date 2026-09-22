@@ -18,12 +18,10 @@
 
 export type FnKind = "map" | "reduce";
 
-export interface FnSpec {
-  /** `map` is scalar -> scalar; `reduce` is column -> scalar. */
-  kind: FnKind;
-  /** exact argument count; every reduce takes exactly one */
-  arity: number;
-}
+/** A map is scalar → scalar. A reduce has one column parameter; `column` is its index. */
+export type FnSpec =
+  | { kind: "map"; arity: number }
+  | { kind: "reduce"; arity: number; column: number };
 
 /**
  * The table itself. Written as a `const` record rather than a `Map` literal so
@@ -32,12 +30,13 @@ export interface FnSpec {
  * fails `typecheck` rather than shipping undocumented.
  */
 export const FUNCTION_TABLE = {
-  // reduces: one column reference in, one scalar out
-  SUM: { kind: "reduce", arity: 1 },
-  MIN: { kind: "reduce", arity: 1 },
-  MAX: { kind: "reduce", arity: 1 },
-  AVG: { kind: "reduce", arity: 1 },
-  COUNT: { kind: "reduce", arity: 1 },
+  // reduces: one column reference in, one scalar out. `column` is that argument's index.
+  SUM: { kind: "reduce", arity: 1, column: 0 },
+  MIN: { kind: "reduce", arity: 1, column: 0 },
+  MAX: { kind: "reduce", arity: 1, column: 0 },
+  AVG: { kind: "reduce", arity: 1, column: 0 },
+  COUNT: { kind: "reduce", arity: 1, column: 0 },
+  NPV: { kind: "reduce", arity: 2, column: 1 },
   // maps: scalars in, one scalar out
   ROUND: { kind: "map", arity: 2 },
   ABS: { kind: "map", arity: 1 },
@@ -60,7 +59,8 @@ export const isReduce = (name: string): boolean => FUNCTIONS.get(name)?.kind ===
 export type CallProblem =
   | { kind: "unknown" }
   | { kind: "arity"; expected: number; got: number }
-  | { kind: "shape" };
+  | { kind: "shape" }
+  | { kind: "not-column" };
 
 /** Static problems with a call, decidable without evaluating anything. */
 export function callProblem(name: string, args: { type: string }[]): CallProblem | null {
@@ -69,7 +69,7 @@ export function callProblem(name: string, args: { type: string }[]): CallProblem
   if (args.length !== spec.arity) {
     return { kind: "arity", expected: spec.arity, got: args.length };
   }
-  if (spec.kind === "reduce" && args[0]!.type !== "ref") return { kind: "shape" };
+  if (spec.kind === "reduce" && args[spec.column]!.type !== "ref") return { kind: "shape" };
   return null;
 }
 
@@ -81,5 +81,7 @@ export function describeCallProblem(name: string, p: CallProblem): string {
       return `${name}() takes ${p.expected} argument${p.expected === 1 ? "" : "s"}, got ${p.got}`;
     case "shape":
       return `${name}() takes a column reference, not an expression`;
+    case "not-column":
+      return `${name}() expects a column`;
   }
 }

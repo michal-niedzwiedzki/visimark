@@ -20,7 +20,8 @@ export type Width = number | "date" | null;
  *
  * `null` means **not derivable**: the operation does not bound its result's
  * scale by its operands', so no width follows from the formula and the author
- * has to declare one. Division, `AVG` and `SQRT` are the cases that matter.
+ * has to declare one. Division, `AVG`, `SQRT`, `PMT` and `NPV` are the cases
+ * that matter.
  *
  * Every rule here satisfies one invariant — **a derived precision never
  * discards a digit**, so rounding a result to its derived width is a no-op.

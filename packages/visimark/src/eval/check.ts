@@ -1075,7 +1075,9 @@ function formulaText(model: DocModel, binding: Binding): string | undefined {
 function isCrossSheetAggregate(model: DocModel, binding: Binding): boolean {
   const e = binding.expr;
   if (e.type !== "call" || !isReduce(e.name)) return false;
-  const arg = e.args[0];
+  const spec = FUNCTIONS.get(e.name);
+  if (!spec || spec.kind !== "reduce") return false;
+  const arg = e.args[spec.column];
   if (!arg || arg.type !== "ref") return false;
   const res = resolve(model, binding.sheetId, arg);
   return (res.kind === "column" || res.kind === "input-column") && res.sheetId !== binding.sheetId;

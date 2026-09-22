@@ -46,6 +46,7 @@ test("every builtin declares a kind and an arity", () => {
     "MAX",
     "MIN",
     "MOD",
+    "NPV",
     "PMT",
     "ROUND",
     "SQRT",
@@ -59,20 +60,22 @@ test("every builtin declares a kind and an arity", () => {
   }
 });
 
-test("the five reduces are exactly the aggregates", () => {
+test("the reduces are exactly the aggregates", () => {
   const reduces = [...FUNCTIONS]
     .filter(([, s]) => s.kind === "reduce")
     .map(([n]) => n)
     .sort();
-  expect(reduces).toEqual(["AVG", "COUNT", "MAX", "MIN", "SUM"]);
+  expect(reduces).toEqual(["AVG", "COUNT", "MAX", "MIN", "NPV", "SUM"]);
   expect(isReduce("SUM")).toBe(true);
   expect(isReduce("ROUND")).toBe(false);
   expect(isReduce("NOPE")).toBe(false);
 });
 
-test("every reduce takes exactly one argument", () => {
-  for (const [, spec] of FUNCTIONS) {
-    if (spec.kind === "reduce") expect(spec.arity).toBe(1);
+test("every reduce has one column parameter", () => {
+  for (const [name, spec] of FUNCTIONS) {
+    if (spec.kind !== "reduce") continue;
+    expect(spec.arity).toBe(name === "NPV" ? 2 : 1);
+    expect(spec.column).toBe(name === "NPV" ? 1 : 0);
   }
 });
 
@@ -593,7 +596,7 @@ test("the function table and the exported map agree", () => {
   const fromTable = Object.keys(FUNCTION_TABLE).sort();
   const fromMap = [...FUNCTIONS.keys()].sort();
   expect(fromMap).toEqual(fromTable);
-  expect(fromTable).toHaveLength(14);
+  expect(fromTable).toHaveLength(15);
 });
 
 // ---- prose notation for unary vocabulary (#64) ------------------------------
@@ -737,4 +740,219 @@ test("PMT rejects a non-number, a bad term, then a bad rate, in that order", () 
   expect(msg("PMT(-1, 12, 1)")).toBe("PMT rate must be greater than -1");
   expect(msg("PMT(-1.5, 12, 1)")).toBe("PMT rate must be greater than -1");
   expect(msg("PMT(-1, 1.5, 1)")).toBe("PMT expects a positive whole number of periods");
+});
+
+// ---- NPV ------------------------------------------------------------
+
+const cashDoc = (rule: string, rows: string) => `
+| Cash |
+|-----:|
+${rows}
+\`\`\`vmark #t
+present = ${rule}
+\`\`\`
+`;
+
+test("NPV is a reduce of arity 2 whose column is argument 1", () => {
+  expect(FUNCTIONS.get("SUM")).toEqual({ kind: "reduce", arity: 1, column: 0 });
+  expect(FUNCTIONS.get("NPV")).toEqual({ kind: "reduce", arity: 2, column: 1 });
+  expect(isReduce("NPV")).toBe(true);
+  expect(callProblem("NPV", [{ type: "num" }, { type: "ref" }])).toBeNull();
+  expect(callProblem("NPV", [])).toEqual({ kind: "arity", expected: 2, got: 0 });
+  expect(callProblem("NPV", [{ type: "num" }])).toEqual({ kind: "arity", expected: 2, got: 1 });
+  expect(callProblem("NPV", [{ type: "num" }, { type: "ref" }, { type: "num" }])).toEqual({
+    kind: "arity",
+    expected: 2,
+    got: 3,
+  });
+  expect(callProblem("NPV", [{ type: "num" }, { type: "binary" }])).toEqual({ kind: "shape" });
+  expect(callProblem("NPV", [{ type: "ref" }, { type: "num" }])).toEqual({ kind: "shape" });
+});
+
+test("NPV exact cases and the motivating full working value", () => {
+  const src = `
+| Cash |
+|-----:|
+| -48000 |
+|  20000 |
+|  20000 |
+|  20000 |
+
+\`\`\`vmark #t
+zero = NPV(0, Cash)
+main = NPV(0.08, Cash)
+pct = NPV(8%, Cash)
+\`\`\`
+
+| Small |
+|------:|
+| -1000 |
+|   400 |
+|   400 |
+|   400 |
+
+\`\`\`vmark #small
+ten = NPV(0.10, Small)
+\`\`\`
+
+| Again |
+|------:|
+| -48000 |
+|  20000 |
+|  20000 |
+|  20000 |
+
+\`\`\`vmark #again
+neg = NPV(-0.05, Again)
+\`\`\`
+
+| Only |
+|-----:|
+| -48000 |
+
+\`\`\`vmark #one
+single = NPV(0.08, Only)
+\`\`\`
+
+| Pair |
+|-----:|
+| 100 |
+| 100 |
+
+\`\`\`vmark #pair
+neg = NPV(-0.5, Pair)
+bare = NPV(0, Pair)
+\`\`\`
+
+| Tagged |
+|-------:|
+| 10 PLN |
+| -10 PLN |
+
+\`\`\`vmark #tag
+units = NPV(0, Tagged)
+\`\`\`
+`;
+  const r = run(src);
+  expect(r.findings.filter((f) => f.code !== "WARN")).toEqual([]);
+  const str = (id: string) => {
+    const v = r.values.get(id);
+    if (!v || v.t !== "num") throw new Error(id);
+    return v.d.toString();
+  };
+  expect(str("t.zero")).toBe("12000");
+  expect(str("t.main")).toBe("3541.9397449575776050398821317888533252");
+  expect(str("t.pct")).toBe(str("t.main"));
+  expect(str("small.ten")).toBe("-5.2592036063110443275732531930879038317");
+  expect(str("again.neg")).toBe("18540.31199883364922000291587694999271031");
+  expect(str("one.single")).toBe("-48000");
+  expect(str("pair.neg")).toBe("300");
+  expect(str("pair.bare")).toBe("200");
+  expect(str("tag.units")).toBe("0");
+});
+
+test("NPV rejects a bad rate before an empty column, a blank, or a non-number", () => {
+  const msg = (src: string) => typeFindings(run(src).findings)[0]?.message;
+  const series = "| -48000 |\n|  20000 |\n|  20000 |\n|  20000 |";
+  expect(msg(cashDoc('NPV("x", Cash)', series))).toBe("NPV expects a number");
+  expect(msg(cashDoc("NPV(-1, Cash)", series))).toBe("NPV rate must be greater than -1");
+  expect(msg(cashDoc("NPV(-1.5, Cash)", series))).toBe("NPV rate must be greater than -1");
+  expect(msg(cashDoc("NPV(-1, Cash)", "| -48000 |"))).toBe("NPV rate must be greater than -1");
+  expect(msg(cashDoc("NPV(-1, Cash)", ""))).toBe("NPV rate must be greater than -1");
+  expect(msg(cashDoc("NPV(0.08, Cash)", ""))).toBe("NPV() of an empty column");
+  expect(msg(cashDoc("NPV(0.08, Cash)", "| 10 |\n|    |\n|  5 |"))).toBe("NPV expects a number");
+  expect(msg(cashDoc("NPV(0.08, Cash)", "| 10 |\n| no |\n|  5 |"))).toBe("NPV expects a number");
+  expect(msg(cashDoc("NPV(0.08, Cash)", "| 10 |\n| 2026-01-01 |"))).toBe("NPV expects a number");
+  expect(msg(cashDoc("NPV(-1, Cash)", "| 10 |\n|    |"))).toBe("NPV rate must be greater than -1");
+});
+
+test("NPV shape, scalar flows, and a column in the rate slot", () => {
+  const shape = typeFindings(run(cashDoc("NPV(0.08, Cash * 1)", "| 10 |")).findings);
+  expect(shape).toHaveLength(1);
+  expect(shape[0]!.message).toBe("NPV() takes a column reference, not an expression");
+
+  const arity = typeFindings(run(cashDoc("NPV(0.08)", "| 10 |")).findings);
+  expect(arity).toHaveLength(1);
+  expect(arity[0]!.message).toBe("NPV() takes 2 arguments, got 1");
+
+  const swapped = `
+| Cash |
+|-----:|
+|   10 |
+\`\`\`vmark #t
+present = NPV(Cash, 0.08)
+\`\`\`
+`;
+  const swappedFindings = run(swapped).findings;
+  expect(typeFindings(swappedFindings).map((f) => f.message)).toEqual([
+    "NPV() takes a column reference, not an expression",
+  ]);
+  expect(swappedFindings.some((f) => f.code === "VECTOR")).toBe(false);
+
+  const scalar = `
+| Cash |
+|-----:|
+|   10 |
+\`\`\`vmark #t
+present = 1
+value = NPV(0.08, present)
+\`\`\`
+`;
+  expect(typeFindings(run(scalar).findings).map((f) => f.message)).toContain(
+    "NPV() expects a column",
+  );
+
+  const twoCols = `
+| Cash | Flows |
+|-----:|------:|
+|   10 |    20 |
+\`\`\`vmark #t
+present = NPV(Cash, Flows)
+\`\`\`
+`;
+  const vec = run(twoCols).findings.filter((f) => f.code === "VECTOR");
+  expect(vec).toHaveLength(1);
+  expect(vec[0]!.raw).toBe("Cash");
+  expect(typeFindings(run(twoCols).findings)).toEqual([]);
+});
+
+test("a column rule reports one TYPE on the row whose rate is -1", () => {
+  const src = `
+| Rate | Cash | Level |
+|-----:|-----:|------:|
+| 0.08 |  -10 |     0 |
+|   -1 |   10 |     0 |
+
+\`\`\`vmark #t
+Level precision 2 = NPV(Rate, Cash)
+\`\`\`
+`;
+  const ts = typeFindings(run(src).findings);
+  expect(ts).toHaveLength(1);
+  expect(ts[0]!.message).toBe("NPV rate must be greater than -1");
+  expect(ts[0]!.rowLabel).toBeDefined();
+});
+
+test("a computed flows column with an upstream error adds no NPV finding", () => {
+  const src = `
+| Den | Cash |
+|----:|-----:|
+|   1 | 1.00 |
+|   0 | 0.00 |
+|   1 | 1.00 |
+
+\`\`\`vmark #t
+Cash = 1 / Den
+present precision 2 = NPV(0, Cash)
+assert present == 3
+\`\`\`
+`;
+  const r = run(src);
+  expect(r.findings.filter((f) => f.code === "TYPE").map((f) => f.message)).toEqual([
+    "division by zero",
+  ]);
+  expect(r.findings.filter((f) => f.message === "division by zero")).toHaveLength(1);
+  expect(r.findings.filter((f) => f.code === "NOTE").map((f) => f.message)).toEqual([
+    "1 assertion not verified (upstream errors)",
+  ]);
 });
