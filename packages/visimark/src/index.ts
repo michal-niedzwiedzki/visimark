@@ -20,7 +20,7 @@ export {
 } from "./lang/reference.js";
 export { infer, type Proposal, type ProposalKind } from "./infer/propose.js";
 export { planInfer, type PlannedInsert } from "./infer/write.js";
-export { formatCheck } from "./report/format.js";
+export { describeFinding, formatCheck } from "./report/format.js";
 export { formatInfer } from "./report/infer.js";
 export { lineOf } from "./report/lines.js";
 export { applyUnit, parseDecorated, type Unit } from "./eval/units.js";

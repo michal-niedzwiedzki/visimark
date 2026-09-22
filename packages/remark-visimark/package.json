@@ -1,0 +1,55 @@
+{
+  "name": "remark-lint-visimark",
+  "version": "0.1.7",
+  "description": "A unified/remark plugin that runs visimark check over a document and reports findings as VFile messages.",
+  "keywords": [
+    "lint",
+    "markdown",
+    "remark-lint",
+    "remark-plugin",
+    "unified",
+    "visimark"
+  ],
+  "homepage": "https://github.com/michal-niedzwiedzki/visimark#readme",
+  "bugs": "https://github.com/michal-niedzwiedzki/visimark/issues",
+  "license": "MIT",
+  "author": "Michał Niedźwiedzki <michal@epsi.pl>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/michal-niedzwiedzki/visimark.git",
+    "directory": "packages/remark-visimark"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "bun": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "build": "bun build src/index.ts --target node --outdir dist && tsc -p tsconfig.build.json",
+    "prepublishOnly": "bun run typecheck && bun test && bun run build"
+  },
+  "dependencies": {
+    "visimark": "0.1.7"
+  },
+  "devDependencies": {
+    "@types/mdast": "^4.0.4",
+    "@types/unist": "^3.0.3",
+    "remark-gfm": "^4.0.0",
+    "remark-parse": "^11.0.0",
+    "remark-stringify": "^11.0.0",
+    "unified": "^11.0.4",
+    "vfile": "^6.0.3"
+  }
+}
