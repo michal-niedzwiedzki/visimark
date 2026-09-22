@@ -23,7 +23,7 @@ jobs:
           bun-version: latest
       - run: bun install --frozen-lockfile
 
-      # Seven files/fields carry the version and all seven must agree. The three
+      # Nine files/fields carry the version and all nine must agree. The four
       # manifests have to match because one tag publishes all of them, and a
       # mismatch ships a release under the wrong number or fails a leg midway
       # with the others already out. action.yml joins them because its `version`
@@ -36,6 +36,8 @@ jobs:
       # `version` (npm won't let a publish under a stale number pass silently)
       # and its `dependencies.visimark` pin (a caret range would let the plugin
       # drift onto an engine version never tested against it).
+      # packages/markdownlint-visimark/package.json joins on the same two counts,
+      # for the same two reasons.
       #
       # docs/releasing.md used to ask the releaser to eyeball this with grep.
       # A release checklist step that nothing enforces is a step that gets
@@ -56,7 +58,9 @@ jobs:
           precommit_count=$(echo "$precommit_versions" | grep -c .)
           remark_version=$(bun -e 'console.log(require("./packages/remark-visimark/package.json").version)')
           remark_dep=$(bun -e 'console.log(require("./packages/remark-visimark/package.json").dependencies.visimark)')
-          echo "engine=$engine lsp=$lsp vscode=$ext action.yml=$pinned precommit-hook=$precommit_versions remark-plugin=$remark_version remark-plugin-dep=$remark_dep"
+          markdownlint_version=$(bun -e 'console.log(require("./packages/markdownlint-visimark/package.json").version)')
+          markdownlint_dep=$(bun -e 'console.log(require("./packages/markdownlint-visimark/package.json").dependencies.visimark)')
+          echo "engine=$engine lsp=$lsp vscode=$ext action.yml=$pinned precommit-hook=$precommit_versions remark-plugin=$remark_version remark-plugin-dep=$remark_dep markdownlint-rule=$markdownlint_version markdownlint-rule-dep=$markdownlint_dep"
           if [ -z "$pinned" ]; then
             echo "::error::could not read the version default out of action.yml. The version input or its default line moved; fix this check rather than deleting it."
             exit 1
@@ -69,7 +73,7 @@ jobs:
           else
             precommit=$precommit_versions
           fi
-          for pair in "packages/visimark-lsp/package.json:$lsp" "editors/vscode/package.json:$ext" "action.yml:$pinned" "scripts/precommit-visimark-check.sh:$precommit" "packages/remark-visimark/package.json (version):$remark_version" "packages/remark-visimark/package.json (visimark dep):$remark_dep"; do
+          for pair in "packages/visimark-lsp/package.json:$lsp" "editors/vscode/package.json:$ext" "action.yml:$pinned" "scripts/precommit-visimark-check.sh:$precommit" "packages/remark-visimark/package.json (version):$remark_version" "packages/remark-visimark/package.json (visimark dep):$remark_dep" "packages/markdownlint-visimark/package.json (version):$markdownlint_version" "packages/markdownlint-visimark/package.json (visimark dep):$markdownlint_dep"; do
             file=${pair%%:*}; got=${pair#*:}
             if [ -n "$got" ] && [ "$got" != "$engine" ]; then
               echo "::error file=$file::$file says $got but packages/visimark/package.json says $engine. Bump every version-carrying file in the release commit — see docs/releasing.md."
