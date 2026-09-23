@@ -1,10 +1,24 @@
-import { MarkdownView, Notice, Plugin, TFile, debounce, type WorkspaceLeaf } from "obsidian";
+import {
+  MarkdownView,
+  Notice,
+  Plugin,
+  TFile,
+  debounce,
+  type Editor,
+  type WorkspaceLeaf,
+} from "obsidian";
+import { check } from "visimark";
 import { FINDINGS_VIEW, FindingsView } from "./findings-view.js";
 import { hasVmarkBlock } from "./gate.js";
 import { createApi, type VisiMarkApi } from "./api.js";
+import { nameAt } from "./at-cursor.js";
+import { ExplainModal } from "./explain-modal.js";
 import { offerInfer } from "./infer-modal.js";
 import { previewInfer } from "./infer-plan.js";
+import { reportFor } from "./report.js";
+import { readNote } from "./snapshot.js";
 import { SWEEP_VIEW, SweepView } from "./sweep-view.js";
+import { ValuesModal } from "./values-modal.js";
 import { vaultSweepRead } from "./vault.js";
 
 /**
@@ -70,8 +84,8 @@ export default class VisiMarkPlugin extends Plugin {
     // to any instance of it.
     this.registerView(FINDINGS_VIEW, (leaf: WorkspaceLeaf) => new FindingsView(leaf));
     this.addCommand({
-      id: "show-findings",
-      name: "Show findings",
+      id: "check",
+      name: "Check this note",
       callback: () => void this.openFindings(),
     });
 
@@ -80,12 +94,32 @@ export default class VisiMarkPlugin extends Plugin {
     // vault-wide scan does not have one. Refusing to look through the vault
     // because the note in front of you happens to have no block would be the
     // gate answering a question it was not asked.
+    // v1 row 4. The five verbs the CLI has, each scoped to the active note.
+    // Named "<verb> this note" rather than the bare verb: the palette is
+    // searchable by the word someone read in the documentation *and* reads as
+    // a sentence to someone who has read none of it.
+    this.addCommand({
+      id: "format",
+      name: "Format this note",
+      editorCallback: (editor) => void this.format(editor),
+    });
+    this.addCommand({
+      id: "evaluate",
+      name: "Evaluate this note",
+      editorCallback: (editor) => void this.evaluate(editor),
+    });
+    this.addCommand({
+      id: "explain",
+      name: "Explain this value",
+      editorCallback: (editor) => void this.explain(editor),
+    });
+
     // v1 row 5, the on-ramp. **Not gated**, by the creating/reading rule in
     // §2.3: its job is to produce a note's first ```vmark block, and a table
     // someone has just pasted is exactly the note that has none.
     this.addCommand({
       id: "infer",
-      name: "Work out the formulas",
+      name: "Infer the formulas",
       editorCallback: (editor) => {
         const selection = editor.getSelection();
         const span =
@@ -101,8 +135,8 @@ export default class VisiMarkPlugin extends Plugin {
 
     this.registerView(SWEEP_VIEW, (leaf: WorkspaceLeaf) => new SweepView(leaf));
     this.addCommand({
-      id: "sweep-vault",
-      name: "Look through the vault",
+      id: "sweep",
+      name: "Sweep the vault",
       callback: () => void this.openSweep(),
     });
 
@@ -115,8 +149,8 @@ export default class VisiMarkPlugin extends Plugin {
     // to any instance of it.
     this.registerView(FINDINGS_VIEW, (leaf: WorkspaceLeaf) => new FindingsView(leaf));
     this.addCommand({
-      id: "show-findings",
-      name: "Show findings",
+      id: "check",
+      name: "Check this note",
       callback: () => void this.openFindings(),
     });
 
@@ -147,6 +181,72 @@ export default class VisiMarkPlugin extends Plugin {
     if (leaf === null) return;
     await leaf.setViewState({ type: FINDINGS_VIEW, active: true });
     this.app.workspace.revealLeaf(leaf);
+  }
+
+  /**
+   * **Format** — repair everything `fmt` would repair, artifacts declined.
+   *
+   * The same plan the findings view offers a row at a time, applied whole.
+   * v1 constraint 3: an explicit command, never a keystroke or a timer.
+   */
+  private async format(editor: Editor): Promise<void> {
+    const gated = await this.noteFor(editor);
+    if (gated === null) return;
+    const { report } = gated;
+    if (report.allRepairs.length === 0) {
+      new Notice("Everything in this note already agrees with its formulas.");
+      return;
+    }
+    const ordered = [...report.allRepairs].sort((a, b) => b.start - a.start);
+    for (const edit of ordered) {
+      editor.replaceRange(edit.text, editor.offsetToPos(edit.start), editor.offsetToPos(edit.end));
+    }
+    const n = ordered.length;
+    new Notice(`Repaired ${n} ${n === 1 ? "value" : "values"}. No chart was written.`);
+  }
+
+  /** **Evaluate** — every name in the note and what it works out to. */
+  private async evaluate(editor: Editor): Promise<void> {
+    if ((await this.noteFor(editor)) === null) return;
+    const file = this.app.workspace.getActiveViewOfType(MarkdownView)?.file;
+    if (file === null || file === undefined) return;
+    new ValuesModal(this.app, await this.api.evaluate(file)).open();
+  }
+
+  /** **Explain** — the one name the caret is on. */
+  private async explain(editor: Editor): Promise<void> {
+    const gated = await this.noteFor(editor);
+    if (gated === null) return;
+    const name = nameAt(gated.model, editor.posToOffset(editor.getCursor()));
+    if (name === null) {
+      new Notice("Put the cursor on a value VisiMark works out, and ask again.");
+      return;
+    }
+    const file = this.app.workspace.getActiveViewOfType(MarkdownView)?.file;
+    if (file === null || file === undefined) return;
+    const explanation = await this.api.explain(file, name);
+    if (explanation === null) {
+      new Notice(`Nothing in this note is called ${name}.`);
+      return;
+    }
+    new ExplainModal(this.app, explanation).open();
+  }
+
+  /**
+   * The gate, the read and the check that every note-scoped command starts
+   * with — §2.3, and the notice it answers with when the gate is shut.
+   */
+  private async noteFor(editor: Editor) {
+    const source = editor.getValue();
+    if (!hasVmarkBlock(source)) {
+      new Notice("This note has no VisiMark block, so there is nothing to check in it yet.");
+      return null;
+    }
+    const file = this.app.workspace.getActiveViewOfType(MarkdownView)?.file;
+    const path = file?.path ?? "untitled.md";
+    const { model, snapshot } = await readNote(source, path, vaultSweepRead(this.app.vault));
+    const doc = { path: snapshot.path, reader: snapshot.reader };
+    return { model, report: reportFor(model, check(model, { doc }), doc) };
   }
 
   /** Open the sweep pane, which starts a scan as it opens. */

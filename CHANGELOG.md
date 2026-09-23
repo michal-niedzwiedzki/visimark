@@ -4,6 +4,18 @@
 
 ### Added
 
+- **The Obsidian plugin has the CLI's five verbs** (issue #221, v1 row 4 of
+  #176) — Check, Format, Infer, Evaluate and Explain, each scoped to the active
+  note, named "<verb> this note" so the palette is searchable by the word
+  someone read in the documentation and reads as a sentence to someone who has
+  read none of it.
+
+  Explain answers about the value the caret is on. A caret can be in the line
+  that declares a name, in a prose anchor that reads one, or in a table cell —
+  and the third is not a span the engine records, so the plugin says to move
+  the caret rather than explaining something nearby. Showing the wrong name
+  confidently is worse than asking.
+
 - **The Obsidian plugin publishes an API** (issue #219, v1 row 9 of #176) —
   `app.plugins.plugins["visimark"].api`, with `check`, `evaluate`, `get` and
   `explain`, and `apiVersion` semver'd from the first release. It is what #176

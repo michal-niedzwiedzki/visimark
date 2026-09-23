@@ -199,7 +199,13 @@ test("every file in src/ is a walk root, so none can hide until a row wires it i
  * Bump this only when the growth is real and reviewed, and record the date,
  * the new value and why directly above.
  */
-const BASELINE_BYTES = 262_083;
+const BASELINE_BYTES = 265_875;
+
+/*
+ * 2026-09-24, 262,083 → 265,875 (+3,792). v1 row 4: the five commands, and
+ * the two dialogs Explain and Evaluate answer in. Small for the same reason
+ * row 9 was — the work was already here, and the row is the way in.
+ */
 
 /*
  * 2026-09-24, 260,667 → 262,083 (+1,416). v1 row 9: the public plugin API.

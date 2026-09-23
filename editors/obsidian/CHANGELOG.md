@@ -9,6 +9,12 @@ Each entry says which engine version the bundle carries.
 
 ## Unreleased
 
+- **The five commands**, each scoped to the note in front of you: **Check this
+  note**, **Format this note**, **Infer the formulas**, **Evaluate this note**
+  and **Explain this value**. Format applies every repair at once and writes no
+  chart; Explain answers about the value the caret is on, and says to move the
+  caret rather than explaining something nearby.
+
 - **A public API other plugins and agents can call**, at
   `app.plugins.plugins["visimark"].api`: `check`, `evaluate`, `get` and
   `explain`, with `apiVersion` semver'd from the first release. Values are
