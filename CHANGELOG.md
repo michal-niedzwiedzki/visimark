@@ -4,6 +4,19 @@
 
 ### Added
 
+- **The engine has a browser-safe entry point** (issue #201).
+  `packages/visimark/src/index.ts` could not be bundled for a browser at all:
+  it reaches `node:fs`, `node:crypto`, `node:module` and `node:url` through
+  exports made on purpose, and a bundler resolves before it tree-shakes. That
+  had never surfaced because the playground enters the engine by path rather
+  than through the public entry point, so the repository had a browser-safe
+  engine and a public engine with no named boundary between them.
+  `src/browser.ts` is that boundary, and `test/browser/entry-graph.test.ts`
+  holds it to a subset: every value it exports is the same object `index.ts`
+  exports, so the browser surface can lag the public one but can never become a
+  second API. Nothing published changes — `exports` still has only `"."` — and
+  no consumer can observe this.
+
 - **The committed browser bundle's size is now checked** (issue #191).
   `docs/vendor/visimark-browser.js` could grow without anything noticing — the
   `playground-bundle` CI job only checks rebuild fidelity against a fresh build, never
