@@ -95,8 +95,9 @@
   for over a year, and no CI job ever exercised it. The Node-facing jobs now
   run on the current LTS **and** the latest stable release, both blocking, and
   a new `node-support-policy` job asserts that every published `engines.node`
-  equals the LTS that `lts/*` resolves to and that no workflow pins a numeric
-  Node version. Bun is unaffected. The policy is
+  equals the LTS that `lts/*` resolves to and that no workflow, or the
+  published `action.yml` composite Action, pins a numeric Node version. Bun is
+  unaffected. The policy is
   [`.agents/rules/runtime-parity.md`](.agents/rules/runtime-parity.md).
 
 ## 0.1.7 - 2026-09-22
