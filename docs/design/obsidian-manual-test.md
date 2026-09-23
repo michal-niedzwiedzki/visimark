@@ -1,15 +1,13 @@
 # Obsidian: a manual test scenario
 
-**Status of the thing under test.** `editors/obsidian` exists and builds, and
-**§2.1 is the only section of Part 2 that can be run.** v1 row 1
-([#200](https://github.com/michal-niedzwiedzki/visimark/issues/200)) ships the
-browser bundle, the activation gate and one status bar item; every other
-section below accepts a row that is not implemented. Each states which.
+**Status of the thing under test.** `editors/obsidian` exists, builds, and
+implements **all twelve of v1's rows**. Part 2 is runnable end to end.
 
-The negative half of §2.1 — an ordinary note shows nothing — was true of an
-empty plugin too, so it is worth little on its own; the half that means
-something is that `example-invoice.md` activates and an ordinary note does
-not, and that is what row 1 makes runnable.
+What a machine asserts and what it cannot is set out in the table at the head
+of Part 2. The short version: the questions that are about a *document* are
+tested against the engine and the CLI, and the questions that are about a
+*screen* are not tested at all. §2.2, §2.5 and §2.11 are where that gap is
+widest.
 
 **Part 1 has been run** — on 2026-09-23, against Obsidian 1.13.7 on desktop and
 Android, before the fork-B decision on
@@ -193,26 +191,29 @@ actually encounters — is unaffected. The result is recorded in
 
 ## Part 2 — the v1 plugin acceptance script
 
-**Runnable one section at a time, as the rows land.** This is the script to
-run against the `editors/obsidian` build, written before the implementation so
-the acceptance bar was set first. Each section names the v1 row from #176 that
-it accepts, and each states a single pass condition. A section whose row is not
-implemented is not a failure; it is not yet a test.
+**All of it is runnable.** v1's twelve rows are built, so every section below
+is a test somebody can perform rather than a bar set for later. This is the
+script written *before* the implementation, so the acceptance bar was set
+first; each section names the v1 row from #176 that it accepts and states a
+single pass condition.
 
-| Section | Row | Runnable |
-|---|---|---|
-| §2.1 activation | v1 constraint 4 | **yes**, since [#200](https://github.com/michal-niedzwiedzki/visimark/issues/200) |
-| §2.6 format, declined artifact | v1 row 7 (repair half) | **partly**, since [#213](https://github.com/michal-niedzwiedzki/visimark/issues/213) — the findings view's per-row repair; format-on-save is still row 7 |
-| §2.2 provenance and staleness | v1 row 2 | **partly**, since [#227](https://github.com/michal-niedzwiedzki/visimark/issues/227) — *where* a mark goes is asserted in `decorations.test.ts`; **everything about what is on screen is this section, and only this section** |
-| §2.1 status and ribbon states | v1 row 12 | **yes**, since [#225](https://github.com/michal-niedzwiedzki/visimark/issues/225) — §2.1's own pass condition is unchanged; what is new to check is that the state is right and that pressing it opens the findings view |
-| §2.4 the five commands | v1 row 4 | **yes**, since [#221](https://github.com/michal-niedzwiedzki/visimark/issues/221) |
-| §2.9 the plugin API | v1 row 9 | **yes**, since [#219](https://github.com/michal-niedzwiedzki/visimark/issues/219) — its comparison against `eval --get` is asserted in `editors/obsidian/test/api.test.ts`; what is left is that the call is made against the documented surface |
-| §2.7 `infer` on a pasted table | v1 row 5 | **yes**, since [#217](https://github.com/michal-niedzwiedzki/visimark/issues/217) — its "rewrites no existing byte" is asserted by reconstruction, which is stronger than the `git diff` this section asks for |
-| §2.8 the vault sweep | v1 row 8 | **yes**, since [#215](https://github.com/michal-niedzwiedzki/visimark/issues/215) — and its fixture is asserted in `editors/obsidian/test/sweep.test.ts`, so what is left for a person is the phone |
-| §2.2 – §2.5, §2.9 – §2.11 | v1 rows 2–10 | not yet |
+The table records which row made each section runnable, and **how much of it a
+machine already asserts** — because the rows where a machine asserts little or
+nothing are the ones that most need a person.
 
-Run every section in **Restricted Mode with only the VisiMark plugin
-enabled**, on desktop and on a phone.
+| Section | Row | Asserted by a machine | Left to a person |
+|---|---|---|---|
+| §2.1 activation, status and ribbon | constraint 4, row 12 | the gate's predicate, and every status state's wording | that the bar appears, reads right, and opens the findings view |
+| §2.2 provenance and staleness | row 2 | *where* every mark goes, and that nothing uncomputed is marked | **everything about what is on screen**, in both renderers |
+| §2.3 hover and tap | row 3 | the line's content — formula, result, inputs | the gesture, and that a cell answers for *that* cell |
+| §2.4 the five commands | row 4 | Explain's caret resolution; Format's plan | the palette, the dialogs, the presses |
+| §2.5 nothing is written unbidden | constraint 3 | — | **all of it**, and on mobile, where an autosave is easiest to trigger |
+| §2.6 format, declined artifact | rows 6–7 | the repair plan, and that it converges on `fmt` | format-on-save, which is still row 7 |
+| §2.7 `infer` on a pasted table | row 5 | that no existing byte is rewritten, by reconstruction | the preview, and the insertion landing where the plan said |
+| §2.8 the vault sweep | row 8 | this section's own fixture, note for note | the phone: does it stay responsive, and does **Stop** stop it |
+| §2.9 the plugin API | row 9 | every name compared against `eval --get` | that the object is there and nothing was reached past |
+| §2.10 templates | row 10 | zero findings, and no Obsidian-only syntax | the insertion not changing the bytes |
+| §2.11 portability, run last | all | — | **all of it, and it outranks every section above** |
 
 ### 2.1 Activation is opt-in per note — v1 constraint 4
 
@@ -265,6 +266,19 @@ enabled**, on desktop and on a phone.
 - **Pass condition:** the popover's numbers are byte-identical to what
   `bun run packages/visimark/src/cli/main.ts explain docs/example-invoice.md`
   prints for the same binding.
+
+  The line's *content* — the formula, the result and what it reads, with a
+  cross-sheet input named — is asserted in
+  `editors/obsidian/test/hover.test.ts`, against the same API row 9 compares
+  to the engine. So a failure here is about the **gesture**: the wrong element
+  answered, or none did.
+- **A cell must say what that cell comes to**, not what its whole column does.
+  Hover the four `Net` cells in `example-invoice.md` and expect four different
+  numbers. This is the one thing a column's explanation gets wrong if the row
+  is not carried through, and it looks plausible when it is wrong.
+- **Tap, do not hover, on the phone.** There is no hover there, which is why
+  the tap opens the same dialog Explain does rather than a tooltip. A tap on an
+  ordinary number must do nothing at all.
 
 ### 2.4 The five commands — v1 row 4
 

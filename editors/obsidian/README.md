@@ -13,7 +13,10 @@ each v1 row is its own issue.
 ## What is built so far
 
 **v1 row 1** ([#200](https://github.com/michal-niedzwiedzki/visimark/issues/200)):
-the browser bundle and the activation gate. **v1 row 2** ([#227](https://github.com/michal-niedzwiedzki/visimark/issues/227)):
+the browser bundle and the activation gate. **v1 row 3** ([#229](https://github.com/michal-niedzwiedzki/visimark/issues/229)):
+hover or tap a marked value for its formula, inputs and result.
+
+**v1 row 2** ([#227](https://github.com/michal-niedzwiedzki/visimark/issues/227)):
 provenance and staleness in reading mode and Live Preview — the row #176 calls
 "the moment the product explains itself".
 

@@ -105,4 +105,7 @@ function apply(node: HTMLElement, decoration: Decoration): void {
   node.addClass("visimark-computed");
   if (decoration.mark === "disagrees") node.addClass("visimark-disagrees");
   node.setAttribute("data-vmark", decoration.name);
+  // which row of the column this cell is, so a hover can say what *this* cell
+  // comes to rather than what the whole column does (v1 row 3)
+  if (decoration.row !== undefined) node.setAttribute("data-vmark-row", String(decoration.row));
 }

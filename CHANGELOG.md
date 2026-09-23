@@ -4,6 +4,20 @@
 
 ### Added
 
+- **A marked value in an Obsidian note answers when you ask it** (issue #229,
+  v1 row 3 of #176) — hover on the desktop, tap anywhere, for the formula the
+  reader wrote, what it comes to and what it reads, with a cross-sheet input
+  named. #176 gives the row one job: it is what makes the previous row's marks
+  legible rather than decorative.
+
+  A cell says what *that* cell comes to rather than what its whole column does
+  — the thing that looks plausible when it is wrong, so the row index is
+  carried from the decoration to the answer and asserted.
+
+  **This completes v1's twelve rows.** Everything in
+  `docs/design/obsidian-manual-test.md` Part 2 is now runnable, and what is
+  left is running it — on a desktop and on a phone.
+
 - **The Obsidian plugin marks the values it works out** (issue #227, v1 row 2
   of #176) — in reading mode *and* in Live Preview, which #176 calls "the
   moment the product explains itself". A hairline under a computed value,

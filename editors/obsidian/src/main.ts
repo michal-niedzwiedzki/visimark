@@ -4,6 +4,7 @@ import {
   Plugin,
   TFile,
   debounce,
+  setTooltip,
   type Editor,
   type WorkspaceLeaf,
 } from "obsidian";
@@ -17,6 +18,7 @@ import { offerInfer } from "./infer-modal.js";
 import { previewInfer } from "./infer-plan.js";
 import { reportFor } from "./report.js";
 import { readNote } from "./snapshot.js";
+import { rowFrom, summaryFor } from "./hover.js";
 import { livePreviewMarks } from "./live-preview.js";
 import { decorateSection } from "./reading-mode.js";
 import { HIDDEN, UNKNOWN, statusFor } from "./status.js";
@@ -151,6 +153,27 @@ export default class VisiMarkPlugin extends Plugin {
     this.registerMarkdownPostProcessor((el, ctx) => decorateSection(el, ctx));
     this.registerEditorExtension(livePreviewMarks());
 
+    // v1 row 3 — what makes row 2's marks legible rather than decorative. One
+    // delegated listener rather than one per decoration: the post-processor
+    // runs per section and per re-render, and a listener attached there would
+    // be attached again every time.
+    //
+    // Hover answers on the desktop and a tap answers everywhere, because a
+    // phone has no hover — and #176's row 3 is "hover / tap" for that reason.
+    this.registerDomEvent(document, "pointerover", (event) => {
+      const el = target(event);
+      if (el === null || el.hasAttribute("data-vmark-hovered")) return;
+      el.setAttribute("data-vmark-hovered", "");
+      void this.describe(el).then((line) => {
+        if (line !== null) setTooltip(el, line, { placement: "top" });
+      });
+    });
+    this.registerDomEvent(document, "click", (event) => {
+      const el = target(event);
+      if (el === null) return;
+      void this.explainElement(el);
+    });
+
     this.status = this.addStatusBarItem();
     this.status.addClass("visimark-status");
     this.status.setAttribute("aria-live", "polite");
@@ -280,6 +303,33 @@ export default class VisiMarkPlugin extends Plugin {
     return { model, report: reportFor(model, check(model, { doc }), doc) };
   }
 
+  /** The one line a hover shows for a marked value, or `null`. */
+  private async describe(el: HTMLElement): Promise<string | null> {
+    const name = el.getAttribute("data-vmark");
+    const file = this.app.workspace.getActiveViewOfType(MarkdownView)?.file;
+    if (name === null || file === null || file === undefined) return null;
+    try {
+      const explanation = await this.api.explain(file, name);
+      return explanation === null
+        ? null
+        : summaryFor(explanation, rowFrom(el.getAttribute("data-vmark-row")));
+    } catch {
+      // a hover is not a place to report a failure; the status bar and the
+      // findings view both already do, and a tooltip that said so would say it
+      // on every pointer move
+      return null;
+    }
+  }
+
+  /** A tap on a marked value opens the same dialog Explain does. */
+  private async explainElement(el: HTMLElement): Promise<void> {
+    const name = el.getAttribute("data-vmark");
+    const file = this.app.workspace.getActiveViewOfType(MarkdownView)?.file;
+    if (name === null || file === null || file === undefined) return;
+    const explanation = await this.api.explain(file, name);
+    if (explanation !== null) new ExplainModal(this.app, explanation).open();
+  }
+
   /** Open the sweep pane, which starts a scan as it opens. */
   private async openSweep(): Promise<void> {
     const existing = this.app.workspace.getLeavesOfType(SWEEP_VIEW);
@@ -333,4 +383,11 @@ export default class VisiMarkPlugin extends Plugin {
     this.status.setAttribute("aria-label", status.detail);
     this.status.toggleClass("visimark-hidden", status.text === "");
   }
+}
+
+/** the marked value a pointer event is on, if it is on one */
+function target(event: Event): HTMLElement | null {
+  const node = event.target;
+  if (!(node instanceof HTMLElement)) return null;
+  return node.closest<HTMLElement>("[data-vmark]");
 }

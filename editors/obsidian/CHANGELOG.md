@@ -9,6 +9,11 @@ Each entry says which engine version the bundle carries.
 
 ## Unreleased
 
+- **A marked value answers when you ask it** — hover on the desktop, tap
+  anywhere — with the formula the reader wrote, what it comes to and what it
+  reads. A cell says what *that* cell comes to rather than what its column
+  does.
+
 - **Computed values are marked, in reading mode and in Live Preview** — a
   hairline under a value VisiMark works out, doubled when it no longer matches
   its formula. Not a colour: a red number says *error* to someone trained by
