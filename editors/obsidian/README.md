@@ -60,7 +60,12 @@ The engine comes in through
 [`packages/visimark/src/browser.ts`](../../packages/visimark/src/browser.ts),
 its browser-safe entry point
 ([#201](https://github.com/michal-niedzwiedzki/visimark/issues/201)). The
-plugin imports no engine path of its own.
+plugin imports no engine path of its own: it writes `visimark`, and **three
+resolvers are made to agree on what that means** — `tsconfig.json`'s `paths`
+for `tsc` and for `bun test`, and `esbuild.config.mjs`'s `alias` for the
+build. A test ties the two files together, because the failure otherwise is
+silent: the plugin would typecheck and test against one engine surface and
+ship another.
 
 ## `minAppVersion`
 

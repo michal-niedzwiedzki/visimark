@@ -62,8 +62,10 @@ function graph(): Map<string, string> {
     const text = readFileSync(file, "utf8");
     out.set(file, text);
     for (const spec of specifiers(text)) {
-      // the one bare specifier the bundle resolves; the alias in
-      // esbuild.config.mjs is followed here so the walk sees what esbuild sees
+      // the one bare specifier the bundle resolves. Three resolvers have to
+      // agree on what it means — tsconfig.json's `paths` for tsc and
+      // `bun test`, and esbuild.config.mjs's alias for the build — and this
+      // walk is the fourth. All four name packages/visimark/src/browser.ts.
       if (spec === "visimark") {
         queue.push(join(engineSrc, "browser.ts"));
         continue;
@@ -193,4 +195,18 @@ test("the bundle stays under a size ceiling with margin over the recorded baseli
       `reviewed, bump BASELINE_BYTES above with the date and reason; if not, something new was ` +
       `pulled into src/main.ts's import graph — the walk above names the files.`,
   ).toBeLessThanOrEqual(MAX_BUNDLE_BYTES);
+});
+
+test("tsconfig and esbuild resolve the engine specifier to the same file", () => {
+  // the failure this catches is silent and nasty: the plugin typechecks and
+  // tests against one engine surface and ships another. tsconfig.json's
+  // `paths` is what tsc and `bun test` follow; `alias` is what the build
+  // follows; they are two files and nothing but this ties them together.
+  const tsconfig = readFileSync(join(here, "tsconfig.json"), "utf8");
+  const declared = /"visimark":\s*\[\s*"([^"]+)"/.exec(tsconfig)?.[1];
+  expect(declared, "tsconfig.json no longer maps the visimark specifier").toBeDefined();
+  expect(
+    resolve(here, declared!),
+    "tsconfig.json's paths and esbuild.config.mjs's alias name different files",
+  ).toBe(resolve(options.alias["visimark"] ?? ""));
 });

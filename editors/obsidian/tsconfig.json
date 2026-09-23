@@ -5,7 +5,24 @@
     "lib": ["ES2023", "DOM"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "allowJs": true
+    "allowJs": true,
+    // `visimark` means the engine's **browser-safe** entry point here, and in
+    // three resolvers at once: this one, `bun test`, and the alias in
+    // `esbuild.config.mjs`. They have to agree or the plugin typechecks
+    // against one surface, tests against a second and ships a third.
+    //
+    // The engine's `exports` map still has only `"."`, which resolves to
+    // `dist/index.js` — a graph that reaches `node:fs`, `node:crypto`,
+    // `node:module` and `node:url` and cannot be bundled for a browser at all
+    // (issue #201). Mapping the specifier here rather than publishing a
+    // `./browser` subpath keeps that decision where it belongs — on #201 —
+    // and keeps a second full copy of the engine out of the published
+    // tarball. It also points at source rather than `dist/`, so the plugin
+    // cannot be built or tested against a stale build, which is the same
+    // reason `editors/vscode/esbuild.mjs` aliases the engine to source.
+    "paths": {
+      "visimark": ["../../packages/visimark/src/browser.ts"]
+    }
   },
   "include": ["src", "test", "esbuild.config.mjs"]
 }
