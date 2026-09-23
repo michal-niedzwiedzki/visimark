@@ -1,0 +1,15 @@
+/*
+ * Row 1 has one element and one state, so this file has one rule.
+ *
+ * `display: none` rather than `visibility: hidden` or an opacity: the status
+ * bar lays its children out in a row, and a hidden-but-present item would
+ * leave a gap — a gap is a thing a person can see, and the pass condition of
+ * the manual test's §2.1 is that a vault of ordinary notes looks exactly like
+ * one without the plugin installed.
+ *
+ * No colours, sizes or spacing are set here on purpose: the item inherits the
+ * status bar's own, so it matches every theme without knowing about any.
+ */
+.visimark-status.visimark-hidden {
+  display: none;
+}

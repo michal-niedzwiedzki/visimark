@@ -4,6 +4,18 @@
 
 ### Added
 
+- **An Obsidian client exists** (issue #200, v1 row 1 of #176).
+  `editors/obsidian` builds as a single `main.js` with **no `node:` specifier
+  in it**, so it loads on Obsidian mobile as well as desktop, and it activates
+  only on a note that contains a ```` ```vmark ```` block — a vault of ordinary
+  notes is indistinguishable from one without it installed. The gate is
+  `locate()`, the same parse the CLI keys on, so the plugin and the CLI cannot
+  come to mean different things by the same file. Nothing published changes:
+  the plugin is not on npm, has its own version in `manifest.json`, and reaches
+  the engine through the browser-safe entry point added for #201. This is the
+  first of eleven v1 rows; the rest are unimplemented.
+  See [`obsidian-plugin-spec.md`](docs/design/obsidian-plugin-spec.md).
+
 - **The engine has a browser-safe entry point** (issue #201).
   `packages/visimark/src/index.ts` could not be bundled for a browser at all:
   it reaches `node:fs`, `node:crypto`, `node:module` and `node:url` through
