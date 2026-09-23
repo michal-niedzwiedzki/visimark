@@ -9,6 +9,15 @@ Each entry says which engine version the bundle carries.
 
 ## Unreleased
 
+- **A vault sweep** — the one feature the VS Code extension cannot have. One
+  command looks through every note in the vault and lists the ones that
+  disagree with themselves. It never refuses on size: a substring prefilter
+  that cannot produce a false negative removes the parse for every note that
+  could not contain a block, so the cost is proportional to the number of
+  VisiMark notes rather than to the size of the vault, and the scan hands the
+  thread back every fifty notes so a phone keeps answering taps. A count that
+  moves and a **Stop** button, at every size.
+
 - **A findings view**, and it is not a Problems panel. One row per finding, in
   a sentence — no red, no codes, no "1 problem" — under **Needs attention** or
   **Advice**, where the split is the engine's own and not a second list.

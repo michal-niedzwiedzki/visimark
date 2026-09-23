@@ -230,6 +230,11 @@ Five, mirroring the CLI's verbs, each scoped to the active note (v1 row 4).
 The sweep is the sixth and has no CLI twin — it is the row that justifies fork
 B over the VS Code extension (v1 row 8), and it is read-only.
 
+It is **not gated on the fence** (§2.3): that gate is a question about the
+*active note*, and a vault-wide scan does not have one. Refusing to look
+through the vault because the note in front of you happens to have no block
+would be the gate answering a question it was not asked.
+
 **Explain was blocked, and the blocker was not in the plugin.** `explainView`
 lives in `report/explain.ts`, which imported `readVersion()` from
 `cli/version.ts`, which imports `node:module` — so it could not enter a browser
@@ -250,15 +255,34 @@ The plugin stamps nothing and needs no version: §3.1 says it has no exit code
 and no `--json` output, and §2.7's `explain` returns an `ExplainView` rather
 than a document.
 
-**The sweep's row states a size bound before it is filed.** An on-demand scan
-of every note containing a fence is the whole feature, and it is also the one
-surface whose cost grows with the vault rather than with the note. The row
-names the vault size at which the scan is still acceptable **on a phone**, and
-what happens above it — progress with a cancel, or a refusal with the count.
-Without that, v1.1 row 13's incremental index stops being a deferred
-improvement and becomes an unstated dependency, which is exactly what holding
-it back was meant to avoid: the cache has to be justified by the feature
-working, not by the feature not working.
+**The sweep's row was asked to state a size bound before it was filed**, on
+the reasoning that an on-demand scan of every note is the one surface whose
+cost grows with the vault rather than with the note, and that without a bound
+v1.1 row 13's incremental index stops being a deferred improvement and becomes
+an unstated dependency.
+
+**It was measured instead, and the premise was wrong.** The cost is the
+*parse*, not the scan: `locate()` is ~1.9 ms on an ordinary note, a full
+`locate + build + check` is ~2.8 ms, and a substring scan for `vmark` is below
+the resolution of `performance.now()`. A prefilter that cannot produce a false
+negative — every block's opening fence carries the info string `vmark`,
+whatever the fence is made of — removes the parse for every note that could not
+contain a block, and the expensive work becomes proportional to the number of
+**VisiMark** notes rather than to the size of the vault. Five thousand ordinary
+notes and three VisiMark ones cost three parses, which
+`editors/obsidian/test/sweep.test.ts` asserts rather than times.
+
+So the answer to "what happens above the bound" is **progress with a cancel,
+at every size**, which was one of the two answers this paragraph allowed. There
+is no size at which the sweep refuses, because there is no cost there to
+refuse. What there is: a count that moves, a button that stops it, and a scan
+that hands the thread back every fifty notes so a phone keeps answering taps.
+
+The phone numbers behind that are an extrapolation from a desktop measurement,
+not a measurement on a phone, and
+[`obsidian-manual-test.md`](obsidian-manual-test.md) §2.8 is what corrects them.
+v1.1 row 13's index remains deferred and is still justified by the feature
+working rather than by it not working — which is now a measured claim.
 
 ### 2.5 Settings
 
