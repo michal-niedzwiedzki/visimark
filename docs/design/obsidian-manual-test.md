@@ -202,7 +202,8 @@ implemented is not a failure; it is not yet a test.
 | Section | Row | Runnable |
 |---|---|---|
 | §2.1 activation | v1 constraint 4 | **yes**, since [#200](https://github.com/michal-niedzwiedzki/visimark/issues/200) |
-| §2.2 – §2.11 | v1 rows 2–10 | not yet |
+| §2.10 templates | v1 row 10 | **yes**, since [#210](https://github.com/michal-niedzwiedzki/visimark/issues/210) — and its pass condition is asserted by `editors/obsidian/test/templates.test.ts`, so what is left for a person is the insertion itself |
+| §2.2 – §2.9, §2.11 | v1 rows 2–9 | not yet |
 
 Run every section in **Restricted Mode with only the VisiMark plugin
 enabled**, on desktop and on a phone.
@@ -301,10 +302,22 @@ palette on `example-invoice.md` and on `example-invoice-drift.md`.
 
 ### 2.10 Templates — v1 row 10
 
-- Insert each template into a new note.
+- Run each of the four **VisiMark: Insert … template** commands into a new,
+  empty note. They are the one family of commands that is **not** gated on the
+  note already containing a block — see spec §2.3 — so try one on an ordinary
+  note too, and expect it to work.
+- **Pass:** the status bar flips to `VisiMark` as the template lands, because
+  the note now has a block.
 - **Pass condition:** the note passes `check` from the CLI with zero findings
   before anything is edited, and contains no syntax that means something only
   inside Obsidian (v1 constraint 5).
+
+  Both halves of that condition are asserted by
+  `editors/obsidian/test/templates.test.ts` over the documents themselves, so
+  a failure here means the *insertion* changed the bytes — a trailing newline
+  eaten, an indent added, a selection replaced that should not have been.
+  That is the part only a person can check, and it is worth checking on the
+  phone as well, where the editor is a different one.
 
 ### 2.11 The portability test, run last and run on everything
 
