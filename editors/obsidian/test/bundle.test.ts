@@ -199,7 +199,14 @@ test("every file in src/ is a walk root, so none can hide until a row wires it i
  * Bump this only when the growth is real and reviewed, and record the date,
  * the new value and why directly above.
  */
-const BASELINE_BYTES = 260_667;
+const BASELINE_BYTES = 262_083;
+
+/*
+ * 2026-09-24, 260,667 → 262,083 (+1,416). v1 row 9: the public plugin API.
+ * Small because it is a facade — `check`, `evalValues` and `dependencies` were
+ * already in the bundle, and the row is the surface rather than the work.
+ * That smallness is itself the architectural claim #176 wanted tested.
+ */
 
 /*
  * 2026-09-23, 243,239 → 260,667 (+17,428). v1 row 5: Infer and its preview.

@@ -9,6 +9,12 @@ Each entry says which engine version the bundle carries.
 
 ## Unreleased
 
+- **A public API other plugins and agents can call**, at
+  `app.plugins.plugins["visimark"].api`: `check`, `evaluate`, `get` and
+  `explain`, with `apiVersion` semver'd from the first release. Values are
+  strings, never numbers, and `get` returns the same answer
+  `visimark eval --get` prints because it goes through the same function.
+
 - **Infer, with a preview** — the on-ramp. One command reads a plain Markdown
   table, works out the formulas behind its numbers, and shows the
   ```` ```vmark ```` block it would add *before* adding anything. Accepting it

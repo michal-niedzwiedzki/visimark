@@ -203,6 +203,7 @@ implemented is not a failure; it is not yet a test.
 |---|---|---|
 | §2.1 activation | v1 constraint 4 | **yes**, since [#200](https://github.com/michal-niedzwiedzki/visimark/issues/200) |
 | §2.6 format, declined artifact | v1 row 7 (repair half) | **partly**, since [#213](https://github.com/michal-niedzwiedzki/visimark/issues/213) — the findings view's per-row repair; format-on-save is still row 7 |
+| §2.9 the plugin API | v1 row 9 | **yes**, since [#219](https://github.com/michal-niedzwiedzki/visimark/issues/219) — its comparison against `eval --get` is asserted in `editors/obsidian/test/api.test.ts`; what is left is that the call is made against the documented surface |
 | §2.7 `infer` on a pasted table | v1 row 5 | **yes**, since [#217](https://github.com/michal-niedzwiedzki/visimark/issues/217) — its "rewrites no existing byte" is asserted by reconstruction, which is stronger than the `git diff` this section asks for |
 | §2.8 the vault sweep | v1 row 8 | **yes**, since [#215](https://github.com/michal-niedzwiedzki/visimark/issues/215) — and its fixture is asserted in `editors/obsidian/test/sweep.test.ts`, so what is left for a person is the phone |
 | §2.2 – §2.5, §2.9 – §2.11 | v1 rows 2–10 | not yet |
@@ -322,10 +323,17 @@ palette on `example-invoice.md` and on `example-invoice-drift.md`.
 - With the console open, call the documented API for a value in
   `example-invoice.md` — for instance `lines.gross_total`.
 - **Pass condition:** the answer equals
-  `bun run packages/visimark/src/cli/main.ts eval docs/example-invoice.md --get lines.gross_total`,
-  and the call is made against the documented surface with no reach into
-  plugin internals. This is spike check 2 shipped, so it is accepted the way
-  the spike states it: a caller that sees only the types.
+  `bun run packages/visimark/src/cli/main.ts eval docs/example-invoice.md --get lines.gross_total`
+  — which prints `28659`, not `28659.00`: the width is the cell's and the value
+  is the value — and the call is made against the documented surface with no
+  reach into plugin internals. This is spike check 2 shipped, so it is accepted
+  the way the spike states it: a caller that sees only the types.
+
+  The arithmetic half is asserted in `editors/obsidian/test/api.test.ts`,
+  against the engine, for every name in the document rather than the one.
+  **What only this console can check is the second half**: that
+  `app.plugins.plugins["visimark"].api` is there, that `apiVersion` is `1`, and
+  that nothing you had to reach past it to get the answer.
 
 ### 2.10 Templates — v1 row 10
 
