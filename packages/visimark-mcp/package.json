@@ -44,7 +44,7 @@
   "scripts": {
     "test": "bun test",
     "typecheck": "tsc --noEmit",
-    "build": "bun build src/main.ts src/index.ts --target node --outdir dist --external visimark --external @modelcontextprotocol/sdk && tsc -p tsconfig.build.json",
+    "build": "bun ../../scripts/gen-mcp-skill.ts && bun build src/main.ts src/index.ts --target node --outdir dist --external visimark --external @modelcontextprotocol/sdk && tsc -p tsconfig.build.json",
     "prepublishOnly": "bun run typecheck && bun test && bun run build"
   },
   "dependencies": {

@@ -32,3 +32,5 @@ export {
   type ToolAnnotations,
   type ToolDef,
 } from "./tools/types.js";
+export { RESOURCES, readResource, resourceFor, type ResourceDef } from "./resources.js";
+export { PROMPTS, promptFor, type PromptDef } from "./prompts.js";

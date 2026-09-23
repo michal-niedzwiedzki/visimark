@@ -231,7 +231,7 @@ export const READ_TOOLS: ToolDef[];   // check, eval, explain, infer, fmt, ref
 
 ## Task 5 — Resources, the generated skill, and prompts
 
-- [ ] Ship the discipline, not only the verifier.
+- [x] Ship the discipline, not only the verifier.
 
 **Files**
 
