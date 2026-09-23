@@ -843,9 +843,10 @@ the computed cells beside it, and a column that is not internally consistent
 about it is an error. The number is still the value; the decoration is still
 the renderer's concern, just pinned in place.
 
-**Anchors depend on renderers permitting raw HTML.** Verified on 2026-09-03;
-see section 16. Seven of eight tested configurations pass. The one failure is
-cosmetic and is accepted.
+**Anchors depend on renderers permitting raw HTML.** Verified on 2026-09-03,
+with Obsidian added by hand on 2026-09-23; see section 16. Seven of eight
+tested configurations pass, and Obsidian hides anchors in reading mode. Both
+failures are cosmetic and are accepted.
 
 ## 16. Renderer verification
 
@@ -885,9 +886,28 @@ Two findings that bear on the implementation:
   directly, and means header-cell anchors remain technically available should
   the block-only decision ever be revisited.
 
-Obsidian was not tested; it is not scriptable in this environment. It is
-believed to hide HTML comments in reading view, but that is unverified and no
-document should claim it.
+**Obsidian, measured by hand on 2026-09-23** — Obsidian 1.13.7, Restricted
+Mode on, desktop and Android, vault opened at `docs/`. It is not scriptable in
+this environment, so this was run as the Part 1 scenario in
+[`docs/design/obsidian-manual-test.md`](design/obsidian-manual-test.md) rather
+than by the probe above.
+
+| Obsidian renderer | Anchor handling | Verdict |
+|-------------------|-----------------|---------|
+| Reading mode | hidden | pass |
+| Live Preview | shown as literal text, regardless of cursor position | accepted |
+
+Reading mode is what a reader encounters, and it is clean: anchors invisible,
+`vmark` blocks plain, table cells byte-verbatim, relative chart paths
+resolved, the drift document indistinguishable from the clean one, and a
+document still passing `check` after Obsidian's Properties UI writes
+frontmatter — on desktop and on a phone alike.
+
+Live Preview is an editing surface, and it shows the anchor comment
+everywhere, not only on the line holding the cursor. That is accepted rather
+than filed: seeing where a value is bound while authoring is useful, and no
+reader meets it. It is cosmetic in the same sense as the markdown-it row
+above — the value renders, and nothing is lost or altered.
 
 ## 17. Assertions
 
