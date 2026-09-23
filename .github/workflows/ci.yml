@@ -23,7 +23,7 @@ jobs:
           bun-version: latest
       - run: bun install --frozen-lockfile
 
-      # Nine files/fields carry the version and all nine must agree. The five
+      # Eleven files/fields carry the version and all eleven must agree. The six
       # package manifests have to match because one tag publishes all of them, and a
       # mismatch ships a release under the wrong number or fails a leg midway
       # with the others already out. action.yml joins them because its `version`
@@ -38,6 +38,12 @@ jobs:
       # drift onto an engine version never tested against it).
       # packages/markdownlint-visimark/package.json joins on the same two counts,
       # for the same two reasons.
+      # packages/visimark-mcp/package.json joins on the same two counts again: its
+      # own `version`, and its `dependencies.visimark` pin. The server imports the
+      # engine as a library and is published in lockstep with it, so a caret there
+      # would let a published server pair with an engine it was never tested
+      # against — and its envelope reports the engine version it loaded, which
+      # would then be a number no CI run ever saw.
       #
       # docs/releasing.md used to ask the releaser to eyeball this with grep.
       # A release checklist step that nothing enforces is a step that gets
@@ -60,7 +66,9 @@ jobs:
           remark_dep=$(bun -e 'console.log(require("./packages/remark-visimark/package.json").dependencies.visimark)')
           markdownlint_version=$(bun -e 'console.log(require("./packages/markdownlint-visimark/package.json").version)')
           markdownlint_dep=$(bun -e 'console.log(require("./packages/markdownlint-visimark/package.json").dependencies.visimark)')
-          echo "engine=$engine lsp=$lsp vscode=$ext action.yml=$pinned precommit-hook=$precommit_versions remark-plugin=$remark_version remark-plugin-dep=$remark_dep markdownlint-rule=$markdownlint_version markdownlint-rule-dep=$markdownlint_dep"
+          mcp_version=$(bun -e 'console.log(require("./packages/visimark-mcp/package.json").version)')
+          mcp_dep=$(bun -e 'console.log(require("./packages/visimark-mcp/package.json").dependencies.visimark)')
+          echo "engine=$engine lsp=$lsp vscode=$ext action.yml=$pinned precommit-hook=$precommit_versions remark-plugin=$remark_version remark-plugin-dep=$remark_dep markdownlint-rule=$markdownlint_version markdownlint-rule-dep=$markdownlint_dep mcp-server=$mcp_version mcp-server-dep=$mcp_dep"
           if [ -z "$pinned" ]; then
             echo "::error::could not read the version default out of action.yml. The version input or its default line moved; fix this check rather than deleting it."
             exit 1
@@ -73,7 +81,7 @@ jobs:
           else
             precommit=$precommit_versions
           fi
-          for pair in "packages/visimark-lsp/package.json:$lsp" "editors/vscode/package.json:$ext" "action.yml:$pinned" "scripts/precommit-visimark-check.sh:$precommit" "packages/remark-visimark/package.json (version):$remark_version" "packages/remark-visimark/package.json (visimark dep):$remark_dep" "packages/markdownlint-visimark/package.json (version):$markdownlint_version" "packages/markdownlint-visimark/package.json (visimark dep):$markdownlint_dep"; do
+          for pair in "packages/visimark-lsp/package.json:$lsp" "editors/vscode/package.json:$ext" "action.yml:$pinned" "scripts/precommit-visimark-check.sh:$precommit" "packages/remark-visimark/package.json (version):$remark_version" "packages/remark-visimark/package.json (visimark dep):$remark_dep" "packages/markdownlint-visimark/package.json (version):$markdownlint_version" "packages/markdownlint-visimark/package.json (visimark dep):$markdownlint_dep" "packages/visimark-mcp/package.json (version):$mcp_version" "packages/visimark-mcp/package.json (visimark dep):$mcp_dep"; do
             file=${pair%%:*}; got=${pair#*:}
             if [ -n "$got" ] && [ "$got" != "$engine" ]; then
               echo "::error file=$file::$file says $got but packages/visimark/package.json says $engine. Bump every version-carrying file in the release commit — see docs/releasing.md."
@@ -154,6 +162,27 @@ jobs:
             exit 1
           fi
 
+  # The files `visimark-mcp` serves as resources must match what they are
+  # derived from. Modelled on `function-reference`: the generated skill variant
+  # and the doc copies inside the package are both regenerated and compared.
+  # Two hand-written variants of the skill drift; a stale doc copy ships a
+  # resource that describes a version nobody is running.
+  mcp-resources:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - name: the generated MCP skill and doc copies must match their sources
+        run: |
+          bun run gen:mcp
+          if ! git diff --exit-code -- packages/visimark-mcp/skill.md packages/visimark-mcp/docs/; then
+            echo "::error::The MCP server's generated resources are stale. Run 'bun run gen:mcp' and commit the result."
+            exit 1
+          fi
+
   # The published CLI must run under Node, not only Bun. Build with Bun (the
   # only supported build path), then exercise the built dist/ under Node.
   acceptance-node:
@@ -203,9 +232,14 @@ jobs:
       - name: the depth cap still has stack headroom under Node
         run: node scripts/stack-headroom.mjs
 
-  # Pack once, then install the tarball globally in two isolated environments —
-  # a Node-only runner and a Bun-only container — and run the command. This is
-  # the regression test for #29 (bun add -g on a machine with no Node).
+  # Pack once, then install the tarballs globally in two isolated environments —
+  # a Node-only runner and a Bun-only container — and run the commands. This is
+  # the regression test for #29 (bun add -g on a machine with no Node), and the
+  # assertion that each job's *other* runtime is absent from PATH is the part
+  # that actually catches a `node` shebang in a `bin` slot. Do not relax it.
+  #
+  # `visimark-mcp` is exercised by a protocol handshake rather than a
+  # `--version` line: a server that cannot speak MCP would pass the latter.
   pack:
     runs-on: ubuntu-latest
     steps:
@@ -218,10 +252,29 @@ jobs:
       - name: pack the tarball
         working-directory: packages/visimark
         run: npm pack --pack-destination "$RUNNER_TEMP"
+      # The MCP server ships beside the engine and is smoke-tested by the same
+      # two jobs, because it is the second published package in this repo with
+      # a `bin` and so the second one #29 can break.
+      - name: pack the MCP server tarball
+        working-directory: packages/visimark-mcp
+        run: npm pack --pack-destination "$RUNNER_TEMP"
       - uses: actions/upload-artifact@v7
         with:
           name: visimark-tarball
+          # One glob catches both: npm names them visimark-X.Y.Z.tgz and
+          # visimark-mcp-X.Y.Z.tgz. The smoke jobs pick them apart by shape —
+          # `visimark-[0-9]*` is the engine — because `visimark-*.tgz` would
+          # hand `npm i -g` two packages where one was meant.
           path: ${{ runner.temp }}/visimark-*.tgz
+          if-no-files-found: error
+      # The smoke jobs have no checkout — they are deliberately bare
+      # single-runtime environments — so the handshake driver rides along with
+      # the tarballs it exercises.
+      - run: cp scripts/mcp-handshake.mjs "$RUNNER_TEMP/handshake.mjs"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: mcp-handshake
+          path: ${{ runner.temp }}/handshake.mjs
           if-no-files-found: error
 
   smoke-node:
@@ -234,17 +287,27 @@ jobs:
       - uses: actions/download-artifact@v8
         with:
           name: visimark-tarball
+      - uses: actions/download-artifact@v8
+        with:
+          name: mcp-handshake
       - name: global install under Node only
         run: |
           set -e
           if command -v bun >/dev/null 2>&1; then
             echo "::error::bun is present; smoke-node must be Node-only"; exit 1
           fi
-          npm i -g ./visimark-*.tgz
+          # Both tarballs in one install so the MCP server's exact `visimark`
+          # pin is satisfied by the engine built in this run. Installed
+          # separately it would resolve that pin from the registry, which works
+          # only while the version is already published — that is, on every
+          # commit except the release-prep one where it matters.
+          npm i -g "./$(ls visimark-[0-9]*.tgz)" "./$(ls visimark-mcp-*.tgz)"
           vm="$(npm prefix -g)/bin/visimark"
           "$vm" --version | grep -qE '^visimark [0-9]'
           printf '# smoke\n' > smoke.md
           "$vm" check smoke.md
+      - name: the MCP server speaks the protocol under Node only
+        run: node handshake.mjs "$(npm prefix -g)/bin/visimark-mcp"
 
   smoke-bun:
     needs: pack
@@ -254,6 +317,9 @@ jobs:
       - uses: actions/download-artifact@v8
         with:
           name: visimark-tarball
+      - uses: actions/download-artifact@v8
+        with:
+          name: mcp-handshake
       - name: global install under Bun only
         run: |
           set -e
@@ -266,7 +332,13 @@ jobs:
           fi
           # bun add -g needs an absolute tarball path; a relative ./x.tgz is
           # parsed as a package name.
-          bun add -g "$(pwd)/$(ls visimark-*.tgz)"
+          # Both tarballs in one install, for the reason smoke-node gives.
+          bun add -g "$(pwd)/$(ls visimark-[0-9]*.tgz)" "$(pwd)/$(ls visimark-mcp-*.tgz)"
           visimark --version | grep -qE '^visimark [0-9]'
           printf '# smoke\n' > smoke.md
           visimark check smoke.md
+      - name: the MCP server speaks the protocol under Bun only
+        run: |
+          set -e
+          export PATH="$(bun pm bin -g):/usr/local/bin:/usr/bin:/bin"
+          bun handshake.mjs "$(bun pm bin -g)/visimark-mcp"

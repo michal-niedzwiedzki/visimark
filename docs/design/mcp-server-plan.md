@@ -340,7 +340,7 @@ export { resolveArtifactPath, type PathResult } from "./artifact/path.js";
 
 ## Task 8 — CI
 
-- [ ] Prove the packed artifact works with only Node, and with only Bun.
+- [x] Prove the packed artifact works with only Node, and with only Bun.
 
 **Files**
 
