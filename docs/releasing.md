@@ -14,6 +14,10 @@ and left an untraceable tarball on the registry for good.
 | Leg | Reads version from | Guard before it publishes |
 |-----|--------------------|---------------------------|
 | `visimark` on npm, with a provenance attestation | `packages/visimark/package.json` | `npm view visimark@<v>` — skip if already there |
+| `remark-lint-visimark` on npm, with a provenance attestation | `packages/remark-visimark/package.json` | `npm view remark-lint-visimark@<v>` — skip if already there |
+| `markdownlint-rule-visimark` on npm, with a provenance attestation | `packages/markdownlint-visimark/package.json` | `npm view markdownlint-rule-visimark@<v>` — skip if already there |
+| `visimark-mcp` on npm, with a provenance attestation | `packages/visimark-mcp/package.json` | `npm view visimark-mcp@<v>` — skip if already there |
+| `io.github.michal-niedzwiedzki/visimark` on the MCP registry | `server.json`, rewritten from the tag | `GET /v0/servers?search=visimark` — skip if this version is listed; runs only if the npm leg succeeded, since the entry points at the npm package |
 | `visimark-vscode` on the VS Code Marketplace | `editors/vscode/package.json` | `vsce show` — skip if the version is listed |
 | `visimark-vscode` on Open VSX | `editors/vscode/package.json` | Open VSX API — skip if the version is there; create the namespace only if it is genuinely missing |
 | GitHub Release, with the `.vsix` attached | the tag | needs a tag — the pushed one, or the `tag` input on a `workflow_dispatch` |
@@ -32,8 +36,9 @@ each leg's outcome and fails at the end. The only ordering that is real is the
 `.vsix`: if packaging the extension fails, both marketplace legs and the GitHub
 Release are skipped, because there is nothing to publish.
 
-The last step of the run, **every leg must have landed**, asks all three
-registries whether the versions are actually there and fails the job if any is
+The last step of the run, **every leg must have landed**, asks all four
+registries — npm, the VS Code Marketplace, Open VSX and
+`registry.modelcontextprotocol.io` — whether the versions are actually there and fails the job if any is
 missing. That is what makes a green run mean something — v0.1.1 went green with
 both marketplace legs empty, and v0.1.3 shipped npm only. It is not a substitute
 for [Verify every leg](#verify-every-leg), which also covers the provenance
@@ -43,6 +48,8 @@ attestation and the GitHub Release.
 flowchart LR
   tag[Push tag vX.Y.Z] --> run[release.yml]
   run --> npm[npm visimark]
+  run --> npmplugins[npm remark/markdownlint/mcp]
+  run --> mcpreg[MCP registry]
   run --> vsce[VS Code Marketplace]
   run --> ovsx[Open VSX]
   run --> ghrel[GitHub Release with vsix]
@@ -50,12 +57,14 @@ flowchart LR
   npm --> present{"Version already there?"}
   vsce --> present
   ovsx --> present
+  npmplugins --> present
+  mcpreg --> present
   present -->|yes| skip[Skip that leg]
   present -->|no| pub[Publish]
   pub --> rejected{"Registry rejects?"}
   rejected -->|yes| legfail[Record the leg as failed, carry on]
   rejected -->|no| ok[Leg done]
-  skip --> gate["every leg must have landed: re-ask all three registries"]
+  skip --> gate["every leg must have landed: re-ask all four registries"]
   ok --> gate
   legfail --> gate
   ghrel --> gate
@@ -178,7 +187,7 @@ did, so it got one).
 
 ## Verify every leg
 
-`release.yml`'s own final step now asserts all three registries have the
+`release.yml`'s own final step now asserts all four registries have the
 version, so a green run is no longer the empty signal it was for v0.1.1. It
 still does not check the provenance attestation or the GitHub Release, and
 `check` refuses to call a formula-free table verified — hold a release to the
@@ -224,7 +233,7 @@ re-trigger the pipeline.**
 | Rule | Consequence if ignored |
 |------|------------------------|
 | The tag is the only publisher. No hand-run `npm publish` / `vsce publish` / `ovsx publish`. | npm keeps the version number forever on the first publish it sees. `visimark@0.1.0` is a mis-publish that can never be reissued. |
-| All three `package.json` versions equal the tag, exactly. | One tag then publishes mismatched version numbers, or a leg fails mid-release with the others already out. |
+| All six `package.json` versions equal the tag, exactly — and the three `dependencies.visimark` pins with them. | One tag then publishes mismatched version numbers, or a leg fails mid-release with the others already out. |
 | The changelog entry is written, dated and merged **before** the tag. | The GitHub Release body is built from `CHANGELOG.md` at the tagged commit — a tag ahead of the changelog ships the previous version's notes. |
 | Each changelog has a dated `## X.Y.Z - YYYY-MM-DD` heading for the release's version, in the release commit. | `ci.yml`'s "every release must have a changelog entry" step fails the release commit. Without the entry the GitHub Release body ships the previous version's notes, or the Marketplace page silently skips the version. The check proves the heading exists, not that the entry is accurate. |
 | The Shipped-register **Released** cells are filled **before** the tag (step 5). | The released `vocabulary-catalogue.md` shows shipped primitives as still pending, while `release.yml` closes their issues — the catalogue and the tracker disagree. |
@@ -232,7 +241,7 @@ re-trigger the pipeline.**
 | `action.yml`'s `version` default is bumped with the manifests. | Every consumer who pins the new Action ref keeps running the previous engine, with nothing at run time to tell them. Nothing fails; it just quietly verifies with the old code. |
 | Changelog dates are ISO 8601, `YYYY-MM-DD`. | The project's own date rule. A release heading with no date fails CI; every other date in a changelog is unchecked, because nothing runs `check` with date repair on it. |
 | Never retag, force-push a tag, or `npm unpublish` to tidy a botched release. | It rewrites history to look like the pipeline did something it did not. Bump to the next patch and let the record stand — the move `infer`'s near-miss refusal exists to enforce, applied to the release instead of a spreadsheet. |
-| A green `release` run is not a fully released package. Verify each leg. | The run's final step asserts the three registries have the version, but nothing automated checks the provenance attestation or the GitHub Release. The v0.1.1 run reported success with npm and the GitHub Release done and both extension registries empty — that gap is closed; the remaining ones are yours. |
+| A green `release` run is not a fully released package. Verify each leg. | The run's final step asserts the four registries have the version, but nothing automated checks the provenance attestation or the GitHub Release. The v0.1.1 run reported success with npm and the GitHub Release done and both extension registries empty — that gap is closed; the remaining ones are yours. |
 
 ## Secrets the workflow needs
 

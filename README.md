@@ -333,6 +333,22 @@ them with
 [`markdownlint-rule-visimark`](https://www.npmjs.com/package/markdownlint-rule-visimark)
 — see [`docs/ci.md` chapter 25](docs/ci.md#25-the-markdownlint-custom-rule).
 
+An agent reaches the same engine over
+[MCP](https://modelcontextprotocol.io) with
+[`visimark-mcp`](https://www.npmjs.com/package/visimark-mcp), which serves
+every command as a tool, the authoring discipline as resources, and writes
+nothing unless an operator opens the write gate:
+
+```bash
+npm i -g visimark-mcp   # or: bun add -g visimark-mcp
+npx visimark-mcp        # or: bunx visimark-mcp
+claude mcp add visimark -- npx -y visimark-mcp
+```
+
+The full surface is [`docs/mcp.md`](docs/mcp.md), and chapter 29 of
+[`docs/ci.md`](docs/ci.md#29-the-mcp-server) covers running it beside a CI
+check.
+
 ## Diffable by construction
 
 An `.xlsx` is a zip of XML: change one cell and code review can tell you the
@@ -452,6 +468,13 @@ checker starts complaining before believing a document is wired up. The
 `COVERAGE` finding described above exists so that an agent cannot report a
 green build on a document with no build in it, but the habit is still the
 better safeguard.
+
+There is also an MCP server, [`visimark-mcp`](docs/mcp.md), for an agent
+working in a repository it has never seen: `npx visimark-mcp` or
+`bunx visimark-mcp`, or `claude mcp add visimark -- npx -y visimark-mcp`. It
+serves the skill above as a resource, so the discipline arrives with the
+verifier rather than separately. It is read-only unless started with
+`--allow-write` **and** given a host-declared root.
 
 Editor support is specified in
 [`docs/visimark-editor-plugins-design.md`](docs/visimark-editor-plugins-design.md):

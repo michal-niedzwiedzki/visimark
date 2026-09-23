@@ -159,6 +159,17 @@ knowing without looking: exit `1` means the document has problems and exit `2`
 means the command could not run at all, and `WARN`/`NOTE` are advice that is
 printed without failing anything.
 
+**If you cannot shell out, there is an MCP server.** `visimark-mcp` serves
+every command above as a tool — `visimark_check`, `visimark_fmt`,
+`visimark_infer`, `visimark_eval`, `visimark_explain`, `visimark_ref`, plus
+`visimark_fmt_apply` and `visimark_infer_apply` behind an operator-controlled
+write gate. Its read tools take a document as `content` as readily as a
+`path`, so a table you are drafting in context needs no temp file. It returns
+the same `--json` envelope, so every field means what this file says it means.
+Install it with `npm i -g visimark-mcp` or `bun add -g visimark-mcp`, or run
+it with `npx visimark-mcp` or `bunx visimark-mcp`. The full surface is
+[`docs/mcp.md`](../../docs/mcp.md).
+
 From a clone: `bun src/cli/main.ts check FILE`, or `node bin/visimark.js check FILE`
 once `bun run build` has been run. `npx visimark` for a published install.
 

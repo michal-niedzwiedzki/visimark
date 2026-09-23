@@ -16,6 +16,25 @@
   document's multi-line comment — both harmless today, now tested.
   See [`pin-what-the-markdownlint-rule-restores-spec.md`](docs/design/pin-what-the-markdownlint-rule-restores-spec.md).
 
+- **`visimark-mcp`** (issue #169) — a new published package: a stdio
+  [MCP](https://modelcontextprotocol.io) server over the same engine, for an
+  agent working in a repository that has never heard of the project. All six
+  commands as tools (`visimark_check`, `_eval`, `_explain`, `_infer`, `_fmt`,
+  `_ref`), the authoring discipline as resources, and two prompts. The read
+  tools take a document as `content` as readily as a `path`, so a table an
+  agent is drafting in context needs no temp file; `content` mode names the
+  imports and charts it could not verify under `skipped` rather than letting
+  them read as a clean pass. Results are the existing `--json` envelope, not a
+  reshaped one, and a document with findings is a **successful** tool call.
+  `visimark_fmt` and `visimark_infer` only plan; `visimark_fmt_apply` and
+  `visimark_infer_apply` write, and are refused unless the operator started
+  the server with `--allow-write` **and** the host declared a root — no roots
+  means no writes — and refused again if the document moved since the plan was
+  computed. Install with `npm i -g visimark-mcp` or `bun add -g visimark-mcp`;
+  run with `npx visimark-mcp` or `bunx visimark-mcp`.
+  See [`mcp.md`](docs/mcp.md) and
+  [`mcp-server-spec.md`](docs/design/mcp-server-spec.md).
+
 - **`fmt --no-artifacts`** (issue #168). Declines the write of generated
   artifacts — the SVGs a `chart` statement declares — and nothing else.
   Computed cells, anchored values and import stamps are still spliced, and

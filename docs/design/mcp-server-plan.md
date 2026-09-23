@@ -393,7 +393,7 @@ export { resolveArtifactPath, type PathResult } from "./artifact/path.js";
 
 ## Task 10 — Documentation
 
-- [ ] The final task. Every file that states the current behaviour, from spec §7.
+- [x] The final task. Every file that states the current behaviour, from spec §7.
 
 **Files**
 
