@@ -305,13 +305,34 @@ So the plugin builds no reader and no hash. It prefetches text and hands
 **The design: prefetch, then serve from a snapshot.** Three phases, and the
 first is the reason it works.
 
-1. **Collect.** `locate(source)` yields the declared `import … from <path>`
-   declarations and the `chart` image paths **before any evaluation happens**.
-   Both classes are syntactic. There is no third class: nothing in the engine
-   asks the reader for a path that a parse of the document did not name.
-2. **Prefetch.** For each collected path, resolved relative to the note's
-   folder: `await vault.adapter.read(p)`, then
-   `await crypto.subtle.digest("SHA-256", bytes)`. Store `{ text, sha256 }`.
+1. **Collect, by asking the engine.** Run `check` against a reader that has
+   nothing and record every path it is asked for.
+
+   This section originally said to read the declared `import … from <path>`
+   declarations and the `chart` image paths off `locate(source)`, on the
+   grounds that both classes are syntactic and there is no third class. The
+   grounds are right and the method is not: re-deriving them is a second
+   implementation of *what does this document read*, maintained in a plugin,
+   against a model whose shape is the engine's business — and on the day the
+   engine grows a third class, it returns a set that is quietly too small and
+   the plugin reports a spurious `IMPORT` finding on a file that is right
+   there. Asking cannot drift.
+
+   It also turns the invariant into a checked property rather than a sentence
+   here. If nothing in the engine asks for a path a parse did not name, then
+   requests are syntactic, cannot depend on what the reader answered, and one
+   fetch round is always enough — which the plugin's tests assert across the
+   worked-example corpus. Implemented in
+   [#205](https://github.com/michal-niedzwiedzki/visimark/issues/205).
+2. **Prefetch.** For each recorded path, translated into vault space:
+   `await vault.adapter.read(p)`. Store the text. **No digest is computed
+   here** — `crypto.subtle.digest` is asynchronous and unnecessary, because the
+   engine ships a synchronous SHA-256 that `memoryReader` already runs on. The
+   asynchrony is confined to fetching bytes.
+
+   Repeat 1 and 2 until a round asks for nothing new. A round that keeps
+   discovering means the invariant above is false, and the plugin throws with
+   the paths named rather than looping.
 3. **Serve.** Call `check(model, { doc: { path, reader } })` with
    `memoryReader((p) => snapshot.get(p))`. Its four methods answer from the
    map: `exists` is membership, `realpath` is identity, `readText` returns the
@@ -336,12 +357,19 @@ snapshot, `exists` answers false, and the engine emits the `IMPORT` finding it
 already emits for a missing file. The vault root is the gate, and it is
 Obsidian's gate, not a second one written here.
 
-**The invariant phase 1 rests on is asserted, not assumed.** A test in
-`packages/visimark` wraps a recording reader around the acceptance corpus,
-logging every path any phase asks for, and asserts the set equals the paths
-declared in the source. If the engine ever grows a third class of read, that
-test goes red in the engine's own suite — where it belongs — rather than as a
-mystery `null` inside a plugin.
+**The invariant phase 1 rests on is asserted, not assumed** — and in the
+design above it is asserted by the mechanism rather than beside it. Discovery
+loops to a fixed point, so a third class of read does not produce a mystery
+`null`: it produces a second round, which the corpus test notices and which
+`MAX_ROUNDS` turns into a named failure. `editors/obsidian/test/snapshot.test.ts`
+asserts that every `docs/example-*.md` settles in one fetch round, and that a
+vault-backed read gives the same findings as `onDisk()` — the comparison, not
+an expectation, because a wrong digest reports every import as stale and looks
+like a content mismatch rather than a bug.
+
+Whether the engine's own suite should carry a recording-reader test as well is
+worth a line in `packages/visimark`; the recording reader itself is the
+plugin's, and belongs where it is used.
 
 ### 2.7 The plugin API
 
