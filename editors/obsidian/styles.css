@@ -193,3 +193,52 @@
   outline: 2px solid var(--interactive-accent);
   outline-offset: 2px;
 }
+
+/* --- Explain and Evaluate (v1 row 4) -------------------------------------- */
+
+.visimark-explain-rule {
+  background: var(--code-background);
+  border-radius: var(--radius-s);
+  font-size: var(--font-smaller);
+  margin: 0 0 var(--size-4-3);
+  overflow-x: auto;
+  padding: var(--size-4-2);
+}
+
+.visimark-explain-value {
+  font-size: var(--font-ui-medium);
+  margin: 0 0 var(--size-4-2);
+}
+
+.visimark-explain-inputs {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  margin: 0 0 var(--size-4-1);
+}
+
+/*
+ * A description list, so a screen reader reads each name with its value rather
+ * than as two unrelated columns.
+ */
+.visimark-values {
+  display: grid;
+  gap: var(--size-2-2) var(--size-4-3);
+  grid-template-columns: auto 1fr;
+  margin: 0;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.visimark-value-name {
+  color: var(--text-muted);
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-small);
+  margin: 0;
+}
+
+.visimark-value-value {
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-small);
+  margin: 0;
+  overflow-wrap: anywhere;
+}

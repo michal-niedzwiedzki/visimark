@@ -13,7 +13,11 @@ each v1 row is its own issue.
 ## What is built so far
 
 **v1 row 1** ([#200](https://github.com/michal-niedzwiedzki/visimark/issues/200)):
-the browser bundle and the activation gate. **v1 row 9** ([#219](https://github.com/michal-niedzwiedzki/visimark/issues/219)):
+the browser bundle and the activation gate. **v1 row 4** ([#221](https://github.com/michal-niedzwiedzki/visimark/issues/221)):
+the five commands — Check, Format, Infer, Evaluate, Explain — each scoped to
+the active note.
+
+**v1 row 9** ([#219](https://github.com/michal-niedzwiedzki/visimark/issues/219)):
 the public API — `app.plugins.plugins["visimark"].api`, so another plugin or an
 agent can ask this vault for a verified number instead of reading the Markdown
 and doing the arithmetic itself.

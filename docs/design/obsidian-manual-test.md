@@ -203,6 +203,7 @@ implemented is not a failure; it is not yet a test.
 |---|---|---|
 | §2.1 activation | v1 constraint 4 | **yes**, since [#200](https://github.com/michal-niedzwiedzki/visimark/issues/200) |
 | §2.6 format, declined artifact | v1 row 7 (repair half) | **partly**, since [#213](https://github.com/michal-niedzwiedzki/visimark/issues/213) — the findings view's per-row repair; format-on-save is still row 7 |
+| §2.4 the five commands | v1 row 4 | **yes**, since [#221](https://github.com/michal-niedzwiedzki/visimark/issues/221) |
 | §2.9 the plugin API | v1 row 9 | **yes**, since [#219](https://github.com/michal-niedzwiedzki/visimark/issues/219) — its comparison against `eval --get` is asserted in `editors/obsidian/test/api.test.ts`; what is left is that the call is made against the documented surface |
 | §2.7 `infer` on a pasted table | v1 row 5 | **yes**, since [#217](https://github.com/michal-niedzwiedzki/visimark/issues/217) — its "rewrites no existing byte" is asserted by reconstruction, which is stronger than the `git diff` this section asks for |
 | §2.8 the vault sweep | v1 row 8 | **yes**, since [#215](https://github.com/michal-niedzwiedzki/visimark/issues/215) — and its fixture is asserted in `editors/obsidian/test/sweep.test.ts`, so what is left for a person is the phone |
@@ -248,12 +249,22 @@ enabled**, on desktop and on a phone.
 
 ### 2.4 The five commands — v1 row 4
 
-For each of Check, Format, Infer, Evaluate, Explain, run the command from the
+For each of **Check this note**, **Format this note**, **Infer the formulas**,
+**Evaluate this note** and **Explain this value**, run the command from the
 palette on `example-invoice.md` and on `example-invoice-drift.md`.
 
 - **Pass condition:** each result matches the CLI's result for the same file,
   run from the repository. This is the acceptance for "one engine, thin
   client", and it is a diff, not an impression.
+- **Explain** needs the caret on a value first. Try all three places a caret
+  plausibly is: on an anchored number in a sentence, inside the
+  `<!--vmark=…-->` comment behind it, and on the line that declares the name.
+  All three answer with the same name, and `at-cursor.test.ts` pins that. A
+  caret in ordinary prose must say to move it rather than explain something
+  nearby.
+- **Format** on the drifted note repairs every value and writes **no chart**;
+  the stale-chart row stays in the findings view. That is the
+  `--no-artifacts` contract, and §2.6 is where it is checked properly.
 
 ### 2.5 Nothing is written without an explicit act — v1 constraint 3
 

@@ -218,14 +218,31 @@ that element rather than introducing one.
 
 Five, mirroring the CLI's verbs, each scoped to the active note (v1 row 4).
 
+**Named "<verb> this note" rather than the bare verb.** The palette is
+searchable by the word someone read in the documentation *and* reads as a
+sentence to someone who has read none of it, which is the audience this client
+is for. The verbs are unchanged and are what the table below lists.
+
 | Command | Engine path | Writes |
 |---|---|---|
 | **VisiMark: Check** | `analyze(source)` | never |
 | **VisiMark: Format** | `planFmt` → preview → `applyEdits` | on the explicit invocation only |
 | **VisiMark: Infer** | `infer` → `planInfer` → preview → `applyEdits` | on the explicit invocation only, inserts only |
 | **VisiMark: Evaluate** | `analyze(source)`, values by name | never |
-| **VisiMark: Explain** | `explainView` | never |
+| **VisiMark: Explain** | `explain` (§2.7) on the name the caret is on | never |
 | **VisiMark: Sweep the vault** | `analyze` over every note containing a fence | never |
+
+**Explain needs to know which name is being asked about**, and the document
+offers three answers to that: a caret can be in the binding line that declares
+a name, in a prose anchor that reads one, or in a table cell a column rule
+computes. The first two are spans the engine already records and
+`editors/obsidian/src/at-cursor.ts` answers from them, counting both halves of
+an anchor — the value and the comment that binds it — because in reading mode
+the comment is invisible and in Live Preview it is not, so a caret "on the
+number" lands in either. The third is not a span the engine records, and the
+plugin **does not guess**: it answers with nothing and says to move the caret,
+because Explain shows one name and showing the wrong one confidently is worse
+than asking.
 
 The sweep is the sixth and has no CLI twin — it is the row that justifies fork
 B over the VS Code extension (v1 row 8), and it is read-only.
