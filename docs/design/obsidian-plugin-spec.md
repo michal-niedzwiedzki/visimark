@@ -1,6 +1,8 @@
 # The Obsidian plugin — feature spec
 
-**Status:** draft (#176) — the fork is decided, the v1 rows are not ·
+**Status:** draft (#176) — the fork is decided, the v1 rows are not.
+Row 1 has been built ([#200](https://github.com/michal-niedzwiedzki/visimark/issues/200)),
+and what it falsified is corrected in place: §2.1, §2.6, §5 and §9. ·
 **Date:** 2026-09-23 ·
 **Decision:** https://github.com/michal-niedzwiedzki/visimark/issues/176#issuecomment-5791675790
 
@@ -71,6 +73,16 @@ spec that does not say who it is for gets implemented for whoever is nearest.
   pass condition was that a third client needs no engine diff, and a spec that
   quietly spends that result has falsified it rather than used it. Where the
   engine does not reach, §2.6 builds the missing piece *inside the plugin*.
+
+  Building row 1 found one the spec had not anticipated, and it was filed and
+  shipped on its own issue rather than inside a plugin PR, exactly as §6 says
+  it must be:
+  [#201](https://github.com/michal-niedzwiedzki/visimark/issues/201), the
+  engine's browser-safe entry point. It is additive — a new module of
+  `export … from` lines, zero deletions, no published entry point changed —
+  which is the *second* half of spike check 1's stated pass condition ("zero
+  lines of engine diff, **or additive exports only**"). The spike is not spent;
+  this is the first thing to exercise its browser half.
 - **The three spike gaps** —
   [#189](https://github.com/michal-niedzwiedzki/visimark/issues/189),
   [#190](https://github.com/michal-niedzwiedzki/visimark/issues/190),
@@ -104,9 +116,23 @@ editors/
 ```
 
 It depends on the engine as `"visimark": "workspace:*"`, exactly as
-`packages/visimark-lsp` and `editors/vscode` do, and it imports from
-`"visimark"` and nothing else — no path into `src/eval/` or `src/model/`. That
-is the same condition the two shipped clients meet and it is not relaxed here.
+`packages/visimark-lsp` and `editors/vscode` do, and it imports one engine
+specifier and nothing else — no path into `src/eval/` or `src/model/`. That is
+the same condition the two shipped clients meet and it is not relaxed here.
+
+**The specifier is the engine's browser-safe entry point, not `index.ts`.**
+This was written expecting `"visimark"` and the expectation was wrong: the
+public entry point cannot be bundled for a browser at all. It reaches
+`node:fs`, `node:crypto`, `node:module` and `node:url` through exports made on
+purpose — `nodeReader`/`onDisk`, `runCli`, `readVersion`, `writeArtifact` — and
+a bundler resolves before it tree-shakes, so nine specifiers fail to resolve
+before anything is shaken. Nobody had hit it because no browser consumer went
+through `index.ts`: the playground enters at `playground/browser-entry.ts` and
+imports the engine by path. `packages/visimark/src/browser.ts`
+([#201](https://github.com/michal-niedzwiedzki/visimark/issues/201)) is the
+named boundary, a subset of `index.ts` enforced by test, and it is what the
+plugin imports. The condition above is unchanged in substance: one engine
+specifier, no reach into internals.
 
 **The plugin does not go through `visimark-lsp`.** Obsidian has no language
 server client and no diagnostics surface to feed. The plugin is a third client
@@ -142,7 +168,8 @@ the walk cannot go blind.
 The bundle's size is recorded as a checked ceiling, in the shape
 [#191](https://github.com/michal-niedzwiedzki/visimark/issues/191) settles for
 the playground bundle. It gets its own number: a plugin ships one `main.js` and
-the registry's reviewers read its size.
+the registry's reviewers read its size. Row 1 recorded it — **161,078 bytes**
+on 2026-09-23, with the same 10% margin and the same rule for bumping it.
 
 **Versioning is independent of the npm packages.** The three published packages
 share one version and a `vX.Y.Z` tag releases the set. The plugin does not join
@@ -177,6 +204,16 @@ The commands in §2.4 remain registered and are no-ops with a plain notice on a
 note with no fence — a command palette that hides and unhides entries as the
 active note changes is worse than one that answers.
 
+**One surface is pulled forward into row 1: a status bar item that reports the
+gate.** Manual test §2.1's pass condition has a positive half — *open
+`example-invoice.md`, VisiMark activates* — and every surface that could show
+it otherwise belongs to a later row, which would leave row 1 acceptable by unit
+test alone and §2.1 half-runnable until row 12. So row 1 ships the smallest
+observable thing: an item reading `VisiMark` when `locate` found a block,
+hidden when it did not, with no verdict, no count and no engine call beyond the
+gate's own parse. Row 12 adds the ribbon and the checked / findings states to
+that element rather than introducing one.
+
 ### 2.4 Commands
 
 Five, mirroring the CLI's verbs, each scoped to the active note (v1 row 4).
@@ -192,6 +229,25 @@ Five, mirroring the CLI's verbs, each scoped to the active note (v1 row 4).
 
 The sweep is the sixth and has no CLI twin — it is the row that justifies fork
 B over the VS Code extension (v1 row 8), and it is read-only.
+
+**Explain is blocked, and the blocker is not in the plugin.** `explainView`
+lives in `report/explain.ts`, which imports `readVersion()` from
+`cli/version.ts`, which imports `node:module` — so it cannot enter a browser
+bundle at all. `docs/design/cross-host-equivalence-check-spec.md` §2 found this
+first, from the other side, and calls its own workaround "closer to forced than
+chosen": it builds the `--json` envelope host-side, outside the bundle. The
+same wall stands in front of the whole envelope, which §2.7's `explain` and any
+future JSON output would want.
+
+Making it browser-safe means making the engine's own version injectable rather
+than read through `createRequire` at module scope. That is a change to modules
+neither this spec nor
+[#201](https://github.com/michal-niedzwiedzki/visimark/issues/201) touches, and
+"what version does a browser host report" is a real decision with
+[#189](https://github.com/michal-niedzwiedzki/visimark/issues/189) downstream
+of it. **The row that implements Explain files it first.** Until then Explain
+is not a v1 row that can be started, and §9 records it as the spec's one open
+question.
 
 **The sweep's row states a size bound before it is filed.** An on-demand scan
 of every note containing a fence is the whole feature, and it is also the one
@@ -226,9 +282,24 @@ digest. Obsidian's vault adapter is **asynchronous**, and in a browser context
 the only hash available is `crypto.subtle.digest`, which is also asynchronous.
 A vault-backed `ReaderPort` therefore cannot be written as a direct adapter.
 
-Two bad answers, rejected: make the port async (an engine change, spending the
-spike result this spec is built on), or ship a synchronous SHA-256 into the
-bundle (weight, and a second hash implementation to keep honest).
+One bad answer, rejected: make the port async — an engine change, spending the
+spike result this spec is built on.
+
+**A second answer was rejected on a premise that turned out to be false, and is
+now the design.** This section originally rejected "ship a synchronous SHA-256
+into the bundle" for its weight and for "a second hash implementation to keep
+honest". That implementation is already in the tree and already honest:
+`packages/visimark/src/playground/sha256.ts` is a dependency-free synchronous
+SHA-256, and `test/playground/sha256.test.ts` pins it against the FIPS 180-4
+vectors *and* against `node:crypto` over randomised inputs. Its sibling
+`playground/memory-reader.ts` is a map-backed synchronous `ReaderPort` built on
+it, written for exactly this shape of problem in the playground. Both are
+reachable from the browser-safe entry point
+([#201](https://github.com/michal-niedzwiedzki/visimark/issues/201)), which
+exports them because `index.ts` never did.
+
+So the plugin builds no reader and no hash. It prefetches text and hands
+`memoryReader` a lookup over the result.
 
 **The design: prefetch, then serve from a snapshot.** Three phases, and the
 first is the reason it works.
@@ -240,10 +311,14 @@ first is the reason it works.
 2. **Prefetch.** For each collected path, resolved relative to the note's
    folder: `await vault.adapter.read(p)`, then
    `await crypto.subtle.digest("SHA-256", bytes)`. Store `{ text, sha256 }`.
-3. **Serve.** Call `check(model, { doc: { path, reader } })` with a reader whose
-   four methods answer from the map: `exists` is `has`, `realpath` is identity,
-   `readText` returns the text or `null`, `readSealed` returns the cached pair
-   or `null`.
+3. **Serve.** Call `check(model, { doc: { path, reader } })` with
+   `memoryReader((p) => snapshot.get(p))`. Its four methods answer from the
+   map: `exists` is membership, `realpath` is identity, `readText` returns the
+   text or `null`, and `readSealed` hashes the bytes held *now* with
+   `sha256Hex` — never a precomputed digest, or the stamp check is theatre.
+   Phase 2 therefore needs only `vault.adapter.read`, not
+   `crypto.subtle.digest`: the asynchrony that made a direct adapter impossible
+   is confined to fetching text.
 
 **Why this preserves `readSealed`'s guarantee rather than working around it.**
 The port's contract is that the digest describes *the bytes that were actually
@@ -284,6 +359,13 @@ interface VisiMarkApi {
 
 Reached as `app.plugins.plugins["visimark"].api`. Every method is async,
 because every one of them goes through §2.6's prefetch.
+
+`explain` is the exception to "row 9 is small": it returns an `ExplainView`,
+and `explainView` cannot be bundled for a browser today for the reason §2.4
+gives. Row 9 either ships without `explain` and adds it when that is fixed —
+`apiVersion` is semver'd and adding a method is not a break — or waits. It does
+not reimplement the view, which would be a second contract over the one thing
+the API exists to make single.
 
 **Values are strings, never numbers.** A JavaScript number cannot carry a
 declared width, and the width is the point
@@ -391,7 +473,7 @@ script, this is the contract.
 | The published npm packages (`visimark`, `visimark-lsp`, `visimark-mcp`, `remark-visimark`, `markdownlint-visimark`) | five packages | unchanged. The plugin is not published to npm |
 | [`.agents/rules/runtime-parity.md`](../../.agents/rules/runtime-parity.md) | a published package with no `bin` gains no launcher and no second CI job | unchanged, and it applies: `editors/obsidian` has no `bin`, so no `sh` launcher, no `acceptance-node` leg, no `smoke-bun` leg |
 | Workspace root | `packages/*`, `editors/*` | `editors/obsidian` is picked up by the existing globs; `bun test` walks it |
-| `ci.yml` | builds and tests the workspace | one added step: build `main.js` and run `bundle.test.ts`. No new job |
+| `ci.yml` | builds and tests the workspace | **nothing.** `bun run build` and `bun run typecheck` are `--filter '*'` and `bun test` walks the tree, so the package joins all three by existing. Row 1 confirmed it: no workflow edit, no new job, no added step |
 | `release.yml` | npm publish on tag, plus the MCP registry leg | unchanged for v1. The plugin ships as GitHub release assets on its own version, outside the npm tag (§2.2) |
 | Every existing CI job, script and composite-Action invocation | — | **none behaves differently.** Nothing in this spec touches the engine, the CLI, `--json`, exit codes, or any published manifest |
 
@@ -402,10 +484,14 @@ script, this is the contract.
 - **`visimark-mcp`** — untouched. An agent that wants a vault number goes
   through §2.7's API from inside Obsidian, or through the MCP server from
   outside against a path; these do not meet.
-- **The engine** — **no change**, and that is a specified property, not an
-  accident. If a row's implementation finds it needs one, that is new
-  information about spike check 1 and belongs on the section-F catalogue row
-  *Shared build across the document phases*, not in a plugin PR.
+- **The engine** — **no behaviour change**, and that is a specified property,
+  not an accident. If a row's implementation finds it needs one, that is new
+  information about spike check 1 and belongs on its own issue, not in a plugin
+  PR. Row 1 found one and it went to
+  [#201](https://github.com/michal-niedzwiedzki/visimark/issues/201) — additive
+  exports only. The section-F catalogue row *Shared build across the document
+  phases* is the wider question and is untouched by it, except that its
+  standing con "No motivating document needs it" is now false.
 - **[#189](https://github.com/michal-niedzwiedzki/visimark/issues/189)** — its
   scope is CLI `--json` against the browser bundle. The snapshot reader of §2.6
   is a natural third host for that corpus later; this spec does not widen #189.
@@ -458,10 +544,26 @@ ones worth naming because someone will ask:
 
 ## 9. Open questions
 
-**Empty.** Everything raised while drafting is resolved and recorded in the
-body rather than here: versioning independent of the npm packages (§2.2),
-side-loadable before the community registry (§2.2), Live Preview decorations
-inside v1 row 2 (§2.5), the finding vocabulary as plugin code (§3.2), and the
-sweep's size bound as a requirement on the row that files it (§2.4).
+**One, and it was found by building row 1 rather than by drafting.**
+
+**How does a browser host get `explainView` and the `--json` envelope?** Both
+reach `node:module` through `readVersion()` and therefore cannot be bundled
+(§2.4). It blocks v1 rows 3 and 4's Explain and §2.7's `explain`, and the
+answer is an engine decision — inject the version, or something else — not a
+plugin one. The row that needs it files it.
+
+Everything raised while drafting is resolved and recorded in the body rather
+than here: versioning independent of the npm packages (§2.2), side-loadable
+before the community registry (§2.2), Live Preview decorations inside v1 row 2
+(§2.5), the finding vocabulary as plugin code (§3.2), the sweep's size bound as
+a requirement on the row that files it (§2.4), and the activation witness in
+row 1 (§2.3).
+
+Two things this document asserted were checked while building row 1 and came
+back **false**, and both are corrected in place above rather than listed here:
+that the plugin could import `"visimark"` (§2.1 — it cannot; `index.ts` does
+not bundle for a browser), and that a synchronous SHA-256 would be a second
+implementation to keep honest (§2.6 — it already exists, and is already pinned
+against `node:crypto`).
 
 <!--vmark:no-formulas-->
