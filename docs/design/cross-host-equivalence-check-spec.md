@@ -144,32 +144,35 @@ non-empty-findings and the file-dependent-exclusion paths respectively.
 | A document with zero findings (`example-invoice.md`) | `check --json` exits 0, `status: "ok"` | Same envelope built from `VM.check()` | Deep-equal (version field excluded) |
 | A document with findings (`example-invoice-drift.md`) | `check --json` exits 1, `findings` populated | Same | Deep-equal |
 | A document with an assertion, evaluated (`example-invoice.md`'s `assert variance == 0`, which holds) | `eval --json` exits 0, `assertions` includes it with `holds: true` | Built from `VM.check()`'s `assertions` via `publicAssertions` | Deep-equal |
-| An import-dependent document with no reader supplied (`example-invoice-csv-import.md`) | `check --json`: import resolves against the real file, `state: "current"` or similar — a live read | `VM.check()` with no `ReaderPort`: import `state: "skipped"` | **Not** expected to be equal on the import's own `state`/`details` — see below |
-| A chart-dependent document (`example-charts.md`) | `check --json`: chart built and written, or a `STALE`/`artifact missing` finding against the real filesystem | `VM.check()` with no chart writer: chart `state: "skipped"` | **Not** expected to be equal on the chart's own `state` |
+| An import-dependent document with no reader supplied (`example-invoice-csv-import.md`) | `check --json`: import resolves against the real file, no cascading findings (clean) | `VM.check()` with no `ReaderPort`: import `state: "skipped"`, and `eval/check.ts`'s "neverAttempted" suppression drops every UNDEF a missing table would otherwise cascade — **`check --json`'s `findings`/`summary` are already deep-equal, no scoping needed.** `explain --json` is not suppressed the same way: it surfaces `sheets[*].hasTable: false`, `import.stampStatus: "skipped"`, `inputs: []`, and drops each scalar's `precision`/`precisionFrom` (nothing to derive a width from) — those five field names are excluded from the `explain` comparison on this document only. |
+| A chart-dependent document (`example-charts.md`, and `example-onboarding-dashboard.md` — both `chart`-bearing; the earlier framing of "two file-reading documents" undercounted by one) | `check --json`: clean, same suppression as above | `VM.check()` with no chart writer: `checkCharts`'s own "skipped" suppression keeps `check --json` deep-equal too. `explain --json` surfaces the difference as each chart's `state` (`"current"` vs `"skipped"`) — that one field name is excluded from the `explain` comparison on these two documents only. |
 | Number formatting | `Value.d.toString()` on whatever numeric representation the engine holds | Same code path, same representation (the engine's arithmetic is host-independent by construction — decimal, not floating-point-sensitive; `.d` is not a raw JS float subject to platform rounding) | Deep-equal |
 | JSON key order | Built by object-literal construction in `report/json.ts`, deterministic given the same input | Same functions, same call shape | Deep-equal once parsed (moot for a structural comparison, but true anyway) |
 
-**The two file-reading documents are not excluded from the run**, but their
-comparison is **scoped**: the harness asserts that every other field of the
-envelope matches (the document's other findings, values, assertions, and
-non-file-dependent charts), and separately asserts that the file-dependent
-entries are `skipped` (or the finding that names them) on the browser side —
-it does not require the CLI's live-file result to equal the browser's
-no-reader result for that one entry, because they are legitimately different
-answers to "was this readable," not a divergence in the engine's semantics.
-This is the "whole envelope including `skipped`" comparison the issue
-proposed, made precise: whole-envelope equality **except** the entries whose
-difference is explained by "no reader was supplied," which is asserted
-structurally rather than silently ignored.
+**The three file-dependent documents are not excluded from the run.**
+Verified empirically by running both hosts' real output side by side, not
+guessed: `check --json` needs **no scoping at all**, on any of the twelve
+documents — the engine's own "neverAttempted"/`skipped` suppression
+(`eval/check.ts`, `eval/check-charts.ts`) already makes both hosts agree
+without help, which is rather the point of that suppression existing.
+`eval --json` needs no scoping either, for the structural reason below.
+Only **`explain --json`**, on exactly the three documents named in the table
+above, needs specific field names excluded from the comparison — five for the
+import document, one for each of the two chart documents — and every other
+field (the document's other sheets, rules, order, assertions, non-excluded
+chart fields) is still compared and must still agree. This is the "whole
+envelope including `skipped`" comparison the issue proposed, made precise and
+narrower than originally scoped: not "check and explain," and not two
+documents but three.
 
-**The scoping exception applies to `check` and `explain` only, not `eval`.**
-`cmdCheck` and `cmdExplain` both call `check(build(locate(source)), { doc:
-onDisk(path) })` — a real reader — on the CLI side, which is what creates the
-CLI/browser difference on the two file-reading documents. `cmdEval` calls
-`check(model)` with **no** reader argument at all, on the CLI side, same as
-the browser side; the two hosts are expected to be plainly deep-equal (no
-scoping) on `eval --json` for every one of the twelve documents, including the
-two file-reading ones.
+**The scoping exception applies to `explain` only, not `check` or `eval`.**
+`cmdExplain` calls `check(build(locate(source)), { doc: onDisk(path) })` — a
+real reader — on the CLI side, which is what creates the CLI/browser
+difference `explain --json` surfaces (`check --json`'s own suppression hides
+the same underlying difference). `cmdEval` calls `check(model)` with **no**
+reader argument at all, on the CLI side, same as the browser side; the two
+hosts are expected to be plainly deep-equal (no scoping) on `eval --json` for
+every one of the twelve documents, including the three file-dependent ones.
 
 ## 5. Type rules and errors
 

@@ -2,6 +2,18 @@
 
 **Spec:** [`cross-host-equivalence-check-spec.md`](cross-host-equivalence-check-spec.md)
 
+**Implementation note (Task 2, discovered while building the orchestrator,
+folded back into the spec):** two things below turned out narrower and more
+precise than planned. `check --json` needs **no** scoped exclusions at all —
+the engine's own `skipped`-state suppression already makes both hosts agree,
+verified empirically — so only `explain --json` needs any. And the
+file-dependent documents are **three**, not two: `example-onboarding-dashboard.md`
+also has a `chart` statement (`grep -l '^chart ' docs/example-*.md`), which
+the issue's original framing missed. The spec's §4 and Tasks 2/4 below reflect
+this; treat the code (`scripts/cross-host-check.ts`'s
+`EXPLAIN_ONLY_EXCLUDED_KEYS`) as authoritative over this plan's earlier
+per-step prose where they'd otherwise disagree.
+
 ## Goal
 
 Add a CI check that runs `check`, `eval`, and `explain --json` for each of the
@@ -59,7 +71,7 @@ existing engine modules (`report/json.ts`, `report/explain.ts`, `eval/check.ts`,
 
 ## Task 1: The pure comparator — `scripts/cross-host-compare.ts`
 
-- [ ] Task 1
+- [x] Task 1
 
 **Files:**
 - `scripts/cross-host-compare.ts` (new)
@@ -119,7 +131,7 @@ export function compareEnvelopes(
 
 ## Task 2: The orchestrator — `scripts/cross-host-check.ts`
 
-- [ ] Task 2
+- [x] Task 2
 
 **Files:**
 - `scripts/cross-host-check.ts` (new)
