@@ -45,6 +45,8 @@ if (!bin) {
 
 function fail(message) {
   console.error(`mcp-handshake: ${message}`);
+  if (stderr.trim() !== "") console.error(`--- the server's stderr ---\n${stderr.trimEnd()}`);
+  if (exited) console.error(`--- the server exited: ${JSON.stringify(exited)} ---`);
   process.exit(1);
 }
 
@@ -55,7 +57,23 @@ child.stderr.on("data", (chunk) => {
   stderr += String(chunk);
 });
 
+// A server that dies on an unresolved import looks exactly like one that is
+// slow to answer, so say which it was. Without this, every startup failure
+// reported itself as "initialize timed out" and hid the reason.
+let exited = null;
+child.on("exit", (code, signal) => {
+  exited = { code, signal };
+  for (const [, reject] of waiting) {
+    reject(new Error(`the server exited (code ${code}, signal ${signal}) before answering`));
+  }
+  waiting.clear();
+});
+child.on("error", (e) => {
+  fail(`could not launch ${bin}: ${e.message}`);
+});
+
 const pending = new Map();
+const waiting = new Map();
 let buffer = "";
 child.stdout.on("data", (chunk) => {
   buffer += String(chunk);
@@ -87,9 +105,17 @@ function send(message) {
 
 function request(id, method, params) {
   return new Promise((resolve, reject) => {
-    pending.set(id, resolve);
+    if (exited) {
+      reject(new Error(`the server exited (code ${exited.code}) before ${method}`));
+      return;
+    }
+    waiting.set(id, reject);
+    pending.set(id, (message) => {
+      waiting.delete(id);
+      resolve(message);
+    });
     send({ jsonrpc: "2.0", id, method, params });
-    setTimeout(() => reject(new Error(`${method} timed out`)), 20000).unref?.();
+    setTimeout(() => reject(new Error(`${method} timed out after 20s`)), 20000).unref?.();
   });
 }
 
@@ -132,9 +158,41 @@ try {
     }
   }
 
+  // Listing tools proves the server started. Calling one proves the engine it
+  // imports actually loaded and ran — a different failure, and the one a
+  // resolution problem in the installed tree produces.
+  const called = await request(3, "tools/call", {
+    name: "visimark_check",
+    arguments: { content: "| Item | Qty |\n|---|---:|\n| a | 1 |\n" },
+  });
+  if (called.error) fail(`tools/call failed: ${JSON.stringify(called.error)}`);
+  if (called.result?.isError) {
+    fail(`visimark_check reported a tool error: ${JSON.stringify(called.result.content)}`);
+  }
+  let body;
+  try {
+    body = JSON.parse(called.result.content[0].text);
+  } catch {
+    fail(`visimark_check did not return a JSON envelope: ${JSON.stringify(called.result)}`);
+  }
+  // A table with no rules is a COVERAGE problem, and a **successful** call
+  // reporting it — the whole §3.1 contract, end to end over a real pipe.
+  if (body.command !== "check" || body.status !== "problems") {
+    fail(
+      `expected a successful check reporting problems, got ${JSON.stringify(body).slice(0, 200)}`,
+    );
+  }
+  if (!body.findings?.some((f) => f.code === "COVERAGE")) {
+    fail(`expected a COVERAGE finding, got ${JSON.stringify(body.findings).slice(0, 200)}`);
+  }
+  if (!/^\d+\.\d+\.\d+/.test(body.visimark ?? "")) {
+    fail(`the envelope's engine version is not a version: ${body.visimark}`);
+  }
+
   if (stderr.trim() !== "") fail(`unexpected stderr: ${stderr.trim().slice(0, 200)}`);
   console.log(
-    `mcp-handshake: ok — ${names.length} tools from visimark ${init.result.serverInfo.version}`,
+    `mcp-handshake: ok — ${names.length} tools, server ${init.result.serverInfo.version},` +
+      ` engine ${body.visimark}, and visimark_check ran`,
   );
   child.kill();
   process.exit(0);

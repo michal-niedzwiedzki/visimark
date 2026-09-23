@@ -296,18 +296,38 @@ jobs:
           if command -v bun >/dev/null 2>&1; then
             echo "::error::bun is present; smoke-node must be Node-only"; exit 1
           fi
-          # Both tarballs in one install so the MCP server's exact `visimark`
-          # pin is satisfied by the engine built in this run. Installed
-          # separately it would resolve that pin from the registry, which works
-          # only while the version is already published — that is, on every
-          # commit except the release-prep one where it matters.
+          # Both tarballs in one install. npm dedupes the MCP server's exact
+          # `visimark` pin against the sibling tarball; bun does not, so the
+          # handshake step below installs the packed engine explicitly rather
+          # than trusting either to. Installing the engine here also keeps the
+          # `visimark` command itself under test.
           npm i -g "./$(ls visimark-[0-9]*.tgz)" "./$(ls visimark-mcp-*.tgz)"
           vm="$(npm prefix -g)/bin/visimark"
           "$vm" --version | grep -qE '^visimark [0-9]'
           printf '# smoke\n' > smoke.md
           "$vm" check smoke.md
       - name: the MCP server speaks the protocol under Node only
-        run: node handshake.mjs "$(npm prefix -g)/bin/visimark-mcp"
+        run: |
+          set -e
+          MCP_BIN="$(npm prefix -g)/bin/visimark-mcp"
+          # Install the engine tarball *into* the MCP package, replacing
+          # whatever the package manager resolved for its exact `visimark`
+          # pin. This is not belt-and-braces: `bun add -g` fetches that pin
+          # from the registry even when the engine tarball is named in the
+          # same command, so without this the job silently exercises the
+          # published engine instead of the one this run built — and a fix
+          # already on master would not be under test. `npm i -g` happens to
+          # dedupe against the sibling tarball, but relying on that difference
+          # is how the two jobs stop testing the same thing.
+          mcp_root=$(cd "$(dirname "$(readlink -f "$MCP_BIN")")/.." && pwd)
+          rm -rf "$mcp_root/node_modules/visimark"
+          mkdir -p "$mcp_root/node_modules/visimark"
+          tar -xzf "$(ls visimark-[0-9]*.tgz)" -C "$mcp_root/node_modules/visimark" --strip-components=1
+          # and prove it is the one from this run, not a registry copy
+          packed=$(tar -xzOf "$(ls visimark-[0-9]*.tgz)" package/package.json | tr -d ' \n')
+          installed=$(tr -d ' \n' < "$mcp_root/node_modules/visimark/package.json")
+          [ "$packed" = "$installed" ] || { echo "::error::the engine under test is not the packed one"; exit 1; }
+          node handshake.mjs "$MCP_BIN"
 
   smoke-bun:
     needs: pack
@@ -333,6 +353,8 @@ jobs:
           # bun add -g needs an absolute tarball path; a relative ./x.tgz is
           # parsed as a package name.
           # Both tarballs in one install, for the reason smoke-node gives.
+          # Note that this does *not* satisfy the MCP server's `visimark` pin
+          # from the local tarball under bun — the handshake step does that.
           bun add -g "$(pwd)/$(ls visimark-[0-9]*.tgz)" "$(pwd)/$(ls visimark-mcp-*.tgz)"
           visimark --version | grep -qE '^visimark [0-9]'
           printf '# smoke\n' > smoke.md
@@ -341,4 +363,22 @@ jobs:
         run: |
           set -e
           export PATH="$(bun pm bin -g):/usr/local/bin:/usr/bin:/bin"
-          bun handshake.mjs "$(bun pm bin -g)/visimark-mcp"
+          MCP_BIN="$(bun pm bin -g)/visimark-mcp"
+          # Install the engine tarball *into* the MCP package, replacing
+          # whatever the package manager resolved for its exact `visimark`
+          # pin. This is not belt-and-braces: `bun add -g` fetches that pin
+          # from the registry even when the engine tarball is named in the
+          # same command, so without this the job silently exercises the
+          # published engine instead of the one this run built — and a fix
+          # already on master would not be under test. `npm i -g` happens to
+          # dedupe against the sibling tarball, but relying on that difference
+          # is how the two jobs stop testing the same thing.
+          mcp_root=$(cd "$(dirname "$(readlink -f "$MCP_BIN")")/.." && pwd)
+          rm -rf "$mcp_root/node_modules/visimark"
+          mkdir -p "$mcp_root/node_modules/visimark"
+          tar -xzf "$(ls visimark-[0-9]*.tgz)" -C "$mcp_root/node_modules/visimark" --strip-components=1
+          # and prove it is the one from this run, not a registry copy
+          packed=$(tar -xzOf "$(ls visimark-[0-9]*.tgz)" package/package.json | tr -d ' \n')
+          installed=$(tr -d ' \n' < "$mcp_root/node_modules/visimark/package.json")
+          [ "$packed" = "$installed" ] || { echo "::error::the engine under test is not the packed one"; exit 1; }
+          bun handshake.mjs "$MCP_BIN"
