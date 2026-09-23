@@ -183,10 +183,78 @@ jobs:
             exit 1
           fi
 
+  # The Node support policy, enforced rather than written down and hoped for.
+  # Two assertions, and the second is the one that keeps the first honest:
+  #
+  #   1. Every `engines.node` floor equals the major that `lts/*` resolves to.
+  #      A floor nothing exercises is what this repository had before — the
+  #      manifests claimed `>=18` for seventeen months after Node 18 went EOL
+  #      and no job ever ran it.
+  #   2. No workflow pins a numeric Node version. The policy is "current LTS
+  #      and latest stable", and a literal `node-version: 20` is how that
+  #      policy silently stops being true. `lts/*` and `latest` cannot go
+  #      stale because they are not versions.
+  #
+  # This job goes red when Node promotes a new LTS. That is intended: the
+  # floor moves on a deliberate commit with a changelog entry, not by drifting.
+  # See .agents/rules/runtime-parity.md.
+  node-support-policy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "lts/*"
+      - name: every engines.node floor is the current LTS
+        run: |
+          set -euo pipefail
+          lts=$(node -p "process.versions.node.split('.')[0]")
+          echo "current LTS major: $lts"
+          fail=0
+          for manifest in packages/visimark/package.json packages/visimark-mcp/package.json; do
+            declared=$(node -p "require('./$manifest').engines?.node ?? ''")
+            floor=$(printf '%s' "$declared" | sed -n 's/^>=\([0-9][0-9]*\).*/\1/p')
+            if [ -z "$floor" ]; then
+              echo "::error file=$manifest::engines.node must be a \">=MAJOR\" range; found \"$declared\""
+              fail=1
+            elif [ "$floor" != "$lts" ]; then
+              echo "::error file=$manifest::engines.node says >=$floor but the current Node LTS is $lts. Bump every engines.node to >=$lts, say so in CHANGELOG.md, and update the prose in CONTRIBUTING.md and docs/ci.md. Do not pin this job to an older LTS to make it pass."
+              fail=1
+            fi
+          done
+          exit $fail
+      - name: no workflow pins a numeric Node version
+        run: |
+          set -uo pipefail
+          # The policy is an alias, not a number. `lts/*` and `latest` are the
+          # only accepted values; anything else is a pin that will rot.
+          # Anchored on the YAML key, so prose and this grep itself do not
+          # match. The accepted values are the two aliases and the matrix
+          # expression that expands to them.
+          bad=$(grep -rnE '^[[:space:]]*node-version:' .github/workflows/ \
+            | grep -vE 'node-version:[[:space:]]*"?lts/\*"?[[:space:]]*$' \
+            | grep -vE 'node-version:[[:space:]]*"?latest"?[[:space:]]*$' \
+            | grep -vF 'node-version: ${{ matrix.node }}' || true)
+          if [ -n "$bad" ]; then
+            echo "$bad" | while IFS= read -r line; do
+              echo "::error::$line — pin Node with lts/* or latest, never a number. See .agents/rules/runtime-parity.md."
+            done
+            exit 1
+          fi
+          echo "every node-version is lts/* or latest"
+
   # The published CLI must run under Node, not only Bun. Build with Bun (the
   # only supported build path), then exercise the built dist/ under Node.
   acceptance-node:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The support policy, stated as configuration rather than as numbers
+        # that go stale: the current LTS, and the latest stable as the canary
+        # that tells us about a break before users do. Both block.
+        # See .agents/rules/runtime-parity.md.
+        node: ["lts/*", "latest"]
     steps:
       - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
@@ -194,7 +262,7 @@ jobs:
           bun-version: latest
       - uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version: ${{ matrix.node }}
       - run: bun install --frozen-lockfile
       - run: bun run build
       - name: the built CLI runs under Node against the worked examples
@@ -280,10 +348,14 @@ jobs:
   smoke-node:
     needs: pack
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ["lts/*", "latest"]
     steps:
       - uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version: ${{ matrix.node }}
       - uses: actions/download-artifact@v8
         with:
           name: visimark-tarball

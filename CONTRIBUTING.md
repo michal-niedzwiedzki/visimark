@@ -89,7 +89,13 @@ $ bunx visimark check docs/example-invoice.md
 ```
 
 Node is not needed to develop, but the published CLI must run under it, so CI
-exercises that separately. VisiMark supports Node 18 and newer.
+exercises that separately. **VisiMark supports the current Node LTS and
+newer**, and CI runs the Node-facing jobs on the current LTS *and* on the
+latest stable release — both blocking, so a break on a new Node is caught here
+rather than by a user. The policy and how it is enforced are in
+[`.agents/rules/runtime-parity.md`](.agents/rules/runtime-parity.md); the
+`engines.node` floor in every published manifest is asserted against the live
+LTS by `ci.yml`'s `node-support-policy` job, so it cannot quietly rot.
 
 ### Running the MCP server from your working tree
 

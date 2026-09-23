@@ -43,6 +43,36 @@ launcher shim, so a `#!/usr/bin/env node` shebang makes the kernel hunt for
   work. The user-facing caveat stays in `docs/cli-reference.md` and the
   README.
 
+## Which Node
+
+**The supported floor is the current Node LTS.** CI runs every Node-facing job
+on the current LTS **and** on the latest stable release, and both block.
+
+- Workflows name Node with **`lts/*`** or **`latest`**, never a number. A
+  numeric pin is a fact about the day it was typed: `node-version: 20` was
+  written on 2026-09-07, four months after Node 20 went end-of-life, and
+  nothing noticed. Aliases cannot go stale because they are not versions.
+- **`engines.node` is `>=<current LTS major>`** in every published manifest,
+  and `ci.yml`'s `node-support-policy` job asserts it against the LTS that
+  `lts/*` actually resolves to. A floor no job exercises is not a support
+  claim; this repository carried `>=18` for seventeen months after Node 18
+  was EOL.
+- The latest-stable leg is **blocking**, not a soft canary. A break there is a
+  break for every user who upgrades, and a check nothing enforces is a check
+  that gets ignored.
+- `release.yml` uses `lts/*` too, though Node is only a tool there — npm does
+  the publishing. Tracking the alias keeps that file from drifting onto an EOL
+  runtime while `ci.yml` moves on.
+
+**When Node promotes a new LTS, `node-support-policy` goes red.** That is the
+design, not a defect: the floor moves on a deliberate commit — bump every
+`engines.node`, add a `CHANGELOG.md` entry, update the prose in
+`CONTRIBUTING.md` and `docs/ci.md` — rather than by drifting. Do **not** pin
+the job to an older LTS to make it pass.
+
+This says nothing about Bun. In-repo development stays Bun-first, and the
+`packageManager` pin in `package.json` is unaffected.
+
 In-repo `bun test`, `bun run`, and `bun packages/visimark/src/cli/main.ts` are
 development commands. They are not published invocations. This rule does not
 ask for an `npx` twin of any of them.

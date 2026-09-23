@@ -40,7 +40,10 @@ jobs:
           bun-version: latest
       - uses: actions/setup-node@v7
         with:
-          node-version: 20
+          # Node is a tool here, not the thing under test — npm does the
+          # publishing. It still tracks the LTS rather than a number, so this
+          # file cannot drift onto an EOL runtime while ci.yml moves on.
+          node-version: "lts/*"
           registry-url: https://registry.npmjs.org
 
       - run: bun install --frozen-lockfile

@@ -1042,7 +1042,7 @@ The same thing in a GitHub workflow, if you prefer not to use the Action:
           npx --yes visimark@0.1.5 check docs/**/*.md
 ```
 
-VisiMark needs Node 18 or newer, or Bun. On Windows the launcher needs `sh` on
+VisiMark needs the current Node LTS or newer, or Bun. On Windows the launcher needs `sh` on
 the PATH — Git Bash or WSL provide it, plain PowerShell does not.
 
 ## 22. GitLab CI
