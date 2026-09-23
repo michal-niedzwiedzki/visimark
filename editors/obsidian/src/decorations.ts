@@ -35,6 +35,16 @@ export interface Decoration {
   readonly name: string;
   /** a cell of a computed column, or a value bound into a sentence */
   readonly kind: "cell" | "anchor";
+  /**
+   * For a cell, which row of the table it is — the index into the column's
+   * values.
+   *
+   * A hover over one cell has to say what *that* cell comes to; a column's
+   * explanation carries every row's value, and showing all of them would
+   * answer a question nobody asked. Absent on an anchor, which is a single
+   * value by construction.
+   */
+  readonly row?: number;
 }
 
 const key = (span: Span): string => `${span.start}:${span.end}`;
@@ -61,7 +71,7 @@ export function decorationsFor(model: DocModel, result: CheckResult): Decoration
     for (const name of sheet.columns.keys()) {
       const index = sheet.columnIndex.get(name);
       if (index === undefined) continue;
-      for (const row of table.rows) {
+      for (const [rowIndex, row] of table.rows.entries()) {
         const cell = row.cells[index];
         // a ragged row is the author's, not ours to mark
         if (cell === undefined) continue;
@@ -70,6 +80,7 @@ export function decorationsFor(model: DocModel, result: CheckResult): Decoration
           mark: markFor(cell),
           name: `${sheet.id}.${name}`,
           kind: "cell",
+          row: rowIndex,
         });
       }
     }

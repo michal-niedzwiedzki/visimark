@@ -199,7 +199,10 @@ test("every file in src/ is a walk root, so none can hide until a row wires it i
  * Bump this only when the growth is real and reviewed, and record the date,
  * the new value and why directly above.
  */
-const BASELINE_BYTES = 270_440;
+const BASELINE_BYTES = 271_891;
+
+/* 2026-09-24, 270,440 → 271,891 (+1,451). v1 row 3: the hover and tap that
+ * make row 2's marks legible. */
 
 /*
  * 2026-09-24, 267,817 → 270,440 (+2,623). v1 row 2: both renderers. Small
