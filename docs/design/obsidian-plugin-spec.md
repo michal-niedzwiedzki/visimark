@@ -404,11 +404,30 @@ calls to ask this vault for a verified number.
 interface VisiMarkApi {
   readonly apiVersion: 1;
   check(file: TFile | string): Promise<Finding[]>;
-  evaluate(file: TFile | string): Promise<Record<string, string>>;
-  get(file: TFile | string, name: string): Promise<string | null>;
-  explain(file: TFile | string, name: string): Promise<ExplainView>;
+  evaluate(file: TFile | string): Promise<Record<string, JsonValue>>;
+  get(file: TFile | string, name: string): Promise<JsonValue | null>;
+  explain(file: TFile | string, name: string): Promise<Explanation | null>;
 }
 ```
+
+Two differences from the sketch this section first carried, both found while
+building it ([#219](https://github.com/michal-niedzwiedzki/visimark/issues/219)):
+
+**`JsonValue`, not `string`.** A column is one value per row, and the engine's
+own `JsonValue` — `string | (string | null)[]` — is what `eval --json` already
+returns for it. Flattening a column into the CLI's `", "`-joined line would be
+a rendering a caller has to undo, and the join is a terminal's business. The
+rule below is unchanged and is what the reason was: a value is never a
+**number**.
+
+**`Explanation`, not `ExplainView`.** `ExplainView` carries the whole
+`DocModel`. Putting it in a semver'd cross-plugin signature would make every
+change to the engine's internal model a breaking change to this API — the one
+property §2.7 says must not be broken casually. `Explanation` is five fields:
+the qualified name, the kind, the binding line verbatim, the value, the names
+it reads and the write precision. It also takes the `name` argument seriously,
+which the sketch did not: an `ExplainView` is per-document, so `explain(file,
+name)` returning one would have ignored half its own signature.
 
 Reached as `app.plugins.plugins["visimark"].api`. Every method is async,
 because every one of them goes through §2.6's prefetch.
@@ -419,14 +438,21 @@ now, so row 9 ships whole. It does not reimplement the view under any
 circumstances — that would be a second contract over the one thing the API
 exists to make single.
 
-**Values are strings, never numbers.** A JavaScript number cannot carry a
-declared width, and the width is the point
-([§7](../visimark-design.md#7-numeric-semantics)): `686.0000` and `686` are
-different renderings of one value and the difference is the document's, not the
-formatter's. A caller that wants arithmetic can parse; a caller handed a number
-has already lost what VisiMark exists to keep. This is also what makes the
-acceptance in manual test §2.9 a byte comparison against `eval --get` rather
-than a numeric one.
+**Values are strings, never numbers.** A caller that wants arithmetic can
+parse; a caller handed a number has already lost what VisiMark exists to keep.
+This is also what makes the acceptance in manual test §2.9 a byte comparison
+against `eval --get` rather than a numeric one.
+
+**The reason is exactness, and this section used to give the wrong one.** It
+argued from the declared width — "`686.0000` and `686` are different
+renderings of one value" — which is true of a **cell** and not of an evaluated
+value. The engine renders a value with `Decimal.toString()`, which normalises:
+`eval --get lines.net_total` on the worked invoice prints `23300`, from a cell
+that reads `23300.00`. The width lives in the document and `fmt` is what writes
+it. What the string buys is that the number is decimal and exact
+([§7](../visimark-design.md#7-numeric-semantics)) — a round trip through a
+JavaScript number is a round trip through binary floating point, which is the
+thing no document is allowed to contain.
 
 `apiVersion` is semver'd from day one and a bump is a breaking change with no
 migration channel — the same property that freezes the MCP tool names.

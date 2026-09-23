@@ -4,6 +4,19 @@
 
 ### Added
 
+- **The Obsidian plugin publishes an API** (issue #219, v1 row 9 of #176) —
+  `app.plugins.plugins["visimark"].api`, with `check`, `evaluate`, `get` and
+  `explain`, and `apiVersion` semver'd from the first release. It is what #176
+  describes as replacing *an LLM reads Markdown and calculates* with *an LLM
+  asks, and VisiMark calculates*.
+
+  `get` returns the same answer `visimark eval --get` prints, because it goes
+  through the same function rather than a second rendering; the test compares
+  every name in the document against the engine, not just one. Values are
+  strings — for exactness, since the engine's arithmetic is decimal and a
+  round trip through a JavaScript number is a round trip through binary
+  floating point.
+
 - **The Obsidian plugin can work out the formulas behind a pasted table**
   (issue #217, v1 row 5 of #176) — the on-ramp, and the row #176 expects to be
   *the* entry point for people who have never run the CLI. Obsidian is where

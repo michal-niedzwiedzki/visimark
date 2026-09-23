@@ -1,9 +1,11 @@
-import { MarkdownView, Notice, Plugin, debounce, type WorkspaceLeaf } from "obsidian";
+import { MarkdownView, Notice, Plugin, TFile, debounce, type WorkspaceLeaf } from "obsidian";
 import { FINDINGS_VIEW, FindingsView } from "./findings-view.js";
 import { hasVmarkBlock } from "./gate.js";
+import { createApi, type VisiMarkApi } from "./api.js";
 import { offerInfer } from "./infer-modal.js";
 import { previewInfer } from "./infer-plan.js";
 import { SWEEP_VIEW, SweepView } from "./sweep-view.js";
+import { vaultSweepRead } from "./vault.js";
 
 /**
  * VisiMark for Obsidian — v1 row 1 of #176: the browser bundle, and activation
@@ -38,6 +40,20 @@ import { SWEEP_VIEW, SweepView } from "./sweep-view.js";
  */
 export default class VisiMarkPlugin extends Plugin {
   private status: HTMLElement | null = null;
+
+  /**
+   * v1 row 9 — the public API, reached as
+   * `app.plugins.plugins["visimark"].api`.
+   *
+   * A field rather than something built on demand, because that is the shape
+   * a caller can hold: a second plugin loading after this one finds it there,
+   * and `apiVersion` tells it what it found. `api.ts` has the surface and the
+   * reasoning; this is the one line that publishes it.
+   */
+  readonly api: VisiMarkApi = createApi(
+    (path) => vaultSweepRead(this.app.vault)(path),
+    (file) => (file instanceof TFile ? file.path : typeof file === "string" ? file : null),
+  );
 
   /**
    * `editor-change` fires per keystroke and the gate is a full parse of the
