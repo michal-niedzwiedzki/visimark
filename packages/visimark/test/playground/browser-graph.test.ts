@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 
 /**
@@ -125,4 +125,33 @@ test("the committed bundle contains no node:fs or node:crypto call site", () => 
       `source-walk test above names the file. Rebuild with ` +
       `'bun run --filter visimark build:playground' after fixing it.`,
   ).toEqual([]);
+});
+
+/**
+ * The size of docs/vendor/visimark-browser.js the day this check was added
+ * (2026-09-23), measured the same way the assertion below measures it —
+ * statSync(...).size, matching `wc -c`, not a UTF-8 character count.
+ *
+ * Bump this only when the growth is real and reviewed. Record the date, the
+ * new value, and why, directly above this constant — the way ALLOWED_BUILTINS
+ * above records why node:path is the one builtin let through. A bump with no
+ * reason is indistinguishable from a bundle nobody looked at.
+ */
+const BASELINE_BYTES = 299_700;
+
+/** 10% over the baseline — a margin, not a byte-exact pin, so an unrelated
+ * minifier version bump doesn't fail this check the way a byte-exact pin
+ * would (the exact churn `playground-bundle` is pinned to Bun 1.4.2 to avoid). */
+const MAX_BUNDLE_BYTES = Math.ceil(BASELINE_BYTES * 1.1); // 329,670
+
+test("the committed bundle stays under a size ceiling with margin over the recorded baseline", () => {
+  const actual = statSync(bundle).size;
+  expect(
+    actual,
+    `docs/vendor/visimark-browser.js is ${actual} bytes, over the ${MAX_BUNDLE_BYTES}-byte ` +
+      `ceiling (10% over the ${BASELINE_BYTES}-byte baseline recorded 2026-09-23). If this ` +
+      `growth is real and reviewed, bump BASELINE_BYTES above with the date and reason and ` +
+      `rebuild; if not, something new was pulled into src/playground/browser-entry.ts's ` +
+      `import graph — the source-walk test above names the file.`,
+  ).toBeLessThanOrEqual(MAX_BUNDLE_BYTES);
 });

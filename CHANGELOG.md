@@ -4,6 +4,15 @@
 
 ### Added
 
+- **The committed browser bundle's size is now checked** (issue #191).
+  `docs/vendor/visimark-browser.js` could grow without anything noticing — the
+  `playground-bundle` CI job only checks rebuild fidelity against a fresh build, never
+  size. A new assertion in `browser-graph.test.ts` fails when the bundle exceeds 10%
+  over its recorded 299,700-byte baseline, so growth is now a reviewable CI failure
+  instead of an unwatched minified-file diff. The second of three follow-ups spiked in
+  #176's architectural-spike check 4.
+  See [`browser-bundle-size-spec.md`](docs/design/browser-bundle-size-spec.md).
+
 - **`smoke-node` and `smoke-bun` now prove `visimark` and `visimark-mcp`
   are importable, not just runnable** (issue #190). Both jobs already
   installed the packed tarballs and ran the CLI/server through their
