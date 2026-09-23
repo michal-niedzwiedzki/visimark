@@ -100,16 +100,6 @@ export type { DocumentFile, ReaderPort, SealedRead } from "./fs/reader.js";
 export { nodeReader, onDisk } from "./fs/node-reader.js";
 export type { CheckOptions } from "./eval/check.js";
 
-import { check as runCheck, type CheckResult } from "./eval/check.js";
-import { build as buildModel } from "./model/build.js";
-import { locate as locateDoc } from "./parse/document.js";
-import type { DocModel } from "./model/types.js";
-
-/** Parse, model and check a document in one pass — what an editor wants. */
-export function analyze(source: string): {
-  model: DocModel;
-  result: CheckResult;
-} {
-  const model = buildModel(locateDoc(source));
-  return { model, result: runCheck(model) };
-}
+// `analyze` is in its own module because `browser.ts` needs it and cannot
+// import this file — see `analyze.ts`, and issue #201.
+export { analyze } from "./analyze.js";
