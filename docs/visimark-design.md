@@ -903,11 +903,14 @@ resolved, the drift document indistinguishable from the clean one, and a
 document still passing `check` after Obsidian's Properties UI writes
 frontmatter — on desktop and on a phone alike.
 
-Live Preview is an editing surface, and it shows the anchor comment
-everywhere, not only on the line holding the cursor. That is accepted rather
-than filed: seeing where a value is bound while authoring is useful, and no
-reader meets it. It is cosmetic in the same sense as the markdown-it row
-above — the value renders, and nothing is lost or altered.
+Live Preview is an editing surface, and the anchor comment is the **only**
+row it differs on: `vmark` blocks, table cells, chart images and the drift
+document all render as cleanly there as in reading mode. It shows the anchor
+everywhere, not only on the line holding the cursor — in prose and after a
+chart image alike. That is accepted rather than filed: seeing where a value is
+bound while authoring is useful, and no reader meets it. It is cosmetic in the
+same sense as the markdown-it row above — the value renders, and nothing is
+lost or altered.
 
 ## 17. Assertions
 

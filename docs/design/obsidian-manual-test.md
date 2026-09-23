@@ -161,10 +161,10 @@ Run on 2026-09-23.
 | # | What | Reading mode | Live Preview | Mobile | Notes |
 |---|------|---|---|---|---|
 | 1.1 | Anchors invisible | yes | **no** | yes | Live Preview shows `<!--vmark=…-->` as literal text, regardless of where the cursor is |
-| 1.2 | `vmark` blocks plain | yes | not recorded | yes | |
-| 1.3 | Table cells verbatim | yes | not recorded | yes | trailing zeros intact |
-| 1.4 | Chart images resolve | yes | not recorded | yes | relative `charts/*.svg` paths resolve with the vault opened at `docs/` |
-| 1.5 | Drift doc renders clean | yes | not recorded | yes | indistinguishable from `example-invoice.md` |
+| 1.2 | `vmark` blocks plain | yes | yes | yes | Live Preview shows the block plain with the cursor outside it and reveals the fence with the cursor inside — ordinary Live Preview behaviour, and accepted |
+| 1.3 | Table cells verbatim | yes | yes | yes | trailing zeros intact; computed cells render clean in both renderers |
+| 1.4 | Chart images resolve | yes | yes | yes | relative `charts/*.svg` paths resolve with the vault opened at `docs/`; Live Preview renders the images clean but shows the image anchor at all times, focused or not — the §1.1 behaviour, and accepted with it |
+| 1.5 | Drift doc renders clean | yes | yes | yes | indistinguishable from `example-invoice.md` in both renderers |
 | 1.7 | Frontmatter survives `check` | n/a | n/a | n/a | exit code: 0, zero findings |
 
 Obsidian version: 1.13.7  Platform(s): desktop + Android  Restricted Mode on: **Y**
