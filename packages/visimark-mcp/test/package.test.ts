@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { spawnSync } from "node:child_process";
 import { readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import manifest from "../package.json" with { type: "json" };
@@ -45,9 +46,31 @@ test("every bin target is inside a published files entry", () => {
 test("every bin target is executable", () => {
   // An unexecutable bin is a broken global install that no other unit test
   // catches — the failure only shows up after `npm i -g`.
+  //
+  // The assertion is the execute bits, not an exact mode: the group and other
+  // permissions a checkout lands on come from the checking-out user's umask,
+  // so `755` here and `775` on a umask-002 machine are the same file. What
+  // git records, and what npm therefore packs, is only the executable bit.
   for (const target of Object.values(manifest.bin)) {
-    const mode = statSync(join(pkg, target)).mode & 0o777;
-    expect({ target, mode: mode.toString(8) }).toMatchObject({ mode: "755" });
+    const mode = statSync(join(pkg, target)).mode;
+    expect({ target, executable: (mode & 0o111) === 0o111 }).toMatchObject({
+      executable: true,
+    });
+  }
+});
+
+test("git records every bin target as executable", () => {
+  // The on-disk check above is about this working tree; this one is about
+  // what every other clone and every CI runner will get. A bin committed as
+  // 100644 installs as a dangling command no matter whose umask is involved.
+  const listed = spawnSync("git", ["ls-files", "-s", "--", "bin"], {
+    cwd: pkg,
+    encoding: "utf8",
+  });
+  expect(listed.status).toBe(0);
+  for (const line of listed.stdout.trim().split("\n")) {
+    const [mode, , , path] = line.split(/\s+/);
+    expect({ path, mode }).toMatchObject({ mode: "100755" });
   }
 });
 
