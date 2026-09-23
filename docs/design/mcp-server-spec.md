@@ -1,6 +1,15 @@
 # An MCP server exposing the engine to agents — feature spec
 
-**Status:** approved (#169) · **Date:** 2026-09-23 · **Decision:** https://github.com/michal-niedzwiedzki/visimark/issues/169#issuecomment-5786228235
+**Status:** approved (#169), reconciled against the implementation on 2026-09-23 ·
+**Date:** 2026-09-23 · **Decision:** https://github.com/michal-niedzwiedzki/visimark/issues/169#issuecomment-5786228235
+
+Sections [3.4](#34-plans-and-the-staleness-guard),
+[3.5](#35-the-engines-public-surface), [4](#4-behaviour-table),
+[5.1](#51-what-does-not-change), [5.2](#52-version-lockstep) and
+[5.4](#54-the-parity-fixture) were corrected where the implementation found
+this spec wrong — most of all §3.5, which assumed the engine's front-end layer
+was already reachable from `index.ts` and it was not. The decisions are
+unchanged; what changed is what the document claims is true.
 
 ## 1. Purpose
 
@@ -340,19 +349,50 @@ Re-planning cannot go stale by construction, but it would mean the agent's
 reviewed plan is not what lands, which undercuts the entire point of the
 plan/apply split.
 
+`visimark_infer`'s plan carries `sha256` on the same terms and for the same
+reason. A guard on one plan shape and not the other would leave
+`visimark_infer_apply` splicing into a document that had moved.
+
 `visimark_fmt`'s plan body additionally lists **the artifact paths it would
 create**, so nothing is written that the caller did not see named first:
 
 ```json
-{ "command": "fmt", "visimark": "0.1.7", "status": "ok",
-  "sha256": "e3b0c442…",
-  "edits": [ { "name": "lines.net_total", "from": "12900.00", "to": "13200.00" } ],
+{ "command": "fmt", "visimark": "0.1.7", "status": "problems",
+  "file": "quote.md",
+  "sha256": "6d482ed8…",
+  "edits": [ { "start": 912, "end": 919, "text": "5200.00", "code": "STALE" } ],
+  "cellsUpdated": 7, "anchorsUpdated": 8, "stampsUpdated": 0,
   "artifactsWouldWrite": [ "charts/quote-trend.svg" ],
+  "findings": [], "summary": { "problems": 26, "stale": 21, "errors": 5 },
   "skipped": {},
   "applied": false }
 ```
 
-### 3.5 The engine exports the artifact writer
+An edit is `{ start, end, text, code }` — the byte span this paragraph opens
+by naming, the replacement, and the finding code it resolves. A friendlier
+`{ name, from, to }` would be unappliable: the apply tool splices the plan it
+was given, and a name is not a span.
+
+The counts are the engine's own arithmetic, carried in the plan rather than
+re-derived at apply time, so `visimark_fmt_apply` reports the numbers the
+caller reviewed and not a second set that could disagree with them.
+
+**Artifacts cannot travel in a plan**, because their content is rendered SVG.
+They are re-derived at apply time from the source the digest has just proved
+identical, and the two path sets are compared **in both directions**. A target
+this run would write that the plan did not name is a `WRITE` error; so is a
+target the plan named that this run will no longer write — something has
+appeared there, or it has stopped being VisiMark's. Only the second direction
+is load-bearing in practice, and without it that target is dropped in silence
+and the call reports success, leaving a document whose numbers moved and whose
+chart did not.
+
+**Every refusal that can be decided before a byte moves is decided first** —
+the gate, the digest, both path-set comparisons, and root containment for each
+artifact target. Then the artifacts, then the document. One rejected target
+therefore leaves no artifact written at all, rather than half of them.
+
+### 3.5 The engine's public surface
 
 `visimark_fmt_apply` writes generated artifacts, so it needs the gate that
 protects them. That gate is **in the engine** — `packages/visimark/src/artifact/write.ts`
@@ -368,15 +408,50 @@ export type { ArtifactWrite } from "./write/fmt.js";
 export { resolveArtifactPath, type PathResult } from "./artifact/path.js";
 ```
 
-This is the one change to the engine's public surface in this spec, and it is
-deliberate: the alternative is for `visimark-mcp` to reimplement a security
-boundary, which is the last thing a second consumer of it should do. The gate
-becomes a supported API and is documented as one.
+The alternative is for `visimark-mcp` to reimplement a security boundary,
+which is the last thing a second consumer of one should do. The gate becomes a
+supported API and is documented as one.
 
 **`resolveArtifactPath` gates containment and extension only.** The
 marker-and-provenance refusal lives in `writeArtifact`, in the caller position,
 because it is about a file's provenance and not its path — `artifact/path.ts`
 says so in its own comment. Both are needed; neither substitutes for the other.
+
+#### 3.5.1 The front-end layer, which this spec assumed was already reachable
+
+This section was drafted believing the artifact gate was the *only* thing
+`index.ts` would have to expose. That was wrong, and the implementation found
+it out: almost none of the engine's front-end layer was exported at all. It had
+never needed to be, because the CLI is compiled in the same tree and imports
+its neighbours directly.
+
+So §3.2's "consume the envelope, do not reshape it" and the reuse rule that
+review made on [#152](https://github.com/michal-niedzwiedzki/visimark/issues/152)
+could not both be honoured without a second copy of the public finding shape
+inside `visimark-mcp` — which is precisely the drift both rules exist to
+prevent. `index.ts` therefore also gains, additively:
+
+| Exported from | What, and why it is needed |
+|---|---|
+| `report/json.ts` | `publicFinding`, `publicProposal`, `publicAssertions`, `publicCharts`, `publicFnEntry`, `evalValues`, `findingSummary`, `inferSummary`, `statusFromExit`, `errorEnvelope`, `signature` — the envelope's own pieces. A consumer that re-derives these is the second serialisation §3.2 forbids. |
+| `report/explain.ts` | `explainView`, `explainJson`, `explainText` — `explain`'s result *is* an envelope, produced whole by `explainJson`. |
+| `report/levenshtein.ts` | `closest` — so `visimark_ref`'s did-you-mean is the CLI's, from the same call, rather than a second guess with its own threshold. |
+| `eval/scenario.ts` | `parseScenarioJson`, `resolveScenario`, `applyScenario`, `listParams`, `ScenarioError` — `visimark_eval`'s scenario arm, which §2.3 requires. |
+| `cli/version.ts` | `readVersion` — so the envelope's `visimark` field is the version of the engine that actually ran, not a string the server carries separately and hopes agrees. |
+
+Two supporting changes fall out of it, neither a behaviour change:
+
+- `publicFnEntry` and `signature` move from `cli/commands.ts` into
+  `report/json.ts`, beside the other public shapes. The CLI imports them from
+  their new home and its output is byte-identical.
+- `readVersion()` could not resolve its own manifest from the **bundled
+  library entry point**: `dist/index.js` looked for `../../package.json` and
+  found `packages/package.json`, so any library consumer that asked for an
+  envelope got `Cannot find module`. It now tries `../` as well. A latent bug
+  this work surfaced, not one it introduced.
+
+Everything here is additive. Nothing is removed or re-typed, so no existing
+library consumer changes — the property §5.1 actually turns on.
 
 ## 4. Behaviour table
 
@@ -398,10 +473,12 @@ Every outcome, with its literal result. This doubles as acceptance.
 | `visimark_eval { path, scenarioContent }` with a bad key/type/width | tool error, `error.code: "SCENARIO"` |
 | `visimark_eval { path }`, an assertion fails | `status: "problems"`, `holds: false` |
 | `visimark_explain { path, sheet: "nope" }` | tool error, `error.code: "USAGE"` |
-| `visimark_infer { path }` | `status: "ok"`, proposals, **no** `written` key — it never writes |
+| `visimark_infer { path }` | `status: "ok"`, proposals, `sha256`, **no** `written` key — it never writes |
+| `visimark_infer_apply { path, plan }` with every proposal removed from the plan | `applied: true`, `changed: false`, and **no** `no-formulas` marker — a document whose rules the agent read and declined is not a document with nothing to derive |
 | `visimark_ref {}` | `status: "ok"`, every builtin |
 | `visimark_ref { name: "SUM" }` | `status: "ok"`, one entry |
-| `visimark_ref { name: "AVERAGE" }` | tool error, `USAGE`, with the did-you-mean suggestion the CLI produces |
+| `visimark_ref { name: "AVERAGE" }` | tool error, `USAGE`, ``visimark: unknown function `AVERAGE` `` — **no** suggestion, because AVERAGE is four edits from AVG and `closest` stops at three. This row previously claimed a suggestion; the CLI does not produce one either. What the two surfaces share is the wording and the same `closest` call, which is what the tests pin. |
+| `visimark_ref { name: "SUMM" }` | tool error, `USAGE`, with the did-you-mean suggestion the CLI produces — ``did you mean `SUM`?`` |
 | `visimark_fmt { path }` | `status: "ok"`, `edits`, `artifactsWouldWrite`, `sha256`, `applied: false`. **Nothing written.** |
 | `visimark_fmt { content }` | as above, `artifactsWouldWrite: []`, `skipped.charts` names them |
 | `visimark_fmt_apply { … }`, gate closed | tool error: `writes are disabled. Start the server with --allow-write.` |
@@ -409,7 +486,8 @@ Every outcome, with its literal result. This doubles as acceptance.
 | `visimark_fmt_apply { path }`, path outside every declared root | tool error, `error.code: "WRITE"` |
 | `visimark_fmt_apply { path, plan }`, `sha256` mismatch | tool error: the document changed since the plan was computed |
 | `visimark_fmt_apply { path, plan }`, gate open, hash matches | `applied: true`, counts for cells / anchors / artifacts |
-| `visimark_fmt_apply`, artifact target is not VisiMark's | tool error, `error.code: "WRITE"`; **the document is left unspliced** — a partly-applied `fmt` is worse than none |
+| `visimark_fmt_apply`, artifact target is not VisiMark's | tool error, `error.code: "WRITE"`; **the document is left unspliced** — a partly-applied `fmt` is worse than none. In practice the refusal arrives from the path-set comparison in §3.4 rather than from `writeArtifact`: a target that stopped being ours is one this run will no longer write, and that is caught before any byte moves. `writeArtifact`'s own refusal remains the backstop for a file that appears between that check and the write. |
+| `visimark_fmt { path }` then an artifact target changes, then `visimark_fmt_apply` | tool error, `error.code: "WRITE"`, naming the target — **no artifact is written at all**, not even ones that precede it in the plan |
 | `visimark_infer_apply { path, plan }`, gate open | `applied: true`, the `vmark` block inserted |
 | `visimark-mcp --nope` | stderr usage line, exit `2`, before the transport starts |
 
@@ -432,8 +510,10 @@ behaves differently.** This is a new, opt-in package. Specifically unchanged:
 | Document syntax, evaluation, the finding set, write-back | Unchanged. |
 | The `--json` envelope | Unchanged — consumed as-is, not reshaped. |
 
-The engine's public surface **is** widened, additively, by the three exports in
-§3.5. Nothing is removed or re-typed, so no existing library consumer changes.
+The engine's public surface **is** widened, additively, by the exports in §3.5
+— the artifact gate, and the front-end layer in §3.5.1 that this spec wrongly
+assumed was already reachable. Nothing is removed or re-typed, so no existing
+library consumer changes, which is the property that matters here.
 
 ### 5.2 Version lockstep
 
@@ -447,6 +527,15 @@ imports the library. It is shaped like `packages/remark-visimark` and
 | depends on core | `"visimark": "0.1.7"` exact | `"visimark": "0.1.7"` exact | `workspace:*` | **exact, in lockstep** |
 | consumes core by | library import | library import | library import | **library import** |
 | has a `bin` | no | no | no | **yes** |
+
+**`visimark-mcp` must never be published ahead of the engine it pins.** The
+exact pin is resolved from the registry by anyone installing the server, so a
+server released against an engine version that is broken *for a given runtime*
+is a server that does not start on that runtime, whatever this repository's
+tree says. That is not hypothetical: `visimark@0.1.7` carries the #170 `bun`
+exports condition, so `bun add -g visimark-mcp` would have failed for every
+user had the server shipped against it. Publishing both in lockstep from one
+tag, which §5.5's release legs do, is what makes this safe.
 
 **Import the library; do not shell out.** Shelling out costs a process spawn and
 a JSON reparse per call, forces every call through a file path — killing §2.3 —
@@ -491,10 +580,26 @@ assertion that actually catches the shebang bug.
   (`oven/bun` container, `PATH` reset, `node` asserted absent) each additionally
   install the MCP tarball globally and drive a **stdio handshake**, not just a
   `--version` line: `initialize`, then `tools/list`, asserting the eight tool
-  names and their annotations.
+  names and their annotations, and then **one `tools/call`**.
 
 A `--version` check would pass on a server that cannot speak the protocol. The
 handshake is the smallest assertion that proves the binary is actually usable.
+Listing the tools proves only that the server started; calling
+`visimark_check` with `content` proves the engine it imports loaded and ran,
+which is a different failure and the one a bad install produces.
+
+**Each job installs the packed engine into the MCP package explicitly.** This
+is not belt-and-braces. `bun add -g` resolves `visimark-mcp`'s exact `visimark`
+pin **from the registry** even when the engine tarball is named in the same
+command; `npm i -g` happens to dedupe against the sibling tarball. Left to the
+package managers, the two jobs therefore test different engines, and the Bun
+one tests a *published* engine rather than the one the run just built — which
+is how the first green-looking implementation of this section failed: it picked
+up a released `visimark` still carrying the
+[#170](https://github.com/michal-niedzwiedzki/visimark/issues/170) `bun`
+exports condition, already fixed in the tree it was supposed to be testing.
+Each job now unpacks the engine tarball over `node_modules/visimark` and
+asserts the manifest it installed is byte-identical to the packed one.
 
 ### 5.5 Version-carrying files and release legs
 
