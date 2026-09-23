@@ -367,7 +367,7 @@ export { resolveArtifactPath, type PathResult } from "./artifact/path.js";
 
 ## Task 9 — Release legs and the registry entry
 
-- [ ] Publish it, in the shape the existing legs already use.
+- [x] Publish it, in the shape the existing legs already use.
 
 **Files**
 

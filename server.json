@@ -1,0 +1,19 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json",
+  "name": "io.github.michal-niedzwiedzki/visimark",
+  "description": "Spreadsheet mechanics for Markdown: every computed number carries the formula that produced it, and this server lets an agent prove the two still agree.",
+  "repository": {
+    "url": "https://github.com/michal-niedzwiedzki/visimark",
+    "source": "github"
+  },
+  "version": "0.1.7",
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "visimark-mcp",
+      "version": "0.1.7",
+      "transport": { "type": "stdio" }
+    }
+  ]
+}
