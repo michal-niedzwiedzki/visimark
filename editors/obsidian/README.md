@@ -12,8 +12,10 @@ each v1 row is its own issue.
 
 ## What is built so far
 
-**v1 row 1 only** ([#200](https://github.com/michal-niedzwiedzki/visimark/issues/200)):
-the browser bundle and the activation gate. The plugin loads on desktop and on
+**v1 row 1** ([#200](https://github.com/michal-niedzwiedzki/visimark/issues/200)):
+the browser bundle and the activation gate. Plus the vault-backed reader
+([#205](https://github.com/michal-niedzwiedzki/visimark/issues/205)), which no
+surface calls yet. The plugin loads on desktop and on
 mobile, and shows a status bar item reading `VisiMark` on a note that contains
 a ```` ```vmark ```` block. That is all it does yet. Provenance decorations,
 the hover popover, the five commands, the findings view, the vault sweep and
