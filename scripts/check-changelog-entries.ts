@@ -33,6 +33,20 @@ const PAIRS: Pair[] = [
     changelog: "editors/vscode/CHANGELOG.md",
     hint: (v) => `Add an entry, even "No editor-visible changes. Bundles engine ${v}."`,
   },
+  // The Obsidian plugin's version is deliberately its own — it is not in the
+  // version-agreement step above, because an Obsidian release goes through a
+  // human registry review and must not be coupled to an engine patch
+  // (docs/design/obsidian-plugin-spec.md §2.2). A version nothing checks is
+  // exactly the drift that rule creates, so the changelog check holds it
+  // instead, against manifest.json rather than package.json: manifest.json is
+  // the plugin's single source of truth for its version, and the workspace
+  // package.json deliberately carries none.
+  {
+    manifest: "editors/obsidian/manifest.json",
+    changelog: "editors/obsidian/CHANGELOG.md",
+    hint: (v) =>
+      `Add a "## ${v} - YYYY-MM-DD" entry, even "No user-visible changes." — and say which engine version the bundle carries`,
+  },
 ];
 
 const args = process.argv.slice(2);

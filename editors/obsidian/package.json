@@ -1,0 +1,26 @@
+{
+  "name": "visimark-obsidian",
+  "private": true,
+  "description": "The Obsidian client for VisiMark: the numbers in a note, checked where the note is read.",
+  "license": "MIT",
+  "author": {
+    "name": "Michał Niedźwiedzki"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/michal-niedzwiedzki/visimark",
+    "directory": "editors/obsidian"
+  },
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "bun esbuild.config.mjs"
+  },
+  "dependencies": {
+    "visimark": "workspace:*"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "obsidian": "^1.8.7"
+  }
+}
