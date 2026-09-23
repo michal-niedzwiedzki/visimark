@@ -4,6 +4,20 @@
 
 ### Added
 
+- **The Obsidian plugin marks the values it works out** (issue #227, v1 row 2
+  of #176) — in reading mode *and* in Live Preview, which #176 calls "the
+  moment the product explains itself". A hairline under a computed value,
+  doubled when it no longer matches its formula.
+
+  **Not a colour.** A red number says *error* to someone trained by build logs
+  and *something is wrong with my document* to someone who has not been, and a
+  computed value is neither wrong nor an error — it is derived, which is a fact
+  about where it came from.
+
+  **Nothing is written.** A mark is a class on rendered output, so a note
+  copied out of the vault is byte-identical to what it was — which is manual
+  test §2.2's pass condition and the whole of constraint 1.
+
 - **The Obsidian plugin's status bar says what state a note is in** (issue
   #225, v1 row 12 of #176) — `VisiMark ✓`, or `VisiMark · 3 to look at` — and
   pressing it opens the findings view; a ribbon icon opens the vault sweep.

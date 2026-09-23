@@ -17,6 +17,8 @@ import { offerInfer } from "./infer-modal.js";
 import { previewInfer } from "./infer-plan.js";
 import { reportFor } from "./report.js";
 import { readNote } from "./snapshot.js";
+import { livePreviewMarks } from "./live-preview.js";
+import { decorateSection } from "./reading-mode.js";
 import { HIDDEN, UNKNOWN, statusFor } from "./status.js";
 import { SWEEP_VIEW, SweepView } from "./sweep-view.js";
 import { ValuesModal } from "./values-modal.js";
@@ -140,6 +142,14 @@ export default class VisiMarkPlugin extends Plugin {
       name: "Sweep the vault",
       callback: () => void this.openSweep(),
     });
+
+    // v1 row 2 — the moment the product explains itself. Both renderers, per
+    // #176's row 2 and manual test §2.2: reading mode is what a reader sees,
+    // Live Preview is what an author does. Neither writes; a decoration is a
+    // class on rendered output, and the note copied out of the vault is
+    // untouched, which is §2.2's pass condition.
+    this.registerMarkdownPostProcessor((el, ctx) => decorateSection(el, ctx));
+    this.registerEditorExtension(livePreviewMarks());
 
     this.status = this.addStatusBarItem();
     this.status.addClass("visimark-status");

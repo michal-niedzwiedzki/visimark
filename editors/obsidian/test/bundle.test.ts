@@ -199,7 +199,13 @@ test("every file in src/ is a walk root, so none can hide until a row wires it i
  * Bump this only when the growth is real and reviewed, and record the date,
  * the new value and why directly above.
  */
-const BASELINE_BYTES = 267_817;
+const BASELINE_BYTES = 270_440;
+
+/*
+ * 2026-09-24, 267,817 → 270,440 (+2,623). v1 row 2: both renderers. Small
+ * because CodeMirror is external — Obsidian provides it — so what enters the
+ * bundle is the decoration model and two adapters, not an editor.
+ */
 
 /* 2026-09-24, 266,316 → 267,817 (+1,501). v1 row 12: the status bar's states
  * and the ribbon icon. */

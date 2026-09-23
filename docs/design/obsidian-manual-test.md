@@ -203,6 +203,7 @@ implemented is not a failure; it is not yet a test.
 |---|---|---|
 | §2.1 activation | v1 constraint 4 | **yes**, since [#200](https://github.com/michal-niedzwiedzki/visimark/issues/200) |
 | §2.6 format, declined artifact | v1 row 7 (repair half) | **partly**, since [#213](https://github.com/michal-niedzwiedzki/visimark/issues/213) — the findings view's per-row repair; format-on-save is still row 7 |
+| §2.2 provenance and staleness | v1 row 2 | **partly**, since [#227](https://github.com/michal-niedzwiedzki/visimark/issues/227) — *where* a mark goes is asserted in `decorations.test.ts`; **everything about what is on screen is this section, and only this section** |
 | §2.1 status and ribbon states | v1 row 12 | **yes**, since [#225](https://github.com/michal-niedzwiedzki/visimark/issues/225) — §2.1's own pass condition is unchanged; what is new to check is that the state is right and that pressing it opens the findings view |
 | §2.4 the five commands | v1 row 4 | **yes**, since [#221](https://github.com/michal-niedzwiedzki/visimark/issues/221) |
 | §2.9 the plugin API | v1 row 9 | **yes**, since [#219](https://github.com/michal-niedzwiedzki/visimark/issues/219) — its comparison against `eval --get` is asserted in `editors/obsidian/test/api.test.ts`; what is left is that the call is made against the documented surface |
@@ -235,7 +236,24 @@ enabled**, on desktop and on a phone.
   constraint-1 violation and a failed acceptance, whatever it looks like in
   Obsidian.
 - **Audience-B check (v1 constraint 6):** no red, no `STALE`, no
-  "1 problem", no exit code anywhere in the UI.
+  "1 problem", no exit code anywhere in the UI. The mark is a hairline under
+  the value and a doubled line when it disagrees — deliberately not a colour,
+  because a red number says *error* to someone trained by build logs and
+  *something is wrong with my document* to someone who has not been. Judge
+  whether it is findable when looked for and invisible when reading; that is
+  the whole of the design and it is the one thing no test can answer.
+- **The mapping is the part most likely to be wrong**, and it is different in
+  each renderer. Live Preview decorates source offsets, which cannot land on
+  the wrong value. Reading mode addresses a table cell by its grid position
+  but finds a prose value by matching its text among elements of its own kind —
+  so the case to try deliberately is **two identical bold numbers in one
+  paragraph where only one is anchored**. The mark landing on the other one is
+  the known limit; anything else is a defect.
+- **Try a note whose CSV import is missing.** Live Preview decorates without
+  waiting for the vault snapshot, so it checks a note whose imports are
+  unresolved. The values must not be marked as disagreeing — an unresolved
+  import is `IMPORT`, not `STALE` — and the findings view, which does wait,
+  must say what is wrong.
 
 ### 2.3 Hover and tap — v1 row 3
 
