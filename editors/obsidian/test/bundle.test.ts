@@ -82,7 +82,9 @@ function graph(): Map<string, string> {
       }
       if (!spec.startsWith(".")) continue;
       // the source is written in ESM style: `./x.js` names `./x.ts` on disk
-      queue.push(resolve(dirname(file), spec).replace(/\.js$/, ".ts"));
+      const target = resolve(dirname(file), spec).replace(/\.js$/, ".ts");
+      if (!target.endsWith(".ts")) continue;
+      queue.push(target);
     }
   }
   return out;
@@ -199,7 +201,15 @@ test("every file in src/ is a walk root, so none can hide until a row wires it i
  * Bump this only when the growth is real and reviewed, and record the date,
  * the new value and why directly above.
  */
-const BASELINE_BYTES = 161_078;
+const BASELINE_BYTES = 168_543;
+
+/*
+ * 2026-09-23, 161,078 → 168,543 (+7,465). v1 row 10: the four templates are
+ * generated into `src/templates.ts` and therefore into the bundle, because a
+ * plugin ships one `main.js` and nothing beside it. The growth is the four
+ * documents' own bytes and is expected to stay proportional to how many
+ * templates there are.
+ */
 
 /** 10% over the baseline — a margin, not a byte-exact pin, so an unrelated
  * esbuild version bump does not fail this for a reason unrelated to the

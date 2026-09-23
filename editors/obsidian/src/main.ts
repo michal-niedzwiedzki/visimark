@@ -1,5 +1,6 @@
-import { MarkdownView, Plugin, debounce } from "obsidian";
+import { MarkdownView, Notice, Plugin, debounce } from "obsidian";
 import { hasVmarkBlock } from "./gate.js";
+import { TEMPLATES } from "./templates.js";
 
 /**
  * VisiMark for Obsidian — v1 row 1 of #176: the browser bundle, and activation
@@ -48,6 +49,27 @@ export default class VisiMarkPlugin extends Plugin {
     this.status = this.addStatusBarItem();
     this.status.addClass("visimark-status");
     this.status.setAttribute("aria-live", "polite");
+
+    // v1 row 10. One command per template rather than a picker: four palette
+    // entries are searchable by name, and a modal is UI that nothing can test.
+    //
+    // **These are deliberately not gated.** Every *reading* surface is gated
+    // on the active note containing a ```vmark block (§2.3), but a command
+    // whose job is to create the first one cannot be — a person with no
+    // VisiMark note could never get one. Constraint 4 is about a vault of
+    // ordinary notes being indistinguishable from one without the plugin, and
+    // a palette entry is visible only to someone who went looking for it.
+    for (const template of TEMPLATES) {
+      this.addCommand({
+        id: `insert-${template.id}-template`,
+        name: `Insert ${template.title.toLowerCase()} template`,
+        editorCallback: (editor) => {
+          editor.replaceSelection(template.body);
+          new Notice(`Inserted the ${template.title.toLowerCase()} template.`);
+          this.refresh();
+        },
+      });
+    }
 
     this.registerEvent(this.app.workspace.on("active-leaf-change", () => this.refresh()));
     this.registerEvent(this.app.workspace.on("file-open", () => this.refresh()));
