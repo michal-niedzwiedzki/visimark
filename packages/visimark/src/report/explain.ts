@@ -1,7 +1,6 @@
 import type { ChartResult, CheckResult } from "../eval/check.js";
 import { topoOrder } from "../eval/graph.js";
 import type { Binding, DocModel, ImportStatus } from "../model/types.js";
-import { readVersion } from "../cli/version.js";
 import { nonParams, paramLines, params } from "./params.js";
 
 /**
@@ -165,15 +164,21 @@ export function explainText(view: ExplainView): string {
 }
 
 /**
+ * The body of `explain --json` — everything after the three stamped keys.
+ *
  * Key order here is the wire format — `JSON.stringify` emits insertion order, so
  * the conditional `import` spread has to stay between `hasTable` and `inputs`.
- * This owns its whole envelope, matching `errorEnvelope` in json.ts.
+ *
+ * `command` and `visimark` are not here, and that is the point: writing the
+ * version meant reading it, reading it meant `node:module`, and one import at
+ * module scope kept this file — `explainView` included, which needs no version
+ * at all — out of any browser build. `report/envelope.ts` stamps those two
+ * keys onto this, and `explainJson` there is still the public name with the
+ * public signature. Issue #204.
  */
-export function explainJson(view: ExplainView, file: string): object {
+export function explainBody(view: ExplainView, file: string): object {
   const { model } = view;
   return {
-    command: "explain",
-    visimark: readVersion(),
     status: "ok",
     file,
     documentScope: nonParams(model.docScope.values()).map((b) => ({

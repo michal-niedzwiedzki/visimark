@@ -230,25 +230,25 @@ Five, mirroring the CLI's verbs, each scoped to the active note (v1 row 4).
 The sweep is the sixth and has no CLI twin — it is the row that justifies fork
 B over the VS Code extension (v1 row 8), and it is read-only.
 
-**Explain is blocked, and the blocker is not in the plugin.** `explainView`
-lives in `report/explain.ts`, which imports `readVersion()` from
-`cli/version.ts`, which imports `node:module` — so it cannot enter a browser
-bundle at all. `docs/design/cross-host-equivalence-check-spec.md` §2 found this
-first, from the other side, and calls its own workaround "closer to forced than
-chosen": it builds the `--json` envelope host-side, outside the bundle. The
-same wall stands in front of the whole envelope, which §2.7's `explain` and any
-future JSON output would want.
+**Explain was blocked, and the blocker was not in the plugin.** `explainView`
+lives in `report/explain.ts`, which imported `readVersion()` from
+`cli/version.ts`, which imports `node:module` — so it could not enter a browser
+bundle at all, and neither could any public piece of the `--json` envelope
+beside it in `report/json.ts`.
+`docs/design/cross-host-equivalence-check-spec.md` §2 hit the same wall from
+the other side and called its workaround "closer to forced than chosen".
 
-Making it browser-safe means making the engine's own version injectable rather
-than read through `createRequire` at module scope. That is a change to modules
-neither this spec nor
-[#201](https://github.com/michal-niedzwiedzki/visimark/issues/201) touches, and
-"what version does a browser host report" is a real decision with
-[#189](https://github.com/michal-niedzwiedzki/visimark/issues/189) downstream
-of it. **Filed as
-[#204](https://github.com/michal-niedzwiedzki/visimark/issues/204)**, which
-lays out three candidate designs; until it is decided, Explain is not a v1 row
-that can be started, and §9 records it as the spec's one open question.
+[#204](https://github.com/michal-niedzwiedzki/visimark/issues/204) settled it
+by moving the two functions that *stamp* an envelope with the engine version —
+`errorEnvelope` and `explainJson` — into `report/envelope.ts`, the one module
+in `src/report/` allowed to read it. `explainView`, which never wanted a
+version, is browser-safe and exported from
+`packages/visimark/src/browser.ts`. Rows 3, 4 and 9 are unblocked, and no
+signature, public name or envelope byte changed.
+
+The plugin stamps nothing and needs no version: §3.1 says it has no exit code
+and no `--json` output, and §2.7's `explain` returns an `ExplainView` rather
+than a document.
 
 **The sweep's row states a size bound before it is filed.** An on-demand scan
 of every note containing a fence is the whole feature, and it is also the one
@@ -389,12 +389,11 @@ interface VisiMarkApi {
 Reached as `app.plugins.plugins["visimark"].api`. Every method is async,
 because every one of them goes through §2.6's prefetch.
 
-`explain` is the exception to "row 9 is small": it returns an `ExplainView`,
-and `explainView` cannot be bundled for a browser today for the reason §2.4
-gives. Row 9 either ships without `explain` and adds it when that is fixed —
-`apiVersion` is semver'd and adding a method is not a break — or waits. It does
-not reimplement the view, which would be a second contract over the one thing
-the API exists to make single.
+`explain` returns an `ExplainView`, which was not bundleable for a browser
+until [#204](https://github.com/michal-niedzwiedzki/visimark/issues/204). It is
+now, so row 9 ships whole. It does not reimplement the view under any
+circumstances — that would be a second contract over the one thing the API
+exists to make single.
 
 **Values are strings, never numbers.** A JavaScript number cannot carry a
 declared width, and the width is the point
@@ -573,15 +572,13 @@ ones worth naming because someone will ask:
 
 ## 9. Open questions
 
-**One, and it was found by building row 1 rather than by drafting.**
-
-**How does a browser host get `explainView` and the `--json` envelope?** Both
-reach `node:module` through `readVersion()` and therefore cannot be bundled
-(§2.4). It blocks v1 rows 3 and 4's Explain and §2.7's `explain`, and the
-answer is an engine decision — inject the version, or something else — not a
-plugin one. Filed as
-[#204](https://github.com/michal-niedzwiedzki/visimark/issues/204) with three
-candidate designs; it is decided there, not here.
+**Empty again.** The one that stood here — *how does a browser host get
+`explainView` and the `--json` envelope* — was found by building row 1 rather
+than by drafting, and is answered in
+[#204](https://github.com/michal-niedzwiedzki/visimark/issues/204): the two
+functions that stamp an envelope with the engine version moved into a module of
+their own, and everything that never wanted a version came with them into the
+browser. Recorded in §2.4 and §2.7 rather than left here.
 
 Everything raised while drafting is resolved and recorded in the body rather
 than here: versioning independent of the npm packages (§2.2), side-loadable

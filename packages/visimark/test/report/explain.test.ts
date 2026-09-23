@@ -6,7 +6,8 @@ import { bandwidth, charts, chartsPath, clean, cleanPath, quote, repoRoot } from
 import { locate } from "../../src/parse/document.js";
 import { build } from "../../src/model/build.js";
 import { check } from "../../src/eval/check.js";
-import { explainJson, explainText, explainView } from "../../src/report/explain.js";
+import { explainText, explainView } from "../../src/report/explain.js";
+import { explainJson } from "../../src/report/envelope.js";
 
 /** the pair the CLI hands the renderers, without going through runCli */
 function view(source: string, docPath?: string, sheets: string[] = []) {
