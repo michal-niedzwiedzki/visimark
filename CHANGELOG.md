@@ -4,6 +4,14 @@
 
 ### Added
 
+- **The Obsidian plugin can copy a note's values as JSON** (issue #223, v1 row
+  11 of #176). It is the `values` object out of `visimark eval --json`,
+  exactly — same shape, same two-space indent, same trailing newline — so a
+  diff between something pasted from the vault and something piped from the CLI
+  is empty. #176 rates the row as making the plugin API discoverable to a
+  person, and that is what it is: this is what `api.evaluate` returns, in a
+  form they can paste.
+
 - **The Obsidian plugin has the CLI's five verbs** (issue #221, v1 row 4 of
   #176) — Check, Format, Infer, Evaluate and Explain, each scoped to the active
   note, named "<verb> this note" so the palette is searchable by the word
