@@ -199,7 +199,10 @@ test("every file in src/ is a walk root, so none can hide until a row wires it i
  * Bump this only when the growth is real and reviewed, and record the date,
  * the new value and why directly above.
  */
-const BASELINE_BYTES = 266_316;
+const BASELINE_BYTES = 267_817;
+
+/* 2026-09-24, 266,316 → 267,817 (+1,501). v1 row 12: the status bar's states
+ * and the ribbon icon. */
 
 /* 2026-09-24, 265,875 → 266,316 (+441). v1 row 11: copy the values as JSON. */
 

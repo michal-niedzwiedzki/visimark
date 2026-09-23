@@ -9,6 +9,12 @@ Each entry says which engine version the bundle carries.
 
 ## Unreleased
 
+- **The status bar says what state the note is in** — `VisiMark ✓` when
+  everything agrees with its formulas, `VisiMark · 3 to look at` when it does
+  not — and pressing it opens the findings view. A ribbon icon opens the vault
+  sweep. Advice alone never changes the state: a note whose only finding is
+  "defined but never used" agrees with itself.
+
 - **Copy the values as JSON**, from the Evaluate dialog. It is the `values`
   object out of `visimark eval --json`, exactly — not a reshaping of it — so
   what you paste into a script or a model prompt is the contract the CLI

@@ -17,6 +17,7 @@ import { offerInfer } from "./infer-modal.js";
 import { previewInfer } from "./infer-plan.js";
 import { reportFor } from "./report.js";
 import { readNote } from "./snapshot.js";
+import { HIDDEN, UNKNOWN, statusFor } from "./status.js";
 import { SWEEP_VIEW, SweepView } from "./sweep-view.js";
 import { ValuesModal } from "./values-modal.js";
 import { vaultSweepRead } from "./vault.js";
@@ -143,6 +144,26 @@ export default class VisiMarkPlugin extends Plugin {
     this.status = this.addStatusBarItem();
     this.status.addClass("visimark-status");
     this.status.setAttribute("aria-live", "polite");
+    // v1 row 12: the status bar is how the findings view is found at all, so
+    // it is the way in rather than only a readout.
+    this.status.addClass("mod-clickable");
+    this.status.setAttribute("role", "button");
+    this.status.setAttribute("tabindex", "0");
+    this.registerDomEvent(this.status, "click", () => void this.openFindings());
+    this.registerDomEvent(this.status, "keydown", (event: KeyboardEvent) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      void this.openFindings();
+    });
+
+    // The ribbon is the other way in, and the only one visible before a note
+    // is open. It is not gated: it opens a vault-wide scan, which has no
+    // active note to ask about (§2.3).
+    this.addRibbonIcon(
+      "search-check",
+      "Sweep the vault with VisiMark",
+      () => void this.openSweep(),
+    );
 
     // v1 row 6. The view owns its own refreshing — it is a Component, so its
     // listeners die with it — which is also why this file keeps no reference
@@ -258,12 +279,48 @@ export default class VisiMarkPlugin extends Plugin {
     this.app.workspace.revealLeaf(leaf);
   }
 
-  /** Re-ask the gate for the active note and show or hide the witness. */
+  /**
+   * Re-ask the gate, and — v1 row 12 — say what the note's state is.
+   *
+   * Row 1 shipped this as a witness that reported the gate and nothing else,
+   * because every surface that could say more belonged to a later row. This
+   * is that row: the element is the same one, and it now carries the state
+   * `statusFor` renders.
+   *
+   * The check is asynchronous because the note may read files (§2.6), so the
+   * gate is answered first and synchronously — that is what keeps a vault of
+   * ordinary notes showing nothing at all without waiting for anything.
+   */
   private refresh(): void {
     if (this.status === null) return;
     const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-    const active = view !== null && hasVmarkBlock(view.getViewData());
-    this.status.setText(active ? "VisiMark" : "");
-    this.status.toggleClass("visimark-hidden", !active);
+    const source = view?.getViewData() ?? null;
+    if (source === null || !hasVmarkBlock(source)) {
+      this.show(HIDDEN);
+      return;
+    }
+    void this.refreshState(view!, source);
+  }
+
+  private async refreshState(view: MarkdownView, source: string): Promise<void> {
+    const path = view.file?.path ?? "untitled.md";
+    try {
+      const { model, snapshot } = await readNote(source, path, vaultSweepRead(this.app.vault));
+      const doc = { path: snapshot.path, reader: snapshot.reader };
+      // the note may have changed while the snapshot was being fetched; the
+      // next refresh will be along, and a stale verdict is worse than none
+      const current = this.app.workspace.getActiveViewOfType(MarkdownView);
+      if (current?.getViewData() !== source) return;
+      this.show(statusFor(reportFor(model, check(model, { doc }), doc)));
+    } catch {
+      this.show(UNKNOWN);
+    }
+  }
+
+  private show(status: { text: string; detail: string }): void {
+    if (this.status === null) return;
+    this.status.setText(status.text);
+    this.status.setAttribute("aria-label", status.detail);
+    this.status.toggleClass("visimark-hidden", status.text === "");
   }
 }

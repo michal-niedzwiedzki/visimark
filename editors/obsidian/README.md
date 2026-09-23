@@ -13,7 +13,11 @@ each v1 row is its own issue.
 ## What is built so far
 
 **v1 row 1** ([#200](https://github.com/michal-niedzwiedzki/visimark/issues/200)):
-the browser bundle and the activation gate. **v1 row 11** ([#223](https://github.com/michal-niedzwiedzki/visimark/issues/223)):
+the browser bundle and the activation gate. **v1 row 12** ([#225](https://github.com/michal-niedzwiedzki/visimark/issues/225)):
+the status bar's states and the ribbon icon — what makes the findings view and
+the sweep findable at all.
+
+**v1 row 11** ([#223](https://github.com/michal-niedzwiedzki/visimark/issues/223)):
 copy a note's values as JSON, in the shape `visimark eval --json` reports.
 
 **v1 row 4** ([#221](https://github.com/michal-niedzwiedzki/visimark/issues/221)):

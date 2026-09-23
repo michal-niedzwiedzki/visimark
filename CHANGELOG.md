@@ -4,6 +4,18 @@
 
 ### Added
 
+- **The Obsidian plugin's status bar says what state a note is in** (issue
+  #225, v1 row 12 of #176) — `VisiMark ✓`, or `VisiMark · 3 to look at` — and
+  pressing it opens the findings view; a ribbon icon opens the vault sweep.
+  #176 rates the row as "what makes rows 2 and 6 findable at all", and a
+  findings view nobody knows is there is a findings view nobody opens.
+
+  v1 constraint 6 forbids the report's vocabulary, not the number: "3 to look
+  at" is a count, "3 problems (3 stale, 0 errors)" is a report. Advice never
+  changes the state, because the engine's own `isProblem` says it is not a
+  problem — and a status bar that cried wolf about an unused name would teach
+  a reader to ignore it.
+
 - **The Obsidian plugin can copy a note's values as JSON** (issue #223, v1 row
   11 of #176). It is the `values` object out of `visimark eval --json`,
   exactly — same shape, same two-space indent, same trailing newline — so a

@@ -203,6 +203,7 @@ implemented is not a failure; it is not yet a test.
 |---|---|---|
 | §2.1 activation | v1 constraint 4 | **yes**, since [#200](https://github.com/michal-niedzwiedzki/visimark/issues/200) |
 | §2.6 format, declined artifact | v1 row 7 (repair half) | **partly**, since [#213](https://github.com/michal-niedzwiedzki/visimark/issues/213) — the findings view's per-row repair; format-on-save is still row 7 |
+| §2.1 status and ribbon states | v1 row 12 | **yes**, since [#225](https://github.com/michal-niedzwiedzki/visimark/issues/225) — §2.1's own pass condition is unchanged; what is new to check is that the state is right and that pressing it opens the findings view |
 | §2.4 the five commands | v1 row 4 | **yes**, since [#221](https://github.com/michal-niedzwiedzki/visimark/issues/221) |
 | §2.9 the plugin API | v1 row 9 | **yes**, since [#219](https://github.com/michal-niedzwiedzki/visimark/issues/219) — its comparison against `eval --get` is asserted in `editors/obsidian/test/api.test.ts`; what is left is that the call is made against the documented surface |
 | §2.7 `infer` on a pasted table | v1 row 5 | **yes**, since [#217](https://github.com/michal-niedzwiedzki/visimark/issues/217) — its "rewrites no existing byte" is asserted by reconstruction, which is stronger than the `git diff` this section asks for |
