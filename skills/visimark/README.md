@@ -23,6 +23,24 @@ For a manual install, copy `SKILL.md` into the agent's skill folder:
 cp -r skills/visimark ~/.claude/skills/visimark
 ```
 
+## Or reach it over MCP
+
+If your agent speaks [MCP](https://modelcontextprotocol.io), `visimark-mcp`
+serves this same skill as a resource alongside tools for every `visimark`
+command — so the discipline and the verifier arrive together, and a document
+the agent is drafting in context can be checked without writing a temp file:
+
+```bash
+npm i -g visimark-mcp   # or: bun add -g visimark-mcp
+claude mcp add visimark -- npx -y visimark-mcp
+```
+
+The skill it serves is generated from `SKILL.md`, with the "Running it"
+section rewritten for a reader who has the server rather than a clone. It is
+the same discipline, not a second one — install it this way *or* the way
+above, not both. The full surface is in
+[`docs/mcp.md`](../../docs/mcp.md).
+
 ## What it does
 
 See [`SKILL.md`](SKILL.md) for the full skill. In short: it makes an agent
