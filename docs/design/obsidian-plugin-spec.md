@@ -204,15 +204,29 @@ The commands in §2.4 remain registered and are no-ops with a plain notice on a
 note with no fence — a command palette that hides and unhides entries as the
 active note changes is worse than one that answers.
 
-**One surface is pulled forward into row 1: a status bar item that reports the
+**One surface was pulled forward into row 1: a status bar item that reports the
 gate.** Manual test §2.1's pass condition has a positive half — *open
 `example-invoice.md`, VisiMark activates* — and every surface that could show
 it otherwise belongs to a later row, which would leave row 1 acceptable by unit
 test alone and §2.1 half-runnable until row 12. So row 1 ships the smallest
 observable thing: an item reading `VisiMark` when `locate` found a block,
 hidden when it did not, with no verdict, no count and no engine call beyond the
-gate's own parse. Row 12 adds the ribbon and the checked / findings states to
-that element rather than introducing one.
+gate's own parse. Row 12 did exactly that — it added the checked / needs-attention
+states to that same element, and the ribbon beside it, rather than introducing
+either ([#225](https://github.com/michal-niedzwiedzki/visimark/issues/225)).
+
+Two things row 12 settled. **A count is not the report's vocabulary**: "3 to
+look at" is a count and "3 problems (3 stale, 0 errors)" is a report, and
+constraint 6 forbids the second shape rather than the number. And **advice
+never changes the state** — the engine's own `isProblem` splits them, and a
+note whose only finding is "defined but never used" agrees with itself. Saying
+otherwise would train a reader to ignore the status bar, which is the one
+failure it cannot recover from.
+
+The ribbon opens the **vault sweep** rather than the findings view: it is the
+only surface visible before a note is open, and the findings view has nothing
+to say until there is one. It is ungated for the same reason the sweep command
+is — a vault-wide scan has no active note to ask about.
 
 ### 2.4 Commands
 
