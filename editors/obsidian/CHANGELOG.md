@@ -9,6 +9,14 @@ Each entry says which engine version the bundle carries.
 
 ## Unreleased
 
+- **A findings view**, and it is not a Problems panel. One row per finding, in
+  a sentence — no red, no codes, no "1 problem" — under **Needs attention** or
+  **Advice**, where the split is the engine's own and not a second list.
+  Clicking a row puts the cursor on what it is about; a stale value offers a
+  **Repair** button that rewrites exactly that one. A stale *chart* keeps its
+  row and gets no button, because v1 has no vault-backed write port and
+  declining the write never silences the finding.
+
 - The audience-B finding vocabulary (`src/findings.ts`) — one translation of
   the engine's seventeen-code taxonomy into sentences, so that the findings
   view, the popover, the sweep and the status bar cannot come to say different

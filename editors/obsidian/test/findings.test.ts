@@ -76,9 +76,10 @@ test("every row is a sentence, not a log line", () => {
     // defined twice" — which is the spec's wording and is lowercase because
     // the document is. Anything else starts with a capital.
     const opensWithSubject = r.row.startsWith("totl") || r.row.startsWith("total");
+    const opensWithCount = /^\d/.test(r.row);
     expect(
-      opensWithSubject || r.row[0] === r.row[0]!.toUpperCase(),
-      `${code}: "${r.row}" starts neither with a capital nor with the name it is about`,
+      opensWithSubject || opensWithCount || r.row[0] === r.row[0]!.toUpperCase(),
+      `${code}: "${r.row}" starts with none of a capital, the name it is about, or a count`,
     ).toBe(true);
     expect(r.row.length, `${code}: "${r.row}" is too terse to be a sentence`).toBeGreaterThan(15);
   }
@@ -93,6 +94,16 @@ test("the code is available, but only off the row", () => {
 test("only a stale value offers a repair, because fmt repairs only that", () => {
   const repairable = ALL_CODES.filter((c) => forReader(finding(c))?.action?.kind === "repair");
   expect(repairable).toEqual(["STALE"]);
+});
+
+test('a collapsed group of drifted anchors says how many, not "this value"', () => {
+  // the engine reports every drifted prose anchor as one finding with no site
+  // of its own, because there is no single place to point at. "This value no
+  // longer matches its formula" about eight of them sends the reader looking
+  // for one that does not exist.
+  const group = forReader(finding("STALE", { anchorGroup: true, suppressedCount: 8 }))!;
+  expect(group.row).toBe("8 values in the text no longer match their formulas.");
+  expect(group.action).toEqual({ kind: "repair" });
 });
 
 test("a stale chart is a row with no repair, and the finding is not silenced", () => {

@@ -199,7 +199,21 @@ test("every file in src/ is a walk root, so none can hide until a row wires it i
  * Bump this only when the growth is real and reviewed, and record the date,
  * the new value and why directly above.
  */
-const BASELINE_BYTES = 161_078;
+const BASELINE_BYTES = 238_664;
+
+/*
+ * 2026-09-23, 161,078 → 238,664 (+77,586, +48%). v1 row 6: the findings view
+ * is the first surface that calls `check` and `planFmt`, so the evaluator, the
+ * writer and decimal.js enter the bundle. Row 1 reached only `locate`.
+ *
+ * This is the step change, not a trend: every later row uses the same three
+ * entry points. A growth of this size again means something new was pulled in,
+ * and the walk above names the file.
+ *
+ * #211 records 168,543 for the same constant, from the four templates. The two
+ * are independent and both real; whichever lands second re-measures and says
+ * so here. That is the mechanism working, not a conflict to avoid.
+ */
 
 /** 10% over the baseline — a margin, not a byte-exact pin, so an unrelated
  * esbuild version bump does not fail this for a reason unrelated to the

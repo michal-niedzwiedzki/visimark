@@ -419,7 +419,7 @@ CLI*, differently presented.
 | CLI outcome | Exit | Plugin surface |
 |---|---|---|
 | Clean | `0` | Status bar reads checked; no findings view rows; no decorations other than provenance |
-| Findings | `1` | One findings-view row per finding, in §3.2's words; provenance decoration distinguishes values that disagree with their formulas; status bar reads in audience-B language |
+| Findings | `1` | One findings-view row per finding, in §3.2's words, under **Needs attention** or **Advice** — the split is the engine's own `isProblem`, not a second list; provenance decoration distinguishes values that disagree with their formulas; status bar reads in audience-B language |
 | Usage error | `2` | **Cannot occur.** The plugin parses no argv. A command on a note with no fence is a notice, not a usage error |
 | Engine throw | — | One notice naming the note, and the findings view says the note could not be checked. The plugin never silently shows a clean state for a note it failed to check |
 
@@ -457,6 +457,15 @@ the same thing.
 Only `STALE` offers a repair, because `fmt` repairs only `STALE`
 ([§10](../visimark-design.md#10-error-taxonomy)) and an action the engine will
 not honour is worse than no action.
+
+One addition this table did not anticipate: the engine collapses every drifted
+prose anchor into a **single** `STALE` finding with no site of its own, because
+there is no one place to point at. "This value no longer matches its formula"
+about eight of them sends a reader looking for one, so that row reads *"8
+values in the text no longer match their formulas."* and its repair covers all
+of them — see `editors/obsidian/src/report.ts`, which is also where the edits
+for it are adopted, since `planFmt` cannot attribute a spanless finding by
+span.
 
 **This table is plugin code** — `src/findings.ts` — not an engine addition.
 A plain-language sibling of `describeFinding` in the engine would be real reuse

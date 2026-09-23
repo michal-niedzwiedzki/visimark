@@ -66,9 +66,15 @@ function subject(f: Finding): string {
  */
 const TEXT: Record<FindingCode, ((f: Finding) => string) | null> = {
   STALE: (f) =>
-    f.artifact === undefined
-      ? "This value no longer matches its formula."
-      : "This chart is older than the numbers it draws.",
+    f.artifact !== undefined
+      ? "This chart is older than the numbers it draws."
+      : // the engine collapses every drifted prose anchor into one finding
+        // with no site of its own, because there is no single place to point
+        // at. Saying "this value" about eight of them would send the reader
+        // looking for one.
+        f.anchorGroup === true
+        ? `${f.suppressedCount ?? 0} values in the text no longer match their formulas.`
+        : "This value no longer matches its formula.",
   DATE: () => "This looks like a date but is not one VisiMark can read.",
   UNIT: () => "This column mixes units.",
   UNDEF: (f) => `Nothing in this note is called ${subject(f)}.`,

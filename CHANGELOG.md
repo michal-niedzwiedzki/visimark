@@ -4,6 +4,19 @@
 
 ### Added
 
+- **The Obsidian plugin has a findings view** (issue #213, v1 row 6 of #176).
+  One row per finding, in a sentence rather than a code — no red, no `STALE`,
+  no "1 problem" anywhere — split into *Needs attention* and *Advice* by the
+  engine's own `isProblem`. Clicking a row puts the cursor on what it is about;
+  a stale value offers a **Repair** that applies exactly the edits `fmt` would
+  make for that one finding, through the editor so it is a single undo step. A
+  stale chart keeps its row and gets no button: v1 has no vault-backed write
+  port, and declining the write never silences the finding.
+
+  The property that makes the per-row repair trustworthy is a test rather than
+  a claim — clicking every row in turn, one at a time, arrives at exactly the
+  bytes `visimark fmt` would have written.
+
 - **The `--json` envelope's shapes and `explainView` can be bundled for a
   browser** (issue #204). `report/json.ts` and `report/explain.ts` each read
   the engine's own version through `readVersion()`, which imports
