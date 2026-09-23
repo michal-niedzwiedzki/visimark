@@ -203,8 +203,9 @@ implemented is not a failure; it is not yet a test.
 |---|---|---|
 | §2.1 activation | v1 constraint 4 | **yes**, since [#200](https://github.com/michal-niedzwiedzki/visimark/issues/200) |
 | §2.6 format, declined artifact | v1 row 7 (repair half) | **partly**, since [#213](https://github.com/michal-niedzwiedzki/visimark/issues/213) — the findings view's per-row repair; format-on-save is still row 7 |
+| §2.7 `infer` on a pasted table | v1 row 5 | **yes**, since [#217](https://github.com/michal-niedzwiedzki/visimark/issues/217) — its "rewrites no existing byte" is asserted by reconstruction, which is stronger than the `git diff` this section asks for |
 | §2.8 the vault sweep | v1 row 8 | **yes**, since [#215](https://github.com/michal-niedzwiedzki/visimark/issues/215) — and its fixture is asserted in `editors/obsidian/test/sweep.test.ts`, so what is left for a person is the phone |
-| §2.2 – §2.5, §2.7, §2.9 – §2.11 | v1 rows 2–10 | not yet |
+| §2.2 – §2.5, §2.9 – §2.11 | v1 rows 2–10 | not yet |
 
 Run every section in **Restricted Mode with only the VisiMark plugin
 enabled**, on desktop and on a phone.
@@ -277,10 +278,22 @@ palette on `example-invoice.md` and on `example-invoice-drift.md`.
 - Paste a plain Markdown table with a visibly arithmetic column — or use
   `example-quote-plain.md`, the repository's worked example of a document with
   nothing wired up — and run Infer.
-- **Pass:** a preview of what would be inserted, before anything is inserted.
+- Run **VisiMark: Work out the formulas**.
+- **Pass:** a preview of what would be inserted, before anything is inserted —
+  the block as it will appear, not a summary of it.
 - **Pass condition:** accepting the preview inserts a ```` ```vmark ```` block
   and rewrites **no existing byte** of the table. Verify with `git diff`, not
   by eye: `planInfer` only inserts.
+
+  `editors/obsidian/test/infer-plan.test.ts` asserts this more strongly than a
+  diff can — it deletes exactly the inserted ranges out of the result and
+  requires the original document back, byte for byte — and asserts that
+  accepting it on `example-quote-plain.md` leaves a document `check` reports
+  **zero** findings in. So a failure here means the insertion, not the plan:
+  the editor put the text somewhere else than the plan said.
+- **Also worth doing:** select one table in a note that has two, and run it
+  again. Only the selected table should be proposed for — and selecting a
+  single character inside a table should propose for the whole of it.
 
 ### 2.8 The vault sweep — v1 row 8
 

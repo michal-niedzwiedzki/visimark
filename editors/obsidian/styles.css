@@ -152,3 +152,44 @@
   outline: 2px solid var(--interactive-accent);
   outline-offset: 2px;
 }
+
+/* --- the infer preview (v1 row 5) ----------------------------------------- */
+
+.visimark-infer-lead {
+  margin-top: 0;
+}
+
+/*
+ * The block is shown as it will appear, so it is typeset as code and allowed
+ * to scroll rather than wrap: a rule that wrapped would read as two rules.
+ */
+.visimark-infer-block {
+  background: var(--code-background);
+  border-radius: var(--radius-s);
+  font-size: var(--font-smaller);
+  margin: var(--size-4-2) 0;
+  overflow-x: auto;
+  padding: var(--size-4-2);
+}
+
+.visimark-infer-note {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.visimark-infer-buttons {
+  display: flex;
+  gap: var(--size-4-2);
+  justify-content: flex-end;
+  margin-top: var(--size-4-4);
+}
+
+.visimark-infer-buttons button {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.visimark-infer-buttons button:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
+}

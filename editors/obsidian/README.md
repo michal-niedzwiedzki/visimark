@@ -13,7 +13,11 @@ each v1 row is its own issue.
 ## What is built so far
 
 **v1 row 1** ([#200](https://github.com/michal-niedzwiedzki/visimark/issues/200)):
-the browser bundle and the activation gate. **v1 row 8** ([#215](https://github.com/michal-niedzwiedzki/visimark/issues/215)):
+the browser bundle and the activation gate. **v1 row 5** ([#217](https://github.com/michal-niedzwiedzki/visimark/issues/217)):
+Infer with a preview — paste a plain table, and one command works out the
+formulas behind it.
+
+**v1 row 8** ([#215](https://github.com/michal-niedzwiedzki/visimark/issues/215)):
 the vault sweep — one command, every note, and a list of the ones that
 disagree with themselves.
 

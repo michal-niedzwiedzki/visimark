@@ -4,6 +4,20 @@
 
 ### Added
 
+- **The Obsidian plugin can work out the formulas behind a pasted table**
+  (issue #217, v1 row 5 of #176) — the on-ramp, and the row #176 expects to be
+  *the* entry point for people who have never run the CLI. Obsidian is where
+  AI-written budgets and pasted CSVs land; one command turns one into a
+  document whose numbers are checked.
+
+  The preview shows the ```` ```vmark ```` block as it will appear, before
+  anything is inserted, and accepting it **rewrites no existing byte** —
+  `planInfer` only inserts. The test proves that by deleting exactly the
+  inserted ranges back out of the result and requiring the original document,
+  byte for byte, which is stronger than the `git diff` the manual test asks
+  for. Run on the repository's own unwired example, the result reports zero
+  findings.
+
 - **The Obsidian plugin can look through a whole vault** (issue #215, v1 row 8
   of #176) — the one feature the VS Code extension cannot have. One command
   lists every note that disagrees with itself, in the same sentences the
