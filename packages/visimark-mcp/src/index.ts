@@ -10,3 +10,16 @@ export {
   type InputFields,
   type Resolved,
 } from "./input.js";
+export {
+  CONTENT_SOURCE,
+  envelope,
+  errorEnvelopeOf,
+  findingSummary,
+  findings,
+  okEnvelope,
+  skipped,
+  statusOf,
+  type Skipped,
+  type Status,
+} from "./envelope.js";
+export { engineVersion, serverVersion } from "./version.js";

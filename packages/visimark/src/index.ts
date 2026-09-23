@@ -21,6 +21,27 @@ export {
 export { infer, type Proposal, type ProposalKind } from "./infer/propose.js";
 export { planInfer, type PlannedInsert } from "./infer/write.js";
 export { describeFinding, formatCheck } from "./report/format.js";
+// The `--json` envelope's own pieces. A second front end over this engine —
+// `visimark-mcp` — consumes the envelope specified in
+// `docs/design/structured-output-json-spec.md` as its wire format, so it needs
+// the functions that produce it. Exported rather than reimplemented for the
+// reason review made on #152: the public finding shape is a contract, and a
+// consumer that re-derives it is a second serialisation that can drift from
+// this one. Additive; no existing consumer changes.
+export {
+  errorEnvelope,
+  evalValues,
+  findingSummary,
+  inferSummary,
+  publicAssertions,
+  publicCharts,
+  publicFinding,
+  publicProposal,
+  statusFromExit,
+  type CommandName,
+  type JsonValue,
+  type OnDefaults,
+} from "./report/json.js";
 export { formatInfer } from "./report/infer.js";
 export { lineOf } from "./report/lines.js";
 export { applyUnit, parseDecorated, type Unit } from "./eval/units.js";

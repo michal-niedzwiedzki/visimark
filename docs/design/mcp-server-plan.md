@@ -153,7 +153,7 @@ export interface Resolved {
 
 ## Task 3 — The envelope and the `skipped` surface
 
-- [ ] Serialise every result as the existing `--json` envelope, and make `content`
+- [x] Serialise every result as the existing `--json` envelope, and make `content`
       mode's stood-down phases visible instead of silent.
 
 **Files**
