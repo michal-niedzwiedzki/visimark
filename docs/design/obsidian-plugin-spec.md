@@ -147,7 +147,7 @@ of the *engine*, not a second client of the *server* — which means
 |---|---|---|
 | `id` | `visimark` | matches the npm package and the CLI |
 | `isDesktopOnly` | `false` | mobile is the entire reason fork B is not a VS Code feature |
-| `minAppVersion` | the version the CodeMirror 6 editor extension API in use was introduced in, recorded in `versions.json` | required by the registry; a guess here is a support claim nobody tested |
+| `minAppVersion` | `1.0.0`, recorded in `versions.json` | required by the registry; a guess here is a support claim nobody tested. Row 2 is the row that registers a CodeMirror 6 editor extension, and it does not move the floor: `registerEditorExtension` predates Obsidian 1.0, as does everything else in use. Still an inference until it is checked against the API documentation before submission |
 
 Build: **esbuild**, format `cjs`, one `main.js`, with `obsidian`, `electron`
 and the CodeMirror packages Obsidian itself provides marked external.

@@ -9,6 +9,13 @@ Each entry says which engine version the bundle carries.
 
 ## Unreleased
 
+- **Computed values are marked, in reading mode and in Live Preview** — a
+  hairline under a value VisiMark works out, doubled when it no longer matches
+  its formula. Not a colour: a red number says *error* to someone trained by
+  build logs and something worse to someone who has not been. Nothing is
+  written: the mark is a class on rendered output, and a note copied out of the
+  vault is byte-identical.
+
 - **The status bar says what state the note is in** — `VisiMark ✓` when
   everything agrees with its formulas, `VisiMark · 3 to look at` when it does
   not — and pressing it opens the findings view. A ribbon icon opens the vault

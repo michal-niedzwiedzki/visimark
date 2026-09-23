@@ -13,7 +13,11 @@ each v1 row is its own issue.
 ## What is built so far
 
 **v1 row 1** ([#200](https://github.com/michal-niedzwiedzki/visimark/issues/200)):
-the browser bundle and the activation gate. **v1 row 12** ([#225](https://github.com/michal-niedzwiedzki/visimark/issues/225)):
+the browser bundle and the activation gate. **v1 row 2** ([#227](https://github.com/michal-niedzwiedzki/visimark/issues/227)):
+provenance and staleness in reading mode and Live Preview — the row #176 calls
+"the moment the product explains itself".
+
+**v1 row 12** ([#225](https://github.com/michal-niedzwiedzki/visimark/issues/225)):
 the status bar's states and the ribbon icon — what makes the findings view and
 the sweep findable at all.
 
@@ -109,12 +113,16 @@ Row 1 uses only APIs that predate Obsidian 1.0: `Plugin`, `MarkdownView`,
 `getViewData`. 1.0.0 is therefore a floor the code actually meets rather than a
 number chosen to look safe.
 
-**It moves when a row uses something newer**, and the row that moves it says
-so. The spec ties it to the CodeMirror 6 editor-extension API that row 2's
-Live Preview decorations will use; row 1 registers no editor extension, so that
-version is not yet knowable and is not guessed here. Before the registry
-submission it is checked against the API documentation rather than inferred —
-a `minAppVersion` is a support claim, and the registry's reviewers read it.
+**Row 2 is the row the spec said would settle this**, because it is the one
+that registers a CodeMirror 6 editor extension. It does not move the floor:
+`registerEditorExtension` and the CodeMirror 6 editor arrived with Live
+Preview, which predates Obsidian 1.0, so every API this plugin uses still
+predates the floor it declares.
+
+That leaves 1.0.0 as an honest floor rather than a guess — but it is still an
+*inference*, and a `minAppVersion` is a support claim the registry's reviewers
+read. Before submission it is checked against the API documentation, and the
+manual test is run on the oldest Obsidian the floor claims.
 
 ## Versioning
 
