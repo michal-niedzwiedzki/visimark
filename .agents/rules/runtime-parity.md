@@ -63,6 +63,11 @@ on the current LTS **and** on the latest stable release, and both block.
 - `release.yml` uses `lts/*` too, though Node is only a tool there — npm does
   the publishing. Tracking the alias keeps that file from drifting onto an EOL
   runtime while `ci.yml` moves on.
+- **`.nvmrc` holds `lts/*`**, not a number, so a contributor's `nvm use` lands
+  on the same runtime CI tests. It is a version-carrying file and is checked
+  like one. `node-version-file:` in a workflow may name `.nvmrc` and nothing
+  else — otherwise it is a way around the rule above, satisfying the key while
+  the file it points at says `20`.
 
 **When Node promotes a new LTS, `node-support-policy` goes red.** That is the
 design, not a defect: the floor moves on a deliberate commit — bump every

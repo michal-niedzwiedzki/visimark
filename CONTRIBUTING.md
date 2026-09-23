@@ -89,7 +89,13 @@ $ bunx visimark check docs/example-invoice.md
 ```
 
 Node is not needed to develop, but the published CLI must run under it, so CI
-exercises that separately. **VisiMark supports the current Node LTS and
+exercises that separately. If you do want it locally, `.nvmrc` holds `lts/*`
+rather than a number, so `nvm use` (or `nvm install`) lands on the same LTS CI
+tests and keeps doing so after the next LTS promotion:
+
+```console
+$ nvm use          # reads .nvmrc -> the current LTS
+``` **VisiMark supports the current Node LTS and
 newer**, and CI runs the Node-facing jobs on the current LTS *and* on the
 latest stable release — both blocking, so a break on a new Node is caught here
 rather than by a user. The policy and how it is enforced are in

@@ -223,6 +223,22 @@ jobs:
             fi
           done
           exit $fail
+      - name: .nvmrc tracks the LTS rather than naming a version
+        run: |
+          set -euo pipefail
+          # `.nvmrc` is what a contributor's `nvm use` reads, so it is a
+          # version-carrying file like any other — and the one most likely to
+          # be "helpfully" pinned to a number by someone who wants a
+          # reproducible local install. `lts/*` is the same alias the
+          # workflows use, so local and CI cannot disagree.
+          want='lts/*'
+          got=$(tr -d '[:space:]' < .nvmrc)
+          if [ "$got" != "$want" ]; then
+            echo "::error file=.nvmrc::.nvmrc says \"$got\"; it must be \"$want\" so it tracks the LTS instead of naming a version that will go EOL. See .agents/rules/runtime-parity.md."
+            exit 1
+          fi
+          echo ".nvmrc is $got"
+
       - name: no workflow pins a numeric Node version
         run: |
           set -uo pipefail
@@ -231,13 +247,19 @@ jobs:
           # Anchored on the YAML key, so prose and this grep itself do not
           # match. The accepted values are the two aliases and the matrix
           # expression that expands to them.
-          bad=$(grep -rnE '^[[:space:]]*node-version:' .github/workflows/ \
+          #
+          # `node-version-file:` is checked too, and only `.nvmrc` is allowed:
+          # it is the obvious way around the rule above — the key satisfies no
+          # pattern here while the file it names says `20` — and `.nvmrc` is
+          # the one file the step above proves says `lts/*`.
+          bad=$(grep -rnE '^[[:space:]]*node-version(-file)?:' .github/workflows/ \
             | grep -vE 'node-version:[[:space:]]*"?lts/\*"?[[:space:]]*$' \
             | grep -vE 'node-version:[[:space:]]*"?latest"?[[:space:]]*$' \
+            | grep -vE 'node-version-file:[[:space:]]*"?\.nvmrc"?[[:space:]]*$' \
             | grep -vF 'node-version: ${{ matrix.node }}' || true)
           if [ -n "$bad" ]; then
             echo "$bad" | while IFS= read -r line; do
-              echo "::error::$line — pin Node with lts/* or latest, never a number. See .agents/rules/runtime-parity.md."
+              echo "::error::$line — name Node with lts/*, latest, or node-version-file: .nvmrc. Never a number. See .agents/rules/runtime-parity.md."
             done
             exit 1
           fi
