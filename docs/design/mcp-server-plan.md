@@ -311,7 +311,7 @@ export { resolveArtifactPath, type PathResult } from "./artifact/path.js";
 
 ## Task 7 — Transport, entry point, and the handshake tests
 
-- [ ] Make it a server.
+- [x] Make it a server.
 
 **Files**
 

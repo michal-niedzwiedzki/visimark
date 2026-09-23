@@ -1,13 +1,19 @@
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { pathToFileURL } from "node:url";
 import { parseArgs } from "./args.js";
+import { createServer } from "./server.js";
 
 /**
  * The entry point. Returns the process exit code rather than calling
- * `process.exit` itself, so the handshake tests can drive it in-process.
+ * `process.exit` itself, so a test can drive it in-process.
  *
  * Exit codes are the server's own, never a document's: `0` on clean shutdown,
- * `2` on a usage error in these arguments. A document with findings is a
- * successful tool call (spec §3.1) and never reaches here.
+ * `2` on a usage error in its own arguments, and **never** `1` because a
+ * document had findings — that is a successful tool call (spec §3.1).
+ *
+ * Arguments are refused **before the transport starts**, as the CLI does
+ * (#121). Once stdio is the protocol stream there is nowhere left to print a
+ * usage line: anything on stdout corrupts it.
  */
 export async function runServer(argv: readonly string[]): Promise<number> {
   const parsed = parseArgs(argv);
@@ -15,7 +21,16 @@ export async function runServer(argv: readonly string[]): Promise<number> {
     console.error(parsed.usage);
     return 2;
   }
-  // Transport and tool registration arrive in task 7.
+
+  const { connect } = createServer({ allowWrite: parsed.args.allowWrite });
+  const transport = new StdioServerTransport();
+  await connect(transport);
+
+  // Resolve when the transport closes, so the process lives as long as the
+  // conversation and exits 0 when the host hangs up.
+  await new Promise<void>((resolve) => {
+    transport.onclose = resolve;
+  });
   return 0;
 }
 
