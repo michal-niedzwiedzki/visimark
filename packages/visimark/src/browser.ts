@@ -28,13 +28,20 @@
  *   five exports that reach a Node builtin directly. A browser host supplies
  *   its own `ReaderPort`; `memoryReader` below is the one the engine already
  *   ships.
- * - Everything from `report/json.ts` and `report/explain.ts` — the `--json`
- *   envelope and `explainView`. They import `readVersion()`, so they reach
- *   `node:module`. `docs/design/cross-host-equivalence-check-spec.md` §2 found
- *   this first and calls the workaround "closer to forced than chosen": it
- *   builds the envelope host-side, outside the bundle. Making them browser-safe
- *   means making the engine's own version injectable, which is a change to
- *   modules this file does not touch and a decision of its own.
+ * - `errorEnvelope` and `explainJson` from `report/envelope.ts` — the two
+ *   functions that stamp a complete `--json` envelope with the engine's own
+ *   version, which they read through `node:module`. **A browser host does not
+ *   know which engine built it**, so this is the honest boundary rather than a
+ *   limitation: everything else in `report/json.ts` is here, so a caller can
+ *   build every *piece* of the envelope and supply the stamp itself if it has
+ *   one.
+ *
+ *   Both modules used to be absent entirely, for those two calls — one string
+ *   kept `explainView`, which needs no version at all, out of every browser
+ *   build, and `docs/design/cross-host-equivalence-check-spec.md` §2 hit the
+ *   same wall from the other side and called its workaround "closer to forced
+ *   than chosen". Issue #204 moved the two stamped builders into their own
+ *   module; nothing else changed, and no signature did.
  *
  * **What is here that `index.ts` does not export.** `memoryReader` and
  * `sha256Hex`, from `playground/`. `ReaderPort` is synchronous and
@@ -90,6 +97,22 @@ export { planInfer, type PlannedInsert } from "./infer/write.js";
 export { resolveArtifactPath, type PathResult } from "./artifact/path.js";
 export { describeFinding, formatCheck } from "./report/format.js";
 export { closest, levenshtein } from "./report/levenshtein.js";
+export {
+  evalValues,
+  findingSummary,
+  inferSummary,
+  publicAssertions,
+  publicCharts,
+  publicFinding,
+  publicFnEntry,
+  publicProposal,
+  signature,
+  statusFromExit,
+  type CommandName,
+  type JsonValue,
+  type OnDefaults,
+} from "./report/json.js";
+export { explainText, explainView, type ExplainView } from "./report/explain.js";
 export {
   ScenarioError,
   applyScenario,

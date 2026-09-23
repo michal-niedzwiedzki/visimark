@@ -42,7 +42,6 @@ export { describeFinding, formatCheck } from "./report/format.js";
 // consumer that re-derives it is a second serialisation that can drift from
 // this one. Additive; no existing consumer changes.
 export {
-  errorEnvelope,
   evalValues,
   findingSummary,
   inferSummary,
@@ -61,7 +60,11 @@ export {
 // over the same envelope: `explain`'s view and its JSON shape, `ref`'s
 // did-you-mean, and `eval`'s scenario machinery. Same reasoning as the block
 // above — each of these is a contract a consumer would otherwise re-derive.
-export { explainJson, explainText, explainView, type ExplainView } from "./report/explain.js";
+export { explainText, explainView, type ExplainView } from "./report/explain.js";
+// `errorEnvelope` and `explainJson`, unchanged in name, signature and output.
+// They moved to the one module in `src/report/` that reads the engine version,
+// so the rest of `src/report/` can be bundled for a browser — issue #204.
+export { errorEnvelope, explainJson } from "./report/envelope.js";
 export { closest, levenshtein } from "./report/levenshtein.js";
 export {
   ScenarioError,

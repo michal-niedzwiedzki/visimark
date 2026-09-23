@@ -4,6 +4,27 @@
 
 ### Added
 
+- **The `--json` envelope's shapes and `explainView` can be bundled for a
+  browser** (issue #204). `report/json.ts` and `report/explain.ts` each read
+  the engine's own version through `readVersion()`, which imports
+  `node:module` — and a module-scope import taints its whole module, because a
+  bundler resolves before it shakes. So one string kept every public piece of
+  the envelope, and all of `explainView` (which needs no version at all), out
+  of every browser build. The two functions that actually stamp a version —
+  `errorEnvelope` and `explainJson` — moved to `report/envelope.ts`, and
+  `test/report/version-reach.test.ts` fails if a third module starts reading
+  it.
+
+  **Nothing changed for any consumer.** Same public names, same signatures,
+  same envelopes byte for byte, same key order; `cross-host-check` still
+  reports 36 pairs and 0 divergences and the committed playground bundle is
+  unchanged. What is new is that `packages/visimark/src/browser.ts` now carries
+  `explainView`, `explainText` and every public envelope shape. The two stamped
+  builders are deliberately **not** in it: a browser host does not know which
+  engine built it, so it gets the pieces and supplies its own stamp.
+
+  This unblocks v1 rows 3, 4 and 9 of the Obsidian plugin (#176).
+
 - **An Obsidian client exists** (issue #200, v1 row 1 of #176).
   `editors/obsidian` builds as a single `main.js` with **no `node:` specifier
   in it**, so it loads on Obsidian mobile as well as desktop, and it activates

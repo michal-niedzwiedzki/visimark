@@ -28,7 +28,8 @@ import { createContext, runInContext } from "node:vm";
 import { decodeNamedCharacterReference } from "decode-named-character-reference";
 
 import { readVersion } from "../packages/visimark/src/cli/version.js";
-import { explainJson, explainView } from "../packages/visimark/src/report/explain.js";
+import { explainView } from "../packages/visimark/src/report/explain.js";
+import { explainJson } from "../packages/visimark/src/report/envelope.js";
 import {
   evalValues,
   findingSummary,

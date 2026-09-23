@@ -1,4 +1,3 @@
-import { readVersion } from "../cli/version.js";
 import type { AssertionResult, ChartResult, CheckResult } from "../eval/check.js";
 import type { Value } from "../eval/value.js";
 import type { Proposal } from "../infer/propose.js";
@@ -16,13 +15,11 @@ export function statusFromExit(code: 0 | 1 | 2): "ok" | "problems" | "error" {
   return code === 0 ? "ok" : code === 1 ? "problems" : "error";
 }
 
-export function errorEnvelope(
-  command: CommandName,
-  code: "USAGE" | "READ" | "SCENARIO",
-  message: string,
-): object {
-  return { command, visimark: readVersion(), status: "error", error: { code, message } };
-}
+// `errorEnvelope` used to be here. It moved to `report/envelope.ts` because it
+// is the only function in this file that reads the engine's own version, and
+// `readVersion()` imports `node:module` — which kept this entire module, and
+// therefore every public piece of the `--json` envelope, out of any browser
+// build. Issue #204. Everything below is pure and bundles anywhere.
 
 export function findingSummary(findings: Finding[]): {
   problems: number;

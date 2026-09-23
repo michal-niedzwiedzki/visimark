@@ -88,12 +88,26 @@ For each of the twelve `docs/example-*.md` files, and for each of
    `findingSummary`, `evalValues`, `publicAssertions`, `publicCharts`,
    `explainJson`, etc.) — imported directly by `scripts/cross-host-check.ts`,
    which runs on the Node/Bun side and is not part of the browser bundle.
-   This is closer to forced than chosen: `report/json.ts` and
-   `report/explain.ts` both transitively import `node:module` (via
-   `cli/version.ts`'s `readVersion()`), so they cannot enter
+   This was closer to forced than chosen when it was written: `report/json.ts`
+   and `report/explain.ts` both transitively imported `node:module` (via
+   `cli/version.ts`'s `readVersion()`), so they could not enter
    `browser-entry.ts`'s module graph without tripping
    `browser-graph.test.ts`'s existing guard, and must not be given a second,
    independently-maintained implementation inside the bundle.
+
+   **Only the two stamped builders are forced now.**
+   [#204](https://github.com/michal-niedzwiedzki/visimark/issues/204) moved
+   `errorEnvelope` and `explainJson` into `report/envelope.ts`, which is the
+   one module in `src/report/` that reads the engine version. Everything else
+   in `report/json.ts`, and all of `report/explain.ts`, is browser-safe and
+   exported from `packages/visimark/src/browser.ts`.
+
+   That does not change what this check should do, and the reason is worth
+   stating rather than leaving implied: **a browser host does not know which
+   engine built it.** The `visimark` field can only come from the side that
+   does, which is this harness — which is also why §5 excludes that field from
+   the comparison. Building the rest of the envelope host-side stays the right
+   arrangement here, and it is now a choice rather than a constraint.
 3. **Compare.** `JSON.parse` both sides' envelopes and deep-equal them,
    **excluding the `visimark` version field** (§5). This is a structural
    comparison, not a byte-string one — see §4.
