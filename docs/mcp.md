@@ -35,6 +35,10 @@ Read-only, as above. To allow writes, see [the write gate](#the-write-gate).
 }
 ```
 
+Releasing this package is [`releasing.md`](releasing.md) — one tag publishes it
+to npm and registers it on the MCP registry, in lockstep with the engine it
+pins.
+
 ## The command
 
 ```
