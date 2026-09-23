@@ -21,6 +21,19 @@ filesystem, no `vscode` import. That is an LSP server almost by construction.
 v1 ships that server plus a VS Code client. Other editors (Neovim, Zed, Helix)
 become a client each, later, with no server work.
 
+**One of them is not a language-server client.** `editors/obsidian` is a third
+client of the *engine* rather than a second client of the *server*: Obsidian
+has no language server client and no diagnostics surface to feed, and running a
+server subprocess is not a thing its mobile app does. So the sentence above is
+one client too narrow, and the shape it promises — *a client each, later, with
+no server work* — holds for it in an unexpected way: the plugin does no server
+work because it uses no server. The engine it imports is the same one; what it
+enters through is
+[`packages/visimark/src/browser.ts`](../packages/visimark/src/browser.ts),
+the browser-safe entry point, because `index.ts` reaches `node:fs` and a phone
+does not have one. See
+[`design/obsidian-plugin-spec.md`](design/obsidian-plugin-spec.md) §2.1.
+
 **In scope for v1**
 
 - Monorepo restructuring into workspaces.
@@ -412,6 +425,11 @@ One version across `packages/visimark`, `packages/visimark-lsp`,
 
 - Other editor clients (Neovim, Zed, Helix). The server is built for them; each
   is a later, small PR.
+- Editors that cannot host a language server are **not** on this list, and
+  Obsidian has come off it: it is a client of the engine, not of the server,
+  and it is being built row by row under
+  [#176](https://github.com/michal-niedzwiedzki/visimark/issues/176). Nothing
+  in this document's v1 is a dependency of it.
 - Incremental reparse.
 - Completion — column names, function names, refs inside a `vmark` block.
 - Semantic tokens / highlighting for the expression grammar.

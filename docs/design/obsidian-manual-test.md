@@ -1,12 +1,23 @@
 # Obsidian: a manual test scenario
 
-**Status of the thing under test.** There is no Obsidian plugin. `editors/`
-contains `vscode` and nothing else, and no file under `packages/` or
-`editors/` mentions Obsidian. Part 2 of this document cannot be run yet.
+**Status of the thing under test.** `editors/obsidian` exists and builds, and
+**§2.1 is the only section of Part 2 that can be run.** v1 row 1
+([#200](https://github.com/michal-niedzwiedzki/visimark/issues/200)) ships the
+browser bundle, the activation gate and one status bar item; every other
+section below accepts a row that is not implemented. Each states which.
 
-**Part 1 can be run right now, and should be run before the fork-B decision on
-[#176](https://github.com/michal-niedzwiedzki/visimark/issues/176).**
-It needs no plugin, no build and no code — only Obsidian and this repository.
+The negative half of §2.1 — an ordinary note shows nothing — was true of an
+empty plugin too, so it is worth little on its own; the half that means
+something is that `example-invoice.md` activates and an ordinary note does
+not, and that is what row 1 makes runnable.
+
+**Part 1 has been run** — on 2026-09-23, against Obsidian 1.13.7 on desktop and
+Android, before the fork-B decision on
+[#176](https://github.com/michal-niedzwiedzki/visimark/issues/176), as that
+decision required. The results are in *Recording Part 1* below and in
+`visimark-design.md` §16. It is kept runnable, and is worth re-running against
+a new Obsidian release: it needs no plugin, no build and no code — only
+Obsidian and this repository.
 It pays off a debt the design doc has carried since it was written:
 `visimark-design.md` §16 records that **Obsidian was never tested**, and that
 the belief it hides HTML comments in reading view "is unverified and no
@@ -182,10 +193,16 @@ actually encounters — is unaffected. The result is recorded in
 
 ## Part 2 — the v1 plugin acceptance script
 
-**Not runnable yet.** This is the script to run against the first
-`editors/obsidian` build, written now so the acceptance bar is set before the
-implementation rather than after it. Each section names the v1 row from #176
-that it accepts, and each states a single pass condition.
+**Runnable one section at a time, as the rows land.** This is the script to
+run against the `editors/obsidian` build, written before the implementation so
+the acceptance bar was set first. Each section names the v1 row from #176 that
+it accepts, and each states a single pass condition. A section whose row is not
+implemented is not a failure; it is not yet a test.
+
+| Section | Row | Runnable |
+|---|---|---|
+| §2.1 activation | v1 constraint 4 | **yes**, since [#200](https://github.com/michal-niedzwiedzki/visimark/issues/200) |
+| §2.2 – §2.11 | v1 rows 2–10 | not yet |
 
 Run every section in **Restricted Mode with only the VisiMark plugin
 enabled**, on desktop and on a phone.

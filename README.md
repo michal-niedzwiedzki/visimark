@@ -453,6 +453,14 @@ instead — that runs the extension straight from `editors/vscode` in a separate
 Extension Development Host, so uninstall the packaged copy first or you will see
 every diagnostic twice.
 
+An Obsidian client is being built row by row under
+[#176](https://github.com/michal-niedzwiedzki/visimark/issues/176), for people
+who read their notes on a phone and will never open a terminal. It is a client
+of the engine rather than of the language server, it is not published to npm,
+and so far it loads and activates only on a note that contains a `vmark` block —
+[`editors/obsidian/README.md`](editors/obsidian/README.md) says what is built
+and how to side-load it.
+
 Releases are tag-driven: pushing a `vX.Y.Z` tag publishes the engine to npm and
 the extension to both the VS Code Marketplace and Open VSX. The workflow needs
 three repository secrets — `NPM_TOKEN`, `VSCE_PAT` and `OVSX_PAT`. The checklist
