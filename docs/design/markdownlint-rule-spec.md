@@ -131,7 +131,9 @@ hands the rule and call the already-public `analyze(source)`.
 > rather than corrupting the offset; unreached today since no VisiMark
 > construct spans lines). Each rule therefore declares `parser: "micromark"`
 > rather than `"none"`, and `markdownlint` parses each document once, shared
-> across all seventeen rules. See `packages/markdownlint-visimark/src/source.ts`.
+> across all eighteen rules (seventeen finding-kind rules plus
+> `visimark-engine-error`, [§2.3](#23-one-rule-per-finding-code)).
+> See `packages/markdownlint-visimark/src/source.ts`.
 
 **Front matter needs no handling in this package.** Verified against
 `markdownlint` v0.41.1's source and by running it: front matter is absent from
@@ -149,8 +151,12 @@ front.md:8 error visimark-stale ... [lines.Net (pen): stored 9.99 ≠ computed 1
 
 ### 2.3 One rule per finding code
 
-The default export is an array of **seventeen** rule objects, one for each
-member of `FindingCode` (`packages/visimark/src/model/types.ts`):
+The default export is an array of **eighteen** rule objects: seventeen, one
+for each member of `FindingCode` (`packages/visimark/src/model/types.ts`), plus
+`visimark-engine-error` — not built from `FindingCode` at all, since it
+reports when the engine itself fails to analyse a document rather than a
+finding about that document's content (issue #173). The seventeen
+finding-kind rules share this shape:
 
 | Field | Value |
 |---|---|
@@ -181,13 +187,15 @@ All four levers, confirmed by running `markdownlint-cli2` v0.23.3:
 | `"visimark-advisory": false` | `WARN` and `NOTE` off |
 | `"visimark": false` | every VisiMark rule off |
 
-**The re-parse is paid once per document, not seventeen times.** The module
+**The re-parse is paid once per document, not eighteen times.** The module
 holds a one-entry cache keyed by the source string; the first rule to run for a
-file fills it and the other sixteen hit it. `markdownlint` runs a file's rules
-consecutively within one synchronous pass (every rule here is synchronous —
-no `asynchronous: true`), so no two files can interleave through the cache even
-when `markdownlint-cli2` lints files concurrently. Confirmed by instrumenting
-`analyze()` during a real run: **one call per file, seventeen rules.**
+file fills it and the other seventeen hit it — including `visimark-engine-error`,
+whose own report depends on that same cache having recorded a failure
+(issue #173). `markdownlint` runs a file's rules consecutively within one
+synchronous pass (every rule here is synchronous — no `asynchronous: true`),
+so no two files can interleave through the cache even when `markdownlint-cli2`
+lints files concurrently. Confirmed by instrumenting `analyze()` during a real
+run: **one call per file, eighteen rules.**
 
 ### 2.4 `recommended`, and the severity question
 
@@ -202,8 +210,10 @@ is exactly such a document, clean under `check` and carrying five `WARN`
 findings. Suppressing `WARN`/`NOTE` unconditionally would make them
 unreachable through this host at any setting.
 
-**The decision:** all seventeen rules are registered, and the package publishes
-a config fragment that switches the advisory tag off.
+**The decision:** all eighteen rules are registered, and the package publishes
+a config fragment that switches the advisory tag off. `visimark-engine-error`
+is never advisory (issue #173) — an engine failure is a hard failure, not a
+downgradable finding kind, so `recommended` never turns it off.
 
 `packages/markdownlint-visimark/recommended.json`:
 

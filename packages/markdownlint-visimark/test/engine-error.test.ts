@@ -80,19 +80,29 @@ Net = Qty * Rate
 `;
 
 test("analyze() throwing reports exactly one violation, under visimark-engine-error", async () => {
-  mock.module("visimark", () => ({ ...real, analyze: () => { throw new Error("boom") } }));
+  mock.module("visimark", () => ({
+    ...real,
+    analyze: () => {
+      throw new Error("boom");
+    },
+  }));
+  resetFindingsCache();
   const report = await run({ doc: clean });
-  expect(report.doc).toEqual([
-    { line: 1, rule: "visimark-engine-error", detail: "boom" },
-  ]);
+  expect(report.doc).toEqual([{ line: 1, rule: "visimark-engine-error", detail: "boom" }]);
+  // The headline invariant of this fix: eighteen rules ran against this
+  // document, but analyze() was called once, not eighteen times.
+  expect(parseCount()).toBe(1);
 });
 
 test("a non-Error thrown value still produces a readable detail", async () => {
-  mock.module("visimark", () => ({ ...real, analyze: () => { throw "boom" } }));
+  mock.module("visimark", () => ({
+    ...real,
+    analyze: () => {
+      throw "boom";
+    },
+  }));
   const report = await run({ doc: clean });
-  expect(report.doc).toEqual([
-    { line: 1, rule: "visimark-engine-error", detail: "boom" },
-  ]);
+  expect(report.doc).toEqual([{ line: 1, rule: "visimark-engine-error", detail: "boom" }]);
 });
 
 test("a successful analyze() never reports visimark-engine-error", async () => {
