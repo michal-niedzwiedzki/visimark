@@ -35,6 +35,7 @@
     "format": "oxfmt",
     "format:check": "oxfmt --check",
     "gen:docs": "bun scripts/gen-function-reference.ts",
+    "gen:mcp": "bun scripts/gen-mcp-skill.ts",
     "serve": "bun scripts/serve.mjs",
     "vscode-install": "cd editors/vscode && bun run install-local",
     "vscode-uninstall": "cd editors/vscode && bun run uninstall-local",

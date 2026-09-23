@@ -89,7 +89,43 @@ $ bunx visimark check docs/example-invoice.md
 ```
 
 Node is not needed to develop, but the published CLI must run under it, so CI
-exercises that separately. VisiMark supports Node 18 and newer.
+exercises that separately. If you do want it locally, `.nvmrc` holds `lts/*`
+rather than a number, so `nvm use` (or `nvm install`) lands on the same LTS CI
+tests and keeps doing so after the next LTS promotion:
+
+```console
+$ nvm use          # reads .nvmrc -> the current LTS
+``` **VisiMark supports the current Node LTS and
+newer**, and CI runs the Node-facing jobs on the current LTS *and* on the
+latest stable release — both blocking, so a break on a new Node is caught here
+rather than by a user. The policy and how it is enforced are in
+[`.agents/rules/runtime-parity.md`](.agents/rules/runtime-parity.md); the
+`engines.node` floor in every published manifest is asserted against the live
+LTS by `ci.yml`'s `node-support-policy` job, so it cannot quietly rot.
+
+### Running the MCP server from your working tree
+
+```console
+$ bun run packages/visimark-mcp/src/main.ts              # read-only
+$ bun run packages/visimark-mcp/src/main.ts --allow-write
+```
+
+To point a client at the tree rather than at the release:
+
+```console
+$ claude mcp add visimark-dev -- bun run "$(pwd)/packages/visimark-mcp/src/main.ts"
+```
+
+**`bunx visimark-mcp` runs the published build, silently.** So does `npx
+visimark-mcp`. Neither will tell you your change is not in it; you will simply
+be testing the last release. The same trap applies to the CLI — see
+`bun packages/visimark/src/cli/main.ts` above.
+
+`bun run gen:mcp` regenerates the files the server ships as resources: the
+skill variant at `packages/visimark-mcp/skill.md` and the doc copies under
+`packages/visimark-mcp/docs/`. CI regenerates both and fails on a diff, so run
+it and commit the result whenever you touch `skills/visimark/SKILL.md` or one
+of the docs it serves.
 
 This repository dogfoods its own [pre-commit](https://pre-commit.com) hook
 (`.pre-commit-config.yaml`) — run `pre-commit install` once, after `pip install
@@ -109,6 +145,7 @@ enforces the same check in CI either way.
 | `bun run format:check` | `oxfmt`, read-only — this is what CI runs |
 | `bun run build` | Builds every package |
 | `bun run gen:docs` | Regenerates the function reference from the engine's own registry |
+| `bun run gen:mcp` | Regenerates the MCP server's served skill and doc copies |
 | `bun run --filter visimark build:playground` | Rebuilds the browser bundles committed under `docs/vendor/` |
 | `bun run serve` | Serves `docs/` on `http://localhost:8080` — needed for the playground and the tutorial pages, which fetch their content and cannot run from `file://` |
 | `bun run vscode-install` | Builds, packages and installs the VS Code extension locally |
@@ -131,6 +168,7 @@ the matching regeneration and **commit the result**:
 
 ```console
 $ bun run gen:docs                              # if you changed a builtin function
+$ bun run gen:mcp                               # if you changed SKILL.md or a served doc
 $ bun run --filter visimark build:playground    # if you changed engine or playground source
 ```
 
@@ -161,10 +199,12 @@ writes `docs/function-reference.md` and part of `docs/visimark-design.md` from
 the engine's own function registry, so that what the documents promise and what
 `visimark ref` prints cannot drift. Fix: run it and commit the result.
 
-**Every version-carrying file must agree.** Four files carry the version — three
-package manifests and `action.yml`'s pinned `version` default. One tag publishes
-all of them, and the Action's default is what a consumer's `npx` actually
-installs. You only touch these in a release commit; see
+**Every version-carrying file must agree.** Eleven fields carry the version —
+six package manifests (three of which also pin `visimark` as a dependency),
+`action.yml`'s pinned `version` default and `scripts/precommit-visimark-check.sh`.
+One tag publishes all of them, the Action's default is what a consumer's `npx`
+actually installs, and an exact `visimark` pin is what stops a published plugin
+or the MCP server pairing with an engine it was never tested against. You only touch these in a release commit; see
 [`docs/releasing.md`](docs/releasing.md). The same commit needs a dated
 `## X.Y.Z - YYYY-MM-DD` heading in `CHANGELOG.md` and in
 `editors/vscode/CHANGELOG.md`; a separate CI step checks that each has one.

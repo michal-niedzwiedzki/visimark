@@ -1042,7 +1042,7 @@ The same thing in a GitHub workflow, if you prefer not to use the Action:
           npx --yes visimark@0.1.5 check docs/**/*.md
 ```
 
-VisiMark needs Node 18 or newer, or Bun. On Windows the launcher needs `sh` on
+VisiMark needs the current Node LTS or newer, or Bun. On Windows the launcher needs `sh` on
 the PATH — Git Bash or WSL provide it, plain PowerShell does not.
 
 ## 22. GitLab CI
@@ -1238,6 +1238,37 @@ reports a line but no column, and `fmt`, `infer`, `explain`, `eval` and
 [README](https://github.com/michal-niedzwiedzki/visimark/tree/master/packages/markdownlint-visimark)
 for the full contract.
 
+## 29. The MCP server
+
+The other entries in this part put VisiMark in a pipeline. This one puts it in
+front of an agent — one working in a repository that has never heard of the
+project, with no clone and no reason to look for a CLI.
+
+```bash
+npm i -g visimark-mcp   # or: bun add -g visimark-mcp
+claude mcp add visimark -- npx -y visimark-mcp
+```
+
+`visimark-mcp` serves every command as a tool over stdio, the authoring
+discipline as resources, and two prompts. It imports the engine as a library,
+so a document the agent is drafting in context needs no temp file: the read
+tools take `content` as readily as `path`.
+
+**It does not replace the CI check, and it is not a gate.** A gate is a thing
+that fails a build; this is a thing an agent consults. Keep
+`visimark check **/*.md` in the workflow whatever else you run, for the reason
+chapter 3 gives — an agent that can read a verdict can also decide not to.
+
+**It is read-only by default**, and deliberately hard to make otherwise. The
+apply tools refuse unless the server was started with `--allow-write` *and* the
+host declared at least one root; no roots means no writes, even with the flag.
+Neither condition is reachable from a tool call, which is the point. For a CI
+context the answer is almost always to leave the gate shut and let the agent
+propose a plan a human applies.
+
+The full surface — every tool, what it reads, what it writes, which annotation
+it carries — is [`mcp.md`](mcp.md).
+
 ---
 
 # Part 7 — Rolling it out
@@ -1388,5 +1419,6 @@ And the things to have done around it:
 | [`cli-reference.md`](cli-reference.md) | Every command, option, exit code and finding |
 | [`playground.html`](playground.html) | The real engine in your browser, nothing to install |
 | [`example-invoice-drift.md`](example-invoice-drift.md) | One input changed and nothing else — 26 findings, each walked through |
+| [`mcp.md`](mcp.md) | The MCP server: every tool, the write gate, the plan/apply split |
 
 <!--vmark:no-formulas-->
