@@ -199,7 +199,13 @@ test("every file in src/ is a walk root, so none can hide until a row wires it i
  * Bump this only when the growth is real and reviewed, and record the date,
  * the new value and why directly above.
  */
-const BASELINE_BYTES = 238_664;
+const BASELINE_BYTES = 243_239;
+
+/*
+ * 2026-09-23, 238,664 → 243,239 (+4,575). v1 row 8: the vault sweep and its
+ * pane. Small, as expected — the sweep reuses `check`, `planFmt` and the
+ * report model that row 6 already brought in, and adds a loop and some DOM.
+ */
 
 /*
  * 2026-09-23, 161,078 → 238,664 (+77,586, +48%). v1 row 6: the findings view

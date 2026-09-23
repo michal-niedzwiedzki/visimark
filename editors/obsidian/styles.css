@@ -120,3 +120,35 @@
   outline: 2px solid var(--interactive-accent);
   outline-offset: 2px;
 }
+
+/* --- the vault sweep (v1 row 8) ------------------------------------------- */
+
+.visimark-sweep {
+  padding: var(--size-4-2);
+}
+
+.visimark-sweep-status {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-4-2);
+  justify-content: space-between;
+  padding-bottom: var(--size-4-2);
+}
+
+/*
+ * 44px, like every other target in this plugin: the sweep is the one feature
+ * VS Code cannot have, and the reason is that it is used on a phone.
+ */
+.visimark-sweep-cancel,
+.visimark-sweep-again {
+  flex: 0 0 auto;
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.visimark-sweep-cancel:focus-visible,
+.visimark-sweep-again:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
+}

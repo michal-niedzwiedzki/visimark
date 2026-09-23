@@ -13,7 +13,11 @@ each v1 row is its own issue.
 ## What is built so far
 
 **v1 row 1** ([#200](https://github.com/michal-niedzwiedzki/visimark/issues/200)):
-the browser bundle and the activation gate. **v1 row 6** ([#213](https://github.com/michal-niedzwiedzki/visimark/issues/213)):
+the browser bundle and the activation gate. **v1 row 8** ([#215](https://github.com/michal-niedzwiedzki/visimark/issues/215)):
+the vault sweep — one command, every note, and a list of the ones that
+disagree with themselves.
+
+**v1 row 6** ([#213](https://github.com/michal-niedzwiedzki/visimark/issues/213)):
 the findings view — a pane listing what disagrees with its formulas, in
 sentences, with a repair where the engine has one. It is the first surface that
 uses the two shared pieces below.

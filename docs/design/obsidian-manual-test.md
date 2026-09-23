@@ -203,7 +203,8 @@ implemented is not a failure; it is not yet a test.
 |---|---|---|
 | §2.1 activation | v1 constraint 4 | **yes**, since [#200](https://github.com/michal-niedzwiedzki/visimark/issues/200) |
 | §2.6 format, declined artifact | v1 row 7 (repair half) | **partly**, since [#213](https://github.com/michal-niedzwiedzki/visimark/issues/213) — the findings view's per-row repair; format-on-save is still row 7 |
-| §2.2 – §2.5, §2.7 – §2.11 | v1 rows 2–10 | not yet |
+| §2.8 the vault sweep | v1 row 8 | **yes**, since [#215](https://github.com/michal-niedzwiedzki/visimark/issues/215) — and its fixture is asserted in `editors/obsidian/test/sweep.test.ts`, so what is left for a person is the phone |
+| §2.2 – §2.5, §2.7, §2.9 – §2.11 | v1 rows 2–10 | not yet |
 
 Run every section in **Restricted Mode with only the VisiMark plugin
 enabled**, on desktop and on a phone.
@@ -285,10 +286,23 @@ palette on `example-invoice.md` and on `example-invoice-drift.md`.
 
 - Copy `example-invoice-drift.md` to three different folders in the vault under
   three names, and leave a dozen ordinary notes around them.
-- Run the sweep. **Pass:** exactly the three disagreeing notes are listed;
-  no ordinary note appears; the clean `example-invoice.md` does not appear.
+- Run **VisiMark: Look through the vault**. **Pass:** exactly the three
+  disagreeing notes are listed; no ordinary note appears; the clean
+  `example-invoice.md` does not appear.
+
+  That fixture is asserted, note for note, by
+  `editors/obsidian/test/sweep.test.ts`. Running it here is worth doing anyway
+  — it is the only place the real vault, the real reader and the real pane meet
+  — but a failure means the wiring, not the sweep.
 - **Pass condition:** the list is reachable and legible on the phone, since
   this is the row that justifies fork B over the VS Code extension.
+- **The part only a phone can answer.** The sweep hands the thread back every
+  fifty notes, and the numbers that say it needs to are a desktop measurement
+  extrapolated (spec §2.4). On the largest vault available, and on the phone:
+  does the app keep answering taps while the count moves, and does **Stop**
+  stop it? Record the vault's note count and what it felt like. If it is not
+  acceptable, that is the first real evidence for v1.1 row 13's index, and it
+  belongs on that row rather than being absorbed here.
 
 ### 2.9 The plugin API — v1 row 9
 
