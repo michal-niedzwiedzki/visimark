@@ -216,7 +216,7 @@ stdout/stderr, calls `process.exit`).
 
 ## Task 3: Wire it into CI
 
-- [ ] Task 3
+- [x] Task 3
 
 **Files:**
 - `.github/workflows/ci.yml`

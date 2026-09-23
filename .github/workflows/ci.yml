@@ -183,6 +183,23 @@ jobs:
             exit 1
           fi
 
+  # A document has to mean the same thing whichever host evaluates it — the
+  # CLI, the browser playground (already in production), the LSP, the MCP
+  # server, any future client. Nothing checked that until now: each existing
+  # test (acceptance.test.ts, playground.test.ts, browser-graph.test.ts)
+  # checks one host against fixed expectations, never host against host. See
+  # scripts/cross-host-check.ts and docs/design/cross-host-equivalence-check-spec.md.
+  cross-host:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - name: the CLI and the committed browser bundle must agree
+        run: bun scripts/cross-host-check.ts
+
   # The Node support policy, enforced rather than written down and hoped for.
   # Two assertions, and the second is the one that keeps the first honest:
   #
