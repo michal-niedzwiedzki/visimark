@@ -61,16 +61,30 @@ otherwise, and it is what this spec adds.
 
 ## 2. The surface
 
-Two existing CI jobs in `.github/workflows/ci.yml` each gain one additional
-assertion, appended to their existing "global install" step (not a new step,
-not a new job):
+Two existing CI jobs in `.github/workflows/ci.yml` each gain two additional
+assertions, appended to two of their existing steps (no new step, no new
+job) — split across those steps rather than bundled into one, because the
+second step is the one that guarantees `visimark-mcp`'s own `visimark`
+dependency is the exact tarball under test:
 
-- **`smoke-node`** ("global install under Node only") — after the existing
-  `"$vm" check smoke.md` line.
-- **`smoke-bun`** ("global install under Bun only") — after the existing
-  `visimark check smoke.md` line, inside the **same shell block** that
-  already resets `PATH` to exclude Node, so the check cannot silently start
-  running under an injected Node the moment someone adds a step above it.
+- **The `visimark` import + `check()` assertion** — appended to the "global
+  install" step (`smoke-node`: after the existing `"$vm" check smoke.md`
+  line; `smoke-bun`: after the existing `visimark check smoke.md` line,
+  inside the **same shell block** that already resets `PATH` to exclude
+  Node, so the check cannot silently start running under an injected Node
+  the moment someone adds a step above it).
+- **The `visimark-mcp` import + `engineVersion()` assertion** — appended to
+  the *second* existing step ("the MCP server speaks the protocol under
+  Node/Bun only"), **after** its existing `mcp_root` swap and
+  `packed == installed` verification, not in the first step. That step is
+  the one that overwrites `visimark-mcp`'s own `node_modules/visimark` with
+  the exact packed tarball and proves it did — the first step's `npm i -g`
+  / `bun add -g` may or may not have already deduped onto the right copy
+  (the existing comment on that swap says explicitly: "relying on that
+  difference is how the two jobs stop testing the same thing"). Running the
+  `visimark-mcp` import check before that guarantee holds would risk
+  silently checking against an unverified — possibly registry, not
+  locally-built — copy of the engine.
 
 No CLI command, option, exit code, stream, or `--json` shape changes. No new
 job, artifact, or runner is added.
@@ -102,17 +116,12 @@ build, including a correctly-published one, and would have to be reverted or
 "fixed" by someone who does not know why — which is worse than not having the
 check.
 
-### The script (both jobs, adapted per runtime)
+### The two scripts (both jobs, adapted per runtime)
 
-One entry point is called, transitively pulling in the largest reachable
-fraction of `dist/`: `check`, built from `locate` + `build` (`check` takes a
-`DocModel`, not a string — `packages/visimark/src/eval/check.ts:88`; every
-real caller builds the model first, e.g.
-`packages/visimark/src/cli/commands.ts:92`). `visimark-mcp`'s
-`engineVersion()` (a re-export of `visimark`'s own `readVersion`,
-`packages/visimark-mcp/src/version.ts:11`) is called in the same step, since
-it needs the identical `cd` treatment and closing that gap in the same PR
-avoids leaving `visimark-mcp`'s own direct-import path uncovered:
+**In the "global install" step**, appended after the existing `bin` check —
+`check`, built from `locate` + `build` (`check` takes a `DocModel`, not a
+string — `packages/visimark/src/eval/check.ts:88`; every real caller builds
+the model first, e.g. `packages/visimark/src/cli/commands.ts:92`):
 
 ```js
 const vm = await import("visimark");
@@ -125,6 +134,21 @@ if (result.findings.length !== 0) {
   );
   process.exit(1);
 }
+console.log(`import("visimark") ok — check() returned 0 findings`);
+```
+
+`smoke-node` already binds `vm="$(npm prefix -g)/bin/visimark"`; the new
+block reuses it. `smoke-bun` has no equivalent variable today and gains
+`vm="$(command -v visimark)"` immediately before the `pkg_root` line.
+
+**In the second step** ("the MCP server speaks the protocol..."), appended
+*after* the existing `packed == installed` verification and *before*
+`node handshake.mjs "$MCP_BIN"` — `engineVersion()` (a re-export of
+`visimark`'s own `readVersion`, `packages/visimark-mcp/src/version.ts:11`),
+resolved from `$MCP_BIN`'s own already-computed `mcp_root`, whose parent is
+the same global `node_modules` directory `visimark` lives in:
+
+```js
 const mcp = await import("visimark-mcp");
 if (!/^\d+\.\d+\.\d+/.test(mcp.engineVersion())) {
   console.error(
@@ -133,18 +157,18 @@ if (!/^\d+\.\d+\.\d+/.test(mcp.engineVersion())) {
   );
   process.exit(1);
 }
-console.log(
-  `import("visimark") and import("visimark-mcp") both ok — check() returned 0 findings, engine ${mcp.engineVersion()}`,
-);
+console.log(`import("visimark-mcp") ok — engine ${mcp.engineVersion()}`);
 ```
+
+Both scripts run the same `cd "$(dirname "$pkg_root")" && node/bun -e '...'`
+wrapper described above — the first step derives `pkg_root` from `$vm`, the
+second already has `mcp_root` computed and reuses `$(dirname "$mcp_root")`
+directly, since `visimark-mcp` and the just-swapped `visimark` are siblings
+in that same directory.
 
 Verified end-to-end against the built `dist/` under both `bun -e` and
 `node --input-type=module -e`: `findings: 0`, and `engineVersion()` returns
 the built version string.
-
-`smoke-node` already binds `vm="$(npm prefix -g)/bin/visimark"`; the new
-block reuses it. `smoke-bun` has no equivalent variable today and gains
-`vm="$(command -v visimark)"` immediately before the `pkg_root` line.
 
 ## 3. The machine contract
 
@@ -215,8 +239,9 @@ what broke, rather than from the MCP handshake's protocol-level failure.
 
 No existing CI job, script, or composite-Action invocation changes behaviour.
 `smoke-node` and `smoke-bun` already exist, already isolate their runtime,
-already install both tarballs globally; they gain one more assertion each,
-appended after their current final assertion. `acceptance-node`, `pack`,
+already install both tarballs globally; they gain two more assertions each,
+appended after each of two existing steps' current final assertion (§2).
+`acceptance-node`, `pack`,
 `playground-bundle`, `function-reference`, `mcp-resources`,
 `node-support-policy`, and `dogfood.yml` are unaffected — none of them
 depends on `smoke-node`/`smoke-bun`'s internals beyond `pack`'s existing
