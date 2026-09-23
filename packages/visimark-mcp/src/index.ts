@@ -34,3 +34,5 @@ export {
 } from "./tools/types.js";
 export { RESOURCES, readResource, resourceFor, type ResourceDef } from "./resources.js";
 export { PROMPTS, promptFor, type PromptDef } from "./prompts.js";
+export { WRITES_DISABLED, closedGate, permits, type Gate } from "./gate.js";
+export { WRITE_TOOL_NAMES, writeTools } from "./tools/write.js";

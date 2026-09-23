@@ -6,6 +6,7 @@ import {
   describeFunction,
   explainJson,
   explainView,
+  fmt,
   functionNames,
   infer,
   inferSummary,
@@ -318,6 +319,10 @@ const inferTool: ToolDef = {
       return {
         ok: okEnvelope("infer", {
           file: r.file ?? CONTENT_SOURCE,
+          // The digest travels with the proposals for the same reason it
+          // travels with `fmt`'s edits: `visimark_infer_apply` refuses a
+          // document that moved since the agent read this list (§3.4).
+          sha256: r.sha256,
           proposals: proposals.map(publicProposal),
           summary: inferSummary(proposals),
         }),
@@ -344,6 +349,11 @@ const fmtTool: ToolDef = {
       const model = build(locate(r.source));
       const result = check(model, { doc: r.doc });
       const edits = planFmt(model, result, { doc: r.doc });
+      // `fmt` splits the same edits into cells, anchors, dates and import
+      // stamps; that arithmetic is the engine's and is not re-derived here.
+      // The counts travel with the plan so `visimark_fmt_apply` reports the
+      // ones the caller reviewed rather than a second set of its own.
+      const counts = fmt(r.source, { doc: r.doc });
       return {
         ok: envelope(
           "fmt",
@@ -356,6 +366,9 @@ const fmtTool: ToolDef = {
               text: e.text,
               code: e.finding.code,
             })),
+            cellsUpdated: counts.cellsUpdated,
+            anchorsUpdated: counts.anchorsUpdated,
+            stampsUpdated: counts.stampsUpdated,
             artifactsWouldWrite: artifactPaths(result),
             findings: findings(r.file, result),
             summary: findingSummary(result.findings),

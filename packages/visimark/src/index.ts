@@ -20,6 +20,19 @@ export {
 } from "./lang/reference.js";
 export { infer, type Proposal, type ProposalKind } from "./infer/propose.js";
 export { planInfer, type PlannedInsert } from "./infer/write.js";
+// The artifact write gate, as supported API. `visimark-mcp` writes generated
+// artifacts, so it needs the gate that protects them; the alternative is for a
+// second consumer to reimplement a security boundary, which is the last thing
+// a second consumer of one should do (spec §3.5).
+//
+// `resolveArtifactPath` gates containment and extension **only**. The
+// marker-and-provenance refusal lives in `writeArtifact`, in the caller
+// position, because it is about a file's provenance and not its path —
+// `artifact/path.ts` says so in its own comment. Both are needed; neither
+// substitutes for the other.
+export { writeArtifact } from "./artifact/write.js";
+export type { ArtifactWrite } from "./write/fmt.js";
+export { resolveArtifactPath, type PathResult } from "./artifact/path.js";
 export { describeFinding, formatCheck } from "./report/format.js";
 // The `--json` envelope's own pieces. A second front end over this engine —
 // `visimark-mcp` — consumes the envelope specified in

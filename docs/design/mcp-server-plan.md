@@ -264,7 +264,7 @@ export const READ_TOOLS: ToolDef[];   // check, eval, explain, infer, fmt, ref
 
 ## Task 6 — The write gate, the engine exports, and the apply tools
 
-- [ ] The only security boundary in the package. Build it last and deliberately.
+- [x] The only security boundary in the package. Build it last and deliberately.
 
 **Files**
 
