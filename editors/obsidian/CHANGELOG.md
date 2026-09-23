@@ -9,6 +9,11 @@ Each entry says which engine version the bundle carries.
 
 ## Unreleased
 
+- The audience-B finding vocabulary (`src/findings.ts`) — one translation of
+  the engine's seventeen-code taxonomy into sentences, so that the findings
+  view, the popover, the sweep and the status bar cannot come to say different
+  things. No red, no codes, no "1 problem". No surface uses it yet.
+
 - The vault-backed reader (`src/snapshot.ts`) — what lets a note's declared
   CSV imports and generated chart artifacts resolve out of an Obsidian vault,
   whose API is asynchronous, through a `ReaderPort` that is synchronous. No
