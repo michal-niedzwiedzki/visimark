@@ -190,10 +190,11 @@ jobs:
   #      A floor nothing exercises is what this repository had before — the
   #      manifests claimed `>=18` for seventeen months after Node 18 went EOL
   #      and no job ever ran it.
-  #   2. No workflow pins a numeric Node version. The policy is "current LTS
-  #      and latest stable", and a literal `node-version: 20` is how that
-  #      policy silently stops being true. `lts/*` and `latest` cannot go
-  #      stale because they are not versions.
+  #   2. No workflow, and no `action.yml` — the published composite Action —
+  #      pins a numeric Node version. The policy is "current LTS and latest
+  #      stable", and a literal `node-version: 20` is how that policy
+  #      silently stops being true. `lts/*` and `latest` cannot go stale
+  #      because they are not versions.
   #
   # This job goes red when Node promotes a new LTS. That is intended: the
   # floor moves on a deliberate commit with a changelog entry, not by drifting.
@@ -239,7 +240,7 @@ jobs:
           fi
           echo ".nvmrc is $got"
 
-      - name: no workflow pins a numeric Node version
+      - name: no workflow or action.yml pins a numeric Node version
         run: |
           set -uo pipefail
           # The policy is an alias, not a number. `lts/*` and `latest` are the
@@ -252,7 +253,12 @@ jobs:
           # it is the obvious way around the rule above — the key satisfies no
           # pattern here while the file it names says `20` — and `.nvmrc` is
           # the one file the step above proves says `lts/*`.
-          bad=$(grep -rnE '^[[:space:]]*node-version(-file)?:' .github/workflows/ \
+          #
+          # `action.yml` is scanned too, not just `.github/workflows/`: it is
+          # the published composite Action, the one artifact a downstream
+          # consumer's CI actually invokes, and its own `setup-node` step is
+          # just as capable of rotting onto a stale numeric pin.
+          bad=$(grep -rnE '^[[:space:]]*node-version(-file)?:' .github/workflows/ action.yml \
             | grep -vE 'node-version:[[:space:]]*"?lts/\*"?[[:space:]]*$' \
             | grep -vE 'node-version:[[:space:]]*"?latest"?[[:space:]]*$' \
             | grep -vE 'node-version-file:[[:space:]]*"?\.nvmrc"?[[:space:]]*$' \
