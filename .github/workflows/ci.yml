@@ -492,6 +492,28 @@ jobs:
           visimark --version | grep -qE '^visimark [0-9]'
           printf '# smoke\n' > smoke.md
           visimark check smoke.md
+          # A global install is not on the ordinary module-resolution path
+          # for a bare specifier — `import("visimark")` from an arbitrary cwd
+          # fails even with a correct `exports` field. Resolve the package's
+          # real `node_modules` directory from the bin symlink's realpath
+          # (same trick the MCP step below uses for `mcp_root`) and import
+          # from inside it, where the package is a filesystem sibling. This
+          # is the regression check for #170: a broken `exports` condition
+          # broke `import("visimark")` under Bun while every `bin`-based
+          # check here kept passing. Same shell block as the PATH reset
+          # above, on purpose — this must run Bun-only too.
+          vm="$(command -v visimark)"
+          pkg_root=$(cd "$(dirname "$(readlink -f "$vm")")/.." && pwd)
+          (cd "$(dirname "$pkg_root")" && bun -e '
+            const vm = await import("visimark");
+            const model = vm.build(vm.locate("# smoke\n"));
+            const result = vm.check(model);
+            if (result.findings.length !== 0) {
+              console.error("::error::import(\"visimark\") resolved, but check() found findings on a trivial document:", JSON.stringify(result.findings));
+              process.exit(1);
+            }
+            console.log("import(\"visimark\") ok — check() returned 0 findings");
+          ')
       - name: the MCP server speaks the protocol under Bun only
         run: |
           set -e
@@ -514,4 +536,17 @@ jobs:
           packed=$(tar -xzOf "$(ls visimark-[0-9]*.tgz)" package/package.json | tr -d ' \n')
           installed=$(tr -d ' \n' < "$mcp_root/node_modules/visimark/package.json")
           [ "$packed" = "$installed" ] || { echo "::error::the engine under test is not the packed one"; exit 1; }
+          # Same regression class as the `visimark` check above, but for the
+          # second published package: `visimark-mcp`'s own `import` of the
+          # engine it just had swapped in. Run only now that the swap above
+          # is verified, not before — the global install step's dedupe is
+          # not guaranteed the way this swap is.
+          (cd "$(dirname "$mcp_root")" && bun -e '
+            const mcp = await import("visimark-mcp");
+            if (!/^\d+\.\d+\.\d+/.test(mcp.engineVersion())) {
+              console.error("::error::import(\"visimark-mcp\") resolved, but engineVersion() did not return a version:", mcp.engineVersion());
+              process.exit(1);
+            }
+            console.log(`import("visimark-mcp") ok — engine ${mcp.engineVersion()}`);
+          ')
           bun handshake.mjs "$MCP_BIN"
