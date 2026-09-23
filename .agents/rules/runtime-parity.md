@@ -34,10 +34,12 @@ launcher shim, so a `#!/usr/bin/env node` shebang makes the kernel hunt for
   README's CI one-liner is `npx visimark check **/*.md` for the same reason.
   Do not pair those, and do not rewrite them to satisfy this rule.
 - CI already exercises the published CLI under Node (`acceptance-node`,
-  `smoke-node`) and under Bun alone (`smoke-bun`). A new published `bin` says,
-  in its own issue, how the packed artifact is installed and run with only
-  Node present and with only Bun present. This rule does not invent that
-  fixture.
+  `smoke-node`) and under Bun alone (`smoke-bun`); `smoke-node` and
+  `smoke-bun` also prove the published `visimark` and `visimark-mcp`
+  packages import cleanly as libraries under each runtime, not only that
+  their `bin` runs (issue #190). A new published `bin` says, in its own
+  issue, how the packed artifact is installed and run with only Node present
+  and with only Bun present. This rule does not invent that fixture.
 - The launcher is `sh`. On Windows, npm's global shim needs `sh` on PATH. Do
   not put `#!/usr/bin/env node` back in the `bin` slot to make PowerShell
   work. The user-facing caveat stays in `docs/cli-reference.md` and the

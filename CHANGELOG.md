@@ -4,6 +4,16 @@
 
 ### Added
 
+- **`smoke-node` and `smoke-bun` now prove `visimark` and `visimark-mcp`
+  are importable, not just runnable** (issue #190). Both jobs already
+  installed the packed tarballs and ran the CLI/server through their
+  `bin`; neither ever did `import("visimark")` and used the result, which
+  is exactly how #170 shipped — a broken `exports` condition that failed
+  module resolution while the `bin` kept working. Each job now also
+  resolves the installed package's `node_modules` directory and imports
+  both packages directly, calling `check()` and `engineVersion()`
+  respectively.
+
 - **`markdownlint-rule-visimark`: report an `analyze()` failure once, not
   seventeen times** (issue #173). A bug in the engine, not a document defect,
   used to surface as seventeen copies of the same stack trace — one per rule
