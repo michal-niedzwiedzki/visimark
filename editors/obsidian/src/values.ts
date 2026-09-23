@@ -37,3 +37,22 @@ export function valueRows(values: Record<string, JsonValue>): ValueRow[] {
     )
     .sort((a, b) => a.name.localeCompare(b.name));
 }
+
+/**
+ * The values as JSON, for a clipboard — v1 row 11 of #176.
+ *
+ * **It is the `values` object out of `visimark eval --json`, exactly.** Not a
+ * reshaping of it: a person pasting this into a script, a spreadsheet or a
+ * model prompt is pasting the contract
+ * `docs/design/structured-output-json-spec.md` already specifies, and a second
+ * shape would be a second contract that can drift from it. Columns stay arrays
+ * with `null` for a cell that has no value, which is why the display join in
+ * `valueRows` lives apart from this.
+ *
+ * Two-space indent and a trailing newline, matching the CLI's own `--json`
+ * output, so a diff between something pasted from here and something piped
+ * from there is empty rather than whitespace.
+ */
+export function valuesJson(values: Record<string, JsonValue>): string {
+  return JSON.stringify(values, null, 2) + "\n";
+}

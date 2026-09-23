@@ -242,3 +242,19 @@
   margin: 0;
   overflow-wrap: anywhere;
 }
+
+.visimark-values-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--size-4-4);
+}
+
+.visimark-values-actions button {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.visimark-values-actions button:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
+}

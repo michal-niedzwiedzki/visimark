@@ -1,5 +1,5 @@
-import { Modal, type App } from "obsidian";
-import { valueRows } from "./values.js";
+import { Modal, Notice, type App } from "obsidian";
+import { valueRows, valuesJson } from "./values.js";
 import type { JsonValue } from "visimark";
 
 /**
@@ -25,6 +25,23 @@ export class ValuesModal extends Modal {
       contentEl.createEl("p", { text: "This note names no values yet." });
       return;
     }
+
+    // v1 row 11. It is here rather than behind its own command because the
+    // question it answers — "give me these numbers" — is the one already on
+    // screen, and #176 rates it as making the plugin API discoverable to a
+    // person: this is what `api.evaluate` returns, in a form they can paste.
+    const actions = contentEl.createDiv({ cls: "visimark-values-actions" });
+    const copy = actions.createEl("button", {
+      cls: "mod-cta",
+      text: "Copy as JSON",
+      attr: { type: "button", "aria-label": "Copy these values to the clipboard as JSON" },
+    });
+    copy.addEventListener("click", () => {
+      void navigator.clipboard.writeText(valuesJson(this.values)).then(
+        () => new Notice("Copied. This is what `visimark eval --json` reports."),
+        () => new Notice("Could not reach the clipboard."),
+      );
+    });
 
     const list = contentEl.createEl("dl", { cls: "visimark-values" });
     for (const row of rows) {

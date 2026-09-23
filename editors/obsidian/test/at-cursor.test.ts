@@ -1,9 +1,9 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { build, locate } from "visimark";
+import { build, check, evalValues, locate } from "visimark";
 import { nameAt } from "../src/at-cursor.js";
-import { valueRows } from "../src/values.js";
+import { valueRows, valuesJson } from "../src/values.js";
 
 /**
  * **Explain shows one name, so it has to be the right one.** Showing the
@@ -62,4 +62,24 @@ test("values are listed by name, with a column on one line", () => {
 
 test("an empty document lists nothing rather than throwing", () => {
   expect(valueRows({})).toEqual([]);
+});
+
+test("the copied JSON is the `values` object out of `eval --json`, exactly", () => {
+  // not a reshaping of it: a person pasting this into a script or a prompt is
+  // pasting the contract structured-output-json-spec.md already specifies, and
+  // a second shape would be a second contract that can drift
+  const values = evalValues(check(build(locate(source))));
+  expect(JSON.parse(valuesJson(values))).toEqual(values);
+  // two-space indent and a trailing newline, as the CLI writes it, so a diff
+  // between something pasted from here and something piped from there is empty
+  expect(valuesJson(values)).toBe(JSON.stringify(values, null, 2) + "\n");
+  expect(valuesJson(values).endsWith("\n")).toBe(true);
+});
+
+test("a column stays an array in the JSON, even though the list joins it", () => {
+  const values = { "lines.Net": ["3600", null], total: "23300" };
+  const parsed = JSON.parse(valuesJson(values)) as Record<string, unknown>;
+  expect(parsed["lines.Net"]).toEqual(["3600", null]);
+  // the display join lives in valueRows and does not leak into the clipboard
+  expect(valueRows(values)[0]!.value).toBe("3600, ?");
 });

@@ -199,7 +199,9 @@ test("every file in src/ is a walk root, so none can hide until a row wires it i
  * Bump this only when the growth is real and reviewed, and record the date,
  * the new value and why directly above.
  */
-const BASELINE_BYTES = 265_875;
+const BASELINE_BYTES = 266_316;
+
+/* 2026-09-24, 265,875 → 266,316 (+441). v1 row 11: copy the values as JSON. */
 
 /*
  * 2026-09-24, 262,083 → 265,875 (+3,792). v1 row 4: the five commands, and

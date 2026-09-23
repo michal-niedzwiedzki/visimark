@@ -9,6 +9,11 @@ Each entry says which engine version the bundle carries.
 
 ## Unreleased
 
+- **Copy the values as JSON**, from the Evaluate dialog. It is the `values`
+  object out of `visimark eval --json`, exactly — not a reshaping of it — so
+  what you paste into a script or a model prompt is the contract the CLI
+  already specifies.
+
 - **The five commands**, each scoped to the note in front of you: **Check this
   note**, **Format this note**, **Infer the formulas**, **Evaluate this note**
   and **Explain this value**. Format applies every repair at once and writes no
