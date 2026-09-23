@@ -199,7 +199,14 @@ test("every file in src/ is a walk root, so none can hide until a row wires it i
  * Bump this only when the growth is real and reviewed, and record the date,
  * the new value and why directly above.
  */
-const BASELINE_BYTES = 243_239;
+const BASELINE_BYTES = 260_667;
+
+/*
+ * 2026-09-23, 243,239 → 260,667 (+17,428). v1 row 5: Infer and its preview.
+ * `infer/propose.ts` and `infer/write.ts` are a substantial part of the engine
+ * and nothing had reached them before — the findings view calls `check` and
+ * `planFmt`, which do not.
+ */
 
 /*
  * 2026-09-23, 238,664 → 243,239 (+4,575). v1 row 8: the vault sweep and its

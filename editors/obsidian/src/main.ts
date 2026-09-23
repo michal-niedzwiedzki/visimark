@@ -1,6 +1,8 @@
 import { MarkdownView, Notice, Plugin, debounce, type WorkspaceLeaf } from "obsidian";
 import { FINDINGS_VIEW, FindingsView } from "./findings-view.js";
 import { hasVmarkBlock } from "./gate.js";
+import { offerInfer } from "./infer-modal.js";
+import { previewInfer } from "./infer-plan.js";
 import { SWEEP_VIEW, SweepView } from "./sweep-view.js";
 
 /**
@@ -62,6 +64,25 @@ export default class VisiMarkPlugin extends Plugin {
     // vault-wide scan does not have one. Refusing to look through the vault
     // because the note in front of you happens to have no block would be the
     // gate answering a question it was not asked.
+    // v1 row 5, the on-ramp. **Not gated**, by the creating/reading rule in
+    // §2.3: its job is to produce a note's first ```vmark block, and a table
+    // someone has just pasted is exactly the note that has none.
+    this.addCommand({
+      id: "infer",
+      name: "Work out the formulas",
+      editorCallback: (editor) => {
+        const selection = editor.getSelection();
+        const span =
+          selection.length > 0
+            ? {
+                start: editor.posToOffset(editor.getCursor("from")),
+                end: editor.posToOffset(editor.getCursor("to")),
+              }
+            : undefined;
+        offerInfer(this.app, editor, previewInfer(editor.getValue(), span));
+      },
+    });
+
     this.registerView(SWEEP_VIEW, (leaf: WorkspaceLeaf) => new SweepView(leaf));
     this.addCommand({
       id: "sweep-vault",

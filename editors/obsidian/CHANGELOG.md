@@ -9,6 +9,13 @@ Each entry says which engine version the bundle carries.
 
 ## Unreleased
 
+- **Infer, with a preview** — the on-ramp. One command reads a plain Markdown
+  table, works out the formulas behind its numbers, and shows the
+  ```` ```vmark ```` block it would add *before* adding anything. Accepting it
+  rewrites no existing byte: `planInfer` only inserts, and the test deletes the
+  inserted ranges back out of the result to prove the note survives inside it.
+  Selecting a table narrows it to that table.
+
 - **A vault sweep** — the one feature the VS Code extension cannot have. One
   command looks through every note in the vault and lists the ones that
   disagree with themselves. It never refuses on size: a substring prefilter
