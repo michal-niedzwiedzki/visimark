@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { onDisk, type DocumentFile } from "visimark";
 import { fault, type Fault } from "./errors.js";
@@ -25,6 +26,13 @@ export interface Resolved {
   readonly doc: DocumentFile | undefined;
   /** the path, or `undefined` in content mode */
   readonly file: string | undefined;
+  /**
+   * Lowercase hex SHA-256 **of the bytes** the source arrived as. It travels
+   * with a plan so the apply tool can refuse a file that moved underneath it
+   * (spec §3.4); it is hashed here, from the one read, rather than by a second
+   * read that could see different bytes.
+   */
+  readonly sha256: string;
 }
 
 /** How the pair of fields is spelled for the document and for a scenario. */
@@ -61,13 +69,25 @@ export function resolveInput(args: unknown, fields: InputFields = DOC_FIELDS): R
   if (path !== undefined && content !== undefined) {
     return fault("USAGE", `visimark: give ${fields.path} or ${fields.content}, not both`);
   }
-  if (content !== undefined) return { source: content, doc: undefined, file: undefined };
+  if (content !== undefined) {
+    return {
+      source: content,
+      doc: undefined,
+      file: undefined,
+      sha256: hash(Buffer.from(content, "utf8")),
+    };
+  }
   if (path === undefined) {
     return fault("USAGE", `visimark: give ${fields.path} or ${fields.content}`);
   }
 
   try {
-    return { source: readFileSync(path, "utf8"), doc: onDisk(path), file: path };
+    // Read once, as bytes, and hash what was read. `readFileSync(path, "utf8")`
+    // followed by a hash of the string would differ from the file's own digest
+    // for any source that is not its own UTF-8 round trip — a BOM, say — and
+    // the apply guard would then refuse a file nothing had touched.
+    const raw = readFileSync(path);
+    return { source: raw.toString("utf8"), doc: onDisk(path), file: path, sha256: hash(raw) };
   } catch {
     return fault("READ", `visimark: cannot read ${path}`);
   }
@@ -86,4 +106,8 @@ export function resolveOptionalInput(
   const a = asArgs(args);
   const given = a[fields.path] !== undefined || a[fields.content] !== undefined;
   return given ? resolveInput(args, fields) : undefined;
+}
+
+function hash(bytes: Buffer): string {
+  return createHash("sha256").update(bytes).digest("hex");
 }

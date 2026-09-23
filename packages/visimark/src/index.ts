@@ -36,12 +36,29 @@ export {
   publicAssertions,
   publicCharts,
   publicFinding,
+  publicFnEntry,
   publicProposal,
+  signature,
   statusFromExit,
   type CommandName,
   type JsonValue,
   type OnDefaults,
 } from "./report/json.js";
+// The rest of what a second front end needs to answer the same six commands
+// over the same envelope: `explain`'s view and its JSON shape, `ref`'s
+// did-you-mean, and `eval`'s scenario machinery. Same reasoning as the block
+// above — each of these is a contract a consumer would otherwise re-derive.
+export { explainJson, explainText, explainView, type ExplainView } from "./report/explain.js";
+export { closest, levenshtein } from "./report/levenshtein.js";
+export {
+  ScenarioError,
+  applyScenario,
+  listParams,
+  parseScenarioJson,
+  resolveScenario,
+  type ParamInfo,
+  type ScenarioEntry,
+} from "./eval/scenario.js";
 export { formatInfer } from "./report/infer.js";
 export { lineOf } from "./report/lines.js";
 export { applyUnit, parseDecorated, type Unit } from "./eval/units.js";
@@ -56,6 +73,10 @@ export type {
   Span,
 } from "./parse/document.js";
 export { runCli } from "./cli/main.js";
+// The engine's own version — the `visimark` field of every envelope. Exported
+// so a second front end reports the version of the engine that actually ran,
+// rather than a string it carries separately and hopes agrees.
+export { readVersion } from "./cli/version.js";
 // The reader port and its `node:fs` implementation. A library caller that has
 // a document on disk passes `onDisk(path)` as `CheckOptions.doc` /
 // `FmtOptions.doc`; a caller that does not (a browser, an editor working on an

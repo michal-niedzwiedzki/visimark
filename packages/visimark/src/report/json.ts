@@ -3,6 +3,7 @@ import type { AssertionResult, ChartResult, CheckResult } from "../eval/check.js
 import type { Value } from "../eval/value.js";
 import type { Proposal } from "../infer/propose.js";
 import { ERROR_CODES, isProblem, type Finding } from "../model/types.js";
+import { precisionPhrase, type FnEntry } from "../lang/reference.js";
 
 export type JsonWriter = (line: string) => void;
 export type CommandName = "check" | "fmt" | "infer" | "eval" | "explain" | "ref";
@@ -171,5 +172,32 @@ export function inferSummary(proposals: Proposal[]): {
     rules: proposals.filter((p) => p.kind === "column" && !p.weak).length,
     scalars: proposals.filter((p) => p.kind === "scalar").length,
     anchors: proposals.filter((p) => p.kind === "scalar" && p.anchorSite).length,
+  };
+}
+
+/** `NAME(a, b)` — the one rendering of a builtin's shape, text and JSON alike. */
+export function signature(e: FnEntry): string {
+  return `${e.name}(${e.params.map((p) => p.name).join(", ")})`;
+}
+
+/**
+ * `ref`'s public entry. It lives here beside the other public shapes rather
+ * than in the CLI, because `visimark-mcp` serves the same command over the
+ * same envelope and a second copy of this would be a second contract.
+ */
+export function publicFnEntry(e: FnEntry): object {
+  return {
+    name: e.name,
+    kind: e.kind,
+    arity: e.arity,
+    signature: signature(e),
+    summary: e.summary,
+    params: e.params.map((p) => ({ name: p.name, type: p.type, note: p.note })),
+    returns: e.returns,
+    precision: { ...e.precision, text: precisionPhrase(e.precision) },
+    ...(e.rounding ? { rounding: e.rounding } : {}),
+    errors: e.errors.map((x) => ({ when: x.when, code: x.code })),
+    examples: e.examples.map((x) => ({ expr: x.expr, is: x.is })),
+    ...(e.see ? { see: [...e.see] } : {}),
   };
 }

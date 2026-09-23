@@ -12,12 +12,7 @@ import { planInfer } from "../infer/write.js";
 import { formatCheck } from "../report/format.js";
 import { explainJson, explainText, explainView } from "../report/explain.js";
 import { formatInfer } from "../report/infer.js";
-import {
-  describeFunction,
-  functionNames,
-  precisionPhrase,
-  type FnEntry,
-} from "../lang/reference.js";
+import { describeFunction, functionNames, precisionPhrase } from "../lang/reference.js";
 import { closest } from "../report/levenshtein.js";
 import {
   emitJson,
@@ -28,7 +23,9 @@ import {
   publicAssertions,
   publicCharts,
   publicFinding,
+  publicFnEntry,
   publicProposal,
+  signature,
   statusFromExit,
   type CommandName,
   type OnDefaults,
@@ -634,10 +631,6 @@ export function cmdRef(args: string[], out: Writer, err: Writer): number {
   return 0;
 }
 
-function signature(e: FnEntry): string {
-  return `${e.name}(${e.params.map((p) => p.name).join(", ")})`;
-}
-
 /** A summary is written lower-case for the design-doc table; here it opens a line. */
 function sentence(s: string): string {
   return s.length > 0 ? `${s[0]!.toUpperCase()}${s.slice(1)}` : s;
@@ -645,21 +638,4 @@ function sentence(s: string): string {
 
 function plural(n: number): string {
   return `${n} argument${n === 1 ? "" : "s"}`;
-}
-
-function publicFnEntry(e: FnEntry): object {
-  return {
-    name: e.name,
-    kind: e.kind,
-    arity: e.arity,
-    signature: signature(e),
-    summary: e.summary,
-    params: e.params.map((p) => ({ name: p.name, type: p.type, note: p.note })),
-    returns: e.returns,
-    precision: { ...e.precision, text: precisionPhrase(e.precision) },
-    ...(e.rounding ? { rounding: e.rounding } : {}),
-    errors: e.errors.map((x) => ({ when: x.when, code: x.code })),
-    examples: e.examples.map((x) => ({ expr: x.expr, is: x.is })),
-    ...(e.see ? { see: [...e.see] } : {}),
-  };
 }

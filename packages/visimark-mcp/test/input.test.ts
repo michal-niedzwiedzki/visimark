@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DOC_FIELDS, SCENARIO_FIELDS, resolveInput, resolveOptionalInput } from "../src/input.js";
@@ -17,7 +18,7 @@ test("path only resolves to a document on disk", () => {
 test("content only resolves to no document — the phases stand down", () => {
   // `doc: undefined` is how `fs/reader.ts` states "this document is not on a
   // filesystem". It is not a stub reader and must not become one.
-  expect(resolveInput({ content: "# hi\n" })).toEqual({
+  expect(resolveInput({ content: "# hi\n" })).toMatchObject({
     source: "# hi\n",
     doc: undefined,
     file: undefined,
@@ -66,6 +67,19 @@ test("an absent scenario is not a fault — a scenario is optional", () => {
   expect(resolveOptionalInput({ path: doc, scenarioContent: "x" }, SCENARIO_FIELDS)).toMatchObject({
     source: "x",
   });
+});
+
+test("the source carries the digest of the bytes it arrived as", () => {
+  // Hashed from the one read, so the apply guard in §3.4 compares against the
+  // bytes the plan was actually computed over. The content arm hashes the
+  // string's UTF-8 encoding, which is the same digest the file would have.
+  const empty = createHash("sha256").update(Buffer.from("", "utf8")).digest("hex");
+  expect(resolveInput({ content: "" })).toMatchObject({ sha256: empty });
+
+  const onPath = resolveInput({ path: doc });
+  expect("sha256" in onPath && onPath.sha256).toBe(
+    createHash("sha256").update(readFileSync(doc)).digest("hex"),
+  );
 });
 
 test("the document fields are the default", () => {

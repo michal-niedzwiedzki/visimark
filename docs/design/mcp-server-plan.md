@@ -193,7 +193,7 @@ export function skipped(result: CheckResult): { imports: string[]; charts: strin
 
 ## Task 4 — The read tools
 
-- [ ] Six tools, `visimark_ref` first.
+- [x] Six tools, `visimark_ref` first.
 
 **Files**
 
