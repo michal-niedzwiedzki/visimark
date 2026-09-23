@@ -95,8 +95,10 @@ tests and keeps doing so after the next LTS promotion:
 
 ```console
 $ nvm use          # reads .nvmrc -> the current LTS
-``` **VisiMark supports the current Node LTS and
-newer**, and CI runs the Node-facing jobs on the current LTS *and* on the
+```
+
+**VisiMark supports the current Node LTS and newer**, and CI runs the
+Node-facing jobs on the current LTS *and* on the
 latest stable release — both blocking, so a break on a new Node is caught here
 rather than by a user. The policy and how it is enforced are in
 [`.agents/rules/runtime-parity.md`](.agents/rules/runtime-parity.md); the
