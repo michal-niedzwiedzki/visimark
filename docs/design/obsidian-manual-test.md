@@ -202,7 +202,8 @@ implemented is not a failure; it is not yet a test.
 | Section | Row | Runnable |
 |---|---|---|
 | §2.1 activation | v1 constraint 4 | **yes**, since [#200](https://github.com/michal-niedzwiedzki/visimark/issues/200) |
-| §2.2 – §2.11 | v1 rows 2–10 | not yet |
+| §2.6 format, declined artifact | v1 row 7 (repair half) | **partly**, since [#213](https://github.com/michal-niedzwiedzki/visimark/issues/213) — the findings view's per-row repair; format-on-save is still row 7 |
+| §2.2 – §2.5, §2.7 – §2.11 | v1 rows 2–10 | not yet |
 
 Run every section in **Restricted Mode with only the VisiMark plugin
 enabled**, on desktop and on a phone.

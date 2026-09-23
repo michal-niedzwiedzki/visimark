@@ -1,15 +1,122 @@
 /*
- * Row 1 has one element and one state, so this file has one rule.
+ * Everything here is Obsidian's own CSS variables, so the plugin matches every
+ * theme without knowing about any of them, and nothing is set from JavaScript.
  *
+ * **No colour says "error".** v1 constraint 6 of #176 is that audience B does
+ * not read exit codes, and red is the same sentence in another alphabet. A
+ * finding is distinguished by being a row with words in it, not by being red;
+ * the only accent used is the theme's own, on focus, where it means "this is
+ * where your keyboard is" and nothing else.
+ */
+
+/* --- the status bar witness (v1 row 1) ------------------------------------ */
+
+/*
  * `display: none` rather than `visibility: hidden` or an opacity: the status
  * bar lays its children out in a row, and a hidden-but-present item would
  * leave a gap — a gap is a thing a person can see, and the pass condition of
  * the manual test's §2.1 is that a vault of ordinary notes looks exactly like
  * one without the plugin installed.
- *
- * No colours, sizes or spacing are set here on purpose: the item inherits the
- * status bar's own, so it matches every theme without knowing about any.
  */
 .visimark-status.visimark-hidden {
   display: none;
+}
+
+/* --- the findings view (v1 row 6) ----------------------------------------- */
+
+.visimark-findings {
+  padding: var(--size-4-2);
+}
+
+.visimark-note-state {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  line-height: var(--line-height-tight);
+  margin: 0;
+  padding: var(--size-4-2);
+}
+
+.visimark-section + .visimark-section {
+  margin-top: var(--size-4-4);
+}
+
+.visimark-section-heading {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-medium);
+  letter-spacing: 0.04em;
+  margin: 0 0 var(--size-4-1);
+  padding: 0 var(--size-4-2);
+  text-transform: uppercase;
+}
+
+.visimark-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.visimark-row {
+  align-items: center;
+  border-bottom: 1px solid var(--background-modifier-border);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-4-2);
+  padding: var(--size-4-2);
+}
+
+/*
+ * A button rather than a div so it is in the tab order and answers Enter and
+ * Space, with the chrome taken off so it reads as a line of text. `min-height`
+ * is the 44px touch target the mobile accessibility rule asks for — this is a
+ * client for someone reading on a phone, so that is not a nicety here.
+ */
+.visimark-row-main {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  color: var(--text-normal);
+  cursor: pointer;
+  display: flex;
+  flex: 1 1 12rem;
+  flex-direction: column;
+  font-size: var(--font-ui-small);
+  gap: var(--size-2-1);
+  line-height: var(--line-height-tight);
+  min-height: 44px;
+  padding: var(--size-2-2);
+  text-align: left;
+}
+
+.visimark-row-main:hover {
+  background: var(--background-modifier-hover);
+}
+
+.visimark-row-where {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.visimark-row-hint {
+  color: var(--text-muted);
+  flex: 1 0 100%;
+  font-size: var(--font-ui-smaller);
+  margin: 0;
+  padding: 0 var(--size-2-2);
+}
+
+.visimark-repair {
+  flex: 0 0 auto;
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/*
+ * `:focus-visible`, not `:focus`: a pointer press should not leave a ring
+ * behind, and a keyboard user must never lose track of where they are.
+ */
+.visimark-row-main:focus-visible,
+.visimark-repair:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
 }

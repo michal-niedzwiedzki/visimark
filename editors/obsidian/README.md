@@ -13,11 +13,16 @@ each v1 row is its own issue.
 ## What is built so far
 
 **v1 row 1** ([#200](https://github.com/michal-niedzwiedzki/visimark/issues/200)):
-the browser bundle and the activation gate. Plus two pieces every later row needs and no surface calls yet: the
-vault-backed reader
+the browser bundle and the activation gate. **v1 row 6** ([#213](https://github.com/michal-niedzwiedzki/visimark/issues/213)):
+the findings view — a pane listing what disagrees with its formulas, in
+sentences, with a repair where the engine has one. It is the first surface that
+uses the two shared pieces below.
+
+The vault-backed reader
 ([#205](https://github.com/michal-niedzwiedzki/visimark/issues/205)) and the
 audience-B finding vocabulary
-([#207](https://github.com/michal-niedzwiedzki/visimark/issues/207)). The plugin loads on desktop and on
+([#207](https://github.com/michal-niedzwiedzki/visimark/issues/207)) are the
+substrate the rest of v1 is built on. The plugin loads on desktop and on
 mobile, and shows a status bar item reading `VisiMark` on a note that contains
 a ```` ```vmark ```` block. That is all it does yet. Provenance decorations,
 the hover popover, the five commands, the findings view, the vault sweep and
