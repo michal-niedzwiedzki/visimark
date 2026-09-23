@@ -9,6 +9,13 @@ Each entry says which engine version the bundle carries.
 
 ## Unreleased
 
+- **Four templates** — invoice, monthly budget, team capacity and experiment
+  log — with a command each to insert one at the cursor. Every one passes
+  `visimark check` with zero findings before it is edited, contains no syntax
+  that means anything only inside Obsidian, and ends with a short "How to use
+  this" section. These commands are deliberately **not** gated on the note
+  already containing a block: their job is to create the first one.
+
 - The audience-B finding vocabulary (`src/findings.ts`) — one translation of
   the engine's seventeen-code taxonomy into sentences, so that the findings
   view, the popover, the sweep and the status bar cannot come to say different

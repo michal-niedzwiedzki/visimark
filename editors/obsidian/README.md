@@ -13,7 +13,13 @@ each v1 row is its own issue.
 ## What is built so far
 
 **v1 row 1** ([#200](https://github.com/michal-niedzwiedzki/visimark/issues/200)):
-the browser bundle and the activation gate. Plus two pieces every later row needs and no surface calls yet: the
+the browser bundle and the activation gate. **v1 row 10** ([#210](https://github.com/michal-niedzwiedzki/visimark/issues/210)):
+four templates — invoice, monthly budget, team capacity, experiment log — with
+a command each. Each passes `visimark check` with zero findings before it is
+edited, and the documents live in [`templates/`](templates/) so the CLI can say
+so.
+
+Plus two pieces every later row needs and no surface calls yet: the
 vault-backed reader
 ([#205](https://github.com/michal-niedzwiedzki/visimark/issues/205)) and the
 audience-B finding vocabulary

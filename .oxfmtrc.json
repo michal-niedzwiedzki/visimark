@@ -5,5 +5,14 @@
   // un-minifies it, and the next rebuild puts it back — a permanent `git diff` that
   // fails CI on every pull request. .oxlintrc.json skips the same directory, for the
   // same reason.
-  "ignorePatterns": ["**/*.md", ".vscode/**", "docs/vendor/**"]
+  //
+  // editors/obsidian/src/templates.ts is written by
+  // scripts/gen-obsidian-templates.ts and checked against its sources by
+  // editors/obsidian/test/templates.test.ts, byte for byte. Formatting it
+  // rewrites the quoting of string literals that hold Markdown full of
+  // double quotes, so the committed file stops matching what the generator
+  // would write and the freshness check fails for a reason that has nothing
+  // to do with the templates. Edit the Markdown in editors/obsidian/templates/
+  // and run `bun run gen:obsidian-templates`.
+  "ignorePatterns": ["**/*.md", ".vscode/**", "docs/vendor/**", "editors/obsidian/src/templates.ts"]
 }

@@ -181,6 +181,7 @@ enforces the same check in CI either way.
 | `bun run build` | Builds every package |
 | `bun run gen:docs` | Regenerates the function reference from the engine's own registry |
 | `bun run gen:mcp` | Regenerates the MCP server's served skill and doc copies |
+| `bun run gen:obsidian-templates` | Regenerates the Obsidian plugin's templates module from `editors/obsidian/templates/*.md` |
 | `bun run --filter visimark build:playground` | Rebuilds the browser bundles committed under `docs/vendor/` |
 | `bun run serve` | Serves `docs/` on `http://localhost:8080` — needed for the playground and the tutorial pages, which fetch their content and cannot run from `file://` |
 | `bun run vscode-install` | Builds, packages and installs the VS Code extension locally |
@@ -204,6 +205,7 @@ the matching regeneration and **commit the result**:
 ```console
 $ bun run gen:docs                              # if you changed a builtin function
 $ bun run gen:mcp                               # if you changed SKILL.md or a served doc
+$ bun run gen:obsidian-templates                # if you changed an Obsidian template
 $ bun run --filter visimark build:playground    # if you changed engine or playground source
 ```
 

@@ -4,6 +4,16 @@
 
 ### Added
 
+- **The Obsidian plugin ships four templates** (issue #210, v1 row 10 of #176).
+  Invoice, monthly budget, team capacity and experiment log, with a command
+  each to insert one at the cursor. Audience B is defined by never having run
+  the CLI, and until now there was no way inside Obsidian to get a first
+  `vmark` block at all. Every template passes `visimark check` with **zero**
+  findings unedited — not "no problems": no `WARN` for an unused name and no
+  `COVERAGE` for a table without rules either — and contains no syntax that
+  means anything only inside Obsidian. The documents are Markdown files the CLI
+  checks, generated into the plugin bundle by `bun run gen:obsidian-templates`.
+
 - **An Obsidian client exists** (issue #200, v1 row 1 of #176).
   `editors/obsidian` builds as a single `main.js` with **no `node:` specifier
   in it**, so it loads on Obsidian mobile as well as desktop, and it activates
