@@ -162,6 +162,15 @@ proposed, made precise: whole-envelope equality **except** the entries whose
 difference is explained by "no reader was supplied," which is asserted
 structurally rather than silently ignored.
 
+**The scoping exception applies to `check` and `explain` only, not `eval`.**
+`cmdCheck` and `cmdExplain` both call `check(build(locate(source)), { doc:
+onDisk(path) })` — a real reader — on the CLI side, which is what creates the
+CLI/browser difference on the two file-reading documents. `cmdEval` calls
+`check(model)` with **no** reader argument at all, on the CLI side, same as
+the browser side; the two hosts are expected to be plainly deep-equal (no
+scoping) on `eval --json` for every one of the twelve documents, including the
+two file-reading ones.
+
 ## 5. Type rules and errors
 
 Not applicable in the [§10](../../docs/visimark-design.md#10-error-taxonomy)
