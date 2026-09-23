@@ -245,9 +245,10 @@ neither this spec nor
 [#201](https://github.com/michal-niedzwiedzki/visimark/issues/201) touches, and
 "what version does a browser host report" is a real decision with
 [#189](https://github.com/michal-niedzwiedzki/visimark/issues/189) downstream
-of it. **The row that implements Explain files it first.** Until then Explain
-is not a v1 row that can be started, and §9 records it as the spec's one open
-question.
+of it. **Filed as
+[#204](https://github.com/michal-niedzwiedzki/visimark/issues/204)**, which
+lays out three candidate designs; until it is decided, Explain is not a v1 row
+that can be started, and §9 records it as the spec's one open question.
 
 **The sweep's row states a size bound before it is filed.** An on-demand scan
 of every note containing a fence is the whole feature, and it is also the one
@@ -550,7 +551,9 @@ ones worth naming because someone will ask:
 reach `node:module` through `readVersion()` and therefore cannot be bundled
 (§2.4). It blocks v1 rows 3 and 4's Explain and §2.7's `explain`, and the
 answer is an engine decision — inject the version, or something else — not a
-plugin one. The row that needs it files it.
+plugin one. Filed as
+[#204](https://github.com/michal-niedzwiedzki/visimark/issues/204) with three
+candidate designs; it is decided there, not here.
 
 Everything raised while drafting is resolved and recorded in the body rather
 than here: versioning independent of the npm packages (§2.2), side-loadable
