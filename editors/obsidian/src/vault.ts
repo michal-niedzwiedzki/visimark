@@ -1,4 +1,4 @@
-import { normalizePath, type Vault } from "obsidian";
+import { TFile, normalizePath, type Vault } from "obsidian";
 import type { VaultRead } from "./snapshot.js";
 
 /**
@@ -23,5 +23,34 @@ export function vaultRead(vault: Vault): VaultRead {
     } catch {
       return null;
     }
+  };
+}
+
+/**
+ * The same contract, preferring `cachedRead` for a note Obsidian already
+ * knows about.
+ *
+ * The sweep reads **every** note in the vault, and reading is its dominant
+ * cost once the prefilter has removed the parses (`sweep.ts`). `cachedRead` is
+ * what Obsidian's own features use for exactly this: it answers from the
+ * in-memory cache when the file is warm, and it is the documented way to read
+ * a file you are not about to modify.
+ *
+ * It falls back to the adapter for anything that is not a Markdown file in the
+ * vault — a declared CSV import, which `snapshot.ts` asks for through this
+ * same function, is not a `TFile` the markdown index holds.
+ */
+export function vaultSweepRead(vault: Vault): VaultRead {
+  const direct = vaultRead(vault);
+  return async (path: string): Promise<string | null> => {
+    const file = vault.getAbstractFileByPath(normalizePath(path));
+    if (file instanceof TFile) {
+      try {
+        return await vault.cachedRead(file);
+      } catch {
+        return null;
+      }
+    }
+    return direct(path);
   };
 }

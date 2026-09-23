@@ -1,6 +1,7 @@
 import { MarkdownView, Notice, Plugin, debounce, type WorkspaceLeaf } from "obsidian";
 import { FINDINGS_VIEW, FindingsView } from "./findings-view.js";
 import { hasVmarkBlock } from "./gate.js";
+import { SWEEP_VIEW, SweepView } from "./sweep-view.js";
 
 /**
  * VisiMark for Obsidian — v1 row 1 of #176: the browser bundle, and activation
@@ -56,6 +57,18 @@ export default class VisiMarkPlugin extends Plugin {
       callback: () => void this.openFindings(),
     });
 
+    // v1 row 8. **Not gated**, and for a different reason than the template
+    // commands: §2.3's gate is a question about the *active note*, and a
+    // vault-wide scan does not have one. Refusing to look through the vault
+    // because the note in front of you happens to have no block would be the
+    // gate answering a question it was not asked.
+    this.registerView(SWEEP_VIEW, (leaf: WorkspaceLeaf) => new SweepView(leaf));
+    this.addCommand({
+      id: "sweep-vault",
+      name: "Look through the vault",
+      callback: () => void this.openSweep(),
+    });
+
     this.status = this.addStatusBarItem();
     this.status.addClass("visimark-status");
     this.status.setAttribute("aria-live", "polite");
@@ -96,6 +109,15 @@ export default class VisiMarkPlugin extends Plugin {
     const leaf = existing[0] ?? this.app.workspace.getRightLeaf(false);
     if (leaf === null) return;
     await leaf.setViewState({ type: FINDINGS_VIEW, active: true });
+    this.app.workspace.revealLeaf(leaf);
+  }
+
+  /** Open the sweep pane, which starts a scan as it opens. */
+  private async openSweep(): Promise<void> {
+    const existing = this.app.workspace.getLeavesOfType(SWEEP_VIEW);
+    const leaf = existing[0] ?? this.app.workspace.getRightLeaf(false);
+    if (leaf === null) return;
+    await leaf.setViewState({ type: SWEEP_VIEW, active: true });
     this.app.workspace.revealLeaf(leaf);
   }
 

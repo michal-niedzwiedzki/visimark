@@ -4,6 +4,22 @@
 
 ### Added
 
+- **The Obsidian plugin can look through a whole vault** (issue #215, v1 row 8
+  of #176) — the one feature the VS Code extension cannot have. One command
+  lists every note that disagrees with itself, in the same sentences the
+  findings view uses.
+
+  The spec asked this row to name a vault size above which the scan refuses.
+  Measured instead, the premise turned out to be wrong: the cost is the parse,
+  not the scan. `locate()` is ~1.9 ms on an ordinary note and a substring scan
+  for `vmark` is below the resolution of `performance.now()`, so a prefilter
+  that cannot produce a false negative — every block's opening fence carries
+  the info string — makes the expensive work proportional to the number of
+  *VisiMark* notes rather than the size of the vault. Five thousand ordinary
+  notes and three VisiMark ones cost three parses, which is asserted rather
+  than timed. So there is no refusal at any size: a count that moves, a Stop
+  button, and a scan that hands the thread back every fifty notes.
+
 - **The Obsidian plugin has a findings view** (issue #213, v1 row 6 of #176).
   One row per finding, in a sentence rather than a code — no red, no `STALE`,
   no "1 problem" anywhere — split into *Needs attention* and *Advice* by the
