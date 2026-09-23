@@ -7,6 +7,13 @@ stall the engine or ship plugin versions nobody changed
 ([`obsidian-plugin-spec.md`](../../docs/design/obsidian-plugin-spec.md) §2.2).
 Each entry says which engine version the bundle carries.
 
+## Unreleased
+
+- The vault-backed reader (`src/snapshot.ts`) — what lets a note's declared
+  CSV imports and generated chart artifacts resolve out of an Obsidian vault,
+  whose API is asynchronous, through a `ReaderPort` that is synchronous. No
+  surface uses it yet; the rows that call `check` will.
+
 ## 0.1.0 - 2026-09-23
 
 First build. Not published to the community registry — see the README for

@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { build } from "esbuild";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { EXTERNALS, options } from "../esbuild.config.mjs";
 
@@ -49,13 +49,23 @@ function specifiers(text: string): string[] {
 }
 
 /**
- * Every `.ts` file the plugin bundles, entry included — the plugin's own
- * source plus the engine's, since `visimark` is an alias into
+ * Every `.ts` file the plugin bundles, plus every one it is *going* to —
+ * the plugin's own source and the engine's, since `visimark` is an alias into
  * `packages/visimark/src/browser.ts` and not an external.
+ *
+ * **The roots are every file in `src/`, not just `main.ts`.** A module that
+ * `main.ts` does not import yet is still a module written to be bundled, and
+ * checking it only once a row wires it in means finding out about a `node:`
+ * import at the moment someone is trying to ship a feature. `src/snapshot.ts`
+ * was exactly that case: written for the rows that need a vault reader, not
+ * reachable from `main.ts` until one of them lands.
  */
 function graph(): Map<string, string> {
   const out = new Map<string, string>();
-  const queue = [join(here, "src", "main.ts")];
+  const src = join(here, "src");
+  const queue = readdirSync(src)
+    .filter((f) => f.endsWith(".ts"))
+    .map((f) => join(src, f));
   while (queue.length > 0) {
     const file = queue.pop()!;
     if (out.has(file)) continue;
@@ -159,13 +169,23 @@ test("the plugin's bundled graph contains no dynamic import the static walk coul
   ).toEqual([]);
 });
 
-test("the walk actually reaches the engine, not just the plugin's own three files", () => {
+test("the walk actually reaches the engine, not just the plugin's own few files", () => {
   // a walk that silently stopped at the `visimark` specifier would pass every
   // test above while checking nothing that matters
   const files = [...graph().keys()].map(shortName);
   expect(files).toContain("packages/visimark/src/browser.ts");
   expect(files).toContain("packages/visimark/src/fs/gate.ts");
   expect(files.length).toBeGreaterThan(20);
+});
+
+test("every file in src/ is a walk root, so none can hide until a row wires it in", () => {
+  const roots = readdirSync(join(here, "src")).filter((f) => f.endsWith(".ts"));
+  const walked = [...graph().keys()].map(shortName);
+  for (const root of roots) {
+    expect(walked, `${root} is in src/ but not in the guarded graph`).toContain(
+      `editors/obsidian/src/${root}`,
+    );
+  }
 });
 
 /**
