@@ -254,7 +254,7 @@ stdout/stderr, calls `process.exit`).
 
 ## Task 4: Documentation
 
-- [ ] Task 4
+- [x] Task 4
 
 **Files:**
 - `docs/ci.md`

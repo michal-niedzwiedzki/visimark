@@ -241,13 +241,19 @@ Nothing else changes.
 
 ## 9. Documentation to update
 
-- **`docs/ci.md`** — enumerates the checks a pull request must pass; add
-  `cross-host` to that enumeration.
-- **`CONTRIBUTING.md`** — the "worked examples double as the acceptance suite"
-  paragraph (currently describing a single-host suite: `check` on the drift
-  invoice, `fmt` on the clean invoice, `infer` on the plain quote) gains one
-  sentence: the same corpus is also checked for cross-host agreement between
-  the CLI and the committed browser bundle.
+- **`CONTRIBUTING.md`**, two places — **checked; `docs/ci.md` was the wrong
+  file** (it's the user-facing "add `visimark check` to your own CI" guide,
+  not a description of this repository's own pipeline; the enumeration the
+  issue meant is here instead):
+  - the "worked examples double as the acceptance suite" paragraph (currently
+    describing a single-host suite: `check` on the drift invoice, `fmt` on
+    the clean invoice, `infer` on the plain quote) gains one sentence: the
+    same corpus is also checked for cross-host agreement between the CLI and
+    the committed browser bundle.
+  - the "What CI checks, and how to fix each one" section gains one entry, in
+    the same bold-lead-sentence-plus-fix form as its neighbours: what
+    `cross-host` checks, and that a real divergence is a real bug to fix, not
+    something to silence.
 - **`packages/visimark/src/fs/reader.ts`**'s header comment, which names
   `test/playground/browser-graph.test.ts` as "the guard that keeps it that
   way" (the no-`node:fs`-in-the-browser-graph property) — add a sentence

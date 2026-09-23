@@ -13,14 +13,20 @@
  * and nothing threw only because every caller happened to pass no document
  * path. That invariant was held by comments. Reading `constants.O_NOFOLLOW`
  * off one of those stubs at module scope is what took the public playground
- * down for 74 minutes (PR #99); see `docs/reviews/2026-09-16.md` §2.
+ * down for 74 minutes (PR #93, shipped into the committed bundle by #95);
+ * see `docs/reviews/2026-09-16.md` §2.
  *
- * So the phases now take a `ReaderPort` instead of importing one. The Node
- * implementation lives in `fs/node-reader.ts`, which the browser entry never
- * imports — so `node:fs` and `node:crypto` are not in the browser bundle at
- * all, and the old "no document path" checks become "no reader was supplied",
- * which is the same condition stated structurally.
- * `test/playground/browser-graph.test.ts` is the guard that keeps it that way.
+ * So the phases now take a `ReaderPort` instead of importing one (PR #99).
+ * The Node implementation lives in `fs/node-reader.ts`, which the browser
+ * entry never imports — so `node:fs` and `node:crypto` are not in the
+ * browser bundle at all, and the old "no document path" checks become "no
+ * reader was supplied", which is the same condition stated structurally.
+ * `test/playground/browser-graph.test.ts` is the guard that keeps
+ * `node:fs`/`node:crypto` out of the browser graph at all;
+ * `scripts/cross-host-check.ts` is the guard on the companion property, that
+ * the two hosts *agree* once a reader is or isn't there — the graph test
+ * alone would have stayed green through the #93 regression, since it only
+ * checks which builtins are reachable, never what either host answers.
  *
  * ## Why hashing is on this port and not a sibling
  *

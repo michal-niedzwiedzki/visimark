@@ -201,6 +201,14 @@ writes `docs/function-reference.md` and part of `docs/visimark-design.md` from
 the engine's own function registry, so that what the documents promise and what
 `visimark ref` prints cannot drift. Fix: run it and commit the result.
 
+**The CLI and the committed browser bundle must agree.** `check`, `eval`, and
+`explain --json` are run for every worked example through both the real CLI
+and the bundle loaded in a `node:vm` sandbox
+(`scripts/cross-host-check.ts`); a divergence means the playground (already
+in production) would answer differently than the CLI for the same document.
+Fix: this is a real bug, not something to silence — find why the two hosts
+disagree, and fix the engine or the `ReaderPort` boundary, never the check.
+
 **Every version-carrying file must agree.** Eleven fields carry the version —
 six package manifests (three of which also pin `visimark` as a dependency),
 `action.yml`'s pinned `version` default and `scripts/precommit-visimark-check.sh`.
@@ -273,7 +281,10 @@ has to reproduce that document's own transcript, `fmt` has to leave the clean
 invoice untouched, and `infer` on the plain quote has to reproduce the proposal
 printed in its appendix. If you change engine behaviour, expect those to move —
 and look hard at the diff when they do, because those documents are what the
-README promises readers.
+README promises readers. The same twelve documents are also checked for
+cross-host agreement — `check`, `eval`, and `explain --json` must produce the
+same answer from the real CLI and from the committed browser bundle; see
+`scripts/cross-host-check.ts`.
 
 ## When a language change lands
 
