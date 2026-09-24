@@ -146,3 +146,47 @@ test("recheck's own default token still lets a direct, uncontested call apply no
   await index.recheck("invoice.md"); // no scheduleRecheck raced it, so its own token wins
   expect(index.notes().map((n) => n.path)).toEqual(["invoice.md"]);
 });
+
+test("beginSeed()/seed() replay a vault event that happened during the scan, instead of losing it", async () => {
+  const { files, index } = await seeded({ "invoice.md": clean });
+  // a scan starts; the note changes and its event arrives while the scan is
+  // still in flight — scheduleRecheck, not a direct edit, since that is what
+  // vault.on("modify") actually calls
+  index.beginSeed();
+  files.set("invoice.md", drifted);
+  index.scheduleRecheck("invoice.md");
+  // the scan's own result, computed from a read that started before the
+  // edit landed, still says clean
+  index.seed({
+    scanned: 1,
+    candidates: 1,
+    checked: 1,
+    notes: [],
+    unreadable: [],
+    cancelled: false,
+  });
+  expect(index.count()).toBe(0); // the stale seed briefly wins
+  await Bun.sleep(800); // the replayed scheduleRecheck's own debounce fires
+  expect(index.notes().map((n) => n.path)).toEqual(["invoice.md"]);
+});
+
+test("beginSeed()/seed() replay a removal that happened during the scan", async () => {
+  const { files, index } = await seeded({ "invoice.md": drifted });
+  const report = index.notes()[0]!.report; // a real report, captured before it is touched
+  index.beginSeed();
+  files.delete("invoice.md");
+  index.remove("invoice.md");
+  // the scan's own result still thinks the note is there — it read before
+  // the delete landed
+  index.seed({
+    scanned: 1,
+    candidates: 1,
+    checked: 1,
+    notes: [{ path: "invoice.md", problems: 1, advice: 0, report }],
+    unreadable: [],
+    cancelled: false,
+  });
+  expect(index.count()).toBe(1); // the stale seed briefly wins
+  await Bun.sleep(5); // the replayed scheduleRecheck(path, 0) fires
+  expect(index.count()).toBe(0); // read() now returns null for the deleted path
+});
