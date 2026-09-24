@@ -67,6 +67,19 @@ export function isClean(report: NoteReport): boolean {
 
 const start = (f: FindingRow): number => f.span?.start ?? Number.MAX_SAFE_INTEGER;
 
+export interface ReportOptions {
+  /**
+   * Mirrors the CLI's `fmt --fix-dates` (v1.1 row 17): include the edit for
+   * a `DATE` finding whose ISO form is decidable. Off by default, same as
+   * the CLI flag it mirrors. **Only `allRepairs` sees it** — `actionFor`
+   * (`findings.ts`) still restricts the per-row repair button to `STALE`,
+   * so a decidable date never grows a row of its own; it is picked up
+   * whole-note by Format, the same way the CLI flag is whole-run rather
+   * than per-finding.
+   */
+  fixDates?: boolean;
+}
+
 /**
  * Build the view's model.
  *
@@ -78,8 +91,17 @@ const start = (f: FindingRow): number => f.span?.start ?? Number.MAX_SAFE_INTEGE
  * finding, which is the shipped `--no-artifacts` contract (spec §2.5, §8), and
  * it is why a stale chart still gets a row here with no repair on it.
  */
-export function reportFor(model: DocModel, result: CheckResult, doc?: DocumentFile): NoteReport {
-  const planned = planFmt(model, result, { noArtifacts: true, ...(doc ? { doc } : {}) });
+export function reportFor(
+  model: DocModel,
+  result: CheckResult,
+  doc?: DocumentFile,
+  opts: ReportOptions = {},
+): NoteReport {
+  const planned = planFmt(model, result, {
+    noArtifacts: true,
+    fixDates: opts.fixDates ?? false,
+    ...(doc ? { doc } : {}),
+  });
 
   const bare = (e: Edit): Edit => ({ start: e.start, end: e.end, text: e.text });
 

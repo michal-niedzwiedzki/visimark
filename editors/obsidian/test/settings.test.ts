@@ -20,3 +20,7 @@ test("sweep-on-open defaults off — a scan is a command, not a startup cost", (
 test("write-chart-artifacts defaults off — a chart is a file this plugin has never created before", () => {
   expect(DEFAULT_SETTINGS.writeChartArtifacts).toBe(false);
 });
+
+test("fix-dates-on-format defaults off, matching the CLI's fmt --fix-dates default", () => {
+  expect(DEFAULT_SETTINGS.fixDatesOnFormat).toBe(false);
+});

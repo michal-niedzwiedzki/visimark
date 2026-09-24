@@ -398,6 +398,23 @@ manual step is the "a person, not just a machine" half.
   matches. Run **Format** again. **Pass:** the stamp updates to the new
   hash and the finding clears.
 
+### 2.6c Fix unambiguous dates — v1.1 row 17
+
+- With **Fix unambiguous dates** off (the default), open a note with a
+  `DATE` finding on a decidable date — `example-invoice-drift.md`'s
+  schedule table has one, `15.10.2026`. Run Format. **Pass:** every other
+  repair applies; that date is untouched, and `DATE` still shows in
+  Check.
+- Turn the setting on. Run Format again. **Pass:** the date becomes
+  `2026-10-15`, and `DATE` no longer shows for it.
+- **Pass condition:** the ambiguous date in the same document
+  (`11/12/2026`) is untouched either way — VisiMark cannot read it at all,
+  and no setting here changes that. Same distinction the CLI's
+  `--fix-dates` draws.
+- **Pass condition:** no row in the findings view ever grows a repair
+  button for a `DATE` finding, setting on or off — this is a whole-note
+  Format behaviour, the same shape the CLI flag has, not a per-finding one.
+
 ### 2.7 `infer` on a pasted table — v1 row 5
 
 - Paste a plain Markdown table with a visibly arithmetic column — or use
