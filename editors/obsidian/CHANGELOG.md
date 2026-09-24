@@ -9,6 +9,18 @@ Each entry says which engine version the bundle carries.
 
 ## Unreleased
 
+- **Format can regenerate a stale or missing chart** (v1.1 row 14 of
+  [#176](https://github.com/michal-niedzwiedzki/visimark/issues/176)), behind
+  a new setting, **Write chart artifacts**, off by default. On, Format (the
+  command or format-on-save) writes every stale/missing chart's SVG through
+  the vault write port (`writeCharts`, `chart.ts`) before applying its text
+  repairs, and refuses the whole run — no chart written, no cell repaired —
+  if any chart write fails, matching the CLI's own all-or-nothing contract
+  for `fmt`. Off, nothing changes: v1's behaviour (repair the cells, decline
+  every chart write, `check` still reports the stale chart) is exactly
+  reproduced, notice text included. Per-finding "regenerate this chart" in
+  the findings view is deliberately not part of this row — see #252.
+
 - **An incremental vault health index, and a live badge on the ribbon icon**
   (v1.1 row 13 of [#176](https://github.com/michal-niedzwiedzki/visimark/issues/176)).
   Turning on "Sweep the vault on open" now also seeds a `LiveVaultIndex` from

@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { charts, clean, drift } from "../examples.js";
 import { onDisk } from "../../src/fs/node-reader.js";
-import { fmt } from "../../src/write/fmt.js";
+import { artifactsFor, fmt } from "../../src/write/fmt.js";
 import { locate } from "../../src/parse/document.js";
 import { build } from "../../src/model/build.js";
 import { check } from "../../src/eval/check.js";
@@ -187,6 +187,25 @@ test("noArtifacts withholds the artifacts and counts them, changing nothing else
   expect(declined.anchorsUpdated).toBe(plain.anchorsUpdated);
   expect(declined.datesFixed).toBe(plain.datesFixed);
   expect(declined.stampsUpdated).toBe(plain.stampsUpdated);
+
+  rmSync(dir, { recursive: true, force: true });
+});
+
+// v1.1 row 14 — a caller (the Obsidian plugin) that already has a
+// `CheckResult` reads the same artifact set off it directly, with no second
+// `fmt`/`check` run, and it agrees with what `fmt` itself would write.
+test("artifactsFor reads the same artifact set fmt() computes from an already-run check()", () => {
+  const dir = mkdtempSync(join(tmpdir(), "vm-fmt-af-"));
+  const p = join(dir, "example-charts.md");
+  writeFileSync(p, charts);
+  const doc = onDisk(p);
+
+  const result = check(build(locate(charts)), { doc });
+  const direct = artifactsFor(result);
+  const viaFmt = fmt(charts, { doc }).artifacts;
+
+  expect(direct).toHaveLength(5);
+  expect(direct).toEqual(viaFmt);
 
   rmSync(dir, { recursive: true, force: true });
 });
