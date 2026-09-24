@@ -65,7 +65,7 @@ constraint exists to prevent.
 
 ### 1.2 `vmark` blocks render as ordinary code blocks
 
-**File:** `example-invoice.md`, the four fenced blocks beginning at line 22.
+**File:** `example-invoice.md`, the four fenced blocks beginning at line 23.
 
 **Required:** each ```` ```vmark ```` block renders as a plain, monospaced,
 unhighlighted code block showing its text verbatim — `vat = 23%`,
@@ -77,7 +77,7 @@ reflowed, and not swallowed by a highlighter guessing at another language.
 
 ### 1.3 Tables, and the computed cells inside them
 
-**File:** `example-invoice.md`, the line-items table at lines 17–21.
+**File:** `example-invoice.md`, the line-items table at lines 16–21.
 
 **Required:** a GFM table with six columns, every numeric cell shown exactly
 as the bytes say — `2500.00`, `575.00`, `3075.00`. Trailing zeros intact.
@@ -190,7 +190,7 @@ that it accepts, and each states a single pass condition.
 Run every section in **Restricted Mode with only the VisiMark plugin
 enabled**, on desktop and on a phone.
 
-### 2.1 Activation is opt-in per note — row 4 of the v1 constraints
+### 2.1 Activation is opt-in per note — v1 constraint 4
 
 - Open any ordinary note in the vault with no ```` ```vmark ```` block.
   **Pass:** no VisiMark UI appears anywhere — no status bar item, no ribbon

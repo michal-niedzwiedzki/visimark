@@ -4,6 +4,34 @@
 
 ### Added
 
+- **The committed browser bundle's size is now checked** (issue #191).
+  `docs/vendor/visimark-browser.js` could grow without anything noticing — the
+  `playground-bundle` CI job only checks rebuild fidelity against a fresh build, never
+  size. A new assertion in `browser-graph.test.ts` fails when the bundle exceeds 10%
+  over its recorded 299,700-byte baseline, so growth is now a reviewable CI failure
+  instead of an unwatched minified-file diff. The second of three follow-ups spiked in
+  #176's architectural-spike check 4.
+  See [`browser-bundle-size-spec.md`](docs/design/browser-bundle-size-spec.md).
+
+- **`smoke-node` and `smoke-bun` now prove `visimark` and `visimark-mcp`
+  are importable, not just runnable** (issue #190). Both jobs already
+  installed the packed tarballs and ran the CLI/server through their
+  `bin`; neither ever did `import("visimark")` and used the result, which
+  is exactly how #170 shipped — a broken `exports` condition that failed
+  module resolution while the `bin` kept working. Each job now also
+  resolves the installed package's `node_modules` directory and imports
+  both packages directly, calling `check()` and `engineVersion()`
+  respectively.
+
+- **A `cross-host` CI check** (issue #189). `check`, `eval`, and
+  `explain --json` are now run for every worked-example document through both
+  the real CLI and the committed browser bundle, and the build fails on any
+  divergence between them. No existing test compared one host's answer to
+  another's — each checked one host against fixed expectations — so the class
+  of bug that took the public playground down for 74 minutes (PR #93,
+  shipped by #95, fixed by #99) would have stayed invisible to CI.
+  See [`cross-host-equivalence-check-spec.md`](docs/design/cross-host-equivalence-check-spec.md).
+
 - **`markdownlint-rule-visimark`: report an `analyze()` failure once, not
   seventeen times** (issue #173). A bug in the engine, not a document defect,
   used to surface as seventeen copies of the same stack trace — one per rule
