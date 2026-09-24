@@ -95,8 +95,20 @@ export default class VisiMarkPlugin extends Plugin {
    * calling it again on a view that already has one would append a second
    * icon. Keyed by view rather than a single field, because more than one
    * leaf can be open at once and each has its own header.
+   *
+   * A `Map`, not a `WeakMap`: `onunload` iterates it to remove every action
+   * this plugin instance added. A disable/re-enable with the view left open
+   * would otherwise leave the old element (and its callback, closing over
+   * the unloaded plugin instance) in place, and the new instance would add a
+   * second one beside it — `view.addAction` has no dedup of its own.
+   *
+
+   * The path travels with the element so `refresh` can tell "this view's
+   * action describes the note now open in it" from "this view switched files
+   * and the action is still showing the old one" — the two cases where
+   * clearing it early matters and where it would only flicker, respectively.
    */
-  private readonly actionFor = new WeakMap<MarkdownView, HTMLElement>();
+  private readonly actionFor = new Map<MarkdownView, { el: HTMLElement; path: string }>();
 
   /**
    * Marked elements a hover fetch is in flight for — separate from
@@ -296,6 +308,18 @@ export default class VisiMarkPlugin extends Plugin {
     // the workspace is not ready during onload, and asking before it is gives
     // the wrong answer for the note the vault opens on
     this.app.workspace.onLayoutReady(() => this.refresh());
+  }
+
+  /**
+   * `registerView`/`registerEvent`/`registerDomEvent` all die with the
+   * plugin automatically (`Component`'s own teardown). A view-header action
+   * does not: `view.addAction` attaches the element to the `MarkdownView`
+   * itself, which outlives this plugin instance across a disable/re-enable —
+   * see `actionFor`'s own comment for what that leaves behind uncleaned.
+   */
+  override onunload(): void {
+    for (const { el } of this.actionFor.values()) el.remove();
+    this.actionFor.clear();
   }
 
   /**
@@ -502,6 +526,16 @@ export default class VisiMarkPlugin extends Plugin {
       this.show(HIDDEN, view);
       return;
     }
+    // A MarkdownView instance is reused across a file switch within the same
+    // leaf, so the action `actionFor` has for it can describe a *different*
+    // note than the one about to be checked. Clear it before the read only
+    // in that case — not on every refresh, or typing (editor-change) would
+    // flash the icon away and back on every pause even though the note has
+    // not changed, for a check that is usually faster than the flash itself.
+    const path = view!.file?.path ?? "untitled.md";
+    if (this.actionFor.get(view!)?.path !== path) {
+      this.showAction(HIDDEN, view);
+    }
     void this.refreshState(view!, source, id);
   }
 
@@ -537,18 +571,20 @@ export default class VisiMarkPlugin extends Plugin {
   private showAction(status: Status, view: MarkdownView | null): void {
     if (view === null) return;
     if (status.kind === "hidden") {
-      this.actionFor.get(view)?.remove();
+      this.actionFor.get(view)?.el.remove();
       this.actionFor.delete(view);
       return;
     }
     const icon = ACTION_ICON[status.kind];
+    const path = view.file?.path ?? "untitled.md";
     const existing = this.actionFor.get(view);
     if (existing === undefined) {
       const el = view.addAction(icon, status.detail, () => void this.openFindings());
-      this.actionFor.set(view, el);
+      this.actionFor.set(view, { el, path });
     } else {
-      setIcon(existing, icon);
-      setTooltip(existing, status.detail, { placement: "bottom" });
+      setIcon(existing.el, icon);
+      setTooltip(existing.el, status.detail, { placement: "bottom" });
+      existing.path = path;
     }
   }
 }
