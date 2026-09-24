@@ -21,6 +21,20 @@
 
 ### Added
 
+- **The Obsidian plugin can format a note automatically on explicit save**
+  (issue #239, v1 row 7 of #176) — the same repair plan the Format command
+  and the findings view's per-row repair already apply, through an explicit
+  act (v1 constraint 3), now optionally on Ctrl/Cmd+S too. Off by default:
+  audience B has not agreed to a tool that changes bytes they did not type.
+  Obsidian has no event for an explicit save distinct from its own autosave,
+  so this listens for the keystroke specifically — an autosave never
+  triggers it, and neither does the command palette's "Save file".
+
+  Ships the plugin's first settings tab, since none existed. Two settings
+  that were previously fixed become real toggles alongside it:
+  show-provenance-in-Live-Preview (row 2, on by default) and sweep-on-open
+  (row 8, off by default).
+
 - **A marked value in an Obsidian note answers when you ask it** (issue #229,
   v1 row 3 of #176) — hover on the desktop, tap anywhere, for the formula the
   reader wrote, what it comes to and what it reads, with a cross-sheet input

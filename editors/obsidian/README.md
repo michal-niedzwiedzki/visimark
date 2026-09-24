@@ -23,7 +23,7 @@ each on its own issue:
 | 4 | the five commands — Check, Format, Infer, Evaluate, Explain | [#221](https://github.com/michal-niedzwiedzki/visimark/issues/221) |
 | 5 | `infer` with a preview | [#217](https://github.com/michal-niedzwiedzki/visimark/issues/217) |
 | 6 | the findings view, in audience-B language | [#213](https://github.com/michal-niedzwiedzki/visimark/issues/213) |
-| 7 | *repair half* — the findings view's per-row repair and Format both ship; format-on-save is still open | — |
+| 7 | the per-row repair, Format, and format on explicit save | [#239](https://github.com/michal-niedzwiedzki/visimark/issues/239) |
 | 8 | the vault sweep | [#215](https://github.com/michal-niedzwiedzki/visimark/issues/215) |
 | 9 | the public API — `app.plugins.plugins["visimark"].api` | [#219](https://github.com/michal-niedzwiedzki/visimark/issues/219) |
 | 10 | four templates — invoice, monthly budget, team capacity, experiment log | [#210](https://github.com/michal-niedzwiedzki/visimark/issues/210) |
@@ -39,11 +39,13 @@ The templates live in [`templates/`](templates/), Markdown files the CLI can
 check directly; each passes `visimark check` with zero findings before it is
 edited.
 
-**Row 7 is the one thing left of v1**, and only the format-on-save half: the
-per-row repair (row 6) and the whole-note Format command (row 4) both write
-today, through an explicit act. Format on an explicit save is a policy about
-unattended writes and wants its own review rather than a fold into another
-row's PR.
+**All twelve rows are now built**, including row 7's format-on-save. It is
+off by default (Settings → VisiMark), and it listens for the Ctrl/Cmd+S
+keystroke specifically — Obsidian has no event for an explicit save distinct
+from its own autosave, so an autosave never triggers it, but neither does the
+command palette's "Save file" or whatever a mobile save gesture turns out to
+be. Show-provenance-in-Live-Preview and sweep-on-open, shipped in rows 2 and
+8 as fixed on/off, are settings too now.
 
 `docs/design/obsidian-manual-test.md` Part 2 is runnable end to end. Its table
 says, per section, what a machine already asserts and what still needs a
