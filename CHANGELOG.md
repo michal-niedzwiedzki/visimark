@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+### Fixed
+
+- **`check` reports every drifted anchor of a scalar, not just the first.**
+  A scalar bound into prose more than once (`<!--vmark=…-->`) that has
+  drifted at two or more of those sites used to get one spanned `STALE`
+  finding — for the first anchor in document order — and every later
+  disagreeing site had no finding of its own. A consumer that marks a value
+  by matching a `STALE` finding's exact span (the Obsidian plugin's
+  reading-mode and Live Preview decorations) would call that later site
+  "computed" — agreeing — because no finding ever named its span. `check`
+  now emits one spanned `STALE` per drifted anchor. This changes the
+  printed problem count for any document with a multiply-anchored,
+  multiply-drifted scalar: `docs/example-invoice-drift.md` moves from `26
+  problems (21 stale, 5 errors)` to `27 problems (22 stale, 5 errors)`,
+  since `lines.gross_total` is anchored twice and both sites had drifted.
+  See [#235](https://github.com/michal-niedzwiedzki/visimark/issues/235).
+
 ### Added
 
 - **A marked value in an Obsidian note answers when you ask it** (issue #229,

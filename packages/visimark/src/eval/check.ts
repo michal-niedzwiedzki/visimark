@@ -654,6 +654,12 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
       }
 
       if (!sigilBlocked && prec !== null && v.t === "num" && mine.length > 0) {
+        // every drifted anchor of this scalar gets its own spanned finding —
+        // not just the first. A second anchor whose stored text is equally
+        // wrong is a second site a reader can be looking at, and a consumer
+        // that marks a value by matching a STALE finding's own span
+        // (editors/obsidian/src/decorations.ts) would otherwise call that
+        // site "computed" — agreeing — because no finding ever named its span.
         for (const a of mine) {
           const text = model.source.slice(a.value!.start, a.value!.end);
           if (matchesStored(v, text, prec)) continue;
@@ -674,7 +680,6 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
               { sheetId: binding.sheetId },
             );
           }
-          break;
         }
       }
     } catch (e) {

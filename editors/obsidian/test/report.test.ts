@@ -122,9 +122,9 @@ test("a name anchored in two places keeps a row after one of them is repaired", 
 
 test("every edit fmt would make belongs to a row the reader can see", () => {
   // the gap this closes: `planFmt` looks its finding up by span, and the
-  // collapsed anchor finding has none, so two of the drift document's fifteen
-  // edits arrive carrying a synthetic finding that is in no result. Dropped,
-  // they would leave a reader who pressed every button with a note the CLI
+  // collapsed anchor finding has none, so one of the drift document's fifteen
+  // edits arrives carrying a synthetic finding that is in no result. Dropped,
+  // it would leave a reader who pressed every button with a note the CLI
   // still calls stale.
   const r = report(drift);
   const perRow = [...r.problems, ...r.advice].flatMap((x) => x.repair ?? []);
@@ -138,7 +138,7 @@ test("the collapsed anchor row is the one that adopts them", () => {
   expect(group, "the drift document should produce a collapsed anchor row").toBeDefined();
   expect(group!.span).toBeNull();
   expect(group!.reader.row).toMatch(/^\d+ values in the text/);
-  expect(group!.repair!.length).toBeGreaterThan(1);
+  expect(group!.repair!.length).toBe(1);
 });
 
 test("a repaired note is clean, and repairing it again is a no-op", () => {
