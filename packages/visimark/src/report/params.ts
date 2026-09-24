@@ -1,3 +1,4 @@
+import { formatDomain } from "../lang/domain.js";
 import type { Binding } from "../model/types.js";
 
 // Listing helpers for `param` statements, shared by `explain` and the
@@ -15,16 +16,24 @@ export function params(bs: Iterable<Binding>): Binding[] {
 }
 
 /**
- * `name   precision N   default TEXT`, the three fields aligned; the default
- * as written. See docs/design/scenario-params-spec.md §5.3.
+ * `name   precision N   default TEXT[   domain CLAUSE]`, the first three
+ * fields aligned; the default as written. A fourth field, the domain as
+ * declared, is appended only for a row whose param declares one — a row
+ * without one is unchanged. See docs/design/scenario-params-spec.md §5.3 and
+ * docs/design/a-param-declares-the-set-of-values-it-ac-spec.md §6.
  */
 export function paramLines(bs: Binding[], indent: string): string[] {
   const rows = bs.map((b) => ({
     name: b.name,
     prec: b.precision === undefined ? "precision ?" : `precision ${b.precision}`,
     dflt: `default ${b.param!.text}`,
+    domain: b.domain === undefined ? undefined : `domain ${formatDomain(b.domain)}`,
   }));
   const nw = Math.max(0, ...rows.map((r) => r.name.length));
   const pw = Math.max(0, ...rows.map((r) => r.prec.length));
-  return rows.map((r) => `${indent}${r.name.padEnd(nw)}   ${r.prec.padEnd(pw)}   ${r.dflt}`);
+  return rows.map(
+    (r) =>
+      `${indent}${r.name.padEnd(nw)}   ${r.prec.padEnd(pw)}   ${r.dflt}` +
+      (r.domain === undefined ? "" : `   ${r.domain}`),
+  );
 }

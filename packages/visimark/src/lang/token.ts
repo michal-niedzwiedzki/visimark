@@ -13,6 +13,10 @@ export type TokenKind =
   | "dot"
   | "lparen"
   | "rparen"
+  | "lbracket"
+  | "rbracket"
+  | "lbrace"
+  | "rbrace"
   | "delim"
   | "comma"
   | "eof";

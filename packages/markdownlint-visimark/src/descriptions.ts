@@ -25,6 +25,7 @@ export const DESCRIPTIONS: Record<FindingCode, string> = {
   ANCHOR: "Anchor with no rewritable target",
   PRECISION:
     "A numeric binding with no declared width and none derivable, a value too large to carry the width it has, or a `%` display sigil on a binding whose width is below 2",
+  DOMAIN: "A param's default is outside its declared domain, or the domain has no legal value",
   ASSERT: "An `assert` statement evaluated false",
   ARTIFACT: "A declared artifact cannot be built or written",
   IMPORT: "A declared local import cannot be resolved",

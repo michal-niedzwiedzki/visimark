@@ -348,4 +348,77 @@ describe("explain", () => {
     expect(e.out).toContain("x     0.2");
     expect(e.out).toContain("  rate  0.1  scenario  (default 0.19)");
   });
+
+  // docs/design/a-param-declares-the-set-of-values-it-ac-spec.md §6
+  test("a param's params: row grows a fourth field when it declares a domain", async () => {
+    const d = join(tmp, "explain-domain.md");
+    writeFileSync(
+      d,
+      "```vmark #levers\nparam extra_hours precision 0 integer in [0, 80] = default 40\n```\n",
+    );
+    const r = await run(["explain", d, "#levers"]);
+    expect(r.out).toContain(
+      "  params:\n    extra_hours   precision 0   default 40   domain integer in [0, 80]",
+    );
+    const j = JSON.parse((await run(["explain", d, "--json"])).out);
+    expect(j.sheets[0].params).toEqual([
+      {
+        name: "extra_hours",
+        precision: 0,
+        default: "40",
+        domain: { clauses: ["integer", "[0, 80]"], fold: expect.any(Array) },
+      },
+    ]);
+  });
+
+  test("explain --json is unaffected when no param declares a domain", async () => {
+    const j = JSON.parse((await run(["explain", example, "--json"])).out);
+    expect(j.sheets[0].params).toEqual([{ name: "budget", precision: 2, default: "2.00" }]);
+    expect(j.sheets[0].params[0].domain).toBeUndefined();
+  });
+});
+
+// docs/design/a-param-declares-the-set-of-values-it-ac-spec.md §6
+describe("eval reports a param's declared domain", () => {
+  const domainDoc = join(tmp, "domain.md");
+  writeFileSync(
+    domainDoc,
+    "```vmark #levers\n" +
+      "param extra_hours precision 0 integer in [0, 80] = default 40\n" +
+      "param prepay_share precision 2 in { 30%, 40%, 45%, 50% } = default 30%\n" +
+      "```\n",
+  );
+
+  test("text output gains a params: block", async () => {
+    const r = await run(["eval", domainDoc]);
+    expect(r.code).toBe(0);
+    expect(r.out).toContain("params:");
+    expect(r.out).toContain("levers.extra_hours");
+    expect(r.out).toContain("integer in [0, 80]");
+    expect(r.out).toContain("levers.prepay_share");
+    expect(r.out).toContain("in { 30%, 40%, 45%, 50% }");
+  });
+
+  test("--json gains a params object with clauses and an exact fold", async () => {
+    const r = await run(["eval", "--json", domainDoc]);
+    const j = JSON.parse(r.out);
+    expect(j.params["levers.extra_hours"]).toMatchObject({
+      value: "40",
+      default: "40",
+      source: "default",
+    });
+    expect(j.params["levers.extra_hours"].domain.clauses).toEqual(["integer", "[0, 80]"]);
+    expect(j.params["levers.extra_hours"].domain.fold.length).toBe(81);
+    expect(j.params["levers.prepay_share"].domain).toEqual({
+      clauses: ["{ 30%, 40%, 45%, 50% }"],
+      fold: ["0.3", "0.4", "0.45", "0.5"],
+    });
+  });
+
+  test("a document with no domain-bearing param is unaffected", async () => {
+    const r = await run(["eval", example]);
+    expect(r.out).not.toContain("params:");
+    const j = await run(["eval", "--json", example]);
+    expect(JSON.parse(j.out).params).toBeUndefined();
+  });
 });

@@ -1,4 +1,5 @@
 import type { ChartResult, CheckResult } from "../eval/check.js";
+import { domainJson } from "../lang/domain.js";
 import { topoOrder } from "../eval/graph.js";
 import type { Binding, DocModel, ImportStatus } from "../model/types.js";
 import { readVersion } from "../cli/version.js";
@@ -75,9 +76,22 @@ function bindingLines(view: ExplainView, sheetId: string, bs: Binding[]): string
   return rows.map((r) => `    ${r.prec ? `${r.text.padEnd(w)}   ${r.prec}` : r.text}`);
 }
 
-/** the JSON form of one `param` */
-function paramJson(b: Binding): { name: string; precision: number | null; default: string } {
-  return { name: b.name, precision: b.precision ?? null, default: b.param!.text };
+/** the JSON form of one `param`; `domain` is present only when declared,
+ *  same shape as `eval --json` (a-param-declares-the-set-of-values-it-ac-spec.md §6) */
+function paramJson(
+  b: Binding,
+): {
+  name: string;
+  precision: number | null;
+  default: string;
+  domain?: { clauses: string[]; fold?: string[] };
+} {
+  return {
+    name: b.name,
+    precision: b.precision ?? null,
+    default: b.param!.text,
+    ...(b.domain === undefined ? {} : { domain: domainJson(b.domain) }),
+  };
 }
 
 /** the bindings of one sheet in evaluation order, with assertions and charts dropped */

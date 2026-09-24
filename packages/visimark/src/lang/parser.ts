@@ -8,6 +8,7 @@ import {
   type Expr,
   type Ref,
 } from "./ast.js";
+import type { Domain, Leaf, PresetName, RangeLeaf, SetLeaf } from "./domain.js";
 import { lex } from "./lexer.js";
 import { DELIM_OPENER_OF, DELIM_PAIRS } from "./notation.js";
 import { LangError, type Token } from "./token.js";
@@ -326,6 +327,9 @@ export interface Binding {
    *  literal as written, and whether it was a percent literal. See
    *  docs/design/scenario-params-spec.md. */
   param?: { text: string; percent: boolean };
+  /** a `param`'s optional domain clause. See
+   *  docs/design/a-param-declares-the-set-of-values-it-ac-spec.md §2. */
+  domain?: Domain;
 }
 
 const LEADING_NAME_RE = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=/;
@@ -476,11 +480,24 @@ function parseParamInner(line: string, toks: Token[], kw: Token, nameTok: Token)
     throw new LangError("binding has no `=`", kw.start, line.length);
   }
   const head = toks.slice(toks.indexOf(nameTok), eqIndex);
-  const { nameToks, precision } = takePrecisionClause(head);
-  if (nameToks.length !== 1) {
-    const extra = nameToks[1] ?? nameToks[0]!;
-    throw new LangError(`unexpected ${extra.kind}`, extra.start, extra.end);
+  let rest = head.slice(1); // past `nameTok`
+  let precision: number | undefined;
+  if (rest[0]?.kind === "precision") {
+    const kw = rest[0]!;
+    const digits = rest[1];
+    if (!digits || digits.kind !== "number" || !/^\d+$/.test(digits.value)) {
+      const start = digits?.start ?? kw.start;
+      const end = digits?.end ?? kw.end;
+      throw new LangError(PRECISION_RANGE_MESSAGE, start, end);
+    }
+    const n = Number(digits.value);
+    if (!Number.isInteger(n) || n < 0 || n > MAX_PRECISION) {
+      throw new LangError(PRECISION_RANGE_MESSAGE, digits.start, digits.end);
+    }
+    precision = n;
+    rest = rest.slice(2);
   }
+  const domain = rest.length === 0 ? undefined : parseParamDomainClause(line, rest);
   const dflt = toks[eqIndex + 1]!;
   if (dflt.kind !== "ident" || dflt.value !== "default") {
     throw new LangError("expected `default` after `=` in a param", dflt.start, dflt.end);
@@ -510,6 +527,182 @@ function parseParamInner(line: string, toks: Token[], kw: Token, nameTok: Token)
     quoted: false,
     ...(precision === undefined ? {} : { precision }),
     param: { text: line.slice(litStart, lit.end), percent },
+    ...(domain === undefined ? {} : { domain }),
+  };
+}
+
+export const PARAM_DOMAIN_LITERAL_MESSAGE = "a param domain bound must be a number literal";
+export const PARAM_DOMAIN_MALFORMED_MESSAGE = "malformed param domain clause";
+const PARAM_DOMAIN_PRESETS = new Set<PresetName>(["integer", "positive", "natural"]);
+
+/**
+ * `[PRESET] [in DOMAIN-EXPR]`, the optional clause on a `param` header
+ * between `precision N` and `= default LITERAL`. See
+ * docs/design/a-param-declares-the-set-of-values-it-ac-spec.md §2. `tokens`
+ * is whatever remains of the head after the name and an optional precision
+ * clause; every glyph spelling (`∈`, `ℤ`, `ℕ`, `ℤ⁺`) has already lexed as its
+ * keyword equivalent by this point, so this function reads keywords only.
+ */
+function parseParamDomainClause(line: string, tokens: Token[]): Domain {
+  let i = 0;
+  const parts: Leaf[] = [];
+  const first = tokens[0];
+  if (first?.kind === "ident" && first.value !== "in") {
+    if (first.value === "positive" && tokens[1]?.kind === "ident" && tokens[1]!.value === "integer") {
+      parts.push({ kind: "preset", name: "positive integer", text: "positive integer" });
+      i = 2;
+    } else if (PARAM_DOMAIN_PRESETS.has(first.value as PresetName)) {
+      parts.push({ kind: "preset", name: first.value as PresetName, text: first.value });
+      i = 1;
+    } else {
+      throw new LangError(`unrecognised param domain preset \`${first.value}\``, first.start, first.end);
+    }
+  }
+  const inTok = tokens[i];
+  if (inTok) {
+    if (inTok.kind !== "ident" || inTok.value !== "in") {
+      throw new LangError(
+        PARAM_DOMAIN_MALFORMED_MESSAGE,
+        inTok.start,
+        tokens[tokens.length - 1]!.end,
+      );
+    }
+    const { leaf, next } = parseDomainRangeOrSet(line, tokens, i + 1);
+    parts.push(leaf);
+    i = next;
+  }
+  if (i !== tokens.length) {
+    const extra = tokens[i]!;
+    throw new LangError(PARAM_DOMAIN_MALFORMED_MESSAGE, extra.start, tokens[tokens.length - 1]!.end);
+  }
+  return { parts };
+}
+
+function parseDomainRangeOrSet(
+  line: string,
+  tokens: Token[],
+  i: number,
+): { leaf: Leaf; next: number } {
+  const open = tokens[i];
+  if (!open) {
+    throw new LangError(PARAM_DOMAIN_MALFORMED_MESSAGE, line.length, line.length);
+  }
+  if (open.kind === "lbrace") return parseDomainSet(line, tokens, i);
+  if (open.kind === "lparen" || open.kind === "lbracket") return parseDomainRange(line, tokens, i);
+  throw new LangError(PARAM_DOMAIN_MALFORMED_MESSAGE, open.start, open.end);
+}
+
+function parseDomainLiteral(
+  line: string,
+  tokens: Token[],
+  i: number,
+): { value: string; literal: { text: string; percent: boolean }; next: number } {
+  const first = tokens[i];
+  if (!first) {
+    throw new LangError(PARAM_DOMAIN_LITERAL_MESSAGE, line.length, line.length);
+  }
+  const start = first.start;
+  let negative = false;
+  let j = i;
+  if (tokens[j]?.kind === "op" && tokens[j]!.value === "-") {
+    negative = true;
+    j++;
+  }
+  const lit = tokens[j];
+  if (!lit || (lit.kind !== "number" && lit.kind !== "percent")) {
+    throw new LangError(PARAM_DOMAIN_LITERAL_MESSAGE, start, lit?.end ?? start);
+  }
+  const percent = lit.kind === "percent";
+  const magnitude = percent ? new Decimal(lit.value).div(100).toString() : lit.value;
+  const value = negative ? `-${magnitude}` : magnitude;
+  return { value, literal: { text: line.slice(start, lit.end), percent }, next: j + 1 };
+}
+
+function parseDomainRange(
+  line: string,
+  tokens: Token[],
+  i: number,
+): { leaf: RangeLeaf; next: number } {
+  const openTok = tokens[i]!;
+  const loClosed = openTok.kind === "lbracket";
+  let j = i + 1;
+  let lo: string | undefined;
+  let loLiteral: { text: string; percent: boolean } | undefined;
+  if (tokens[j]?.kind !== "comma") {
+    const parsed = parseDomainLiteral(line, tokens, j);
+    lo = parsed.value;
+    loLiteral = parsed.literal;
+    j = parsed.next;
+  }
+  const comma = tokens[j];
+  if (!comma || comma.kind !== "comma") {
+    throw new LangError(PARAM_DOMAIN_MALFORMED_MESSAGE, openTok.start, comma?.end ?? openTok.end);
+  }
+  j++;
+  let hi: string | undefined;
+  let hiLiteral: { text: string; percent: boolean } | undefined;
+  const closeAhead = tokens[j]?.kind === "rparen" || tokens[j]?.kind === "rbracket";
+  if (!closeAhead) {
+    const parsed = parseDomainLiteral(line, tokens, j);
+    hi = parsed.value;
+    hiLiteral = parsed.literal;
+    j = parsed.next;
+  }
+  const closeTok = tokens[j];
+  if (!closeTok || (closeTok.kind !== "rparen" && closeTok.kind !== "rbracket")) {
+    throw new LangError(PARAM_DOMAIN_MALFORMED_MESSAGE, openTok.start, closeTok?.end ?? openTok.end);
+  }
+  const hiClosed = closeTok.kind === "rbracket";
+  j++;
+  if (lo === undefined && loClosed) {
+    throw new LangError(PARAM_DOMAIN_MALFORMED_MESSAGE, openTok.start, openTok.end);
+  }
+  if (hi === undefined && hiClosed) {
+    throw new LangError(PARAM_DOMAIN_MALFORMED_MESSAGE, closeTok.start, closeTok.end);
+  }
+  return {
+    leaf: {
+      kind: "range",
+      ...(lo === undefined ? {} : { lo, loLiteral }),
+      loClosed,
+      ...(hi === undefined ? {} : { hi, hiLiteral }),
+      hiClosed,
+      text: line.slice(openTok.start, closeTok.end),
+    },
+    next: j,
+  };
+}
+
+function parseDomainSet(
+  line: string,
+  tokens: Token[],
+  i: number,
+): { leaf: SetLeaf; next: number } {
+  const openTok = tokens[i]!;
+  let j = i + 1;
+  const members: string[] = [];
+  const memberLiterals: { text: string; percent: boolean }[] = [];
+  if (tokens[j]?.kind !== "rbrace") {
+    for (;;) {
+      const parsed = parseDomainLiteral(line, tokens, j);
+      members.push(parsed.value);
+      memberLiterals.push(parsed.literal);
+      j = parsed.next;
+      if (tokens[j]?.kind === "comma") {
+        j++;
+        continue;
+      }
+      break;
+    }
+  }
+  const closeTok = tokens[j];
+  if (!closeTok || closeTok.kind !== "rbrace") {
+    throw new LangError(PARAM_DOMAIN_MALFORMED_MESSAGE, openTok.start, closeTok?.end ?? openTok.end);
+  }
+  j++;
+  return {
+    leaf: { kind: "set", members, memberLiterals, text: line.slice(openTok.start, closeTok.end) },
+    next: j,
   };
 }
 

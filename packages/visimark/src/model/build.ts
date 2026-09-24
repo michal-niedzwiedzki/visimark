@@ -495,6 +495,7 @@ function parseOne(
         kind: "scalar",
         ...(s.precision === undefined ? {} : { precision: s.precision }),
         ...(s.param === undefined ? {} : { param: s.param }),
+        ...(s.domain === undefined ? {} : { domain: s.domain }),
         span: { start: rb.start, end: rb.end },
       },
     };

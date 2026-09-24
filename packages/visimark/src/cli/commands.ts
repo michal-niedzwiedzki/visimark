@@ -13,6 +13,7 @@ import { formatCheck } from "../report/format.js";
 import { explainJson, explainText, explainView } from "../report/explain.js";
 import { formatInfer } from "../report/infer.js";
 import { describeFunction, functionNames, precisionPhrase } from "../lang/reference.js";
+import { domainJson, formatDomain } from "../lang/domain.js";
 import { closest } from "../report/levenshtein.js";
 import {
   emitJson,
@@ -356,6 +357,9 @@ export function cmdEval(args: string[], out: Writer, err: Writer): number {
     return 2;
   }
   const model = build(locate(source));
+  // listed before a scenario would change any value, so each carries its
+  // default (a-param-declares-the-set-of-values-it-ac-spec.md §6)
+  const allParams = listParams(model);
 
   // A scenario is checked in full before anything is evaluated: a fault is a
   // usage error, and no values are printed (scenario-params-spec.md §4.2).
@@ -370,8 +374,7 @@ export function cmdEval(args: string[], out: Writer, err: Writer): number {
         throw new ScenarioError(`visimark: cannot read scenario ${scenarioFile}`);
       }
       const resolved = resolveScenario(model, parseScenarioJson(text, scenarioFile));
-      // listed before the values change, so each carries its default
-      const params = listParams(model);
+      const params = allParams;
       applyScenario(model, resolved);
       scenario = { file: scenarioFile, params, supplied: new Set(resolved.keys()) };
     } catch (e) {
@@ -431,6 +434,31 @@ export function cmdEval(args: string[], out: Writer, err: Writer): number {
     return { file: scenario!.file, params };
   };
 
+  // `params:`/`params`: every param that declares a domain, gated on at
+  // least one existing — a document with none keeps today's output
+  // byte-for-byte. See a-param-declares-the-set-of-values-it-ac-spec.md §6.
+  const domainParams = allParams.filter((p) => p.domain !== undefined);
+  const domainParamsJson = (): Record<string, object> => {
+    const out: Record<string, object> = {};
+    for (const p of domainParams) {
+      out[p.id] = {
+        value: typeof values[p.id] === "string" ? values[p.id] : null,
+        default: p.defaultValue,
+        source: scenario?.supplied.has(p.id) ? "scenario" : "default",
+        domain: domainJson(p.domain!),
+      };
+    }
+    return out;
+  };
+  const domainParamsText = (): string[] => {
+    if (domainParams.length === 0) return [];
+    const w = Math.max(...domainParams.map((p) => p.id.length));
+    return [
+      "params:",
+      ...domainParams.map((p) => `  ${p.id.padEnd(w)}   ${formatDomain(p.domain!)}`),
+    ];
+  };
+
   const emitEval = (selected: typeof values): void => {
     emitJson(out, {
       command: "eval",
@@ -438,6 +466,7 @@ export function cmdEval(args: string[], out: Writer, err: Writer): number {
       status: statusFromExit(assertExit),
       file: path,
       ...(scenario ? { scenario: scenarioJson() } : {}),
+      ...(domainParams.length > 0 ? { params: domainParamsJson() } : {}),
       values: selected,
       assertions: publicAssertions(result.assertions, onDefaults),
       charts: publicCharts(result.charts, scenario === null),
@@ -466,6 +495,7 @@ export function cmdEval(args: string[], out: Writer, err: Writer): number {
     const width = Math.max(...[...all.keys()].map((k) => k.length), 0);
     for (const [k, v] of all) out(`${k.padEnd(width)}  ${v}`);
     if (scenario) for (const line of scenarioText(scenario, all)) out(line);
+    for (const line of domainParamsText()) out(line);
     reportFailures();
   }
   return assertExit;

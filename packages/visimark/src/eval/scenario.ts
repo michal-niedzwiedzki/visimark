@@ -1,4 +1,5 @@
 import { Decimal } from "decimal.js";
+import { type Domain, firstFailingLeaf, type Leaf } from "../lang/domain.js";
 import { type Binding, type DocModel, DOC_SCOPE } from "../model/types.js";
 import { closest } from "../report/levenshtein.js";
 
@@ -36,6 +37,9 @@ export interface ParamInfo {
   percent: boolean;
   /** the default's value, canonical (`2.00` → `2`) */
   defaultValue: string;
+  /** a `param`'s optional domain clause. See
+   *  docs/design/a-param-declares-the-set-of-values-it-ac-spec.md §4.2. */
+  domain?: Domain;
   binding: Binding;
 }
 
@@ -124,6 +128,7 @@ export function listParams(model: DocModel): ParamInfo[] {
       text: b.param.text,
       percent: b.param.percent,
       defaultValue: b.expr.type === "num" ? new Decimal(b.expr.value).toString() : b.param.text,
+      ...(b.domain === undefined ? {} : { domain: b.domain }),
       binding: b,
     });
   };
@@ -229,7 +234,40 @@ function checkValue(param: ParamInfo, key: string, raw: string): string {
       `visimark: scenario value for ${key} has ${places} decimal${places === 1 ? "" : "s"}; ${param.name} declares ${param.precision}`,
     );
   }
-  return d.toString();
+  const canonical = d.toString();
+  if (param.domain !== undefined) {
+    const failed = firstFailingLeaf(param.domain, canonical);
+    if (failed) {
+      throw new ScenarioError(
+        `visimark: scenario value for ${key} ${domainRefusal(failed)}: ${value}`,
+      );
+    }
+  }
+  return canonical;
+}
+
+/** the spec §4.2 four-way message shape, keyed on the clause that failed */
+const LARGE_SET_THRESHOLD = 10;
+function domainRefusal(leaf: Leaf): string {
+  switch (leaf.kind) {
+    case "range":
+      return `is not in ${leaf.text}`;
+    case "set":
+      return leaf.members.length > LARGE_SET_THRESHOLD
+        ? `is not among the ${leaf.members.length} legal values`
+        : `is not in ${leaf.text}`;
+    case "preset":
+      switch (leaf.name) {
+        case "integer":
+          return "is not an integer";
+        case "positive":
+          return "is not positive";
+        case "natural":
+          return "is not a non-negative integer";
+        case "positive integer":
+          return "is not a positive integer";
+      }
+  }
 }
 
 /**

@@ -212,3 +212,48 @@ test("`precision` is a statement keyword, case-sensitively", () => {
   // with a `Precision` column is unaffected by the keyword.
   expect(kinds("Precision")).toEqual(["ident", "eof"]);
 });
+
+test("bracket and brace punctuation for param domain clauses", () => {
+  expect(kinds("[0, 80]")).toEqual([
+    "lbracket",
+    "number",
+    "comma",
+    "number",
+    "rbracket",
+    "eof",
+  ]);
+  expect(kinds("{ 30%, 40% }")).toEqual([
+    "lbrace",
+    "percent",
+    "comma",
+    "percent",
+    "rbrace",
+    "eof",
+  ]);
+});
+
+test("`∈` lexes as the `in` identifier", () => {
+  expect(pairs("∈")).toEqual([
+    ["ident", "in"],
+    ["eof", ""],
+  ]);
+});
+
+test("`ℤ` and `ℕ` lex as the `integer` and `natural` identifiers", () => {
+  expect(pairs("ℤ")).toEqual([
+    ["ident", "integer"],
+    ["eof", ""],
+  ]);
+  expect(pairs("ℕ")).toEqual([
+    ["ident", "natural"],
+    ["eof", ""],
+  ]);
+});
+
+test("`ℤ⁺` lexes as two identifiers, `positive` then `integer`", () => {
+  expect(pairs("ℤ⁺")).toEqual([
+    ["ident", "positive"],
+    ["ident", "integer"],
+    ["eof", ""],
+  ]);
+});

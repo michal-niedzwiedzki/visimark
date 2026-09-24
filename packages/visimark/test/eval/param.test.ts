@@ -111,3 +111,76 @@ describe("findings", () => {
     expect(model.sheets.get("s")!.scalars.has("Price")).toBe(false);
   });
 });
+
+// docs/design/a-param-declares-the-set-of-values-it-ac-spec.md §4.1
+describe("param domain findings", () => {
+  test("default outside a range is DOMAIN, and dependants are suppressed", () => {
+    const { result } = run(
+      fence(
+        "s",
+        "param extra_hours precision 0 integer in [0, 80] = default 100\nnet = extra_hours * 2\nassert net > 0",
+      ),
+    );
+    const f = result.findings.find((x) => x.code === "DOMAIN")!;
+    expect(f.message).toBe(
+      "default 100 is not in the domain of extra_hours: integer in [0, 80]",
+    );
+    expect(result.values.has("s.net")).toBe(false);
+    expect(result.assertions[0]?.holds).toBeNull();
+  });
+
+  test("default outside a finite set is DOMAIN", () => {
+    const { result } = run(
+      fence("s", "param prepay_share precision 2 in { 30%, 40% } = default 35%"),
+    );
+    const f = result.findings.find((x) => x.code === "DOMAIN")!;
+    expect(f.message).toBe(
+      "default 35% is not in the domain of prepay_share: in { 30%, 40% }",
+    );
+  });
+
+  test("a reversed range is an empty-domain DOMAIN", () => {
+    const { result } = run(fence("s", "param x precision 0 in [10, 0] = default 5"));
+    expect(codes(result.findings)).toEqual(["DOMAIN s.x"]);
+    expect(result.findings[0]!.message).toBe(
+      "param x declares an empty domain: in [10, 0] has no legal value",
+    );
+  });
+
+  test("an empty set literal is an empty-domain DOMAIN", () => {
+    const { result } = run(fence("s", "param x precision 0 in { } = default 0"));
+    expect(result.findings[0]!.message).toBe(
+      "param x declares an empty domain: in { } has no legal value",
+    );
+  });
+
+  test("integer preset intersected with a fractional range is an empty-domain DOMAIN", () => {
+    const { result } = run(
+      fence("s", "param x precision 1 integer in [0.2, 0.8] = default 0.5"),
+    );
+    expect(result.findings[0]!.code).toBe("DOMAIN");
+  });
+
+  test("a domain literal wider than the declared precision is PRECISION", () => {
+    const { result } = run(
+      fence("s", "param x precision 2 in { 30%, 33.33% } = default 30%"),
+    );
+    expect(codes(result.findings)).toEqual(["PRECISION s.x"]);
+    expect(result.findings[0]!.message).toBe(
+      "domain value 33.33% has 4 decimals; param x declares 2",
+    );
+  });
+
+  test("a domain literal percent-mismatched with the param is TYPE", () => {
+    const { result } = run(fence("s", "param x precision 2 in { 30%, 40 } = default 30%"));
+    expect(codes(result.findings)).toEqual(["TYPE s.x"]);
+    expect(result.findings[0]!.message).toBe("x is a percent; domain value 40 must be too");
+  });
+
+  test("an in-domain default with no other findings passes", () => {
+    const { result } = run(
+      fence("s", "param extra_hours precision 0 integer in [0, 80] = default 40"),
+    );
+    expect(codes(result.findings)).toEqual(["WARN s.extra_hours"]);
+  });
+});
