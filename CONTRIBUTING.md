@@ -138,6 +138,30 @@ Obsidian release goes through a human registry review and must not be coupled
 to an engine patch. `scripts/check-changelog-entries.ts` holds it honest
 instead.
 
+#### Developing and debugging it against a running vault
+
+`bun test` and the cross-host equivalence checks run against the engine, not
+against Obsidian's own event handling, keymap, or window lifecycle — a bug in
+those is invisible to everything in the tree except a person driving a real
+Obsidian instance. `.agents/skills/obsidian-cli` (a Claude skill, but its
+`obsidian` CLI is a plain binary) drives one from the command line:
+
+1. Enable **Settings → General → Advanced → Command line interface** in
+   Obsidian once, in the vault you side-load into.
+2. After a rebuild, `obsidian plugin:reload id=visimark` picks up the new
+   `main.js` without restarting Obsidian.
+3. `obsidian dev:errors` and `obsidian dev:console level=error` surface
+   exceptions and console warnings; `obsidian dev:screenshot path=...`
+   confirms what actually rendered.
+4. `obsidian dev:cdp method="Input.dispatchKeyEvent" params='...'` drives a
+   Chrome DevTools Protocol key event against the app. This is not the same
+   as a real keystroke: it showed up empty when issue #243 was diagnosed —
+   no debugger was attached, and the synthetic event never reached a
+   `document`-level listener at all — while a `keydown` dispatched directly
+   on the focused element (`.cm-content` for the editor) reproduced the bug.
+   Prefer dispatching on the element over `dev:cdp` when a DOM-level listener
+   is what's under test, and attach the debugger if the two disagree.
+
 ### Running the MCP server from your working tree
 
 ```console

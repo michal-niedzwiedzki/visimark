@@ -302,9 +302,19 @@ export default class VisiMarkPlugin extends Plugin {
     // constructors (Obsidian's pop-out-window docs), so `event.target
     // instanceof Node` — which closes over *this* module's `Node` — would
     // silently fail for a keystroke typed there. `nodeType` is checked
-    // structurally instead, and the listener is attached to every window's
-    // document: the main one now, each pop-out already open, and any that
-    // opens later.
+    // structurally instead, and the listener is attached to every window:
+    // the main one now, each pop-out already open, and any that opens later.
+    //
+    // Registered on `Window`, capture phase (`{ capture: true }`), not on
+    // `Document` at the default bubble phase: Obsidian's own keymap binds
+    // `keydown` on `window` at capture (`addEventListener(..., true)`) and,
+    // on the matched "Save file" hotkey, calls `preventDefault()` and
+    // `stopPropagation()`. `stopPropagation` stops the event from reaching
+    // other listeners further down the same phase and on `document`, but not
+    // other capture listeners already on `window` itself — so this handler
+    // still sees the keystroke, ahead of where Obsidian consumes it. It does
+    // not call `preventDefault` or `stopPropagation` itself, so Obsidian's
+    // own save still runs unblocked (issue #243).
     const onSaveKeydown = (event: KeyboardEvent): void => {
       if (!this.settings.formatOnSave) return;
       if (event.shiftKey || event.altKey) return;
@@ -317,17 +327,18 @@ export default class VisiMarkPlugin extends Plugin {
       if (!view.contentEl.contains(eventTarget as Node)) return;
       void this.format(view.editor, { silent: true });
     };
-    const seenWindows = new Set<Document>();
-    const listenForSaveIn = (doc: Document): void => {
-      if (seenWindows.has(doc)) return;
-      seenWindows.add(doc);
-      this.registerDomEvent(doc, "keydown", onSaveKeydown);
+    const seenWindows = new Set<Window>();
+    const listenForSaveIn = (win: Window): void => {
+      if (seenWindows.has(win)) return;
+      seenWindows.add(win);
+      this.registerDomEvent(win, "keydown", onSaveKeydown, { capture: true });
     };
-    listenForSaveIn(document);
-    this.app.workspace.iterateAllLeaves((leaf) => listenForSaveIn(leaf.view.containerEl.doc));
-    this.registerEvent(
-      this.app.workspace.on("window-open", (_win, win) => listenForSaveIn(win.document)),
-    );
+    listenForSaveIn(window);
+    this.app.workspace.iterateAllLeaves((leaf) => {
+      const win = leaf.view.containerEl.doc.defaultView;
+      if (win !== null) listenForSaveIn(win);
+    });
+    this.registerEvent(this.app.workspace.on("window-open", (_win, win) => listenForSaveIn(win)));
 
     this.status = this.addStatusBarItem();
     this.status.addClass("visimark-status");

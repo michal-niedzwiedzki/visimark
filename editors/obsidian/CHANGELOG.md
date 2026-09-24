@@ -9,6 +9,16 @@ Each entry says which engine version the bundle carries.
 
 ## Unreleased
 
+- **Format on explicit save now fires on a real Ctrl/Cmd+S keystroke**
+  (issue #243). The listener was bound on each window's `Document` at the
+  default bubble phase; Obsidian's own keymap binds `keydown` on `Window` at
+  capture and, on a matched hotkey such as "Save file", calls
+  `preventDefault()` and `stopPropagation()` before the event ever reached
+  it. Rebinding on `Window` with `{ capture: true }` runs the listener ahead
+  of Obsidian's own handling, without pre-empting it — Obsidian's save still
+  fires unblocked. The command and the per-finding repair, which never went
+  through this listener, were unaffected.
+
 - **Activation has a witness on mobile, not only on desktop** (issue #232).
   `addStatusBarItem()` is desktop-only — Obsidian's own typings say so — and
   it was the plugin's only sign that a note had activated, so a vault on a
