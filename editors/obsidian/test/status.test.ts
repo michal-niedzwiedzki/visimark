@@ -75,6 +75,15 @@ test("a note with no block shows nothing at all", () => {
   expect(HIDDEN.detail).toBe("");
 });
 
+test("every state names its own kind, for a surface with no text to parse", () => {
+  // main.ts's mobile witness (#232) picks a view-header icon off `kind`
+  // rather than parsing it out of `text`
+  expect(HIDDEN.kind).toBe("hidden");
+  expect(UNKNOWN.kind).toBe("unknown");
+  expect(statusFor(report("example-invoice.md")).kind).toBe("clean");
+  expect(statusFor(report("example-invoice-drift.md")).kind).toBe("problems");
+});
+
 test("one of each reads as English, not as a template", () => {
   const one = statusFor({ problems: [{}] as never[], advice: [{}] as never[], allRepairs: [] });
   expect(one.text).toBe("VisiMark · 1 to look at");

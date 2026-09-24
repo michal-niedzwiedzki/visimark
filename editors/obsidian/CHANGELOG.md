@@ -9,6 +9,14 @@ Each entry says which engine version the bundle carries.
 
 ## Unreleased
 
+- **Activation has a witness on mobile, not only on desktop** (issue #232).
+  `addStatusBarItem()` is desktop-only — Obsidian's own typings say so — and
+  it was the plugin's only sign that a note had activated, so a vault on a
+  phone showed an activated note exactly like an ordinary one. A view-header
+  icon now carries the same four states (checked, N to look at, could not be
+  checked, hidden) and the same click-through to the findings view, on every
+  platform; the status bar is unchanged on desktop.
+
 - **A marked value answers when you ask it** — hover on the desktop, tap
   anywhere — with the formula the reader wrote, what it comes to and what it
   reads. A cell says what *that* cell comes to rather than what its column

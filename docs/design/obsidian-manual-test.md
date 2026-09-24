@@ -203,7 +203,7 @@ nothing are the ones that most need a person.
 
 | Section | Row | Asserted by a machine | Left to a person |
 |---|---|---|---|
-| §2.1 activation, status and ribbon | constraint 4, row 12 | the gate's predicate, and every status state's wording | that the bar appears, reads right, and opens the findings view |
+| §2.1 activation, status and ribbon | constraint 4, row 12, #232 | the gate's predicate, and every status state's wording | that the bar (desktop) and the view-header icon (desktop and mobile) appear, read right, and open the findings view |
 | §2.2 provenance and staleness | row 2 | *where* every mark goes, and that nothing uncomputed is marked | **everything about what is on screen**, in both renderers |
 | §2.3 hover and tap | row 3 | the line's content — formula, result, inputs | the gesture, and that a cell answers for *that* cell |
 | §2.4 the five commands | row 4 | Explain's caret resolution; Format's plan | the palette, the dialogs, the presses |
@@ -218,11 +218,15 @@ nothing are the ones that most need a person.
 ### 2.1 Activation is opt-in per note — v1 constraint 4
 
 - Open any ordinary note in the vault with no ```` ```vmark ```` block.
-  **Pass:** no VisiMark UI appears anywhere — no status bar item, no ribbon
-  state, no decorations, no commands doing anything visible.
-- Open `example-invoice.md`. **Pass:** VisiMark activates.
+  **Pass:** no VisiMark UI appears anywhere — no status bar item, no
+  view-header icon, no ribbon state, no decorations, no commands doing
+  anything visible.
+- Open `example-invoice.md`. **Pass:** VisiMark activates — on desktop, the
+  status bar reads a state and a view-header icon appears in the note's own
+  tab; `addStatusBarItem` is desktop-only (#232), so on a phone the
+  view-header icon is the only witness, and it must appear there too.
 - **Pass condition:** a vault of ordinary notes is indistinguishable from one
-  without the plugin installed.
+  without the plugin installed, on desktop and on a phone alike.
 
 ### 2.2 Provenance and staleness in reading mode — v1 row 2
 
