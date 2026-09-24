@@ -123,6 +123,9 @@ export class SweepView extends ItemView {
     // subscription would otherwise redraw underneath it on the next edit
     this.unsubscribe?.();
     this.unsubscribe = null;
+    // a vault event during this scan is recorded rather than lost or
+    // clobbered by the seed() below — see vault-index.ts's beginSeed()
+    this.getIndex()?.beginSeed();
 
     const files = this.app.vault.getMarkdownFiles();
     const read = vaultSweepRead(this.app.vault);

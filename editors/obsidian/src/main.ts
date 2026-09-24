@@ -124,6 +124,22 @@ export default class VisiMarkPlugin extends Plugin {
    */
   private index: LiveVaultIndex | null = null;
 
+  /**
+   * De-dupes concurrent calls to `startAmbientIndex` — startup and a
+   * settings-tab toggle can both call it before either finishes its scan.
+   * The second caller gets the first caller's promise back rather than
+   * starting a second scan and a second set of vault listeners.
+   */
+  private indexStarting: Promise<void> | null = null;
+
+  /**
+   * Bumped by `onunload`. A `startAmbientIndex` scan in flight at unload
+   * checks this before publishing `this.index`, so a scan that finishes
+   * after the plugin has already torn down cannot resurrect an index (and
+   * its listeners) on a dead instance.
+   */
+  private indexGeneration = 0;
+
   /** The ribbon icon's element, kept so `updateRibbonBadge` can draw on it. */
   private ribbonIcon: HTMLElement | null = null;
 
@@ -428,9 +444,13 @@ export default class VisiMarkPlugin extends Plugin {
       // spec §2.5, off by default: a vault-wide scan is a cost every vault
       // opens with the plugin should not pay unasked. Awaited before
       // openSweep so the pane opens reading the freshly seeded index instead
-      // of racing it into a second, redundant full scan.
+      // of racing it into a second, redundant full scan. The `this.index`
+      // check guards against opening the sweep view after an unload that
+      // raced the scan (`buildAmbientIndex`'s own generation check below).
       if (this.settings.sweepOnOpen) {
-        void this.startAmbientIndex().then(() => this.openSweep());
+        void this.startAmbientIndex().then(() => {
+          if (this.index !== null) void this.openSweep();
+        });
       }
     });
   }
@@ -440,39 +460,41 @@ export default class VisiMarkPlugin extends Plugin {
    * for the rest of the session with `vault.on("modify"/"create"/"delete"/
    * "rename")`. Called once at startup when "Sweep the vault on open" is
    * already on, and again from the settings tab if it is switched on mid
-   * session — both call sites are safe to call more than once, since this
-   * returns immediately if `this.index` already exists.
-   *
-   * **Every listener is registered before the scan starts, not after —
-   * but nothing reaches the index until the scan finishes.** A note edited
-   * during the scan cannot be silently missed: its event is buffered here and
-   * replayed once `seed()` has run, rather than dispatched into an index that
-   * does not exist yet or, worse, into one `seed()` is about to clear.
-   * Buffering (rather than the simpler "register after") is what makes that
-   * replay possible at all — an event that never reached anything has
-   * nothing to replay.
+   * session. De-duped through `indexStarting`: a second call while the first
+   * is still scanning gets the first call's promise back rather than
+   * starting a second scan and a second set of vault listeners.
    */
-  async startAmbientIndex(): Promise<void> {
-    if (this.index !== null) return;
+  startAmbientIndex(): Promise<void> {
+    if (this.index !== null) return Promise.resolve();
+    if (this.indexStarting !== null) return this.indexStarting;
+    const generation = this.indexGeneration;
+    const starting = this.buildAmbientIndex(generation).finally(() => {
+      if (this.indexStarting === starting) this.indexStarting = null;
+    });
+    this.indexStarting = starting;
+    return starting;
+  }
+
+  /**
+   * `beginSeed()`/`seed()` (`vault-index.ts`) is what makes registering
+   * listeners before the scan starts safe: a vault event during the scan is
+   * recorded rather than lost or clobbered, and replayed once `seed()` has
+   * installed the authoritative result.
+   *
+   * **The `indexGeneration` check after the scan is the unload guard.**
+   * `onunload` bumps `indexGeneration` before anything else; if this call's
+   * captured `generation` no longer matches, the plugin was unloaded while
+   * `sweep()` was in flight, and this must publish nothing — no `this.index`
+   * assignment, no `onChange` subscription — or a scan that outlives the
+   * plugin would resurrect an index (and start calling `updateRibbonBadge`
+   * on torn-down state) after the fact. The event listeners registered
+   * below need no matching cleanup here: `registerEvent` already ties their
+   * lifetime to the plugin's.
+   */
+  private async buildAmbientIndex(generation: number): Promise<void> {
     const read = vaultSweepRead(this.app.vault);
     const index = new LiveVaultIndex(read);
-
-    type Change =
-      | { kind: "recheck"; path: string }
-      | { kind: "remove"; path: string }
-      | { kind: "rename"; oldPath: string; path: string };
-    // non-null while the initial scan is in flight; every event lands here
-    // instead of on `index` until the scan's own authoritative seed() has run
-    let buffered: Change[] | null = [];
-    const dispatch = (c: Change): void => {
-      if (c.kind === "recheck") index.scheduleRecheck(c.path);
-      else if (c.kind === "remove") index.remove(c.path);
-      else index.rename(c.oldPath, c.path);
-    };
-    const handle = (c: Change): void => {
-      if (buffered !== null) buffered.push(c);
-      else dispatch(c);
-    };
+    index.beginSeed();
 
     // every listener below is scoped to Markdown files — an image or a PDF
     // added to the vault is not a note this index has ever claimed to track,
@@ -480,17 +502,17 @@ export default class VisiMarkPlugin extends Plugin {
     const isNote = (f: unknown): f is TFile => f instanceof TFile && f.extension === "md";
     this.registerEvent(
       this.app.vault.on("modify", (f) => {
-        if (isNote(f)) handle({ kind: "recheck", path: f.path });
+        if (isNote(f)) index.scheduleRecheck(f.path);
       }),
     );
     this.registerEvent(
       this.app.vault.on("create", (f) => {
-        if (isNote(f)) handle({ kind: "recheck", path: f.path });
+        if (isNote(f)) index.scheduleRecheck(f.path);
       }),
     );
     this.registerEvent(
       this.app.vault.on("delete", (f) => {
-        if (isNote(f)) handle({ kind: "remove", path: f.path });
+        if (isNote(f)) index.remove(f.path);
       }),
     );
     this.registerEvent(
@@ -498,8 +520,8 @@ export default class VisiMarkPlugin extends Plugin {
         // the old path's extension does not survive the rename event, so a
         // note renamed away from .md is handled as a plain removal — its
         // entry (if any) is stale the moment it stops being Markdown
-        if (isNote(f)) handle({ kind: "rename", oldPath, path: f.path });
-        else if (oldPath.endsWith(".md")) handle({ kind: "remove", path: oldPath });
+        if (isNote(f)) index.rename(oldPath, f.path);
+        else if (oldPath.endsWith(".md")) index.remove(oldPath);
       }),
     );
 
@@ -508,13 +530,10 @@ export default class VisiMarkPlugin extends Plugin {
       { paths: () => files.map((f) => f.path), read },
       { chunk: 50, pause: () => new Promise((resolve) => activeWindow.setTimeout(resolve, 0)) },
     );
-    // settings could have been toggled off, or this raced a second call,
-    // while the scan above was in flight
-    if (this.index !== null) return;
+    // unloaded mid-scan, or a second call already published — either way,
+    // nothing below may run
+    if (generation !== this.indexGeneration || this.index !== null) return;
     index.seed(result);
-    const missed = buffered;
-    buffered = null; // future events dispatch straight to the index from here
-    for (const c of missed) dispatch(c);
     index.onChange(() => this.updateRibbonBadge());
     this.index = index;
     this.updateRibbonBadge();
@@ -554,6 +573,9 @@ export default class VisiMarkPlugin extends Plugin {
   override onunload(): void {
     for (const { el } of this.actionFor.values()) el.remove();
     this.actionFor.clear();
+    // first: invalidates a buildAmbientIndex scan still in flight, so it
+    // cannot publish an index onto this now-dead instance after the fact
+    this.indexGeneration++;
     // a note edited within DEBOUNCE_MS of unload would otherwise still fire
     // a recheck afterward, into a listener closing over this dead instance
     this.index?.dispose();
