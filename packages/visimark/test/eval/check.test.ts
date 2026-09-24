@@ -29,6 +29,7 @@ test("drift: STALE findings in the transcript's order", () => {
     "STALE lines.net_total",
     "STALE lines.vat_total",
     "STALE lines.gross_total",
+    "STALE lines.gross_total",
     "STALE schedule.Amount · Signature",
     "STALE schedule.Amount · Delivery of backend",
     "STALE schedule.Amount · Acceptance",
@@ -116,16 +117,16 @@ test("drift: UNDEF, VECTOR and CYCLE contents", () => {
   ]);
 });
 
-test("drift: problem tally reconciles to 26 (21 stale, 5 errors)", () => {
+test("drift: problem tally reconciles to 27 (22 stale, 5 errors)", () => {
   const r = run(drift);
   const stale = r.findings
     .filter((f) => f.code === "STALE")
     .reduce((n, f) => n + (f.anchorGroup ? f.suppressedCount! : 1), 0);
   const errorCodes = new Set(["DATE", "UNDEF", "VECTOR", "CYCLE", "TYPE", "SHEET", "ANCHOR"]);
   const errors = r.findings.filter((f) => errorCodes.has(f.code)).length;
-  expect(stale).toBe(21);
+  expect(stale).toBe(22);
   expect(errors).toBe(5);
-  expect(stale + errors).toBe(26);
+  expect(stale + errors).toBe(27);
 });
 
 test("drift: no double-report of the late_fees cycle members", () => {

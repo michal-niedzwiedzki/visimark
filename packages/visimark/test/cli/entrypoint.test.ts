@@ -20,7 +20,7 @@ async function run(args: string[]): Promise<{ code: number; out: string }> {
 
 test("running main.ts directly reports the drift invoice and exits 1", async () => {
   const { code, out } = await run(["check", driftPath]);
-  expect(out).toContain("26 problems (21 stale, 5 errors)");
+  expect(out).toContain("27 problems (22 stale, 5 errors)");
   expect(code).toBe(1);
 });
 

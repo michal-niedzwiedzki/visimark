@@ -261,9 +261,9 @@ test("ordinary prose reports nothing", async () => {
   expect(report.prose).toEqual([]);
 });
 
-test("the drift invoice reports eighteen violations: check's 26 less the folded anchors", async () => {
-  // `visimark check` on this document prints "26 problems (21 stale, 5 errors)".
-  // Here it is 18: exactly the eight prose anchors folded into the anchor-group
+test("the drift invoice reports nineteen violations: check's 27 less the folded anchors", async () => {
+  // `visimark check` on this document prints "27 problems (22 stale, 5 errors)".
+  // Here it is 19: exactly the eight prose anchors folded into the anchor-group
   // rollup this package skips. Six of these — the scalar totals on lines 34, 35,
   // 36, 53, 64 and 65 — are bound through prose anchors, so they are precisely
   // the findings a package reading the blanked `params.lines` would lose.
@@ -275,12 +275,12 @@ test("the drift invoice reports eighteen violations: check's 26 less the folded 
   );
   const report = await run({ drift });
   const violations = report.drift!;
-  expect(violations).toHaveLength(18);
+  expect(violations).toHaveLength(19);
 
   const byRule: Record<string, number> = {};
   for (const v of violations) byRule[v.rule] = (byRule[v.rule] ?? 0) + 1;
   expect(byRule).toEqual({
-    "visimark-stale": 13,
+    "visimark-stale": 14,
     "visimark-date": 2,
     "visimark-cycle": 1,
     "visimark-undef": 1,

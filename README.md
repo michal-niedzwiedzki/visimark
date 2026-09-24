@@ -47,6 +47,7 @@ docs/example-invoice-drift.md
   STALE   lines.net_total                          23300.00 ≠ 25380.00   SUM(Net)
   STALE   lines.vat_total                           5359.00 ≠ 5837.40    SUM(VAT)
   STALE   lines.gross_total                        28659.00 ≠ 31217.40   SUM(Gross)
+  STALE   lines.gross_total                        28659.00 ≠ 31217.40   SUM(Gross)
   STALE   schedule.Amount · Signature               8597.70 ≠ 9365.22    Share * lines.gross_total
   STALE   schedule.Amount · Delivery of backend    11463.60 ≠ 12486.96   Share * lines.gross_total
   STALE   schedule.Amount · Acceptance              8597.70 ≠ 9365.22    Share * lines.gross_total
@@ -73,12 +74,12 @@ docs/example-invoice-drift.md
 
   CYCLE   late_fees.base → late_fees.fee → late_fees.total → late_fees.base
 
-  26 problems (21 stale, 5 errors)
+  27 problems (22 stale, 5 errors)
 $ echo $?
 1
 ```
 
-Twenty-six problems: a payment date ambiguous by twenty-nine days, a cell
+Twenty-seven problems: a payment date ambiguous by twenty-nine days, a cell
 someone nudged by hand to make a column look right, a circular reference — all
 invisible on the rendered page, all caught before a human had to notice.
 
@@ -144,9 +145,9 @@ total, early-payment terms, a currency conversion, and a reconciliation that
 proves the instalments sum to the invoice. Its appendix explains each mechanism.
 
 [`docs/example-invoice-drift.md`](docs/example-invoice-drift.md) is that same
-invoice with the drift shown at the top of this README — the `26 problems`
+invoice with the drift shown at the top of this README — the `27 problems`
 transcript above is `check` reading this exact file, and its appendix walks
-through every one of the 26 findings.
+through every one of the 27 problems.
 
 [`docs/example-quote-plain.md`](docs/example-quote-plain.md) is the other
 direction: a quote with no VisiMark in it at all — no `vmark` block, no
@@ -452,6 +453,14 @@ targets need the `code` CLI on your PATH. For development, press <kbd>F5</kbd>
 instead — that runs the extension straight from `editors/vscode` in a separate
 Extension Development Host, so uninstall the packaged copy first or you will see
 every diagnostic twice.
+
+An Obsidian client is being built row by row under
+[#176](https://github.com/michal-niedzwiedzki/visimark/issues/176), for people
+who read their notes on a phone and will never open a terminal. It is a client
+of the engine rather than of the language server, it is not published to npm,
+and so far it loads and activates only on a note that contains a `vmark` block —
+[`editors/obsidian/README.md`](editors/obsidian/README.md) says what is built
+and how to side-load it.
 
 Releases are tag-driven: pushing a `vX.Y.Z` tag publishes the engine to npm and
 the extension to both the VS Code Marketplace and Open VSX. The workflow needs

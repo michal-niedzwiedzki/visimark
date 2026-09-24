@@ -61,12 +61,12 @@ test("document values stay decimal strings, never JSON numbers", () => {
 });
 
 test("the summary is the one the CLI reports for the same document", () => {
-  // 26 problems over 20 findings: an anchor group counts its suppressed rows.
+  // 27 problems over 21 findings: an anchor group counts its suppressed rows.
   // Re-deriving that arithmetic here rather than reusing `findingSummary`
   // would be the second serialisation the envelope spec forbids.
   expect(findingSummary(onDiskRun(drift).findings)).toEqual({
-    problems: 26,
-    stale: 21,
+    problems: 27,
+    stale: 22,
     errors: 5,
   });
 });

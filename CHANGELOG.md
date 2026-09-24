@@ -2,7 +2,215 @@
 
 ## Unreleased
 
+### Fixed
+
+- **`check` reports every drifted anchor of a scalar, not just the first.**
+  A scalar bound into prose more than once (`<!--vmark=…-->`) that has
+  drifted at two or more of those sites used to get one spanned `STALE`
+  finding — for the first anchor in document order — and every later
+  disagreeing site had no finding of its own. A consumer that marks a value
+  by matching a `STALE` finding's exact span (the Obsidian plugin's
+  reading-mode and Live Preview decorations) would call that later site
+  "computed" — agreeing — because no finding ever named its span. `check`
+  now emits one spanned `STALE` per drifted anchor. This changes the
+  printed problem count for any document with a multiply-anchored,
+  multiply-drifted scalar: `docs/example-invoice-drift.md` moves from `26
+  problems (21 stale, 5 errors)` to `27 problems (22 stale, 5 errors)`,
+  since `lines.gross_total` is anchored twice and both sites had drifted.
+  See [#235](https://github.com/michal-niedzwiedzki/visimark/issues/235).
+
 ### Added
+
+- **The Obsidian plugin can format a note automatically on explicit save**
+  (issue #239, v1 row 7 of #176) — the same repair plan the Format command
+  and the findings view's per-row repair already apply, through an explicit
+  act (v1 constraint 3), now optionally on Ctrl/Cmd+S too. Off by default:
+  audience B has not agreed to a tool that changes bytes they did not type.
+  Obsidian has no event for an explicit save distinct from its own autosave,
+  so this listens for the keystroke specifically — an autosave never
+  triggers it, and neither does the command palette's "Save file".
+
+  Ships the plugin's first settings tab, since none existed. Two settings
+  that were previously fixed become real toggles alongside it:
+  show-provenance-in-Live-Preview (row 2, on by default) and sweep-on-open
+  (row 8, off by default).
+
+- **A marked value in an Obsidian note answers when you ask it** (issue #229,
+  v1 row 3 of #176) — hover on the desktop, tap anywhere, for the formula the
+  reader wrote, what it comes to and what it reads, with a cross-sheet input
+  named. #176 gives the row one job: it is what makes the previous row's marks
+  legible rather than decorative.
+
+  A cell says what *that* cell comes to rather than what its whole column does
+  — the thing that looks plausible when it is wrong, so the row index is
+  carried from the decoration to the answer and asserted.
+
+  **This completes v1's twelve rows.** Everything in
+  `docs/design/obsidian-manual-test.md` Part 2 is now runnable, and what is
+  left is running it — on a desktop and on a phone.
+
+- **The Obsidian plugin marks the values it works out** (issue #227, v1 row 2
+  of #176) — in reading mode *and* in Live Preview, which #176 calls "the
+  moment the product explains itself". A hairline under a computed value,
+  doubled when it no longer matches its formula.
+
+  **Not a colour.** A red number says *error* to someone trained by build logs
+  and *something is wrong with my document* to someone who has not been, and a
+  computed value is neither wrong nor an error — it is derived, which is a fact
+  about where it came from.
+
+  **Nothing is written.** A mark is a class on rendered output, so a note
+  copied out of the vault is byte-identical to what it was — which is manual
+  test §2.2's pass condition and the whole of constraint 1.
+
+- **The Obsidian plugin's status bar says what state a note is in** (issue
+  #225, v1 row 12 of #176) — `VisiMark ✓`, or `VisiMark · 3 to look at` — and
+  pressing it opens the findings view; a ribbon icon opens the vault sweep.
+  #176 rates the row as "what makes rows 2 and 6 findable at all", and a
+  findings view nobody knows is there is a findings view nobody opens.
+
+  v1 constraint 6 forbids the report's vocabulary, not the number: "3 to look
+  at" is a count, "3 problems (3 stale, 0 errors)" is a report. Advice never
+  changes the state, because the engine's own `isProblem` says it is not a
+  problem — and a status bar that cried wolf about an unused name would teach
+  a reader to ignore it.
+
+- **The Obsidian plugin can copy a note's values as JSON** (issue #223, v1 row
+  11 of #176). It is the `values` member of `visimark eval --json`'s
+  envelope, pretty-printed at the root — same shape, same two-space indent,
+  same trailing newline — so a diff against that one member, dedented, is
+  empty; it does not stamp the envelope around it (`command`, `visimark`,
+  `status`), which the plugin has no version to fill. #176 rates the row as
+  making the plugin API discoverable to a person, and that is what it is:
+  this is what `api.evaluate` returns, in a form they can paste.
+
+- **The Obsidian plugin has the CLI's five verbs** (issue #221, v1 row 4 of
+  #176) — Check, Format, Infer, Evaluate and Explain, each scoped to the active
+  note, named "<verb> this note" so the palette is searchable by the word
+  someone read in the documentation and reads as a sentence to someone who has
+  read none of it.
+
+  Explain answers about the value the caret is on. A caret can be in the line
+  that declares a name, in a prose anchor that reads one, or in a table cell —
+  and the third is not a span the engine records, so the plugin says to move
+  the caret rather than explaining something nearby. Showing the wrong name
+  confidently is worse than asking.
+
+- **The Obsidian plugin publishes an API** (issue #219, v1 row 9 of #176) —
+  `app.plugins.plugins["visimark"].api`, with `check`, `evaluate`, `get` and
+  `explain`, and `apiVersion` semver'd from the first release. It is what #176
+  describes as replacing *an LLM reads Markdown and calculates* with *an LLM
+  asks, and VisiMark calculates*.
+
+  `get` and `evaluate` return the CLI's own `evalValues` — a string for a
+  scalar, an array of strings-or-null (one per row, null where the cell is
+  blank) for a column — rather than a second rendering; the test compares
+  every name in the document against the engine, not just one. A scalar's
+  string is byte-identical to what `visimark eval --get` prints; a column is
+  not, since that command joins its rows with `", "` for a terminal and this
+  API leaves the join to the caller.
+  Values are never numbers — for exactness, since the engine's arithmetic is
+  decimal and a round trip through a JavaScript number is a round trip
+  through binary floating point.
+
+- **The Obsidian plugin can work out the formulas behind a pasted table**
+  (issue #217, v1 row 5 of #176) — the on-ramp, and the row #176 expects to be
+  *the* entry point for people who have never run the CLI. Obsidian is where
+  AI-written budgets and pasted CSVs land; one command turns one into a
+  document whose numbers are checked.
+
+  The preview shows the ```` ```vmark ```` block as it will appear, before
+  anything is inserted, and accepting it **rewrites no existing byte** —
+  `planInfer` only inserts. The test proves that by deleting exactly the
+  inserted ranges back out of the result and requiring the original document,
+  byte for byte, which is stronger than the `git diff` the manual test asks
+  for. Run on the repository's own unwired example, the result reports zero
+  findings.
+
+- **The Obsidian plugin can look through a whole vault** (issue #215, v1 row 8
+  of #176) — the one feature the VS Code extension cannot have. One command
+  lists every note that disagrees with itself, in the same sentences the
+  findings view uses.
+
+  The spec asked this row to name a vault size above which the scan refuses.
+  Measured instead, the premise turned out to be wrong: the cost is the parse,
+  not the scan. `locate()` is ~1.9 ms on an ordinary note and a substring scan
+  for `vmark` is below the resolution of `performance.now()`, so a prefilter
+  that cannot produce a false negative — every block's opening fence carries
+  the info string — makes the expensive work proportional to the number of
+  *VisiMark* notes rather than the size of the vault. Five thousand ordinary
+  notes and three VisiMark ones cost three parses, which is asserted rather
+  than timed. So there is no refusal at any size: a count that moves, a Stop
+  button, and a scan that hands the thread back every fifty notes.
+
+- **The Obsidian plugin has a findings view** (issue #213, v1 row 6 of #176).
+  One row per finding, in a sentence rather than a code — no red, no `STALE`,
+  no "1 problem" anywhere — split into *Needs attention* and *Advice* by the
+  engine's own `isProblem`. Clicking a row puts the cursor on what it is about;
+  a stale value offers a **Repair** that applies exactly the edits `fmt` would
+  make for that one finding, through the editor so it is a single undo step. A
+  stale chart keeps its row and gets no button: v1 has no vault-backed write
+  port, and declining the write never silences the finding.
+
+  The property that makes the per-row repair trustworthy is a test rather than
+  a claim — clicking every row in turn, one at a time, arrives at exactly the
+  bytes `visimark fmt` would have written.
+
+- **The `--json` envelope's shapes and `explainView` can be bundled for a
+  browser** (issue #204). `report/json.ts` and `report/explain.ts` each read
+  the engine's own version through `readVersion()`, which imports
+  `node:module` — and a module-scope import taints its whole module, because a
+  bundler resolves before it shakes. So one string kept every public piece of
+  the envelope, and all of `explainView` (which needs no version at all), out
+  of every browser build. The two functions that actually stamp a version —
+  `errorEnvelope` and `explainJson` — moved to `report/envelope.ts`, and
+  `test/report/version-reach.test.ts` fails if a third module starts reading
+  it.
+
+  **Nothing changed for any consumer.** Same public names, same signatures,
+  same envelopes byte for byte, same key order; `cross-host-check` still
+  reports 36 pairs and 0 divergences and the committed playground bundle is
+  unchanged. What is new is that `packages/visimark/src/browser.ts` now carries
+  `explainView`, `explainText` and every public envelope shape. The two stamped
+  builders are deliberately **not** in it: a browser host does not know which
+  engine built it, so it gets the pieces and supplies its own stamp.
+
+  This unblocks v1 rows 3, 4 and 9 of the Obsidian plugin (#176).
+
+- **The Obsidian plugin ships four templates** (issue #210, v1 row 10 of #176).
+  Invoice, monthly budget, team capacity and experiment log, with a command
+  each to insert one at the cursor. Audience B is defined by never having run
+  the CLI, and until now there was no way inside Obsidian to get a first
+  `vmark` block at all. Every template passes `visimark check` with **zero**
+  findings unedited — not "no problems": no `WARN` for an unused name and no
+  `COVERAGE` for a table without rules either — and contains no syntax that
+  means anything only inside Obsidian. The documents are Markdown files the CLI
+  checks, generated into the plugin bundle by `bun run gen:obsidian-templates`.
+
+- **An Obsidian client exists** (issue #200, v1 row 1 of #176).
+  `editors/obsidian` builds as a single `main.js` with **no `node:` specifier
+  in it**, so it loads on Obsidian mobile as well as desktop, and it activates
+  only on a note that contains a ```` ```vmark ```` block — a vault of ordinary
+  notes is indistinguishable from one without it installed. The gate is
+  `locate()`, the same parse the CLI keys on, so the plugin and the CLI cannot
+  come to mean different things by the same file. Nothing published changes:
+  the plugin is not on npm, has its own version in `manifest.json`, and reaches
+  the engine through the browser-safe entry point added for #201. This is the
+  first of eleven v1 rows; the rest are unimplemented.
+  See [`obsidian-plugin-spec.md`](docs/design/obsidian-plugin-spec.md).
+
+- **The engine has a browser-safe entry point** (issue #201).
+  `packages/visimark/src/index.ts` could not be bundled for a browser at all:
+  it reaches `node:fs`, `node:crypto`, `node:module` and `node:url` through
+  exports made on purpose, and a bundler resolves before it tree-shakes. That
+  had never surfaced because the playground enters the engine by path rather
+  than through the public entry point, so the repository had a browser-safe
+  engine and a public engine with no named boundary between them.
+  `src/browser.ts` is that boundary, and `test/browser/entry-graph.test.ts`
+  holds it to a subset: every value it exports is the same object `index.ts`
+  exports, so the browser surface can lag the public one but can never become a
+  second API. Nothing published changes — `exports` still has only `"."` — and
+  no consumer can observe this.
 
 - **The committed browser bundle's size is now checked** (issue #191).
   `docs/vendor/visimark-browser.js` could grow without anything noticing — the

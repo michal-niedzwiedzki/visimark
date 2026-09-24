@@ -10,13 +10,13 @@ import { locate, NO_FORMULAS_MARKER } from "../parse/document.js";
 import { infer } from "../infer/propose.js";
 import { planInfer } from "../infer/write.js";
 import { formatCheck } from "../report/format.js";
-import { explainJson, explainText, explainView } from "../report/explain.js";
+import { explainText, explainView } from "../report/explain.js";
+import { errorEnvelope, explainJson } from "../report/envelope.js";
 import { formatInfer } from "../report/infer.js";
 import { describeFunction, functionNames, precisionPhrase } from "../lang/reference.js";
 import { closest } from "../report/levenshtein.js";
 import {
   emitJson,
-  errorEnvelope,
   evalValues,
   findingSummary,
   inferSummary,

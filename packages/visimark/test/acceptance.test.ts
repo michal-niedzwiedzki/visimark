@@ -30,13 +30,13 @@ describe("the two worked examples are the acceptance suite", () => {
     expect(formatCheck("docs/example-invoice-drift.md", run(drift).findings)).toBe(expected);
   });
 
-  test("example-invoice-drift.md: 26 problems (21 stale, 5 errors) plus one NOTE", () => {
+  test("example-invoice-drift.md: 27 problems (22 stale, 5 errors) plus one NOTE", () => {
     const f = run(drift).findings;
     const stale = f
       .filter((x) => x.code === "STALE")
       .reduce((n, x) => n + (x.anchorGroup ? x.suppressedCount! : 1), 0);
     const errorCodes = new Set(["DATE", "UNDEF", "VECTOR", "CYCLE", "TYPE", "SHEET", "ANCHOR"]);
-    expect(stale).toBe(21);
+    expect(stale).toBe(22);
     expect(f.filter((x) => errorCodes.has(x.code)).length).toBe(5);
     expect(f.filter((x) => x.code === "NOTE").length).toBe(1);
   });

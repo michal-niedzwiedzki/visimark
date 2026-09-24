@@ -42,7 +42,6 @@ export { describeFinding, formatCheck } from "./report/format.js";
 // consumer that re-derives it is a second serialisation that can drift from
 // this one. Additive; no existing consumer changes.
 export {
-  errorEnvelope,
   evalValues,
   findingSummary,
   inferSummary,
@@ -61,7 +60,11 @@ export {
 // over the same envelope: `explain`'s view and its JSON shape, `ref`'s
 // did-you-mean, and `eval`'s scenario machinery. Same reasoning as the block
 // above — each of these is a contract a consumer would otherwise re-derive.
-export { explainJson, explainText, explainView, type ExplainView } from "./report/explain.js";
+export { explainText, explainView, type ExplainView } from "./report/explain.js";
+// `errorEnvelope` and `explainJson`, unchanged in name, signature and output.
+// They moved to the one module in `src/report/` that reads the engine version,
+// so the rest of `src/report/` can be bundled for a browser — issue #204.
+export { errorEnvelope, explainJson } from "./report/envelope.js";
 export { closest, levenshtein } from "./report/levenshtein.js";
 export {
   ScenarioError,
@@ -78,6 +81,7 @@ export { applyUnit, parseDecorated, type Unit } from "./eval/units.js";
 export type { Binding, DocModel, Finding, FindingCode, Sheet } from "./model/types.js";
 export { ERROR_CODES, isProblem } from "./model/types.js";
 export type {
+  AnchorTargetKind,
   LocatedDoc,
   RawAnchor,
   RawBlock,
@@ -100,16 +104,6 @@ export type { DocumentFile, ReaderPort, SealedRead } from "./fs/reader.js";
 export { nodeReader, onDisk } from "./fs/node-reader.js";
 export type { CheckOptions } from "./eval/check.js";
 
-import { check as runCheck, type CheckResult } from "./eval/check.js";
-import { build as buildModel } from "./model/build.js";
-import { locate as locateDoc } from "./parse/document.js";
-import type { DocModel } from "./model/types.js";
-
-/** Parse, model and check a document in one pass — what an editor wants. */
-export function analyze(source: string): {
-  model: DocModel;
-  result: CheckResult;
-} {
-  const model = buildModel(locateDoc(source));
-  return { model, result: runCheck(model) };
-}
+// `analyze` is in its own module because `browser.ts` needs it and cannot
+// import this file — see `analyze.ts`, and issue #201.
+export { analyze } from "./analyze.js";

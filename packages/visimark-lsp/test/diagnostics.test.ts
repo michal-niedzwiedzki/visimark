@@ -27,11 +27,11 @@ test("the clean invoice produces no diagnostics", async () => {
 test("the drift invoice produces one diagnostic per located finding", async () => {
   await h.open(URI, drift);
   const diags = await h.nextDiagnostics(URI);
-  // check() yields 20 finding objects for this document. Exactly two carry
+  // check() yields 21 finding objects for this document. Exactly two carry
   // no span and so cannot be placed: the collapsed anchor-group STALE, which
   // stands for 8 prose anchors, and the NOTE covering 2 unverified rows.
-  // The transcript's "26 problems" counts that group as its 8 anchors.
-  expect(diags.length).toBe(18);
+  // The transcript's "27 problems" counts that group as its 8 anchors.
+  expect(diags.length).toBe(19);
   expect(diags.every((d) => d.source === "visimark")).toBe(true);
 });
 
