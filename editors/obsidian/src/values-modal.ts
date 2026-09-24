@@ -37,10 +37,23 @@ export class ValuesModal extends Modal {
       attr: { type: "button", "aria-label": "Copy these values to the clipboard as JSON" },
     });
     copy.addEventListener("click", () => {
-      void navigator.clipboard.writeText(valuesJson(this.values)).then(
-        () => new Notice("Copied. This is what `visimark eval --json` reports."),
-        () => new Notice("Could not reach the clipboard."),
-      );
+      // The button's own window, not the global — `Modal.open` can show on
+      // an Obsidian pop-out `Window` (since 0.15), and the Clipboard API
+      // checks user activation against the window that owns `navigator`.
+      // Writing through the main window's `navigator` from a pop-out click
+      // has no activation and the promise rejects, or `clipboard` is
+      // `undefined` there and the property access throws before `.then` ever
+      // runs. Route both into the one failure Notice.
+      try {
+        const clipboard = copy.win.navigator.clipboard as Clipboard | undefined;
+        if (clipboard === undefined) throw new Error("no Clipboard API on this window");
+        void clipboard.writeText(valuesJson(this.values)).then(
+          () => new Notice("Copied. This is what `visimark eval --json` reports."),
+          () => new Notice("Could not reach the clipboard."),
+        );
+      } catch {
+        new Notice("Could not reach the clipboard.");
+      }
     });
 
     const list = contentEl.createEl("dl", { cls: "visimark-values" });
