@@ -358,7 +358,7 @@ row 13's own module comment for what it explicitly does not defend against
 
 ### 2.5 Settings
 
-Four, and the defaults are the spec.
+Four in v1; six since v1.1 rows 14 and 17. The defaults are still the spec.
 
 | Setting | Default | Note |
 |---|---|---|
@@ -366,6 +366,7 @@ Four, and the defaults are the spec.
 | Write chart artifacts | off | Fixed and unsettable through v1.1 row 13, for lack of a caller. **Settable since v1.1 row 14** (`chart.ts`, `write/fmt.ts`'s `artifactsFor`): on, Format (the command or format-on-save) also regenerates a stale or missing chart's SVG through the vault write port. Off is still the default — a chart is a file this plugin had never created before row 14, the same bar `formatOnSave` set for editing bytes the reader did not type. Declining the write, whichever way it is declined, does **not** silence the finding — the shipped `--no-artifacts` contract, verbatim ([`cli-reference.md`](../cli-reference.md)). |
 | Show provenance in Live Preview | on | v1 row 2 covers reading mode **and** Live Preview, as #176 states it and as manual test §2.2 demands. The setting exists because §16 records that Live Preview shows the anchor comment as literal text everywhere, so the decoration sits beside a visible `<!--vmark=…-->` — a design this spec commits to and wants one toggle away from if it reads badly in practice. |
 | Sweep on vault open | off | A vault sweep on open is a scan of every note; it is a command, not a startup cost. Since v1.1 row 13, turning this on also seeds and keeps live the incremental vault index (`vault-index.ts`) — one setting for both, since the index has no scan of its own to start from. |
+| Fix unambiguous dates | off | **v1.1 row 17.** Mirrors the CLI's `fmt --fix-dates`, default included: on, Format also rewrites a `DATE` finding whose ISO form is decidable. `report.ts`'s `ReportOptions.fixDates` threads it into `planFmt`; `findings.ts`'s `actionFor` still restricts the per-row repair button to `STALE`, so this is whole-note only, the same shape the CLI flag has. |
 
 ### 2.6 The vault reader — the one piece the engine does not supply
 

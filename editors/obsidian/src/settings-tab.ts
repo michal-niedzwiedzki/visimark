@@ -79,5 +79,19 @@ export class VisiMarkSettingTab extends PluginSettingTab {
           await this.plugin.saveSettings();
         }),
       );
+
+    new Setting(containerEl)
+      .setName("Fix unambiguous dates")
+      .setDesc(
+        "Let Format also rewrite a date it can read but that is not in ISO form — the same thing " +
+          "the CLI's fmt --fix-dates does. Off by default, same as that flag. A date VisiMark cannot " +
+          "read at all (an ambiguous one such as 03/04/2026) still needs a person either way.",
+      )
+      .addToggle((toggle) =>
+        toggle.setValue(this.plugin.settings.fixDatesOnFormat).onChange(async (value) => {
+          this.plugin.settings.fixDatesOnFormat = value;
+          await this.plugin.saveSettings();
+        }),
+      );
   }
 }

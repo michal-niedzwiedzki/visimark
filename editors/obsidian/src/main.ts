@@ -742,7 +742,11 @@ export default class VisiMarkPlugin extends Plugin {
     const { model, snapshot } = await readNote(source, path, vaultSweepRead(this.app.vault));
     const doc = { path: snapshot.path, reader: snapshot.reader };
     const result = check(model, { doc });
-    return { model, result, report: reportFor(model, result, doc) };
+    return {
+      model,
+      result,
+      report: reportFor(model, result, doc, { fixDates: this.settings.fixDatesOnFormat }),
+    };
   }
 
   /**
