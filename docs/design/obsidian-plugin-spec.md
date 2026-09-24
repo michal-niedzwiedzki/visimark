@@ -310,8 +310,8 @@ version, is browser-safe and exported from
 signature, public name or envelope byte changed.
 
 The plugin stamps nothing and needs no version: §3.1 says it has no exit code
-and no `--json` output, and §2.7's `explain` returns an `ExplainView` rather
-than a document.
+and no `--json` output, and §2.7's `explain` returns an `Explanation` — a
+shape defined here, not the engine's own — rather than a document.
 
 **The sweep's row was asked to state a size bound before it was filed**, on
 the reasoning that an on-demand scan of every note is the one surface whose
@@ -481,7 +481,7 @@ rule below is unchanged and is what the reason was: a value is never a
 **`Explanation`, not `ExplainView`.** `ExplainView` carries the whole
 `DocModel`. Putting it in a semver'd cross-plugin signature would make every
 change to the engine's internal model a breaking change to this API — the one
-property §2.7 says must not be broken casually. `Explanation` is five fields:
+property §2.7 says must not be broken casually. `Explanation` is six fields:
 the qualified name, the kind, the binding line verbatim, the value, the names
 it reads and the write precision. It also takes the `name` argument seriously,
 which the sketch did not: an `ExplainView` is per-document, so `explain(file,
@@ -489,12 +489,6 @@ name)` returning one would have ignored half its own signature.
 
 Reached as `app.plugins.plugins["visimark"].api`. Every method is async,
 because every one of them goes through §2.6's prefetch.
-
-`explain` returns an `ExplainView`, which was not bundleable for a browser
-until [#204](https://github.com/michal-niedzwiedzki/visimark/issues/204). It is
-now, so row 9 ships whole. It does not reimplement the view under any
-circumstances — that would be a second contract over the one thing the API
-exists to make single.
 
 **Values are strings, never numbers.** A caller that wants arithmetic can
 parse; a caller handed a number has already lost what VisiMark exists to keep.
