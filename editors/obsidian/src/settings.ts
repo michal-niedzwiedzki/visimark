@@ -2,11 +2,13 @@
  * The plugin's four settings — spec §2.5, and its defaults are the spec.
  *
  * **`writeChartArtifacts` is not here.** §2.5 lists it, off and "not settable
- * in v1": there is no vault-backed write port (§2.6, §8), so the plugin
- * cannot honour a `true` value yet, and a toggle nothing can act on is worse
- * than no toggle. Declining the write never silences the finding — the
- * shipped `--no-artifacts` contract — which is why a stale chart still gets
- * a row with no repair, unconditionally, everywhere in this plugin.
+ * in v1": there is a vault-backed write *primitive* now (`vault.ts`'s
+ * `vaultWriter`) but no chart-generation code to call it (§8 — that's v1.1
+ * row 14, unbuilt), so the plugin still cannot honour a `true` value, and a
+ * toggle nothing can act on is worse than no toggle. Declining the write
+ * never silences the finding — the shipped `--no-artifacts` contract — which
+ * is why a stale chart still gets a row with no repair, unconditionally,
+ * everywhere in this plugin.
  */
 export interface VisiMarkSettings {
   /**

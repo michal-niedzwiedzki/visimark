@@ -9,6 +9,20 @@ Each entry says which engine version the bundle carries.
 
 ## Unreleased
 
+- **An incremental vault health index, and a live badge on the ribbon icon**
+  (v1.1 row 13 of [#176](https://github.com/michal-niedzwiedzki/visimark/issues/176)).
+  Turning on "Sweep the vault on open" now also seeds a `LiveVaultIndex` from
+  that scan and keeps it current with `vault.on("modify"/"create"/"delete"/
+  "rename")` for the rest of the session — the ribbon icon carries a numeric
+  badge of how many notes currently disagree with themselves, kept live with
+  no command, and the sweep pane draws from the same index instantly instead
+  of re-scanning on every open. Off unless that setting is on, at startup or
+  turned on mid-session from the settings tab; nothing changes for anyone who
+  leaves it off. "Look again" in the sweep pane still runs a real full scan
+  and reseeds the index from it — the self-heal path for anything an
+  incremental update could miss, such as a vault change no Obsidian event
+  fires for (accepted as a limitation, not hidden — see `vault-index.ts`).
+
 - **A vault write primitive, not yet wired to any command** — `vault.ts`'s
   `vaultWriter`, the plugin's first call to `vault.modify`/`vault.create`.
   Prerequisite for v1.1 rows 14 (chart artifacts) and 16 (CSV import stamps)

@@ -27,10 +27,12 @@ import { decorateSection } from "./reading-mode.js";
 import { DEFAULT_SETTINGS, type VisiMarkSettings } from "./settings.js";
 import { VisiMarkSettingTab } from "./settings-tab.js";
 import { HIDDEN, UNKNOWN, statusFor, type Status } from "./status.js";
+import { sweep } from "./sweep.js";
 import { SWEEP_VIEW, SweepView } from "./sweep-view.js";
 import { TEMPLATES } from "./templates.js";
 import { ValuesModal } from "./values-modal.js";
 import { vaultSweepRead } from "./vault.js";
+import { LiveVaultIndex } from "./vault-index.js";
 
 /** the view-header icon for each of `Status`'s non-hidden states (#232) */
 const ACTION_ICON: Record<Exclude<Status["kind"], "hidden">, string> = {
@@ -111,6 +113,19 @@ export default class VisiMarkPlugin extends Plugin {
    * clearing it early matters and where it would only flicker, respectively.
    */
   private readonly actionFor = new Map<MarkdownView, { el: HTMLElement; path: string }>();
+
+  /**
+   * v1.1 row 13 — the incremental vault health index, ambient rather than a
+   * command. `null` until `startAmbientIndex` seeds it: creating this plugin
+   * never implies a vault-wide scan (spec §2.5's cost-not-paid-unasked
+   * default), so there is nothing to keep live until "Sweep the vault on
+   * open" is on, either at startup or turned on later in the same session —
+   * see `startAmbientIndex`, called from both places.
+   */
+  private index: LiveVaultIndex | null = null;
+
+  /** The ribbon icon's element, kept so `updateRibbonBadge` can draw on it. */
+  private ribbonIcon: HTMLElement | null = null;
 
   /**
    * Spec §2.5's three real toggles. `Plugin.settings` is Obsidian's own
@@ -215,7 +230,7 @@ export default class VisiMarkPlugin extends Plugin {
     // vault-wide scan does not have one. Refusing to look through the vault
     // because the note in front of you happens to have no block would be the
     // gate answering a question it was not asked.
-    this.registerView(SWEEP_VIEW, (leaf: WorkspaceLeaf) => new SweepView(leaf));
+    this.registerView(SWEEP_VIEW, (leaf: WorkspaceLeaf) => new SweepView(leaf, () => this.index));
     this.addCommand({
       id: "sweep",
       name: "Sweep the vault",
@@ -375,7 +390,7 @@ export default class VisiMarkPlugin extends Plugin {
     // The ribbon is the other way in, and the only one visible before a note
     // is open. It is not gated: it opens a vault-wide scan, which has no
     // active note to ask about (§2.3).
-    this.addRibbonIcon(
+    this.ribbonIcon = this.addRibbonIcon(
       "search-check",
       "Sweep the vault with VisiMark",
       () => void this.openSweep(),
@@ -412,8 +427,97 @@ export default class VisiMarkPlugin extends Plugin {
       this.refresh();
       // spec §2.5, off by default: a vault-wide scan is a cost every vault
       // opens with the plugin should not pay unasked
-      if (this.settings.sweepOnOpen) void this.openSweep();
+      if (this.settings.sweepOnOpen) {
+        void this.openSweep();
+        void this.startAmbientIndex();
+      }
     });
+  }
+
+  /**
+   * v1.1 row 13. Seeds `this.index` with one real sweep, then keeps it live
+   * for the rest of the session with `vault.on("modify"/"create"/"delete"/
+   * "rename")`. Called once at startup when "Sweep the vault on open" is
+   * already on, and again from the settings tab if it is switched on mid
+   * session — both call sites are safe to call more than once, since this
+   * returns immediately if `this.index` already exists.
+   *
+   * **Listeners are registered only after the initial seed resolves**, not
+   * before. Registering first would let a `modify` fired mid-scan race
+   * `seed()`'s own clear-then-repopulate — a low-stakes race (the next edit
+   * or the sweep pane's "Look again" self-corrects either way) but an
+   * unnecessary one to accept when waiting costs nothing observable: a scan
+   * a person cannot watch part-way through has no "before" for a missed edit
+   * to be later than.
+   */
+  async startAmbientIndex(): Promise<void> {
+    if (this.index !== null) return;
+    const read = vaultSweepRead(this.app.vault);
+    const index = new LiveVaultIndex(read);
+    const files = this.app.vault.getMarkdownFiles();
+    const result = await sweep(
+      { paths: () => files.map((f) => f.path), read },
+      { chunk: 50, pause: () => new Promise((resolve) => activeWindow.setTimeout(resolve, 0)) },
+    );
+    // settings could have been toggled off, or this raced a second call,
+    // while the scan above was in flight
+    if (this.index !== null) return;
+    index.seed(result);
+    index.onChange(() => this.updateRibbonBadge());
+    // every listener below is scoped to Markdown files — an image or a PDF
+    // added to the vault is not a note this index has ever claimed to track,
+    // and rechecking one on every binary asset drop would be pure waste
+    const isNote = (f: unknown): f is TFile => f instanceof TFile && f.extension === "md";
+    this.registerEvent(
+      this.app.vault.on("modify", (f) => {
+        if (isNote(f)) index.scheduleRecheck(f.path);
+      }),
+    );
+    this.registerEvent(
+      this.app.vault.on("create", (f) => {
+        if (isNote(f)) index.scheduleRecheck(f.path);
+      }),
+    );
+    this.registerEvent(
+      this.app.vault.on("delete", (f) => {
+        if (isNote(f)) index.remove(f.path);
+      }),
+    );
+    this.registerEvent(
+      this.app.vault.on("rename", (f, oldPath) => {
+        // the old path's extension does not survive the rename event, so a
+        // note renamed away from .md is handled as a plain removal — its
+        // entry (if any) is stale the moment it stops being Markdown
+        if (isNote(f)) index.rename(oldPath, f.path);
+        else if (oldPath.endsWith(".md")) index.remove(oldPath);
+      }),
+    );
+    this.index = index;
+    this.updateRibbonBadge();
+  }
+
+  /**
+   * The badge next to the ribbon icon — "a badge that is simply true at all
+   * times" is #176's own line for this row. A `visimark-ribbon-badge` span,
+   * created once and removed rather than hidden at zero: at zero there is
+   * nothing to announce, and an element that exists only when it has
+   * something to say is the same choice row 12 made for the status bar item.
+   */
+  private updateRibbonBadge(): void {
+    if (this.ribbonIcon === null || this.index === null) return;
+    const n = this.index.count();
+    const existing = this.ribbonIcon.querySelector<HTMLElement>(".visimark-ribbon-badge");
+    if (n === 0) {
+      existing?.remove();
+      this.ribbonIcon.setAttribute("aria-label", "Sweep the vault with VisiMark");
+      return;
+    }
+    const badge = existing ?? this.ribbonIcon.createSpan({ cls: "visimark-ribbon-badge" });
+    badge.setText(n > 99 ? "99+" : String(n));
+    this.ribbonIcon.setAttribute(
+      "aria-label",
+      `Sweep the vault with VisiMark — ${n} ${n === 1 ? "note needs" : "notes need"} attention`,
+    );
   }
 
   /**

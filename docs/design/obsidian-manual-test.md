@@ -387,6 +387,39 @@ palette on `example-invoice.md` and on `example-invoice-drift.md`.
   acceptable, that is the first real evidence for v1.1 row 13's index, and it
   belongs on that row rather than being absorbed here.
 
+### 2.8a The incremental vault index — v1.1 row 13
+
+- Turn on **Sweep the vault on open** in settings. **Pass:** a scan starts
+  immediately (no restart needed — the toggle starts it in this session too),
+  and once it finishes, the ribbon icon carries a small numeric badge equal
+  to the count §2.8's sweep would report.
+- Fix one of the three drifting notes from §2.8's fixture (correct the total
+  so it agrees with its formula again), then wait a second or two.
+  **Pass:** the ribbon badge count drops by one, with no command run — the
+  index is watching `vault.on("modify")`, not being asked.
+- Open **VisiMark: Sweep the vault** again. **Pass:** the pane shows the
+  current list immediately, with no "Looking at note…" progress — it is
+  reading the index, not scanning. Break the note back the way it was, with
+  the pane still open. **Pass:** the pane's list updates on its own while it
+  is open, the same way the badge did.
+- Click **Look again** in that pane. **Pass:** this does run a full scan
+  (progress shows), which is the manual override that re-derives the index
+  from scratch — the one path in this row that reports a note it could not
+  read at all, rather than the incremental path's silent removal (see
+  `vault-index.ts`'s module note on why).
+- Rename one of the three drifting notes. **Pass:** the badge count is
+  unchanged (the note still disagrees with itself, just at a new path), and
+  the findings view opened from the sweep pane's new row opens the renamed
+  file, not the old path.
+- Delete one of the three drifting notes. **Pass:** the badge count drops
+  by one within a couple of seconds, with no scan run.
+- **What this does not claim**, and is not a fail if it does not hold: a
+  change made to a note through something other than Obsidian itself — a
+  sync client writing to the vault folder while the app is backgrounded, for
+  instance — is not guaranteed to update the badge until **Look again** is
+  run once. That gap is accepted, not hidden; §2.8's own "Look again" is
+  what closes it.
+
 ### 2.9 The plugin API — v1 row 9
 
 - With the console open, call the documented API for a value in
