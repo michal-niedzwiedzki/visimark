@@ -78,9 +78,7 @@ function bindingLines(view: ExplainView, sheetId: string, bs: Binding[]): string
 
 /** the JSON form of one `param`; `domain` is present only when declared,
  *  same shape as `eval --json` (a-param-declares-the-set-of-values-it-ac-spec.md §6) */
-function paramJson(
-  b: Binding,
-): {
+function paramJson(b: Binding): {
   name: string;
   precision: number | null;
   default: string;

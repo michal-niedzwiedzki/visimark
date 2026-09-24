@@ -548,14 +548,22 @@ function parseParamDomainClause(line: string, tokens: Token[]): Domain {
   const parts: Leaf[] = [];
   const first = tokens[0];
   if (first?.kind === "ident" && first.value !== "in") {
-    if (first.value === "positive" && tokens[1]?.kind === "ident" && tokens[1]!.value === "integer") {
+    if (
+      first.value === "positive" &&
+      tokens[1]?.kind === "ident" &&
+      tokens[1]!.value === "integer"
+    ) {
       parts.push({ kind: "preset", name: "positive integer", text: "positive integer" });
       i = 2;
     } else if (PARAM_DOMAIN_PRESETS.has(first.value as PresetName)) {
       parts.push({ kind: "preset", name: first.value as PresetName, text: first.value });
       i = 1;
     } else {
-      throw new LangError(`unrecognised param domain preset \`${first.value}\``, first.start, first.end);
+      throw new LangError(
+        `unrecognised param domain preset \`${first.value}\``,
+        first.start,
+        first.end,
+      );
     }
   }
   const inTok = tokens[i];
@@ -573,7 +581,11 @@ function parseParamDomainClause(line: string, tokens: Token[]): Domain {
   }
   if (i !== tokens.length) {
     const extra = tokens[i]!;
-    throw new LangError(PARAM_DOMAIN_MALFORMED_MESSAGE, extra.start, tokens[tokens.length - 1]!.end);
+    throw new LangError(
+      PARAM_DOMAIN_MALFORMED_MESSAGE,
+      extra.start,
+      tokens[tokens.length - 1]!.end,
+    );
   }
   return { parts };
 }
@@ -650,7 +662,11 @@ function parseDomainRange(
   }
   const closeTok = tokens[j];
   if (!closeTok || (closeTok.kind !== "rparen" && closeTok.kind !== "rbracket")) {
-    throw new LangError(PARAM_DOMAIN_MALFORMED_MESSAGE, openTok.start, closeTok?.end ?? openTok.end);
+    throw new LangError(
+      PARAM_DOMAIN_MALFORMED_MESSAGE,
+      openTok.start,
+      closeTok?.end ?? openTok.end,
+    );
   }
   const hiClosed = closeTok.kind === "rbracket";
   j++;
@@ -673,11 +689,7 @@ function parseDomainRange(
   };
 }
 
-function parseDomainSet(
-  line: string,
-  tokens: Token[],
-  i: number,
-): { leaf: SetLeaf; next: number } {
+function parseDomainSet(line: string, tokens: Token[], i: number): { leaf: SetLeaf; next: number } {
   const openTok = tokens[i]!;
   let j = i + 1;
   const members: string[] = [];
@@ -697,7 +709,11 @@ function parseDomainSet(
   }
   const closeTok = tokens[j];
   if (!closeTok || closeTok.kind !== "rbrace") {
-    throw new LangError(PARAM_DOMAIN_MALFORMED_MESSAGE, openTok.start, closeTok?.end ?? openTok.end);
+    throw new LangError(
+      PARAM_DOMAIN_MALFORMED_MESSAGE,
+      openTok.start,
+      closeTok?.end ?? openTok.end,
+    );
   }
   j++;
   return {

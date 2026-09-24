@@ -93,8 +93,10 @@ export function domainLiterals(domain: Domain): { value: string; literal: Domain
   const out: { value: string; literal: DomainLiteral }[] = [];
   for (const leaf of domain.parts) {
     if (leaf.kind === "range") {
-      if (leaf.lo !== undefined && leaf.loLiteral) out.push({ value: leaf.lo, literal: leaf.loLiteral });
-      if (leaf.hi !== undefined && leaf.hiLiteral) out.push({ value: leaf.hi, literal: leaf.hiLiteral });
+      if (leaf.lo !== undefined && leaf.loLiteral)
+        out.push({ value: leaf.lo, literal: leaf.loLiteral });
+      if (leaf.hi !== undefined && leaf.hiLiteral)
+        out.push({ value: leaf.hi, literal: leaf.hiLiteral });
     } else if (leaf.kind === "set" && leaf.memberLiterals) {
       leaf.members.forEach((value, idx) => {
         const literal = leaf.memberLiterals![idx];

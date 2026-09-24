@@ -13,7 +13,12 @@ import { runCli } from "../src/cli/main.js";
 import { build } from "../src/model/build.js";
 import { locate } from "../src/parse/document.js";
 import { check } from "../src/eval/check.js";
-import { applyScenario, parseScenarioJson, resolveScenario, ScenarioError } from "../src/eval/scenario.js";
+import {
+  applyScenario,
+  parseScenarioJson,
+  resolveScenario,
+  ScenarioError,
+} from "../src/eval/scenario.js";
 
 const MD_PATH = join(import.meta.dir, "fixtures", "domain", "levers.md");
 const CLEAN = readFileSync(MD_PATH, "utf8");

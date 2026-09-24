@@ -122,9 +122,7 @@ describe("param domain findings", () => {
       ),
     );
     const f = result.findings.find((x) => x.code === "DOMAIN")!;
-    expect(f.message).toBe(
-      "default 100 is not in the domain of extra_hours: integer in [0, 80]",
-    );
+    expect(f.message).toBe("default 100 is not in the domain of extra_hours: integer in [0, 80]");
     expect(result.values.has("s.net")).toBe(false);
     expect(result.assertions[0]?.holds).toBeNull();
   });
@@ -134,9 +132,7 @@ describe("param domain findings", () => {
       fence("s", "param prepay_share precision 2 in { 30%, 40% } = default 35%"),
     );
     const f = result.findings.find((x) => x.code === "DOMAIN")!;
-    expect(f.message).toBe(
-      "default 35% is not in the domain of prepay_share: in { 30%, 40% }",
-    );
+    expect(f.message).toBe("default 35% is not in the domain of prepay_share: in { 30%, 40% }");
   });
 
   test("a reversed range is an empty-domain DOMAIN", () => {
@@ -155,16 +151,12 @@ describe("param domain findings", () => {
   });
 
   test("integer preset intersected with a fractional range is an empty-domain DOMAIN", () => {
-    const { result } = run(
-      fence("s", "param x precision 1 integer in [0.2, 0.8] = default 0.5"),
-    );
+    const { result } = run(fence("s", "param x precision 1 integer in [0.2, 0.8] = default 0.5"));
     expect(result.findings[0]!.code).toBe("DOMAIN");
   });
 
   test("a domain literal wider than the declared precision is PRECISION", () => {
-    const { result } = run(
-      fence("s", "param x precision 2 in { 30%, 33.33% } = default 30%"),
-    );
+    const { result } = run(fence("s", "param x precision 2 in { 30%, 33.33% } = default 30%"));
     expect(codes(result.findings)).toEqual(["PRECISION s.x"]);
     expect(result.findings[0]!.message).toBe(
       "domain value 33.33% has 4 decimals; param x declares 2",

@@ -186,12 +186,14 @@ describe("param domain clause", () => {
     expect(fails("param x precision 0 in [0,)").message).not.toBe(undefined);
     const b = param("param x precision 0 in [0, ) = default 0");
     expect(b.domain?.parts[0]).toMatchObject({ lo: "0", loClosed: true, hiClosed: false });
-    expect((b.domain?.parts[0] as { hi?: string }).hi).toBeUndefined();
+    expect((b.domain?.parts[0] as { hi?: string } | undefined)?.hi).toBeUndefined();
   });
 
   test("an empty set literal parses (checked for emptiness later)", () => {
     const b = param("param x precision 0 in { } = default 0");
-    expect(b.domain?.parts).toEqual([{ kind: "set", members: [], memberLiterals: [], text: "{ }" }]);
+    expect(b.domain?.parts).toEqual([
+      { kind: "set", members: [], memberLiterals: [], text: "{ }" },
+    ]);
   });
 
   test("unrecognised preset word", () => {
