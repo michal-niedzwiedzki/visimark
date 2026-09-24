@@ -5,6 +5,7 @@ import {
   TFile,
   debounce,
   displayTooltip,
+  setIcon,
   setTooltip,
   type Editor,
   type WorkspaceLeaf,
@@ -22,11 +23,18 @@ import { readNote } from "./snapshot.js";
 import { rowFrom, summaryFor } from "./hover.js";
 import { livePreviewMarks } from "./live-preview.js";
 import { decorateSection } from "./reading-mode.js";
-import { HIDDEN, UNKNOWN, statusFor } from "./status.js";
+import { HIDDEN, UNKNOWN, statusFor, type Status } from "./status.js";
 import { SWEEP_VIEW, SweepView } from "./sweep-view.js";
 import { TEMPLATES } from "./templates.js";
 import { ValuesModal } from "./values-modal.js";
 import { vaultSweepRead } from "./vault.js";
+
+/** the view-header icon for each of `Status`'s non-hidden states (#232) */
+const ACTION_ICON: Record<Exclude<Status["kind"], "hidden">, string> = {
+  clean: "check-circle-2",
+  problems: "alert-circle",
+  unknown: "help-circle",
+};
 
 /**
  * VisiMark for Obsidian — `onload` wires up every row of v1 (#176) that
@@ -51,6 +59,17 @@ import { vaultSweepRead } from "./vault.js";
  * renders, plus the click-through to the findings view; the ribbon is a
  * second, unconditional entry point next to it, not a state of it.
  *
+ * **The status bar is desktop-only, which `addStatusBarItem()`'s own
+ * typings say plainly — #232.** It was the *only* witness, so a vault on a
+ * phone showed an activated note exactly like an ordinary one: worse than
+ * §2.1's negative half, since a reader on mobile could not tell the plugin
+ * was doing anything at all. `actionFor`/`showAction` add a second witness
+ * on `MarkdownView` itself — a view-header icon, which Obsidian renders on
+ * every platform — carrying the same four `Status` states and the same
+ * click-through to the findings view. Kept alongside the status bar rather
+ * than replacing it: desktop keeps both, and nothing that worked before
+ * stops working.
+ *
  * **Why the item is hidden rather than removed.** `addStatusBarItem()` has no
  * inverse, and calling it again on every activation would append a second
  * element and a second registration for the life of the session. So the
@@ -61,6 +80,23 @@ import { vaultSweepRead } from "./vault.js";
  */
 export default class VisiMarkPlugin extends Plugin {
   private status: HTMLElement | null = null;
+
+  /**
+   * The mobile witness (#232) — a view-header action, one per open
+   * `MarkdownView`. `addStatusBarItem` is desktop-only (Obsidian's own
+   * typings say so plainly), and the status bar was the *only* UI that ever
+   * showed a note had activated, so on a phone an activated note and an
+   * ordinary one were indistinguishable — the opposite of what §2.1 requires,
+   * and worse than showing nothing, because "worse than nothing" is a plugin
+   * mobile users cannot tell is doing anything at all.
+   *
+   * `addAction` belongs to a *view instance*, not to the plugin, and a
+   * `MarkdownView` is reused across a file switch within the same leaf/tab —
+   * calling it again on a view that already has one would append a second
+   * icon. Keyed by view rather than a single field, because more than one
+   * leaf can be open at once and each has its own header.
+   */
+  private readonly actionFor = new WeakMap<MarkdownView, HTMLElement>();
 
   /**
    * Marked elements a hover fetch is in flight for — separate from
@@ -432,18 +468,6 @@ export default class VisiMarkPlugin extends Plugin {
   }
 
   /**
-   * Re-ask the gate, and — v1 row 12 — say what the note's state is.
-   *
-   * Row 1 shipped this as a witness that reported the gate and nothing else,
-   * because every surface that could say more belonged to a later row. This
-   * is that row: the element is the same one, and it now carries the state
-   * `statusFor` renders.
-   *
-   * The check is asynchronous because the note may read files (§2.6), so the
-   * gate is answered first and synchronously — that is what keeps a vault of
-   * ordinary notes showing nothing at all without waiting for anything.
-   */
-  /**
    * Bumped at the start of every `refresh`. `refreshState` awaits a vault
    * read, so two requests can be in flight at once — typing during a slow
    * one, or a leaf change that starts a fresh check before the last one
@@ -457,13 +481,25 @@ export default class VisiMarkPlugin extends Plugin {
    */
   private renderId = 0;
 
+  /**
+   * Re-ask the gate, and — v1 row 12 — say what the note's state is.
+   *
+   * Row 1 shipped this as a witness that reported the gate and nothing else,
+   * because every surface that could say more belonged to a later row. This
+   * is that row: the element is the same one, and it now carries the state
+   * `statusFor` renders.
+   *
+   * The check is asynchronous because the note may read files (§2.6), so the
+   * gate is answered first and synchronously — that is what keeps a vault of
+   * ordinary notes showing nothing at all without waiting for anything.
+   */
   private refresh(): void {
     if (this.status === null) return;
     const id = ++this.renderId;
     const view = this.app.workspace.getActiveViewOfType(MarkdownView);
     const source = view?.getViewData() ?? null;
     if (source === null || !hasVmarkBlock(source)) {
-      this.show(HIDDEN);
+      this.show(HIDDEN, view);
       return;
     }
     void this.refreshState(view!, source, id);
@@ -475,18 +511,45 @@ export default class VisiMarkPlugin extends Plugin {
       const { model, snapshot } = await readNote(source, path, vaultSweepRead(this.app.vault));
       const doc = { path: snapshot.path, reader: snapshot.reader };
       if (id !== this.renderId) return; // a newer refresh has started; let it paint instead
-      this.show(statusFor(reportFor(model, check(model, { doc }), doc)));
+      this.show(statusFor(reportFor(model, check(model, { doc }), doc)), view);
     } catch {
       if (id !== this.renderId) return;
-      this.show(UNKNOWN);
+      this.show(UNKNOWN, view);
     }
   }
 
-  private show(status: { text: string; detail: string }): void {
-    if (this.status === null) return;
-    this.status.setText(status.text);
-    this.status.setAttribute("aria-label", status.detail);
-    this.status.toggleClass("visimark-hidden", status.text === "");
+  /** `view` is `null` only when there is no active Markdown view at all. */
+  private show(status: Status, view: MarkdownView | null): void {
+    if (this.status !== null) {
+      this.status.setText(status.text);
+      this.status.setAttribute("aria-label", status.detail);
+      this.status.toggleClass("visimark-hidden", status.text === "");
+    }
+    this.showAction(status, view);
+  }
+
+  /**
+   * The mobile witness half of `show` — see `actionFor`'s own comment for
+   * why this exists at all. `addAction` sets an icon once at creation; the
+   * same element is reused and its icon swapped for every later state, the
+   * same "create once, mutate after" shape `this.status` already uses.
+   */
+  private showAction(status: Status, view: MarkdownView | null): void {
+    if (view === null) return;
+    if (status.kind === "hidden") {
+      this.actionFor.get(view)?.remove();
+      this.actionFor.delete(view);
+      return;
+    }
+    const icon = ACTION_ICON[status.kind];
+    const existing = this.actionFor.get(view);
+    if (existing === undefined) {
+      const el = view.addAction(icon, status.detail, () => void this.openFindings());
+      this.actionFor.set(view, el);
+    } else {
+      setIcon(existing, icon);
+      setTooltip(existing, status.detail, { placement: "bottom" });
+    }
   }
 }
 

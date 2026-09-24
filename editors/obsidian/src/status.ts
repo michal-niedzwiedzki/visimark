@@ -23,10 +23,16 @@ export interface Status {
   readonly text: string;
   /** the fuller sentence, for a screen reader and for a pointer at rest */
   readonly detail: string;
+  /**
+   * The same four states, named rather than parsed out of `text` — for
+   * `main.ts`'s mobile witness (#232), which has an icon to pick and no
+   * string to render one from.
+   */
+  readonly kind: "hidden" | "clean" | "problems" | "unknown";
 }
 
 /** The note has no ```vmark block: the plugin shows nothing at all (§2.3). */
-export const HIDDEN: Status = { text: "", detail: "" };
+export const HIDDEN: Status = { text: "", detail: "", kind: "hidden" };
 
 export function statusFor(report: NoteReport): Status {
   const problems = report.problems.length;
@@ -36,7 +42,7 @@ export function statusFor(report: NoteReport): Status {
     const detail = isClean(report)
       ? "Everything in this note agrees with its formulas."
       : `Everything in this note agrees with its formulas. ${advice} ${advice === 1 ? "note is" : "notes are"} worth knowing about.`;
-    return { text: "VisiMark ✓", detail };
+    return { text: "VisiMark ✓", detail, kind: "clean" };
   }
 
   return {
@@ -44,6 +50,7 @@ export function statusFor(report: NoteReport): Status {
     detail:
       `${problems} ${problems === 1 ? "thing needs" : "things need"} attention in this note.` +
       (advice > 0 ? ` ${advice} more ${advice === 1 ? "is" : "are"} worth knowing.` : ""),
+    kind: "problems",
   };
 }
 
@@ -51,4 +58,5 @@ export function statusFor(report: NoteReport): Status {
 export const UNKNOWN: Status = {
   text: "VisiMark · ?",
   detail: "This note could not be checked, so nothing here is a verdict about it.",
+  kind: "unknown",
 };
