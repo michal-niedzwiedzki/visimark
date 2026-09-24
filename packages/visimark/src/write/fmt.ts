@@ -202,6 +202,33 @@ function dedupe(edits: PlannedEdit[]): PlannedEdit[] {
 
 const FIXABLE_BY_FMT = new Set(["STALE"]);
 
+/**
+ * Which charts `fmt` would write, read straight off an already-computed
+ * `CheckResult` — exported so a caller that keeps its own `check()` result
+ * for another reason (the Obsidian plugin's findings view, v1.1 row 14) does
+ * not have to re-run `check`/`fmt` a second time just to learn what artifacts
+ * exist. `fmt` itself calls this rather than repeating the loop, so there is
+ * one place that decides "which charts need writing" — an artifact carrying
+ * an ARTIFACT error is not among them, the same rule a column with a UNIT
+ * conflict already follows.
+ */
+export function artifactsFor(result: CheckResult): ArtifactWrite[] {
+  const artifacts: ArtifactWrite[] = [];
+  for (const c of result.charts) {
+    if (c.state !== "stale" && c.state !== "missing") continue;
+    if (!c.target || !c.svg) continue;
+    artifacts.push({
+      target: c.target,
+      svg: c.svg,
+      path: c.path,
+      state: c.state,
+      sheetId: c.sheetId,
+      chart: c.name,
+    });
+  }
+  return artifacts;
+}
+
 export function fmt(source: string, opts: FmtOptions = {}): FmtResult {
   const model = build(locate(source));
   const result = check(model, { doc: opts.doc });
@@ -224,21 +251,7 @@ export function fmt(source: string, opts: FmtOptions = {}): FmtResult {
     return true;
   });
 
-  // an artifact carrying an ARTIFACT error is not written at all — the same
-  // rule a column with a UNIT conflict already follows
-  const artifacts: ArtifactWrite[] = [];
-  for (const c of result.charts) {
-    if (c.state !== "stale" && c.state !== "missing") continue;
-    if (!c.target || !c.svg) continue;
-    artifacts.push({
-      target: c.target,
-      svg: c.svg,
-      path: c.path,
-      state: c.state,
-      sheetId: c.sheetId,
-      chart: c.name,
-    });
-  }
+  const artifacts = artifactsFor(result);
 
   // `noArtifacts` withholds the artifacts from the caller; it does not change
   // what was found. `unfixable` above is untouched, which is what keeps the

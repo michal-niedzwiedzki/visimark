@@ -64,5 +64,20 @@ export class VisiMarkSettingTab extends PluginSettingTab {
           if (value) void this.plugin.startAmbientIndex();
         }),
       );
+
+    new Setting(containerEl)
+      .setName("Write chart artifacts")
+      .setDesc(
+        "Let Format (the command, or format-on-save) regenerate a stale or missing chart's SVG in " +
+          "the vault. Off by default: this plugin has never created a new file in your vault before, " +
+          "and this is the first setting that lets it. With this off, a stale chart still gets a " +
+          "finding — it just never gets rewritten for you.",
+      )
+      .addToggle((toggle) =>
+        toggle.setValue(this.plugin.settings.writeChartArtifacts).onChange(async (value) => {
+          this.plugin.settings.writeChartArtifacts = value;
+          await this.plugin.saveSettings();
+        }),
+      );
   }
 }

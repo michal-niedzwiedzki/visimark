@@ -324,7 +324,8 @@ palette on `example-invoice.md` and on `example-invoice-drift.md`.
 
 ### 2.6 Format, and the declined artifact write — v1 row 7
 
-- Open `example-charts.md`, break one input number by hand, and run Format.
+- With **Write chart artifacts** off (the default), open `example-charts.md`,
+  break one input number by hand, and run Format.
 - **Pass:** the computed cells are repaired; the chart SVGs are **not** written
   by the plugin.
 - **Pass condition, exactly as the shipped CLI contract states it
@@ -342,6 +343,26 @@ palette on `example-invoice.md` and on `example-invoice-drift.md`.
   repairs. This is the documented limit, not a bug: Obsidian has no event for
   an explicit save distinct from autosave, so the setting only answers the
   Ctrl/Cmd+S keystroke specifically.
+
+### 2.6a Format actually writes a chart — v1.1 row 14
+
+- Turn on **Write chart artifacts** (Settings → VisiMark; off by default).
+  Open `example-charts.md`, break one input number by hand, and run Format.
+  **Pass:** the computed cells are repaired, **and** the chart's SVG file in
+  the vault is rewritten — open it (or the note that embeds it) and confirm
+  the image changed. The notice says how many charts were written.
+- Run Format again immediately, nothing changed. **Pass:** the notice says
+  "Nothing to repair. No chart needed writing." — the chart is current, not
+  regenerated a second time for nothing.
+- **Pass condition — every claim §2.6 already made still holds with the
+  setting on.** The chart being current now is a *result* of Format having
+  run, not a relaxation of the finding: turn the setting back off, break the
+  input again, and confirm the stale-chart finding still appears exactly as
+  in §2.6, since `check`'s verdict has never depended on this setting.
+- **Deliberately not covered by this row:** a per-finding "regenerate this
+  chart" button in the findings view, the way other rows get a per-row
+  repair. Format (whole-note) is the only entry point row 14 wires up; see
+  #252's "what you considered and rejected" for why.
 
 ### 2.7 `infer` on a pasted table — v1 row 5
 

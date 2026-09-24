@@ -21,6 +21,14 @@
 
 ### Added
 
+- **`artifactsFor(result)`, reading which charts `fmt` would write off an
+  already-computed `CheckResult`** — exported so a caller that keeps its own
+  `check()` result for another reason does not have to re-run `check`/`fmt`
+  just to learn what artifacts exist. `fmt` itself now calls this rather than
+  repeating the loop inline, so there is one place that decides which charts
+  need writing. Prerequisite for the Obsidian plugin's v1.1 row 14 (chart
+  regeneration through the vault write port); no CLI behaviour change.
+
 - **A writer port, alongside the reader port** — `WriterPort` in the new
   `fs/writer.ts`, and its `node:fs` implementation `nodeWriter` in
   `fs/node-writer.ts`, both exported from the package's Node entry point.

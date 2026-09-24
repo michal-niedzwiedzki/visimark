@@ -1,7 +1,14 @@
 export { locate } from "./parse/document.js";
 export { build } from "./model/build.js";
 export { check, type CheckResult } from "./eval/check.js";
-export { fmt, planFmt, type FmtOptions, type FmtResult, type PlannedEdit } from "./write/fmt.js";
+export {
+  artifactsFor,
+  fmt,
+  planFmt,
+  type FmtOptions,
+  type FmtResult,
+  type PlannedEdit,
+} from "./write/fmt.js";
 export { applyEdits, type Edit } from "./write/splice.js";
 export { topoOrder, dependencies, resolve, refText } from "./eval/graph.js";
 export { FUNCTIONS, isReduce, type FnKind, type FnSpec } from "./eval/functions.js";
