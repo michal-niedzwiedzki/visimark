@@ -241,7 +241,12 @@ export default class VisiMarkPlugin extends Plugin {
     // `click` follows it; without the pointerType check a tap would arm a
     // tooltip nobody can dismiss *and* open the dialog, which the manual test
     // says a tap must not do.
-    this.registerDomEvent(document, "pointerover", (event: PointerEvent) => {
+    //
+    // Defined here, registered per window below alongside row 7's save
+    // listener: a pop-out is a separate document, and a marked value opened
+    // there needs the same hover/tap/keyboard answers as the main window
+    // (issue #231 review).
+    const onMarkPointerOver = (event: PointerEvent): void => {
       if (event.pointerType !== "mouse") return;
       const el = target(event);
       if (el === null || el.hasAttribute("data-vmark-hovered") || this.hoverPending.has(el)) return;
@@ -257,8 +262,8 @@ export default class VisiMarkPlugin extends Plugin {
         setTooltip(el, line, { placement: "top" });
         displayTooltip(el, line, { placement: "top" });
       });
-    });
-    this.registerDomEvent(document, "click", (event) => {
+    };
+    const onMarkClick = (event: MouseEvent): void => {
       const el = target(event);
       if (el === null) return;
       // a plain click in Live Preview is placing the caret, not asking a
@@ -268,14 +273,14 @@ export default class VisiMarkPlugin extends Plugin {
       // never bound to anything of ours in the editor) still asks.
       if (el.closest(".cm-editor") !== null && !(event.metaKey || event.ctrlKey)) return;
       void this.explainElement(el);
-    });
-    this.registerDomEvent(document, "keydown", (event: KeyboardEvent) => {
+    };
+    const onMarkKeydown = (event: KeyboardEvent): void => {
       if (event.key !== "Enter" && event.key !== " ") return;
       const el = target(event);
       if (el === null) return;
       event.preventDefault();
       void this.explainElement(el);
-    });
+    };
 
     // v1 row 7 — the other half of "an explicit act" (v1 constraint 3). Not
     // preventDefault'd: Obsidian's own save still runs on the same keystroke,
@@ -302,19 +307,24 @@ export default class VisiMarkPlugin extends Plugin {
     // constructors (Obsidian's pop-out-window docs), so `event.target
     // instanceof Node` — which closes over *this* module's `Node` — would
     // silently fail for a keystroke typed there. `nodeType` is checked
-    // structurally instead, and the listener is attached to every window:
-    // the main one now, each pop-out already open, and any that opens later.
+    // structurally instead, and every listener below (row 3's hover/tap/
+    // keyboard trio and this one) is attached to every window: the main one
+    // now, each pop-out already open, and any that opens later.
     //
-    // Registered on `Window`, capture phase (`{ capture: true }`), not on
-    // `Document` at the default bubble phase: Obsidian's own keymap binds
-    // `keydown` on `window` at capture (`addEventListener(..., true)`) and,
-    // on the matched "Save file" hotkey, calls `preventDefault()` and
-    // `stopPropagation()`. `stopPropagation` stops the event from reaching
-    // other listeners further down the same phase and on `document`, but not
-    // other capture listeners already on `window` itself — so this handler
-    // still sees the keystroke, ahead of where Obsidian consumes it. It does
-    // not call `preventDefault` or `stopPropagation` itself, so Obsidian's
-    // own save still runs unblocked (issue #243).
+    // The save listener is registered on `Window`, capture phase
+    // (`{ capture: true }`), not on `Document` at the default bubble phase:
+    // Obsidian's own keymap binds `keydown` on `window` at capture
+    // (`addEventListener(..., true)`) and, on the matched "Save file"
+    // hotkey, calls `preventDefault()` and `stopPropagation()`.
+    // `stopPropagation` stops the event from reaching other listeners
+    // further down the same phase and on `document`, but not other capture
+    // listeners already on `window` itself — so this handler still sees the
+    // keystroke, ahead of where Obsidian consumes it. It does not call
+    // `preventDefault` or `stopPropagation` itself, so Obsidian's own save
+    // still runs unblocked (issue #243). Row 3's listeners stay on
+    // `Document` at the default (bubble) phase: they only read the event,
+    // never race Obsidian's own handling of it, so capture buys them
+    // nothing.
     const onSaveKeydown = (event: KeyboardEvent): void => {
       if (!this.settings.formatOnSave) return;
       if (event.shiftKey || event.altKey) return;
@@ -328,17 +338,22 @@ export default class VisiMarkPlugin extends Plugin {
       void this.format(view.editor, { silent: true });
     };
     const seenWindows = new Set<Window>();
-    const listenForSaveIn = (win: Window): void => {
+    const listenForMarksAndSaveIn = (win: Window): void => {
       if (seenWindows.has(win)) return;
       seenWindows.add(win);
+      this.registerDomEvent(win.document, "pointerover", onMarkPointerOver);
+      this.registerDomEvent(win.document, "click", onMarkClick);
+      this.registerDomEvent(win.document, "keydown", onMarkKeydown);
       this.registerDomEvent(win, "keydown", onSaveKeydown, { capture: true });
     };
-    listenForSaveIn(window);
+    listenForMarksAndSaveIn(window);
     this.app.workspace.iterateAllLeaves((leaf) => {
       const win = leaf.view.containerEl.doc.defaultView;
-      if (win !== null) listenForSaveIn(win);
+      if (win !== null) listenForMarksAndSaveIn(win);
     });
-    this.registerEvent(this.app.workspace.on("window-open", (_win, win) => listenForSaveIn(win)));
+    this.registerEvent(
+      this.app.workspace.on("window-open", (_win, win) => listenForMarksAndSaveIn(win)),
+    );
 
     this.status = this.addStatusBarItem();
     this.status.addClass("visimark-status");
@@ -695,12 +710,23 @@ export default class VisiMarkPlugin extends Plugin {
   }
 }
 
-/** the marked value an event is on, if it is on one */
+/**
+ * The marked value an event is on, if it is on one.
+ *
+ * A pop-out window's elements are instances of *its own* `HTMLElement`
+ * (Obsidian's pop-out-window docs), so `instanceof HTMLElement` — which
+ * closes over this module's, i.e. the main window's, constructor — would
+ * silently reject every element from one. Checked structurally instead:
+ * `nodeType` for "is this a node", `closest` for "is this an element with
+ * the DOM methods this function needs".
+ */
 function target(event: Event): HTMLElement | null {
-  const node = event.target;
+  const node = event.target as Node | null;
   // CodeMirror can surface a text node as the event target (a mark's content
   // rendered directly, with no further wrapping); its element is the parent
-  const el = node instanceof HTMLElement ? node : (node as Node | null)?.parentElement;
-  if (!(el instanceof HTMLElement)) return null;
-  return el.closest<HTMLElement>("[data-vmark]");
+  const el = node !== null && node.nodeType === 1 ? node : node?.parentElement;
+  if (el === null || el === undefined || typeof (el as HTMLElement).closest !== "function") {
+    return null;
+  }
+  return (el as HTMLElement).closest<HTMLElement>("[data-vmark]");
 }
