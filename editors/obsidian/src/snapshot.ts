@@ -56,13 +56,19 @@ import { build, check, locate, memoryReader, type DocModel, type ReaderPort } fr
  *
  * Obsidian paths are vault-relative and carry no leading slash
  * (`notes/2026/q3.csv`). The engine works in absolute paths, and
- * `src/browser-path.ts` roots a bare relative path at `/` — which makes the
- * vault root the engine's containment boundary, exactly as the spec wants. So
- * the two spaces differ by one leading slash, and `toVaultPath` is the whole
- * translation. **The plugin adds no path policy of its own**: a path that
- * escapes the vault *lexically* is simply not in the snapshot, `exists`
- * answers false, and the engine emits the `IMPORT` finding it already emits
- * for a missing file.
+ * `src/browser-path.ts` roots a bare relative path at `/`, which is why the
+ * vault root is where a relative reference bottoms out however many `../`
+ * it has. So the two spaces differ by one leading slash, and `toVaultPath`
+ * is the whole translation.
+ *
+ * **The plugin adds no path policy of its own beyond that.** The tighter
+ * boundary — `gatePath` (`fs/gate.ts`) bounds an import to *the document's
+ * own directory*, not the vault root — is the engine's, applied unchanged: a
+ * lexically escaping path fails `gatePath`'s own containment check and gets
+ * its own refusal message (`"… escapes the document's directory"`) as an
+ * `IMPORT` finding, before `reader.exists`/`readText` are ever called. This
+ * plugin's snapshot never attempts to fetch such a path — there is nothing
+ * to be lexically wrong about a request the reader was never asked to serve.
  *
  * ## What this does not catch — a symlink, accepted rather than solved (#233)
  *
@@ -88,10 +94,15 @@ import { build, check, locate, memoryReader, type DocModel, type ReaderPort } fr
  * satisfy that guard's letter while defeating the reason it exists.
  *
  * The residual risk is narrower than "a symlink escapes containment"
- * sounds: planting one inside a vault requires local write access to that
- * vault already, at which point editing the Markdown directly is no harder
- * than placing a link. Mobile has no symlinks at all, so this is
- * desktop-only. What holds: the lexical half of containment, unconditionally.
+ * sounds, but it is a read, not nothing. Planting a symlink requires local
+ * write access to the vault directory it sits in, same as editing the
+ * Markdown does — but placing one does not require write access to
+ * whatever it points at. A writer limited to the vault can still cause the
+ * plugin to *read* a file elsewhere on disk it could never write to; that
+ * is the actual risk, not "write anywhere". Mobile has no symlinks at all,
+ * so this is desktop-only. What holds regardless: the document-directory
+ * boundary above, unconditionally — a symlink is the one thing past it this
+ * architecture cannot see.
  */
 
 /**

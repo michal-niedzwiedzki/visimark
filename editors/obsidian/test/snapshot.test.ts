@@ -131,25 +131,34 @@ test("path discovery settles, which is the invariant the design rests on", async
 });
 
 test("a file outside the vault is absent, and the engine says so in its own words", async () => {
-  // This is the lexical escape only — a `..` that walks past the vault root
-  // in the path text itself. A symlink that resolves outside the vault
-  // without any `..` in its own name is a different, unfixed gap: see
-  // snapshot.ts's "What this does not catch" section and #233.
+  // This is the lexical escape only — a `..` that walks the path text past
+  // the document's own directory (gatePath's actual boundary — narrower
+  // than the vault root; see snapshot.ts's "Vault space and engine space").
+  // A symlink that resolves outside without any `..` in its own name is a
+  // different, unfixed gap: see snapshot.ts's "What this does not catch"
+  // section and #233.
+  //
+  // The path must end in `.csv` to reach the containment check at all —
+  // `gatePath` rejects the wrong extension first, and `../../etc/passwd`
+  // (no `.csv`) would be refused for that reason instead, exercising a
+  // different rule than the one this test is about.
   const source = [
     "| Item | Qty |",
     "|---|---|",
     "| a | 1 |",
     "",
-    "```vmark #lines from ../../etc/passwd labelled Item, Qty",
+    "```vmark #lines from ../../etc/passwd.csv labelled Item, Qty",
     "```",
     "",
   ].join("\n");
   const { model, snapshot } = await readNote(source, "notes/q3.md", readFromVault);
-  // the plugin adds no path policy of its own: nothing was fetched, and the
-  // finding is the engine's ordinary one for a file it could not read
+  // the plugin adds no path policy of its own: gatePath refuses the lexical
+  // escape itself, before the reader is ever consulted, so nothing is fetched
   expect(snapshot.held.size).toBe(0);
   const findings = check(model, { doc: { path: snapshot.path, reader: snapshot.reader } }).findings;
-  expect(findings.map((f) => f.code)).toContain("IMPORT");
+  expect(findings.map((f) => f.message)).toContain(
+    "imported file path escapes the document's directory",
+  );
 });
 
 test("the recorded set is what the note reads, and nothing else", async () => {
