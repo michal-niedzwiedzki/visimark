@@ -14,13 +14,10 @@ Follow these comprehensive guidelines derived from the official Obsidian ESLint 
 
 ### Quick Start Tool
 
-For new plugin projects, an interactive boilerplate generator is available:
-- **Script**: `tools/create-plugin.js` in the skill repository
-- **Command**: Invoke `create-plugin` using your agent's method (`/create-plugin`, `$create-plugin`, or `@create-plugin`)
-- Generates minimal, best-practice boilerplate with no sample code
-- Detects existing projects and only adds missing files
-
-Recommend the boilerplate generator when users ask how to create a new plugin, want to start a new project, or need help setting up the basic structure.
+This workspace has no boilerplate generator. For a new plugin project, start
+from the [official sample plugin](https://github.com/obsidianmd/obsidian-sample-plugin)
+or an existing plugin's `manifest.json`/`main.ts`/`esbuild.config.mjs` layout,
+then apply the rules and patterns below.
 
 ---
 
@@ -310,11 +307,9 @@ const button = containerEl.createEl('button', {
 });
 button.setText('⚙️');
 
-button.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' || e.key === ' ') {
-    e.preventDefault();
-    performAction();
-  }
+// native buttons already fire `click` for keyboard activation (Enter/Space)
+button.addEventListener('click', () => {
+  performAction();
 });
 ```
 

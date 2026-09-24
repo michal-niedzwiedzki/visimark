@@ -103,11 +103,12 @@
   asks, and VisiMark calculates*.
 
   `get` and `evaluate` return the CLI's own `evalValues` — a string for a
-  scalar, an array of strings (one per row) for a column — rather than a
-  second rendering; the test compares every name in the document against the
-  engine, not just one. A scalar's string is byte-identical to what
-  `visimark eval --get` prints; a column is not, since that command joins its
-  rows with `", "` for a terminal and this API leaves the join to the caller.
+  scalar, an array of strings-or-null (one per row, null where the cell is
+  blank) for a column — rather than a second rendering; the test compares
+  every name in the document against the engine, not just one. A scalar's
+  string is byte-identical to what `visimark eval --get` prints; a column is
+  not, since that command joins its rows with `", "` for a terminal and this
+  API leaves the join to the caller.
   Values are never numbers — for exactness, since the engine's arithmetic is
   decimal and a round trip through a JavaScript number is a round trip
   through binary floating point.

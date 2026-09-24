@@ -133,12 +133,16 @@ function wrapText(el: HTMLElement, text: string, claimed: Set<Node>): HTMLElemen
     const content = node.textContent ?? "";
     const at = content.indexOf(text);
     if (at === -1) continue;
-    claimed.add(node);
     const range = doc.createRange();
     range.setStart(node, at);
     range.setEnd(node, at + text.length);
     const span = doc.createElement("span");
     range.surroundContents(span);
+    // `surroundContents` splits `node` into up to three text nodes and
+    // leaves the matched run as `span`'s child, a new node distinct from
+    // `node` — claiming that child, not `node`, lets a later identical
+    // bare-text anchor still match the unmarked remainder of the original
+    if (span.firstChild !== null) claimed.add(span.firstChild);
     return span;
   }
   return null;
