@@ -397,8 +397,8 @@ $ echo $?
   `packages/markdownlint-visimark/package.json` (both its own `version` and its
   `visimark` dependency pin) as the eighth/ninth entry in its file list.
 - **The reported count differs from `check`'s footer, by design.**
-  `visimark check docs/example-invoice-drift.md` prints `26 problems (21 stale,
-  5 errors)`; the same document under `recommended` is `18 issues`. The
+  `visimark check docs/example-invoice-drift.md` prints `27 problems (22 stale,
+  5 errors)`; the same document under `recommended` is `19 issues`. The
   difference is exactly the eight prose anchors folded into the skipped
   anchor-group rollup ([§3](#3-the-machine-contract)). `WARN` and `NOTE` are advice: `check` does not count
   them in that footer either, so the advisory tag changes which findings are

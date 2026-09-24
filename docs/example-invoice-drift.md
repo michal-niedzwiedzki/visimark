@@ -108,6 +108,7 @@ docs/example-invoice-drift.md
   STALE   lines.net_total                          23300.00 ≠ 25380.00   SUM(Net)
   STALE   lines.vat_total                           5359.00 ≠ 5837.40    SUM(VAT)
   STALE   lines.gross_total                        28659.00 ≠ 31217.40   SUM(Gross)
+  STALE   lines.gross_total                        28659.00 ≠ 31217.40   SUM(Gross)
   STALE   schedule.Amount · Signature               8597.70 ≠ 9365.22    Share * lines.gross_total
   STALE   schedule.Amount · Delivery of backend    11463.60 ≠ 12486.96   Share * lines.gross_total
   STALE   schedule.Amount · Acceptance              8597.70 ≠ 9365.22    Share * lines.gross_total
@@ -134,7 +135,7 @@ docs/example-invoice-drift.md
 
   CYCLE   late_fees.base → late_fees.fee → late_fees.total → late_fees.base
 
-  26 problems (21 stale, 5 errors)
+  27 problems (22 stale, 5 errors)
 ```
 
 `visimark fmt` repairs every `STALE` line without asking, because those cells are
