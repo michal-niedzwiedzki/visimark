@@ -15,6 +15,15 @@ import { resolve } from "node:path";
 
 const source = readFileSync(resolve(import.meta.dir, "../src/main.ts"), "utf8");
 
+test("format-on-save listens on Window in the capture phase", () => {
+  // Obsidian's keymap calls stopPropagation during window capture on Ctrl/Cmd+S,
+  // so a bubble listener on Document never sees the chord (issue #243).
+  expect(source).toContain(
+    'this.registerDomEvent(win, "keydown", onSaveKeydown, { capture: true })',
+  );
+  expect(source).not.toContain('registerDomEvent(doc, "keydown", onSaveKeydown');
+});
+
 test("main.ts registers each view type at most once", () => {
   const types = [...source.matchAll(/this\.registerView\((\w+),/g)].map((m) => m[1]!);
   expect(types.length, "no registerView call found — has the pattern changed?").toBeGreaterThan(0);
