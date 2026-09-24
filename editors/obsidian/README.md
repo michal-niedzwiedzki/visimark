@@ -12,52 +12,44 @@ each v1 row is its own issue.
 
 ## What is built so far
 
-**v1 row 1** ([#200](https://github.com/michal-niedzwiedzki/visimark/issues/200)):
-the browser bundle and the activation gate. **v1 row 3** ([#229](https://github.com/michal-niedzwiedzki/visimark/issues/229)):
-hover or tap a marked value for its formula, inputs and result.
+**All twelve of v1's rows** ([#176](https://github.com/michal-niedzwiedzki/visimark/issues/176)),
+each on its own issue:
 
-**v1 row 2** ([#227](https://github.com/michal-niedzwiedzki/visimark/issues/227)):
-provenance and staleness in reading mode and Live Preview — the row #176 calls
-"the moment the product explains itself".
+| Row | | Issue |
+|---|---|---|
+| 1 | browser bundle + activation gate | [#200](https://github.com/michal-niedzwiedzki/visimark/issues/200) |
+| 2 | provenance and staleness, reading mode and Live Preview | [#227](https://github.com/michal-niedzwiedzki/visimark/issues/227) |
+| 3 | hover / tap a marked value for its formula | [#229](https://github.com/michal-niedzwiedzki/visimark/issues/229) |
+| 4 | the five commands — Check, Format, Infer, Evaluate, Explain | [#221](https://github.com/michal-niedzwiedzki/visimark/issues/221) |
+| 5 | `infer` with a preview | [#217](https://github.com/michal-niedzwiedzki/visimark/issues/217) |
+| 6 | the findings view, in audience-B language | [#213](https://github.com/michal-niedzwiedzki/visimark/issues/213) |
+| 7 | *repair half* — the findings view's per-row repair and Format both ship; format-on-save is still open | — |
+| 8 | the vault sweep | [#215](https://github.com/michal-niedzwiedzki/visimark/issues/215) |
+| 9 | the public API — `app.plugins.plugins["visimark"].api` | [#219](https://github.com/michal-niedzwiedzki/visimark/issues/219) |
+| 10 | four templates — invoice, monthly budget, team capacity, experiment log | [#210](https://github.com/michal-niedzwiedzki/visimark/issues/210) |
+| 11 | copy a note's values as JSON | [#223](https://github.com/michal-niedzwiedzki/visimark/issues/223) |
+| 12 | status bar states and the ribbon icon | [#225](https://github.com/michal-niedzwiedzki/visimark/issues/225) |
 
-**v1 row 12** ([#225](https://github.com/michal-niedzwiedzki/visimark/issues/225)):
-the status bar's states and the ribbon icon — what makes the findings view and
-the sweep findable at all.
-
-**v1 row 11** ([#223](https://github.com/michal-niedzwiedzki/visimark/issues/223)):
-copy a note's values as JSON, in the shape `visimark eval --json` reports.
-
-**v1 row 4** ([#221](https://github.com/michal-niedzwiedzki/visimark/issues/221)):
-the five commands — Check, Format, Infer, Evaluate, Explain — each scoped to
-the active note.
-
-**v1 row 9** ([#219](https://github.com/michal-niedzwiedzki/visimark/issues/219)):
-the public API — `app.plugins.plugins["visimark"].api`, so another plugin or an
-agent can ask this vault for a verified number instead of reading the Markdown
-and doing the arithmetic itself.
-
-**v1 row 5** ([#217](https://github.com/michal-niedzwiedzki/visimark/issues/217)):
-Infer with a preview — paste a plain table, and one command works out the
-formulas behind it.
-
-**v1 row 8** ([#215](https://github.com/michal-niedzwiedzki/visimark/issues/215)):
-the vault sweep — one command, every note, and a list of the ones that
-disagree with themselves.
-
-**v1 row 6** ([#213](https://github.com/michal-niedzwiedzki/visimark/issues/213)):
-the findings view — a pane listing what disagrees with its formulas, in
-sentences, with a repair where the engine has one. It is the first surface that
-uses the two shared pieces below.
-
-The vault-backed reader
+Plus two pieces every row above is built on: the vault-backed reader
 ([#205](https://github.com/michal-niedzwiedzki/visimark/issues/205)) and the
 audience-B finding vocabulary
-([#207](https://github.com/michal-niedzwiedzki/visimark/issues/207)) are the
-substrate the rest of v1 is built on. The plugin loads on desktop and on
-mobile, and shows a status bar item reading `VisiMark` on a note that contains
-a ```` ```vmark ```` block. That is all it does yet. Provenance decorations,
-the hover popover, the five commands, the findings view, the vault sweep and
-the plugin API are rows 2 through 12 and are not implemented.
+([#207](https://github.com/michal-niedzwiedzki/visimark/issues/207)).
+
+The templates live in [`templates/`](templates/), Markdown files the CLI can
+check directly; each passes `visimark check` with zero findings before it is
+edited.
+
+**Row 7 is the one thing left of v1**, and only the format-on-save half: the
+per-row repair (row 6) and the whole-note Format command (row 4) both write
+today, through an explicit act. Format on an explicit save is a policy about
+unattended writes and wants its own review rather than a fold into another
+row's PR.
+
+`docs/design/obsidian-manual-test.md` Part 2 is runnable end to end. Its table
+says, per section, what a machine already asserts and what still needs a
+person — nothing has been run inside a real vault, so §2.2 (everything on
+screen), §2.5 (nothing written unbidden, especially on mobile) and §2.11
+(portability, which outranks every other section) are where that matters most.
 
 ## Installing it
 
@@ -147,3 +139,5 @@ bun test editors/obsidian
 `bun test` builds the bundle in memory from the very options
 `esbuild.config.mjs` exports, so the guard cannot drift from the build it
 guards and does not depend on `bun run build` having happened first.
+
+<!--vmark:no-formulas-->
