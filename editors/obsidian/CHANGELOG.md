@@ -14,10 +14,13 @@ Each entry says which engine version the bundle carries.
   a new setting, **Write chart artifacts**, off by default. On, Format (the
   command or format-on-save) writes every stale/missing chart's SVG through
   the vault write port (`writeCharts`, `chart.ts`) before applying its text
-  repairs, and refuses the whole run — no chart written, no cell repaired —
-  if any chart write fails, matching the CLI's own all-or-nothing contract
-  for `fmt`. Off, nothing changes: v1's behaviour (repair the cells, decline
-  every chart write, `check` still reports the stale chart) is exactly
+  repairs, stopping at the first chart write that fails or fails its
+  immediately-pre-write ownership recheck — no cell is repaired in that
+  case, though an earlier chart in the same run may already have written
+  cleanly, matching the CLI's own `fmt`: neither undoes an artifact already
+  written before a later one refuses. Off, nothing changes: v1's behaviour
+  (repair the cells, decline every chart write, `check` still reports the
+  stale chart) is exactly
   reproduced, notice text included. Per-finding "regenerate this chart" in
   the findings view is deliberately not part of this row — see #252.
 
