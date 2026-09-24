@@ -1226,7 +1226,7 @@ One number will not match, by design. A stale cell with prose anchors bound to
 it produces one summary finding on top of the cell's own, and this package
 reports the cell rather than the summary, so anchors are not counted twice.
 `visimark check docs/example-invoice-drift.md` prints
-`26 problems (21 stale, 5 errors)` where the same document reports `18 issues`
+`27 problems (22 stale, 5 errors)` where the same document reports `19 issues`
 here — the difference is exactly the eight prose anchors folded into that
 summary. **The exit codes agree in every case**; the headline number is the only
 thing that differs, and the exit code is what a CI gate reads.

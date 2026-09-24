@@ -111,7 +111,7 @@ test("a drifted document is a SUCCESSFUL call reporting problems", () => {
   expect("fault" in outcome).toBe(false);
   const body = ok(outcome);
   expect(body["status"]).toBe("problems");
-  expect(body["summary"]).toEqual({ problems: 26, stale: 21, errors: 5 });
+  expect(body["summary"]).toEqual({ problems: 27, stale: 22, errors: 5 });
 });
 
 test("a table with no rules reports COVERAGE under content, and skips nothing", () => {
