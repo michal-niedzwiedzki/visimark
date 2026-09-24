@@ -311,20 +311,18 @@ export default class VisiMarkPlugin extends Plugin {
     // keyboard trio and this one) is attached to every window: the main one
     // now, each pop-out already open, and any that opens later.
     //
-    // The save listener is registered on `Window`, capture phase
-    // (`{ capture: true }`), not on `Document` at the default bubble phase:
-    // Obsidian's own keymap binds `keydown` on `window` at capture
-    // (`addEventListener(..., true)`) and, on the matched "Save file"
-    // hotkey, calls `preventDefault()` and `stopPropagation()`.
-    // `stopPropagation` stops the event from reaching other listeners
-    // further down the same phase and on `document`, but not other capture
-    // listeners already on `window` itself — so this handler still sees the
-    // keystroke, ahead of where Obsidian consumes it. It does not call
-    // `preventDefault` or `stopPropagation` itself, so Obsidian's own save
-    // still runs unblocked (issue #243). Row 3's listeners stay on
-    // `Document` at the default (bubble) phase: they only read the event,
-    // never race Obsidian's own handling of it, so capture buys them
-    // nothing.
+    // The save listener is registered on `Window` in the capture phase
+    // (`{ capture: true }`), not on `Document` in the bubble phase.
+    // Obsidian's keymap listens for `keydown` on `window` in that same phase
+    // (`addEventListener(..., true)`) and, when "Save file" matches, calls
+    // `preventDefault()` and `stopPropagation()`. That stops the event from
+    // reaching `document`. It does not skip the other listeners on `window`
+    // itself, so this handler still runs. The keymap is registered at
+    // startup, before the plugin, so it runs first and the save is already
+    // accepted. This handler does not call `preventDefault` or
+    // `stopPropagation` (issue #243). Row 3's listeners stay on `Document`
+    // at the default (bubble) phase: they only read the event, never race
+    // Obsidian's own handling of it, so capture buys them nothing.
     const onSaveKeydown = (event: KeyboardEvent): void => {
       if (!this.settings.formatOnSave) return;
       if (event.shiftKey || event.altKey) return;
