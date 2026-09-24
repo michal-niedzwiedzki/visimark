@@ -1,0 +1,10 @@
+{
+  "id": "visimark",
+  "name": "VisiMark",
+  "version": "0.1.0",
+  "minAppVersion": "1.0.0",
+  "description": "Keeps the numbers in a note honest: every computed value carries the formula that produced it, and the note is still ordinary Markdown outside the vault.",
+  "author": "Michał Niedźwiedzki",
+  "authorUrl": "https://github.com/michal-niedzwiedzki/visimark",
+  "isDesktopOnly": false
+}

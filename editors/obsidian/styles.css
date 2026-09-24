@@ -1,0 +1,325 @@
+/*
+ * Everything here is Obsidian's own CSS variables, so the plugin matches every
+ * theme without knowing about any of them, and nothing is set from JavaScript.
+ *
+ * **No colour says "error".** v1 constraint 6 of #176 is that audience B does
+ * not read exit codes, and red is the same sentence in another alphabet. A
+ * finding is distinguished by being a row with words in it, not by being red;
+ * the only accent used is the theme's own, on focus, where it means "this is
+ * where your keyboard is" and nothing else.
+ */
+
+/* --- the status bar witness (v1 row 1) ------------------------------------ */
+
+/*
+ * `display: none` rather than `visibility: hidden` or an opacity: the status
+ * bar lays its children out in a row, and a hidden-but-present item would
+ * leave a gap — a gap is a thing a person can see, and the pass condition of
+ * the manual test's §2.1 is that a vault of ordinary notes looks exactly like
+ * one without the plugin installed.
+ */
+.visimark-status.visimark-hidden {
+  display: none;
+}
+
+/*
+ * The item is the way into the findings view, so it has to look and behave
+ * like something you can press. `mod-clickable` is Obsidian's own class for
+ * exactly that, which is why nothing here sets a cursor or a hover colour.
+ */
+.visimark-status:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
+}
+
+/* --- the findings view (v1 row 6) ----------------------------------------- */
+
+.visimark-findings {
+  padding: var(--size-4-2);
+}
+
+.visimark-note-state {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  line-height: var(--line-height-tight);
+  margin: 0;
+  padding: var(--size-4-2);
+}
+
+.visimark-section + .visimark-section {
+  margin-top: var(--size-4-4);
+}
+
+.visimark-section-heading {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-medium);
+  letter-spacing: 0.04em;
+  margin: 0 0 var(--size-4-1);
+  padding: 0 var(--size-4-2);
+  text-transform: uppercase;
+}
+
+.visimark-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.visimark-row {
+  align-items: center;
+  border-bottom: 1px solid var(--background-modifier-border);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-4-2);
+  padding: var(--size-4-2);
+}
+
+/*
+ * A button rather than a div so it is in the tab order and answers Enter and
+ * Space, with the chrome taken off so it reads as a line of text. `min-height`
+ * is the 44px touch target the mobile accessibility rule asks for — this is a
+ * client for someone reading on a phone, so that is not a nicety here.
+ */
+.visimark-row-main {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  color: var(--text-normal);
+  cursor: pointer;
+  display: flex;
+  flex: 1 1 12rem;
+  flex-direction: column;
+  font-size: var(--font-ui-small);
+  gap: var(--size-2-1);
+  line-height: var(--line-height-tight);
+  min-height: 44px;
+  padding: var(--size-2-2);
+  text-align: left;
+}
+
+.visimark-row-main:hover {
+  background: var(--background-modifier-hover);
+}
+
+.visimark-row-where {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.visimark-row-hint {
+  color: var(--text-muted);
+  flex: 1 0 100%;
+  font-size: var(--font-ui-smaller);
+  margin: 0;
+  padding: 0 var(--size-2-2);
+}
+
+.visimark-repair {
+  flex: 0 0 auto;
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/*
+ * `:focus-visible`, not `:focus`: a pointer press should not leave a ring
+ * behind, and a keyboard user must never lose track of where they are.
+ */
+.visimark-row-main:focus-visible,
+.visimark-repair:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
+}
+
+/* --- the vault sweep (v1 row 8) ------------------------------------------- */
+
+.visimark-sweep {
+  padding: var(--size-4-2);
+}
+
+.visimark-sweep-status {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-4-2);
+  justify-content: space-between;
+  padding-bottom: var(--size-4-2);
+}
+
+/*
+ * 44px, like every other target in this plugin: the sweep is the one feature
+ * VS Code cannot have, and the reason is that it is used on a phone.
+ */
+.visimark-sweep-cancel,
+.visimark-sweep-again {
+  flex: 0 0 auto;
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.visimark-sweep-cancel:focus-visible,
+.visimark-sweep-again:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
+}
+
+/* --- the infer preview (v1 row 5) ----------------------------------------- */
+
+.visimark-infer-lead {
+  margin-top: 0;
+}
+
+/*
+ * The block is shown as it will appear, so it is typeset as code and allowed
+ * to scroll rather than wrap: a rule that wrapped would read as two rules.
+ */
+.visimark-infer-block {
+  background: var(--code-background);
+  border-radius: var(--radius-s);
+  font-size: var(--font-smaller);
+  margin: var(--size-4-2) 0;
+  overflow-x: auto;
+  padding: var(--size-4-2);
+}
+
+.visimark-infer-note {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.visimark-infer-buttons {
+  display: flex;
+  gap: var(--size-4-2);
+  justify-content: flex-end;
+  margin-top: var(--size-4-4);
+}
+
+.visimark-infer-buttons button {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.visimark-infer-buttons button:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
+}
+
+/* --- Explain and Evaluate (v1 row 4) -------------------------------------- */
+
+.visimark-explain-rule {
+  background: var(--code-background);
+  border-radius: var(--radius-s);
+  font-size: var(--font-smaller);
+  margin: 0 0 var(--size-4-3);
+  overflow-x: auto;
+  padding: var(--size-4-2);
+}
+
+.visimark-explain-value {
+  font-size: var(--font-ui-medium);
+  margin: 0 0 var(--size-4-2);
+}
+
+.visimark-explain-inputs {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  margin: 0 0 var(--size-4-1);
+}
+
+/*
+ * A description list, so a screen reader reads each name with its value rather
+ * than as two unrelated columns.
+ */
+.visimark-values {
+  display: grid;
+  gap: var(--size-2-2) var(--size-4-3);
+  grid-template-columns: auto 1fr;
+  margin: 0;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.visimark-value-name {
+  color: var(--text-muted);
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-small);
+  margin: 0;
+}
+
+.visimark-value-value {
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-small);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.visimark-values-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--size-4-4);
+}
+
+.visimark-values-actions button {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.visimark-values-actions button:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
+}
+
+/* --- provenance and staleness (v1 row 2) ---------------------------------- */
+
+/*
+ * **A computed value is marked, not coloured.** v1 constraint 6 of #176 is
+ * that audience B does not read exit codes, and a red number is the same
+ * sentence in another alphabet — it says "error" to someone who has been
+ * trained by build logs and says "something is wrong with my document" to
+ * someone who has not. A number that VisiMark works out is not wrong; it is
+ * *derived*, which is a fact about where it came from.
+ *
+ * So the mark is a hairline under the value, in the theme's own muted colour:
+ * enough to see when looking, invisible when reading. The same treatment a
+ * dictionary gives a cross-reference.
+ */
+.visimark-computed {
+  border-bottom: 1px solid var(--text-faint);
+  text-decoration: none;
+}
+
+/*
+ * A value that disagrees with its formula gets a *second* line rather than a
+ * different colour — it is more of the same signal, which is what it is: the
+ * value is derived, and the derivation no longer matches. The findings view
+ * is where the sentence explaining it lives.
+ */
+.visimark-disagrees {
+  border-bottom-style: double;
+  border-bottom-width: 3px;
+  border-bottom-color: var(--text-muted);
+}
+
+/*
+ * A marked value answers when asked — a hover on the desktop, a tap anywhere,
+ * because a phone has no hover (v1 row 3). `cursor: help` is the one hint
+ * that it will, since the mark itself is quiet by design.
+ */
+.visimark-computed[data-vmark] {
+  cursor: help;
+}
+
+/*
+ * A tap target inside a sentence cannot be 44px tall without moving the line
+ * it is in, so the padding goes sideways and the height comes from the line
+ * itself. This is the one place in the plugin where the 44px rule is met by
+ * the surrounding text rather than by the element.
+ */
+.visimark-computed[data-vmark] {
+  padding-inline: var(--size-2-1);
+}
+
+.visimark-computed[data-vmark]:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
+}
