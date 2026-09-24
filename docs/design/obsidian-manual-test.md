@@ -1,12 +1,21 @@
 # Obsidian: a manual test scenario
 
-**Status of the thing under test.** There is no Obsidian plugin. `editors/`
-contains `vscode` and nothing else, and no file under `packages/` or
-`editors/` mentions Obsidian. Part 2 of this document cannot be run yet.
+**Status of the thing under test.** `editors/obsidian` exists, builds, and
+implements **all twelve of v1's rows**. Part 2 is runnable end to end.
 
-**Part 1 can be run right now, and should be run before the fork-B decision on
-[#176](https://github.com/michal-niedzwiedzki/visimark/issues/176).**
-It needs no plugin, no build and no code — only Obsidian and this repository.
+What a machine asserts and what it cannot is set out in the table at the head
+of Part 2. The short version: the questions that are about a *document* are
+tested against the engine and the CLI, and the questions that are about a
+*screen* are not tested at all. §2.2, §2.5 and §2.11 are where that gap is
+widest.
+
+**Part 1 has been run** — on 2026-09-23, against Obsidian 1.13.7 on desktop and
+Android, before the fork-B decision on
+[#176](https://github.com/michal-niedzwiedzki/visimark/issues/176), as that
+decision required. The results are in *Recording Part 1* below and in
+`visimark-design.md` §16. It is kept runnable, and is worth re-running against
+a new Obsidian release: it needs no plugin, no build and no code — only
+Obsidian and this repository.
 It pays off a debt the design doc has carried since it was written:
 `visimark-design.md` §16 records that **Obsidian was never tested**, and that
 the belief it hides HTML comments in reading view "is unverified and no
@@ -182,13 +191,29 @@ actually encounters — is unaffected. The result is recorded in
 
 ## Part 2 — the v1 plugin acceptance script
 
-**Not runnable yet.** This is the script to run against the first
-`editors/obsidian` build, written now so the acceptance bar is set before the
-implementation rather than after it. Each section names the v1 row from #176
-that it accepts, and each states a single pass condition.
+**All of it is runnable.** v1's twelve rows are built, so every section below
+is a test somebody can perform rather than a bar set for later. This is the
+script written *before* the implementation, so the acceptance bar was set
+first; each section names the v1 row from #176 that it accepts and states a
+single pass condition.
 
-Run every section in **Restricted Mode with only the VisiMark plugin
-enabled**, on desktop and on a phone.
+The table records which row made each section runnable, and **how much of it a
+machine already asserts** — because the rows where a machine asserts little or
+nothing are the ones that most need a person.
+
+| Section | Row | Asserted by a machine | Left to a person |
+|---|---|---|---|
+| §2.1 activation, status and ribbon | constraint 4, row 12 | the gate's predicate, and every status state's wording | that the bar appears, reads right, and opens the findings view |
+| §2.2 provenance and staleness | row 2 | *where* every mark goes, and that nothing uncomputed is marked | **everything about what is on screen**, in both renderers |
+| §2.3 hover and tap | row 3 | the line's content — formula, result, inputs | the gesture, and that a cell answers for *that* cell |
+| §2.4 the five commands | row 4 | Explain's caret resolution; Format's plan | the palette, the dialogs, the presses |
+| §2.5 nothing is written unbidden | constraint 3 | — | **all of it**, and on mobile, where an autosave is easiest to trigger |
+| §2.6 format, declined artifact | rows 6–7 | the repair plan, and that it converges on `fmt` | format-on-save, which is still row 7 |
+| §2.7 `infer` on a pasted table | row 5 | that no existing byte is rewritten, by reconstruction | the preview, and the insertion landing where the plan said |
+| §2.8 the vault sweep | row 8 | this section's own fixture, note for note | the phone: does it stay responsive, and does **Stop** stop it |
+| §2.9 the plugin API | row 9 | every name compared against `eval --get` | that the object is there and nothing was reached past |
+| §2.10 templates | row 10 | zero findings, and no Obsidian-only syntax | the insertion not changing the bytes |
+| §2.11 portability, run last | all | — | **all of it, and it outranks every section above** |
 
 ### 2.1 Activation is opt-in per note — v1 constraint 4
 
@@ -212,7 +237,24 @@ enabled**, on desktop and on a phone.
   constraint-1 violation and a failed acceptance, whatever it looks like in
   Obsidian.
 - **Audience-B check (v1 constraint 6):** no red, no `STALE`, no
-  "1 problem", no exit code anywhere in the UI.
+  "1 problem", no exit code anywhere in the UI. The mark is a hairline under
+  the value and a doubled line when it disagrees — deliberately not a colour,
+  because a red number says *error* to someone trained by build logs and
+  *something is wrong with my document* to someone who has not been. Judge
+  whether it is findable when looked for and invisible when reading; that is
+  the whole of the design and it is the one thing no test can answer.
+- **The mapping is the part most likely to be wrong**, and it is different in
+  each renderer. Live Preview decorates source offsets, which cannot land on
+  the wrong value. Reading mode addresses a table cell by its grid position
+  but finds a prose value by matching its text among elements of its own kind —
+  so the case to try deliberately is **two identical bold numbers in one
+  paragraph where only one is anchored**. The mark landing on the other one is
+  the known limit; anything else is a defect.
+- **Try a note whose CSV import is missing.** Live Preview decorates without
+  waiting for the vault snapshot, so it checks a note whose imports are
+  unresolved. The values must not be marked as disagreeing — an unresolved
+  import is `IMPORT`, not `STALE` — and the findings view, which does wait,
+  must say what is wrong.
 
 ### 2.3 Hover and tap — v1 row 3
 
@@ -225,14 +267,37 @@ enabled**, on desktop and on a phone.
   `bun run packages/visimark/src/cli/main.ts explain docs/example-invoice.md`
   prints for the same binding.
 
+  The line's *content* — the formula, the result and what it reads, with a
+  cross-sheet input named — is asserted in
+  `editors/obsidian/test/hover.test.ts`, against the same API row 9 compares
+  to the engine. So a failure here is about the **gesture**: the wrong element
+  answered, or none did.
+- **A cell must say what that cell comes to**, not what its whole column does.
+  Hover the four `Net` cells in `example-invoice.md` and expect four different
+  numbers. This is the one thing a column's explanation gets wrong if the row
+  is not carried through, and it looks plausible when it is wrong.
+- **Tap, do not hover, on the phone.** There is no hover there, which is why
+  the tap opens the same dialog Explain does rather than a tooltip. A tap on an
+  ordinary number must do nothing at all.
+
 ### 2.4 The five commands — v1 row 4
 
-For each of Check, Format, Infer, Evaluate, Explain, run the command from the
+For each of **Check this note**, **Format this note**, **Infer the formulas**,
+**Evaluate this note** and **Explain this value**, run the command from the
 palette on `example-invoice.md` and on `example-invoice-drift.md`.
 
 - **Pass condition:** each result matches the CLI's result for the same file,
   run from the repository. This is the acceptance for "one engine, thin
   client", and it is a diff, not an impression.
+- **Explain** needs the caret on a value first. Try all three places a caret
+  plausibly is: on an anchored number in a sentence, inside the
+  `<!--vmark=…-->` comment behind it, and on the line that declares the name.
+  All three answer with the same name, and `at-cursor.test.ts` pins that. A
+  caret in ordinary prose must say to move it rather than explain something
+  nearby.
+- **Format** on the drifted note repairs every value and writes **no chart**;
+  the stale-chart row stays in the findings view. That is the
+  `--no-artifacts` contract, and §2.6 is where it is checked properly.
 
 ### 2.5 Nothing is written without an explicit act — v1 constraint 3
 
@@ -258,29 +323,61 @@ palette on `example-invoice.md` and on `example-invoice-drift.md`.
 - Paste a plain Markdown table with a visibly arithmetic column — or use
   `example-quote-plain.md`, the repository's worked example of a document with
   nothing wired up — and run Infer.
-- **Pass:** a preview of what would be inserted, before anything is inserted.
+- Run **VisiMark: Work out the formulas**.
+- **Pass:** a preview of what would be inserted, before anything is inserted —
+  the block as it will appear, not a summary of it.
 - **Pass condition:** accepting the preview inserts a ```` ```vmark ```` block
   and rewrites **no existing byte** of the table. Verify with `git diff`, not
   by eye: `planInfer` only inserts.
+
+  `editors/obsidian/test/infer-plan.test.ts` asserts this more strongly than a
+  diff can — it deletes exactly the inserted ranges out of the result and
+  requires the original document back, byte for byte — and asserts that
+  accepting it on `example-quote-plain.md` leaves a document `check` reports
+  **zero** findings in. So a failure here means the insertion, not the plan:
+  the editor put the text somewhere else than the plan said.
+- **Also worth doing:** select one table in a note that has two, and run it
+  again. Only the selected table should be proposed for — and selecting a
+  single character inside a table should propose for the whole of it.
 
 ### 2.8 The vault sweep — v1 row 8
 
 - Copy `example-invoice-drift.md` to three different folders in the vault under
   three names, and leave a dozen ordinary notes around them.
-- Run the sweep. **Pass:** exactly the three disagreeing notes are listed;
-  no ordinary note appears; the clean `example-invoice.md` does not appear.
+- Run **VisiMark: Look through the vault**. **Pass:** exactly the three
+  disagreeing notes are listed; no ordinary note appears; the clean
+  `example-invoice.md` does not appear.
+
+  That fixture is asserted, note for note, by
+  `editors/obsidian/test/sweep.test.ts`. Running it here is worth doing anyway
+  — it is the only place the real vault, the real reader and the real pane meet
+  — but a failure means the wiring, not the sweep.
 - **Pass condition:** the list is reachable and legible on the phone, since
   this is the row that justifies fork B over the VS Code extension.
+- **The part only a phone can answer.** The sweep hands the thread back every
+  fifty notes, and the numbers that say it needs to are a desktop measurement
+  extrapolated (spec §2.4). On the largest vault available, and on the phone:
+  does the app keep answering taps while the count moves, and does **Stop**
+  stop it? Record the vault's note count and what it felt like. If it is not
+  acceptable, that is the first real evidence for v1.1 row 13's index, and it
+  belongs on that row rather than being absorbed here.
 
 ### 2.9 The plugin API — v1 row 9
 
 - With the console open, call the documented API for a value in
   `example-invoice.md` — for instance `lines.gross_total`.
 - **Pass condition:** the answer equals
-  `bun run packages/visimark/src/cli/main.ts eval docs/example-invoice.md --get lines.gross_total`,
-  and the call is made against the documented surface with no reach into
-  plugin internals. This is spike check 2 shipped, so it is accepted the way
-  the spike states it: a caller that sees only the types.
+  `bun run packages/visimark/src/cli/main.ts eval docs/example-invoice.md --get lines.gross_total`
+  — which prints `28659`, not `28659.00`: the width is the cell's and the value
+  is the value — and the call is made against the documented surface with no
+  reach into plugin internals. This is spike check 2 shipped, so it is accepted
+  the way the spike states it: a caller that sees only the types.
+
+  The arithmetic half is asserted in `editors/obsidian/test/api.test.ts`,
+  against the engine, for every name in the document rather than the one.
+  **What only this console can check is the second half**: that
+  `app.plugins.plugins["visimark"].api` is there, that `apiVersion` is `1`, and
+  that nothing you had to reach past it to get the answer.
 
 ### 2.10 Templates — v1 row 10
 

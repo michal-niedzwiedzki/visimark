@@ -105,6 +105,39 @@ rather than by a user. The policy and how it is enforced are in
 `engines.node` floor in every published manifest is asserted against the live
 LTS by `ci.yml`'s `node-support-policy` job, so it cannot quietly rot.
 
+### Building the Obsidian plugin and side-loading it
+
+`editors/obsidian` is a client of the engine rather than of the language
+server, and it is not published to npm or to the community registry yet. Build
+it and copy three files into a vault:
+
+```console
+$ bun run --filter visimark-obsidian build
+$ mkdir -p "$VAULT/.obsidian/plugins/visimark"
+$ cp editors/obsidian/{manifest.json,main.js,styles.css} "$VAULT/.obsidian/plugins/visimark/"
+```
+
+Then enable it under **Settings → Community plugins**. `main.js` is a build
+artifact and is gitignored.
+
+Two things about this package are stricter than the rest of the repository, and
+both are enforced by `editors/obsidian/test/bundle.test.ts`:
+
+- **No `node:` specifier may reach `main.js`.** Not one — the playground's
+  `node:path` allowance does not transfer, because Obsidian mobile is not
+  Electron and has no Node to fall back on. The build substitutes
+  `editors/obsidian/src/browser-path.ts`.
+- **The plugin enters the engine at `packages/visimark/src/browser.ts`**, its
+  browser-safe entry point, and never at `src/index.ts` — which reaches
+  `node:fs`, `node:crypto`, `node:module` and `node:url` and cannot be bundled
+  for a browser at all.
+
+The plugin's version lives in `manifest.json` only, and is deliberately **not**
+one of the numbers `ci.yml`'s version-agreement step keeps in lockstep: an
+Obsidian release goes through a human registry review and must not be coupled
+to an engine patch. `scripts/check-changelog-entries.ts` holds it honest
+instead.
+
 ### Running the MCP server from your working tree
 
 ```console
