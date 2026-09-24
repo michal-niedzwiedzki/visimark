@@ -118,17 +118,47 @@ export class LiveVaultIndex implements VaultIndex {
     };
   }
 
+  /**
+   * Every path `remove`/`scheduleRecheck` touches while non-null — a scan is
+   * in flight and about to call `seed()`, which would otherwise clobber
+   * whatever any of those calls was about to conclude. `null` the rest of
+   * the time, which is also how `remove`/`scheduleRecheck` know there is
+   * nothing to record.
+   */
+  private touched: Set<string> | null = null;
+
+  /**
+   * Call before starting a full scan whose result will reach `seed()` —
+   * `main.ts`'s `startAmbientIndex` and `sweep-view.ts`'s `run()` both do.
+   * `sweep()` awaits a read per candidate note, so a vault event can land at
+   * any point during it; without this, that event's effect is either
+   * clobbered by `seed()`'s clear-then-repopulate (if it already landed) or
+   * discarded by `seed()`'s own `epoch` bump (if it was still in flight —
+   * see `recheck`). Every touched path is replayed once `seed()` has
+   * installed the authoritative result, so nothing during the scan is lost,
+   * only deferred.
+   */
+  beginSeed(): void {
+    this.touched = new Set();
+  }
+
   /** Replace the whole index with a real sweep's result — the only way in. */
   seed(result: SweepResult): void {
+    const touched = this.touched;
+    this.touched = null;
     this.epoch++;
     this.entries.clear();
     for (const note of result.notes) this.entries.set(note.path, note);
     this.seededOnce = true;
     this.notify();
+    // 0ms: these are not new events needing a debounce window, they are
+    // events already old enough that the scan they interrupted has finished
+    for (const path of touched ?? []) this.scheduleRecheck(path, 0);
   }
 
   /** A note left the vault, or a rename's old path — drop it, no recheck. */
   remove(path: string): void {
+    this.touched?.add(path);
     this.bump(path);
     this.cancelPending(path);
     if (this.entries.delete(path)) this.notify();
@@ -142,6 +172,7 @@ export class LiveVaultIndex implements VaultIndex {
 
   /** A note was created or modified — recheck it after `DEBOUNCE_MS` of quiet. */
   scheduleRecheck(path: string, delayMs = DEBOUNCE_MS): void {
+    this.touched?.add(path);
     this.cancelPending(path);
     // captured now, not when the timer fires: this is the moment this call
     // supersedes whatever else was pending or in flight for this path
