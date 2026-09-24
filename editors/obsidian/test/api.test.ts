@@ -119,6 +119,23 @@ test("a column's explanation is about the column, not one cell", async () => {
   expect(Array.isArray(e.value)).toBe(true);
 });
 
+test("an input column is named, even though it has no rule of its own", async () => {
+  // `dependencies()` deliberately excludes an input-column resolution from
+  // `deps` ("inputs are leaves" — eval/graph.ts) because it has no binding
+  // for the topological sort to order against. That is not the same as it
+  // being unread: `Qty` and `Rate` are exactly what `Net = Qty * Rate` reads.
+  const e = (await api.explain("example-invoice.md", "lines.Net"))!;
+  expect(e.inputs).toEqual(["lines.Qty", "lines.Rate"]);
+});
+
+test("a cross-sheet column input is qualified, alongside a same-sheet one", async () => {
+  // Amount precision 2 = Share * lines.gross_total — Share is an input
+  // column on #schedule itself; lines.gross_total is a computed scalar on
+  // another sheet. Both are inputs; only one is a dependency edge.
+  const e = (await api.explain("example-invoice.md", "schedule.Amount"))!;
+  expect(e.inputs).toEqual(["schedule.Share", "lines.gross_total"]);
+});
+
 test("a document-scope constant resolves without a sheet", async () => {
   const e = (await api.explain("example-invoice.md", "vat"))!;
   expect(e.kind).toBe("scalar");

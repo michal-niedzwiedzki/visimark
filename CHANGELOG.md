@@ -70,12 +70,15 @@
   describes as replacing *an LLM reads Markdown and calculates* with *an LLM
   asks, and VisiMark calculates*.
 
-  `get` returns the same answer `visimark eval --get` prints, because it goes
-  through the same function rather than a second rendering; the test compares
-  every name in the document against the engine, not just one. Values are
-  strings — for exactness, since the engine's arithmetic is decimal and a
-  round trip through a JavaScript number is a round trip through binary
-  floating point.
+  `get` and `evaluate` return the CLI's own `evalValues` — a string for a
+  scalar, an array of strings (one per row) for a column — rather than a
+  second rendering; the test compares every name in the document against the
+  engine, not just one. A scalar's string is byte-identical to what
+  `visimark eval --get` prints; a column is not, since that command joins its
+  rows with `", "` for a terminal and this API leaves the join to the caller.
+  Values are never numbers — for exactness, since the engine's arithmetic is
+  decimal and a round trip through a JavaScript number is a round trip
+  through binary floating point.
 
 - **The Obsidian plugin can work out the formulas behind a pasted table**
   (issue #217, v1 row 5 of #176) — the on-ramp, and the row #176 expects to be
