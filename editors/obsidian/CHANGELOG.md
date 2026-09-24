@@ -9,6 +9,16 @@ Each entry says which engine version the bundle carries.
 
 ## Unreleased
 
+- **CSV import stamping through the vault, proven rather than built** (v1.1
+  row 16 of [#176](https://github.com/michal-niedzwiedzki/visimark/issues/176)).
+  The roadmap recorded this row as blocked on the write port; it was not — an
+  import's `at="sha256:…"` stamp is an edit to the note's own bytes, which
+  `format()` has applied unconditionally since v1 row 7. What was unverified
+  was the read half: `editors/obsidian/test/csv-import.test.ts` proves a
+  `from <path>` declaration relative to the importing note's own vault
+  folder resolves and repairs end to end, stamp and re-stamp alike. No
+  production code changed; see #254.
+
 - **Format can regenerate a stale or missing chart** (v1.1 row 14 of
   [#176](https://github.com/michal-niedzwiedzki/visimark/issues/176)), behind
   a new setting, **Write chart artifacts**, off by default. On, Format (the

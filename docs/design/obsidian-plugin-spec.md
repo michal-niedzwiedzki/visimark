@@ -731,12 +731,20 @@ ones worth naming because someone will ask:
 - **The incremental vault index — landed, v1.1 row 13.** `vault-index.ts`'s
   `LiveVaultIndex`, gated on the existing "Sweep the vault on open" setting.
   See #249.
-- **CSV import writes.** Same write primitive as chart generation, same
-  remaining gap — the *read* half works today through §2.6; only stamp
-  insertion (v1.1 row 16) is unbuilt. #176's v1 constraint 2 — "anything
-  needing `node:fs` is desktop-only" — is stricter than the engine requires
-  and is not adopted here: the blocker was, and until row 16 lands still is,
-  a missing *caller*, not a runtime.
+- **CSV import stamping through the vault — landed, v1.1 row 16, and it needed
+  no new code.** `docs/WIP/OBSIDIAN-FEATURES.md`'s row 16 recorded this as
+  "blocked on the same write port as row 14 for stamp insertion"; that
+  premise did not hold. An import's `at="sha256:…"` stamp is a plain edit to
+  the *document's own bytes* (`write/fmt.ts`'s `planFmt`), never a write to
+  the CSV file — [`visimark-design.md`](../visimark-design.md) already says
+  so — so it was always inside `report.allRepairs`, which `format()` has
+  applied through one unconditional `editor.transaction` since v1 row 7,
+  with no dependence on the write port §247/§252 added for charts. What was
+  actually unverified was the *read* half reaching all the way through:
+  `editors/obsidian/test/csv-import.test.ts` (#254) proves a `from <path>`
+  declaration, relative to the importing note's own folder inside the vault,
+  resolves and repairs end to end. #176's v1 constraint 2 — "anything
+  needing `node:fs` is desktop-only" — was never the actual blocker here.
 - **Publishing scalars to YAML properties** (fork C as a feature of B),
   **cross-note transclusion**, **the scenario panel**, **anything that adds
   Obsidian-only syntax**.
