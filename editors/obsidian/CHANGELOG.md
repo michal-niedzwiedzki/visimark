@@ -9,6 +9,17 @@ Each entry says which engine version the bundle carries.
 
 ## Unreleased
 
+- **A vault write primitive, not yet wired to any command** — `vault.ts`'s
+  `vaultWriter`, the plugin's first call to `vault.modify`/`vault.create`.
+  Prerequisite for v1.1 rows 14 (chart artifacts) and 16 (CSV import stamps)
+  of [#176](https://github.com/michal-niedzwiedzki/visimark/issues/176);
+  nothing in the plugin calls it yet, so there is no user-visible change and
+  no new manual-test step. Built on the engine's new `WriterPort`
+  (`packages/visimark`'s `fs/writer.ts`) in the sense that both exist for the
+  same reason, not by implementing it — `WriterPort` is synchronous and a
+  vault write cannot be, the same asymmetry `snapshot.ts` already documents
+  for the read side.
+
 - **Format on explicit save now fires on a real Ctrl/Cmd+S keystroke**
   (issue #243). The listener was bound on each window's `Document` at the
   default bubble phase; Obsidian's own keymap binds `keydown` on `Window` at
