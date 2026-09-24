@@ -19,6 +19,12 @@ export class ExplainModal extends Modal {
   constructor(
     app: App,
     private readonly explanation: Explanation,
+    /**
+     * Which row of a column value to show, when the caller knows — a tap on
+     * one cell, rather than the Explain command's caret, which has no row of
+     * its own and means the whole column. Ignored for a scalar.
+     */
+    private readonly row?: number,
   ) {
     super(app);
   }
@@ -32,7 +38,11 @@ export class ExplainModal extends Modal {
       .createEl("pre", { cls: "visimark-explain-rule" })
       .createEl("code", { text: e.source });
 
-    const value = Array.isArray(e.value) ? e.value.map((v) => v ?? "?").join(", ") : e.value;
+    const value = !Array.isArray(e.value)
+      ? e.value
+      : this.row !== undefined
+        ? (e.value[this.row] ?? "?")
+        : e.value.map((v) => v ?? "?").join(", ");
     contentEl.createEl("p", {
       cls: "visimark-explain-value",
       text:

@@ -4,14 +4,15 @@ import {
   Plugin,
   TFile,
   debounce,
+  displayTooltip,
   setTooltip,
   type Editor,
   type WorkspaceLeaf,
 } from "obsidian";
-import { check } from "visimark";
+import { check, evalValues } from "visimark";
 import { FINDINGS_VIEW, FindingsView } from "./findings-view.js";
 import { hasVmarkBlock } from "./gate.js";
-import { createApi, type VisiMarkApi } from "./api.js";
+import { createApi, explainBinding, type VisiMarkApi } from "./api.js";
 import { nameAt } from "./at-cursor.js";
 import { ExplainModal } from "./explain-modal.js";
 import { offerInfer } from "./infer-modal.js";
@@ -28,27 +29,27 @@ import { ValuesModal } from "./values-modal.js";
 import { vaultSweepRead } from "./vault.js";
 
 /**
- * VisiMark for Obsidian — v1 row 1 of #176: the browser bundle, and activation
- * gated on a ```vmark fence.
+ * VisiMark for Obsidian — `onload` wires up every row of v1 (#176) that
+ * needs a plugin-lifetime registration: the browser bundle and activation
+ * gate (row 1), the reading-mode and Live Preview decorations (row 2), the
+ * hover/tap listeners (row 3), the five commands (row 4), the templates (row
+ * 10), the findings and sweep panes (rows 6, 8), the public API (row 9) and
+ * the status bar plus ribbon (row 12). `noteFor`, `refreshState` and
+ * `describe`/`explainElement` all call `check`, through a `ReaderPort` from
+ * `snapshot.ts` — row 1's "nothing here needs one" stopped being true once
+ * the rows that read a document's imports landed.
  *
- * **What this row ships, and what it deliberately does not.** The package, the
- * build that produces one `main.js` with no `node:` specifier in it, the
- * activation gate, and exactly one witness that the gate flipped. Provenance
- * decorations (row 2), the hover popover (row 3), the five commands (row 4),
- * the findings view (row 6) and the ribbon (row 12) are each their own row and
- * are not here. Nothing in this file calls `check`, so nothing here needs a
- * `ReaderPort`; `locate` is the only engine entry point row 1 touches.
- *
- * **The witness.** `docs/design/obsidian-manual-test.md` §2.1 has two halves.
- * The negative half — an ordinary note shows nothing — is satisfied by a
- * plugin that draws nothing at all, which is not worth much. The positive half
- * is one line: "Open `example-invoice.md`. Pass: VisiMark activates." Every
- * surface that could show that belongs to a later row, so this row ships the
- * smallest thing that makes §2.1 runnable whole: a status bar item that reads
- * `VisiMark` when the gate is open and is not rendered when it is not. It
- * reports the gate and nothing else — no verdict, no count, no engine call
- * beyond the gate's own parse. Row 12 adds the ribbon and the checked /
- * findings states on top of this element rather than inventing one.
+ * **The status bar item is the witness row 1 shipped, and row 12 grew into a
+ * readout.** `docs/design/obsidian-manual-test.md` §2.1 has two halves. The
+ * negative half — an ordinary note shows nothing — is satisfied by a plugin
+ * that draws nothing at all, which is not worth much. The positive half is
+ * one line: "Open `example-invoice.md`. Pass: VisiMark activates." Row 1
+ * shipped the smallest thing that makes §2.1 runnable whole: a status bar
+ * item that read `VisiMark` when the gate was open and was not rendered when
+ * it was not — the gate and nothing else, no verdict, no count. Row 12 kept
+ * the same element and gave it the checked / findings states `statusFor`
+ * renders, plus the click-through to the findings view; the ribbon is a
+ * second, unconditional entry point next to it, not a state of it.
  *
  * **Why the item is hidden rather than removed.** `addStatusBarItem()` has no
  * inverse, and calling it again on every activation would append a second
@@ -60,6 +61,14 @@ import { vaultSweepRead } from "./vault.js";
  */
 export default class VisiMarkPlugin extends Plugin {
   private status: HTMLElement | null = null;
+
+  /**
+   * Marked elements a hover fetch is in flight for — separate from
+   * `data-vmark-hovered`, which means "answered", not "asked". Without this,
+   * the pointer lingering a moment sends a second `describe` before the
+   * first resolves.
+   */
+  private readonly hoverPending = new WeakSet<HTMLElement>();
 
   /**
    * v1 row 9 — the public API, reached as
@@ -78,9 +87,9 @@ export default class VisiMarkPlugin extends Plugin {
   /**
    * `editor-change` fires per keystroke and the gate is a full parse of the
    * note — `locate` runs remark over the whole document. Debounced so that
-   * typing costs one parse per pause rather than one per character. `true`
-   * is leading-edge: the first keystroke after a pause is answered at once,
-   * which is what makes adding a fence feel immediate.
+   * typing costs one parse per pause rather than one per character. The
+   * third argument is `resetTimer`, not leading-edge: each keystroke resets
+   * the 400ms timer, and `refresh` runs once, after typing stops.
    */
   private readonly refreshSoon = debounce(() => this.refresh(), 400, true);
 
@@ -95,11 +104,6 @@ export default class VisiMarkPlugin extends Plugin {
       callback: () => void this.openFindings(),
     });
 
-    // v1 row 8. **Not gated**, and for a different reason than the template
-    // commands: §2.3's gate is a question about the *active note*, and a
-    // vault-wide scan does not have one. Refusing to look through the vault
-    // because the note in front of you happens to have no block would be the
-    // gate answering a question it was not asked.
     // v1 row 4. The five verbs the CLI has, each scoped to the active note.
     // Named "<verb> this note" rather than the bare verb: the palette is
     // searchable by the word someone read in the documentation *and* reads as
@@ -139,6 +143,11 @@ export default class VisiMarkPlugin extends Plugin {
       },
     });
 
+    // v1 row 8. **Not gated**, and for a different reason than the template
+    // commands: §2.3's gate is a question about the *active note*, and a
+    // vault-wide scan does not have one. Refusing to look through the vault
+    // because the note in front of you happens to have no block would be the
+    // gate answering a question it was not asked.
     this.registerView(SWEEP_VIEW, (leaf: WorkspaceLeaf) => new SweepView(leaf));
     this.addCommand({
       id: "sweep",
@@ -161,12 +170,25 @@ export default class VisiMarkPlugin extends Plugin {
     //
     // Hover answers on the desktop and a tap answers everywhere, because a
     // phone has no hover — and #176's row 3 is "hover / tap" for that reason.
-    this.registerDomEvent(document, "pointerover", (event) => {
+    // `pointerover` fires for a touch tap too (as `pointerType: "touch"`), and
+    // `click` follows it; without the pointerType check a tap would arm a
+    // tooltip nobody can dismiss *and* open the dialog, which the manual test
+    // says a tap must not do.
+    this.registerDomEvent(document, "pointerover", (event: PointerEvent) => {
+      if (event.pointerType !== "mouse") return;
       const el = target(event);
-      if (el === null || el.hasAttribute("data-vmark-hovered")) return;
-      el.setAttribute("data-vmark-hovered", "");
+      if (el === null || el.hasAttribute("data-vmark-hovered") || this.hoverPending.has(el)) return;
+      this.hoverPending.add(el);
       void this.describe(el).then((line) => {
-        if (line !== null) setTooltip(el, line, { placement: "top" });
+        this.hoverPending.delete(el);
+        // a failed or empty answer is retried on the next hover rather than
+        // marked as answered — `setTooltip` only primes Obsidian's own
+        // mouseover-driven popover for a *future* hover, which is why
+        // `displayTooltip` also fires it now, on the hover that fetched it
+        if (line === null) return;
+        el.setAttribute("data-vmark-hovered", "");
+        setTooltip(el, line, { placement: "top" });
+        displayTooltip(el, line, { placement: "top" });
       });
     });
     this.registerDomEvent(document, "click", (event) => {
@@ -174,9 +196,20 @@ export default class VisiMarkPlugin extends Plugin {
       if (el === null) return;
       void this.explainElement(el);
     });
+    this.registerDomEvent(document, "keydown", (event: KeyboardEvent) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      const el = target(event);
+      if (el === null) return;
+      event.preventDefault();
+      void this.explainElement(el);
+    });
 
     this.status = this.addStatusBarItem();
     this.status.addClass("visimark-status");
+    // hidden from creation: refresh() only runs once onLayoutReady fires, and
+    // an empty, unhidden item between now and then is the visible gap §2.1's
+    // pass condition rules out on every desktop startup
+    this.status.addClass("visimark-hidden");
     this.status.setAttribute("aria-live", "polite");
     // v1 row 12: the status bar is how the findings view is found at all, so
     // it is the way in rather than only a readout.
@@ -198,16 +231,6 @@ export default class VisiMarkPlugin extends Plugin {
       "Sweep the vault with VisiMark",
       () => void this.openSweep(),
     );
-
-    // v1 row 6. The view owns its own refreshing — it is a Component, so its
-    // listeners die with it — which is also why this file keeps no reference
-    // to any instance of it.
-    this.registerView(FINDINGS_VIEW, (leaf: WorkspaceLeaf) => new FindingsView(leaf));
-    this.addCommand({
-      id: "check",
-      name: "Check this note",
-      callback: () => void this.openFindings(),
-    });
 
     // v1 row 10. One command per template rather than a picker: four palette
     // entries are searchable by name, and a modal is UI that nothing can test.
@@ -262,10 +285,14 @@ export default class VisiMarkPlugin extends Plugin {
   /**
    * **Format** — repair everything `fmt` would repair, artifacts declined.
    *
-   * The same plan the findings view offers a row at a time, applied whole.
-   * v1 constraint 3: an explicit command, never a keystroke or a timer.
+   * The same plan the findings view offers a row at a time, applied whole,
+   * as one `editor.transaction` — the buffer has several non-adjacent edits
+   * (cells and anchors sit apart), and a loop of `replaceRange` would be one
+   * undo step per edit rather than the one explicit act v1 constraint 3
+   * promises.
    */
   private async format(editor: Editor): Promise<void> {
+    const source = editor.getValue();
     const gated = await this.noteFor(editor);
     if (gated === null) return;
     const { report } = gated;
@@ -273,20 +300,30 @@ export default class VisiMarkPlugin extends Plugin {
       new Notice("Everything in this note already agrees with its formulas.");
       return;
     }
-    const ordered = [...report.allRepairs].sort((a, b) => b.start - a.start);
-    for (const edit of ordered) {
-      editor.replaceRange(edit.text, editor.offsetToPos(edit.start), editor.offsetToPos(edit.end));
+    // `noteFor` awaits a vault read; a keystroke in that gap would make these
+    // offsets describe a buffer that no longer exists
+    if (editor.getValue() !== source) {
+      new Notice("This note changed while it was being checked. Try Format again.");
+      return;
     }
-    const n = ordered.length;
-    new Notice(`Repaired ${n} ${n === 1 ? "value" : "values"}. No chart was written.`);
+    editor.transaction({
+      changes: report.allRepairs.map((edit) => ({
+        from: editor.offsetToPos(edit.start),
+        to: editor.offsetToPos(edit.end),
+        text: edit.text,
+      })),
+    });
+    // "repair", not "value": allRepairs can carry a splice with no value of
+    // its own, such as an import-stamp insert (report.ts)
+    const n = report.allRepairs.length;
+    new Notice(`Applied ${n} ${n === 1 ? "repair" : "repairs"}. No chart was written.`);
   }
 
   /** **Evaluate** — every name in the note and what it works out to. */
   private async evaluate(editor: Editor): Promise<void> {
-    if ((await this.noteFor(editor)) === null) return;
-    const file = this.app.workspace.getActiveViewOfType(MarkdownView)?.file;
-    if (file === null || file === undefined) return;
-    new ValuesModal(this.app, await this.api.evaluate(file)).open();
+    const gated = await this.noteFor(editor);
+    if (gated === null) return;
+    new ValuesModal(this.app, evalValues(gated.result)).open();
   }
 
   /** **Explain** — the one name the caret is on. */
@@ -298,9 +335,7 @@ export default class VisiMarkPlugin extends Plugin {
       new Notice("Put the cursor on a value VisiMark works out, and ask again.");
       return;
     }
-    const file = this.app.workspace.getActiveViewOfType(MarkdownView)?.file;
-    if (file === null || file === undefined) return;
-    const explanation = await this.api.explain(file, name);
+    const explanation = explainBinding(gated.model, gated.result, name);
     if (explanation === null) {
       new Notice(`Nothing in this note is called ${name}.`);
       return;
@@ -311,6 +346,12 @@ export default class VisiMarkPlugin extends Plugin {
   /**
    * The gate, the read and the check that every note-scoped command starts
    * with — §2.3, and the notice it answers with when the gate is shut.
+   *
+   * **Built from the live buffer, never re-read from the vault.** Format,
+   * Evaluate and Explain all act on what `editor.getValue()` holds right now,
+   * which can be ahead of the last save. Routing Evaluate or Explain through
+   * `this.api` instead would answer from `vault.cachedRead` — the saved copy
+   * — and disagree with the buffer on a dirty note.
    */
   private async noteFor(editor: Editor) {
     const source = editor.getValue();
@@ -322,14 +363,32 @@ export default class VisiMarkPlugin extends Plugin {
     const path = file?.path ?? "untitled.md";
     const { model, snapshot } = await readNote(source, path, vaultSweepRead(this.app.vault));
     const doc = { path: snapshot.path, reader: snapshot.reader };
-    return { model, report: reportFor(model, check(model, { doc }), doc) };
+    const result = check(model, { doc });
+    return { model, result, report: reportFor(model, result, doc) };
+  }
+
+  /**
+   * The file a marked element belongs to.
+   *
+   * `data-vmark-path` (set at decoration time — `reading-mode.ts`,
+   * `live-preview.ts`) names the note the mark is actually about. Falling
+   * back to whichever view is globally active would explain the wrong note
+   * for a hover or tap in a background pane, a pinned preview, or a second
+   * split — the active view has no necessary relation to the element under
+   * the pointer.
+   */
+  private fileFor(el: HTMLElement): TFile | null {
+    const path = el.getAttribute("data-vmark-path");
+    if (path === null) return this.app.workspace.getActiveViewOfType(MarkdownView)?.file ?? null;
+    const file = this.app.vault.getAbstractFileByPath(path);
+    return file instanceof TFile ? file : null;
   }
 
   /** The one line a hover shows for a marked value, or `null`. */
   private async describe(el: HTMLElement): Promise<string | null> {
     const name = el.getAttribute("data-vmark");
-    const file = this.app.workspace.getActiveViewOfType(MarkdownView)?.file;
-    if (name === null || file === null || file === undefined) return null;
+    const file = this.fileFor(el);
+    if (name === null || file === null) return null;
     try {
       const explanation = await this.api.explain(file, name);
       return explanation === null
@@ -343,13 +402,24 @@ export default class VisiMarkPlugin extends Plugin {
     }
   }
 
-  /** A tap on a marked value opens the same dialog Explain does. */
+  /**
+   * A tap (or Enter/Space) on a marked value opens the same dialog Explain
+   * does — but scoped to the row that was actually pointed at, when there is
+   * one: a phone has no hover, so this is the only place §2.3's cell-versus-
+   * column distinction can be honoured there.
+   */
   private async explainElement(el: HTMLElement): Promise<void> {
     const name = el.getAttribute("data-vmark");
-    const file = this.app.workspace.getActiveViewOfType(MarkdownView)?.file;
-    if (name === null || file === null || file === undefined) return;
-    const explanation = await this.api.explain(file, name);
-    if (explanation !== null) new ExplainModal(this.app, explanation).open();
+    const file = this.fileFor(el);
+    if (name === null || file === null) return;
+    try {
+      const explanation = await this.api.explain(file, name);
+      if (explanation !== null) {
+        new ExplainModal(this.app, explanation, rowFrom(el.getAttribute("data-vmark-row"))).open();
+      }
+    } catch {
+      new Notice("Could not check this value.");
+    }
   }
 
   /** Open the sweep pane, which starts a scan as it opens. */
@@ -373,28 +443,41 @@ export default class VisiMarkPlugin extends Plugin {
    * gate is answered first and synchronously — that is what keeps a vault of
    * ordinary notes showing nothing at all without waiting for anything.
    */
+  /**
+   * Bumped at the start of every `refresh`. `refreshState` awaits a vault
+   * read, so two requests can be in flight at once — typing during a slow
+   * one, or a leaf change that starts a fresh check before the last one
+   * settles — and comparing the resolved text against a captured `source`
+   * only catches a *later edit to the same note*, not a switch to a
+   * different note whose body happens to be byte-identical (a different
+   * `path`, so a different import resolution) or a failure that outlives the
+   * navigation away from the note that failed. A generation counter, checked
+   * in both branches below, catches all three: only the most recent `refresh`
+   * call is allowed to paint.
+   */
+  private renderId = 0;
+
   private refresh(): void {
     if (this.status === null) return;
+    const id = ++this.renderId;
     const view = this.app.workspace.getActiveViewOfType(MarkdownView);
     const source = view?.getViewData() ?? null;
     if (source === null || !hasVmarkBlock(source)) {
       this.show(HIDDEN);
       return;
     }
-    void this.refreshState(view!, source);
+    void this.refreshState(view!, source, id);
   }
 
-  private async refreshState(view: MarkdownView, source: string): Promise<void> {
+  private async refreshState(view: MarkdownView, source: string, id: number): Promise<void> {
     const path = view.file?.path ?? "untitled.md";
     try {
       const { model, snapshot } = await readNote(source, path, vaultSweepRead(this.app.vault));
       const doc = { path: snapshot.path, reader: snapshot.reader };
-      // the note may have changed while the snapshot was being fetched; the
-      // next refresh will be along, and a stale verdict is worse than none
-      const current = this.app.workspace.getActiveViewOfType(MarkdownView);
-      if (current?.getViewData() !== source) return;
+      if (id !== this.renderId) return; // a newer refresh has started; let it paint instead
       this.show(statusFor(reportFor(model, check(model, { doc }), doc)));
     } catch {
+      if (id !== this.renderId) return;
       this.show(UNKNOWN);
     }
   }
@@ -407,9 +490,12 @@ export default class VisiMarkPlugin extends Plugin {
   }
 }
 
-/** the marked value a pointer event is on, if it is on one */
+/** the marked value an event is on, if it is on one */
 function target(event: Event): HTMLElement | null {
   const node = event.target;
-  if (!(node instanceof HTMLElement)) return null;
-  return node.closest<HTMLElement>("[data-vmark]");
+  // CodeMirror can surface a text node as the event target (a mark's content
+  // rendered directly, with no further wrapping); its element is the parent
+  const el = node instanceof HTMLElement ? node : (node as Node | null)?.parentElement;
+  if (!(el instanceof HTMLElement)) return null;
+  return el.closest<HTMLElement>("[data-vmark]");
 }
