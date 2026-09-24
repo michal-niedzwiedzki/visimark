@@ -40,6 +40,13 @@ export { planInfer, type PlannedInsert } from "./infer/write.js";
 export { writeArtifact } from "./artifact/write.js";
 export type { ArtifactWrite } from "./write/fmt.js";
 export { resolveArtifactPath, type PathResult } from "./artifact/path.js";
+// `readMarker` is pure string parsing — no reader, no I/O — so a host with
+// its own write primitive (the Obsidian plugin's `vaultWriter`) can use it to
+// re-prove a target's ownership immediately before writing, the same check
+// `artifact/write.ts`'s `confirmOwnership` makes against a file descriptor on
+// the Node side. `classify` itself stays unexported: it takes a `ReaderPort`,
+// which is exactly the synchronous, Node-shaped seam a vault cannot satisfy.
+export { readMarker } from "./artifact/stale.js";
 export { describeFinding, formatCheck } from "./report/format.js";
 // The `--json` envelope's own pieces. A second front end over this engine —
 // `visimark-mcp` — consumes the envelope specified in

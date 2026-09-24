@@ -102,6 +102,11 @@ export {
 export { infer, type Proposal, type ProposalKind } from "./infer/propose.js";
 export { planInfer, type PlannedInsert } from "./infer/write.js";
 export { resolveArtifactPath, type PathResult } from "./artifact/path.js";
+// Pure string parsing, exported so a host with its own write primitive (the
+// Obsidian plugin's `vaultWriter`) can re-prove a target's ownership
+// immediately before writing — see `index.ts`'s copy of this export for why
+// `classify` itself stays unexported.
+export { readMarker } from "./artifact/stale.js";
 export { describeFinding, formatCheck } from "./report/format.js";
 export { closest, levenshtein } from "./report/levenshtein.js";
 export {

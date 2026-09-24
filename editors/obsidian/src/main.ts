@@ -650,10 +650,24 @@ export default class VisiMarkPlugin extends Plugin {
     }
     let chartsWritten = 0;
     if (artifacts.length > 0) {
-      const written = await writeCharts(artifacts, vaultWriter(this.app.vault));
+      const written = await writeCharts(
+        artifacts,
+        vaultSweepRead(this.app.vault),
+        vaultWriter(this.app.vault),
+      );
       chartsWritten = written.written;
       if (written.failed !== null) {
         new Notice(`Could not write the "${written.failed.chart}" chart: ${written.failed.err}`);
+        return;
+      }
+      // writeCharts awaits one vault write per chart — another real gap a
+      // keystroke can land in, on top of the one noteFor's own read already
+      // opened. report.allRepairs' offsets describe `source`; applying them
+      // to a buffer that moved under this await would corrupt the note.
+      if (editor.getValue() !== source) {
+        if (!opts.silent) {
+          new Notice("This note changed while writing its charts. Try Format again.");
+        }
         return;
       }
     }
