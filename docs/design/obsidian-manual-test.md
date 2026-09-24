@@ -364,6 +364,40 @@ palette on `example-invoice.md` and on `example-invoice-drift.md`.
   repair. Format (whole-note) is the only entry point row 14 wires up; see
   #252's "what you considered and rejected" for why.
 
+### 2.6b A CSV import stamps itself through Format — v1.1 row 16
+
+Row 16 needed no new production code — see #254 for why the write-port
+premise it was filed under did not hold, and
+`editors/obsidian/test/csv-import.test.ts` for the automated proof. This
+manual step is the "a person, not just a machine" half.
+
+- Create a note in a subfolder, say `Finance/2026 Budget.md`, and a CSV
+  beside it in a folder of its own, `Finance/data/rates.csv`, with a couple
+  of rows of numbers.
+- In the note, add:
+
+  ```` markdown
+  ```vmark #rates from data/rates.csv
+  Mean = AVG(rates.Rate)
+  ```
+  ````
+
+  (Column names match the CSV's header.)
+- Run **Check this note**. **Pass:** one `IMPORT` finding, "unstamped
+  import" — the path resolved (the CSV's rows are readable at all is proof
+  of that; an unresolved path would be a different `IMPORT` message
+  entirely) and the note is only waiting on a stamp.
+- Run **Format this note**. **Pass:** the block's first line gains
+  `at sha256:…`, and the `IMPORT` finding is gone. This is the same one
+  `editor.transaction` every other repair goes through — no notice about a
+  chart, because there is none in this note, and no setting to turn on
+  first: nothing about the write half of row 16 was ever gated, since
+  nothing here writes anything but the note itself.
+- Edit `rates.csv` (change a number). Run **Check this note** again.
+  **Pass:** `STALE`, not `IMPORT` — the stamp is present but no longer
+  matches. Run **Format** again. **Pass:** the stamp updates to the new
+  hash and the finding clears.
+
 ### 2.7 `infer` on a pasted table — v1 row 5
 
 - Paste a plain Markdown table with a visibly arithmetic column — or use
