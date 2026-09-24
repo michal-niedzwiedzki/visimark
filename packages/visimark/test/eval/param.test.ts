@@ -132,21 +132,21 @@ describe("param domain findings", () => {
       fence("s", "param prepay_share precision 2 in { 30%, 40% } = default 35%"),
     );
     const f = result.findings.find((x) => x.code === "DOMAIN")!;
-    expect(f.message).toBe("default 35% is not in the domain of prepay_share: in { 30%, 40% }");
+    expect(f.message).toBe("default 35% is not in the domain of prepay_share: { 30%, 40% }");
   });
 
   test("a reversed range is an empty-domain DOMAIN", () => {
     const { result } = run(fence("s", "param x precision 0 in [10, 0] = default 5"));
     expect(codes(result.findings)).toEqual(["DOMAIN s.x"]);
     expect(result.findings[0]!.message).toBe(
-      "param x declares an empty domain: in [10, 0] has no legal value",
+      "param x declares an empty domain: [10, 0] has no legal value",
     );
   });
 
   test("an empty set literal is an empty-domain DOMAIN", () => {
     const { result } = run(fence("s", "param x precision 0 in { } = default 0"));
     expect(result.findings[0]!.message).toBe(
-      "param x declares an empty domain: in { } has no legal value",
+      "param x declares an empty domain: { } has no legal value",
     );
   });
 

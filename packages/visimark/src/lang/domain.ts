@@ -109,13 +109,16 @@ export function domainLiterals(domain: Domain): { value: string; literal: Domain
 
 /**
  * The domain exactly as declared, in source order — `integer in [0, 80]`,
- * `in { 30%, 40% }`, `positive integer`. Shared by the `DOMAIN`/`SCENARIO`
- * messages (`eval/check.ts`, `eval/scenario.ts`) and by `eval`/`explain`
- * reporting (spec §6).
+ * `{ 30%, 40% }`, `positive integer`. `in` joins a preset to the range/set
+ * that follows it; a bare range or set (no preset) is printed without it,
+ * matching spec §4.1's and §6's worked examples exactly (`[10, 0] has no
+ * legal value`, not `in [10, 0] has no legal value`). Shared by the
+ * `DOMAIN`/`SCENARIO` messages (`eval/check.ts`, `eval/scenario.ts`) and by
+ * `eval`/`explain` reporting (spec §6).
  */
 export function formatDomain(domain: Domain): string {
   return domain.parts
-    .map((leaf) => (leaf.kind === "preset" ? leaf.text : `in ${leaf.text}`))
+    .map((leaf, i) => (leaf.kind === "preset" || i === 0 ? leaf.text : `in ${leaf.text}`))
     .join(" ");
 }
 
@@ -235,14 +238,24 @@ export function foldDomain(domain: Domain): string[] | undefined {
   }
   if (lo === undefined || hi === undefined) return undefined;
 
+  const first = lo.isInteger() ? lo : lo.floor().plus(1);
+  // A fold this wide is not useful to list and would block `eval --json`/
+  // `explain --json` for tens of seconds while it walks every integer; the
+  // spec allows an absent fold (spec §6), so an oversized range is treated
+  // the same as an unbounded one rather than enumerated.
+  if (hi.floor().minus(first).plus(1).gt(MAX_FOLD_SIZE)) return undefined;
+
   const out: string[] = [];
-  let v = lo.isInteger() ? lo : lo.floor().plus(1);
+  let v = first;
   while (v.lte(hi)) {
     if (testDomain(domain, v.toString())) out.push(v.toString());
     v = v.plus(1);
   }
   return out;
 }
+
+/** the widest integer-lattice fold `foldDomain` will enumerate; see spec §6 */
+const MAX_FOLD_SIZE = 10_000;
 
 /** `{ clauses, fold? }` — the JSON shape shared by `eval --json` and
  *  `explain --json` (spec §6). `fold` is absent, not `null`, when no exact

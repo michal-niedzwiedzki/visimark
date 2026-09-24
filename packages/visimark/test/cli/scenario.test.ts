@@ -396,7 +396,7 @@ describe("eval reports a param's declared domain", () => {
     expect(r.out).toContain("levers.extra_hours");
     expect(r.out).toContain("integer in [0, 80]");
     expect(r.out).toContain("levers.prepay_share");
-    expect(r.out).toContain("in { 30%, 40%, 45%, 50% }");
+    expect(r.out).toContain("{ 30%, 40%, 45%, 50% }");
   });
 
   test("--json gains a params object with clauses and an exact fold", async () => {

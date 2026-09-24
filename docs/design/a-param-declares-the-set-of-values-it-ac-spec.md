@@ -330,7 +330,13 @@ when the intersection folds to a finite, exactly-known list (an explicit set,
 or a preset/range combination bounded to a finite integer lattice); it is
 **absent**, not `null`, when no exact fold exists (an unbounded or
 non-integer range) — following the same presence/absence convention
-`scenario-params-spec.md` §5.3 already uses for optional per-entry keys. Under
+`scenario-params-spec.md` §5.3 already uses for optional per-entry keys. An
+integer-lattice range wider than **10,000** points is also treated as having
+no exact fold — a fold that size is not useful to list and would otherwise
+block `eval --json`/`explain --json` while it enumerates every integer, so it
+is omitted the same way an unbounded range's fold is. `check` and `fmt` are
+unaffected; only the fold that would appear in `--json` output is capped, not
+membership testing. Under
 `--scenario`, `value`/`default`/`source` behave exactly as the existing
 `scenario.params` entries do today; `domain` is the only addition. An
 out-of-domain scenario value is the existing `SCENARIO` error envelope (§4.2

@@ -264,7 +264,7 @@ one with no value is `USAGE`, since it is not a fault in the scenario
 [§10](../visimark-design.md#10-error-taxonomy) finding taxonomy does not change.
 A param with a declared domain reuses this same `SCENARIO` code for an
 out-of-domain scenario value — see
-[`a-param-declares-the-set-of-values-it-ac-spec.md` §4.2](a-param-declares-the-set-of-values-it-ac-spec.md#42-scenario-faults-usage-errors-existing-scenario-code).
+[`a-param-declares-the-set-of-values-it-ac-spec.md` §4.2](a-param-declares-the-set-of-values-it-ac-spec.md#42-scenario-faults-usage-errors-unchanged-code).
 
 | Case | stderr |
 |---|---|

@@ -116,3 +116,19 @@ test("fold: unbounded or non-integer range is undefined", () => {
   expect(foldDomain(range("0", true, "80", true))).toBeUndefined();
   expect(foldDomain(preset("positive"))).toBeUndefined();
 });
+
+test("fold: an integer range past the fold-size cap is undefined, not enumerated", () => {
+  // A hang/OOM regression guard: `eval --json`/`explain --json` must not
+  // block walking a billion-point range. 10,000 is the documented cap
+  // (spec §6); this exercises just past it without actually iterating 1e9
+  // times if the cap were broken (a wall-clock bound keeps it honest).
+  const huge = withPreset("integer", range("0", true, "1000000000", true));
+  const start = Date.now();
+  expect(foldDomain(huge)).toBeUndefined();
+  expect(Date.now() - start).toBeLessThan(1000);
+});
+
+test("fold: an integer range exactly at the cap still enumerates", () => {
+  const atCap = withPreset("integer", range("1", true, "10000", true));
+  expect(foldDomain(atCap)?.length).toBe(10000);
+});

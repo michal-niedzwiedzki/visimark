@@ -101,7 +101,7 @@ test("4. a default outside its finite-set domain: DOMAIN, exit 1", () => {
   const result = checkVariant(source);
   const f = result.findings.find((x) => x.code === "DOMAIN")!;
   expect(f.message).toBe(
-    "default 35% is not in the domain of prepay_share: in { 30%, 40%, 45%, 50% }",
+    "default 35% is not in the domain of prepay_share: { 30%, 40%, 45%, 50% }",
   );
   expect(result.exitCode).toBe(1);
 });
