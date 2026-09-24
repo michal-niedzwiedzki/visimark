@@ -460,18 +460,23 @@ reason it exists; that is not a fix, it is hiding the same hole from the
 check built to catch it.
 
 **The residual risk is narrower than "a symlink escapes containment"
-sounds.** Planting a symlink inside a vault directory requires local
-filesystem write access to that vault already — at which point an attacker
-can edit the Markdown directly, or write anywhere else on disk a symlink
-could point to; misdirecting one `import` read is not an escalation over
-that. Mobile has no symlinks at all, so this is desktop-only. **The plugin
-adds no path policy of its own beyond the lexical one**: a path that
-escapes the vault lexically is simply not in the snapshot, `exists` answers
-false, and the engine emits the `IMPORT` finding it already emits for a
-missing file — that half of the containment guarantee holds. The vault root
-is the gate for everything lexical; a symlink is the one thing past it this
-architecture cannot see. See
-[#233](https://github.com/michal-niedzwiedzki/visimark/issues/233).
+sounds, but it is a read, not nothing.** Planting a symlink inside a vault
+directory requires local filesystem write access to that vault already, and
+misdirecting one `import` read is not an escalation over what editing the
+Markdown directly could already do to *this* document — but placing a
+symlink does not require write access to whatever it points at. A writer
+limited to the vault can still cause the plugin to *read* a file elsewhere
+on disk that it could never write to; that is the actual residual risk, not
+"write anywhere". Mobile has no symlinks at all, so this is desktop-only.
+**The plugin adds no path policy of its own beyond the lexical one**:
+`gatePath` (`fs/gate.ts`) bounds an import to *the document's own
+directory* — not the vault root, a narrower boundary — and returns its own
+path error the moment a lexical escape is seen, before the reader is ever
+consulted; the plugin's snapshot never attempts to fetch such a path, and
+`IMPORT`'s message is that specific refusal, not the generic one a missing
+file gets. That half of the containment guarantee holds regardless of
+`realpath`. A symlink is the one thing past it this architecture cannot
+see. See [#233](https://github.com/michal-niedzwiedzki/visimark/issues/233).
 
 **The invariant phase 1 rests on is asserted, not assumed** — and in the
 design above it is asserted by the mechanism rather than beside it. Discovery
