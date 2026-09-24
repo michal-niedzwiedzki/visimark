@@ -128,6 +128,7 @@ export { applyUnit, parseDecorated, type Unit } from "./eval/units.js";
 export type { Binding, DocModel, Finding, FindingCode, Sheet } from "./model/types.js";
 export { ERROR_CODES, isProblem } from "./model/types.js";
 export type {
+  AnchorTargetKind,
   LocatedDoc,
   RawAnchor,
   RawBlock,

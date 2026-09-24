@@ -1,4 +1,4 @@
-import type { CheckResult, DocModel, Span } from "visimark";
+import type { AnchorTargetKind, CheckResult, DocModel, Span } from "visimark";
 
 /**
  * Where the plugin marks a value, and how — v1 row 2 of #176, and the row it
@@ -45,6 +45,23 @@ export interface Decoration {
    * value by construction.
    */
   readonly row?: number;
+  /**
+   * For a cell, which column of the table it is — the same index
+   * `sheet.columnIndex` gave the engine, and the index a rendered `<tr>`'s
+   * `<td>`s share with it (one `<td>` per source column, in order). This is
+   * what lets `reading-mode.ts` address `rows[row].cells[column]` directly
+   * instead of matching cell text, which a repeated value (an input column
+   * that happens to equal a computed one) can match on the wrong cell.
+   */
+  readonly column?: number;
+  /**
+   * For an anchor, which tag the value's markup became — `strong`, `em` or
+   * `code` — or `"text"` for a bare number with no wrapping markup. Lets
+   * `reading-mode.ts` search only the matching element kind, rather than
+   * trying `strong` then `em` then `code` regardless of what the anchor
+   * actually is and taking whichever text matches first.
+   */
+  readonly anchorKind?: AnchorTargetKind;
 }
 
 const key = (span: Span): string => `${span.start}:${span.end}`;
@@ -81,6 +98,7 @@ export function decorationsFor(model: DocModel, result: CheckResult): Decoration
           name: `${sheet.id}.${name}`,
           kind: "cell",
           row: rowIndex,
+          column: index,
         });
       }
     }
@@ -95,6 +113,7 @@ export function decorationsFor(model: DocModel, result: CheckResult): Decoration
       mark: markFor(anchor.value),
       name: anchor.sheetId === "" ? anchor.name : `${anchor.sheetId}.${anchor.name}`,
       kind: "anchor",
+      anchorKind: anchor.value.kind,
     });
   }
 
