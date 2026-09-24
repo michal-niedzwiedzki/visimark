@@ -1,7 +1,8 @@
+import { editorInfoField, type MarkdownFileInfo } from "obsidian";
 import { RangeSetBuilder, type Extension } from "@codemirror/state";
 import { Decoration, ViewPlugin, type DecorationSet, type EditorView } from "@codemirror/view";
 import { build, check, locate } from "visimark";
-import { decorationsFor } from "./decorations.js";
+import { decorationsFor, type Decoration as VmarkDecoration } from "./decorations.js";
 import { hasVmarkBlock } from "./gate.js";
 
 /**
@@ -25,10 +26,27 @@ import { hasVmarkBlock } from "./gate.js";
  * copied out of the vault renders on GitHub exactly as it did before the
  * plugin existed; the guarantee is structural — a `Decoration.mark` is a class
  * on a rendered range and never a change to the document.
+ *
+ * **Every mark carries `data-vmark`, `data-vmark-row` and `data-vmark-path`
+ * as DOM attributes**, not only a CSS class — `main.ts`'s hover/tap listeners
+ * find a mark by `closest("[data-vmark]")`, and reading mode is not the only
+ * renderer they have to work in (#176's row 3 is "hover / tap" precisely
+ * because a phone has no hover, and Live Preview is the surface an author is
+ * looking at while typing). `MarkDecorationSpec.attributes` puts them on the
+ * wrapping element CodeMirror renders, the same way `reading-mode.ts`'s
+ * `apply` does for its own `<span>`s.
  */
 
-const COMPUTED = Decoration.mark({ class: "visimark-computed" });
-const DISAGREES = Decoration.mark({ class: "visimark-computed visimark-disagrees" });
+/** one CodeMirror mark per decoration, carrying that decoration's own name/row/path */
+function markFor(d: VmarkDecoration, path: string | null): Decoration {
+  const attributes: Record<string, string> = { "data-vmark": d.name, tabindex: "0" };
+  if (path !== null) attributes["data-vmark-path"] = path;
+  if (d.row !== undefined) attributes["data-vmark-row"] = String(d.row);
+  return Decoration.mark({
+    class: d.mark === "disagrees" ? "visimark-computed visimark-disagrees" : "visimark-computed",
+    attributes,
+  });
+}
 
 function marksFor(view: EditorView): DecorationSet {
   const source = view.state.doc.toString();
@@ -36,13 +54,21 @@ function marksFor(view: EditorView): DecorationSet {
   // the gate, before the parse: an ordinary note must cost a substring scan
   if (!hasVmarkBlock(source)) return builder.finish();
 
+  // absent only if this editor is not backed by a note Obsidian knows the
+  // path of yet (e.g. a brand-new unsaved file) — the mark still shows, it
+  // just cannot say which note it belongs to
+  //
+  // `as unknown as typeof field` is a duplicate-`@codemirror/state`-install
+  // workaround, not a real type difference: this repository's `EditorView`
+  // resolves `@codemirror/state` to one installed copy, and `obsidian`'s own
+  // `.d.ts` resolves `editorInfoField`'s `StateField` to a different
+  // installed copy — nominally distinct types for the same class at runtime,
+  // since `StateField` has no structural difference to check instead.
+  const field = editorInfoField as unknown as Parameters<typeof view.state.field>[0];
+  const path = (view.state.field(field, false) as MarkdownFileInfo | undefined)?.file?.path ?? null;
   const model = build(locate(source));
   for (const decoration of decorationsFor(model, check(model))) {
-    builder.add(
-      decoration.span.start,
-      decoration.span.end,
-      decoration.mark === "disagrees" ? DISAGREES : COMPUTED,
-    );
+    builder.add(decoration.span.start, decoration.span.end, markFor(decoration, path));
   }
   return builder.finish();
 }
@@ -52,16 +78,19 @@ function marksFor(view: EditorView): DecorationSet {
  *
  * Rebuilt on every document change rather than mapped through it: a value's
  * span moves when a character before it is typed, and a mapped range would
- * drift off the value it is about. `check` on a note-sized document is ~2.8 ms
- * (measured), and CodeMirror only asks when the document or the viewport
- * actually changed.
+ * drift off the value it is about. **Not on `viewportChanged`** — the
+ * decoration set is source spans, computed from the whole document, and does
+ * not depend on which part of it is scrolled into view; rebuilding on scroll
+ * would pay for a full `locate` + `build` + `check` (measured ~9ms on a
+ * note-sized document, not the ~2.8ms of `check` alone) for no change in the
+ * result.
  */
 export function livePreviewMarks(): Extension {
   return ViewPlugin.define(
     (view: EditorView) => ({
       decorations: marksFor(view),
-      update(update: { docChanged: boolean; viewportChanged: boolean; view: EditorView }) {
-        if (update.docChanged || update.viewportChanged) {
+      update(update: { docChanged: boolean; view: EditorView }) {
+        if (update.docChanged) {
           this.decorations = marksFor(update.view);
         }
       },

@@ -76,6 +76,40 @@ test("an input column is never marked", () => {
   for (const d of clean.all) expect(inputs.has(d.name)).toBe(false);
 });
 
+test("a cell decoration carries the same grid index the engine used", () => {
+  // reading-mode.ts addresses rows[row].cells[column] directly; a row/column
+  // that disagrees with sheet.columnIndex or the row's position in
+  // table.rows would silently mark the wrong cell with no test noticing
+  for (const sheet of clean.model.sheets.values()) {
+    if (sheet.table === null) continue;
+    for (const name of sheet.columns.keys()) {
+      const column = sheet.columnIndex.get(name);
+      if (column === undefined) continue;
+      const cells = clean.all.filter((d) => d.kind === "cell" && d.name === `${sheet.id}.${name}`);
+      expect(cells.length).toBeGreaterThan(0);
+      for (const d of cells) {
+        expect(d.column, `${d.name} at row ${d.row}`).toBe(column);
+        expect(d.row).toBeGreaterThanOrEqual(0);
+        expect(d.row).toBeLessThan(sheet.table.rows.length);
+      }
+    }
+  }
+});
+
+test("an anchor decoration carries the markup kind it was found in", () => {
+  const byName = new Map(clean.model.located.anchors.map((a) => [a.name, a]));
+  for (const d of clean.all) {
+    if (d.kind !== "anchor") continue;
+    const anchor = byName.get(
+      d.name.includes(".") ? d.name.slice(d.name.indexOf(".") + 1) : d.name,
+    );
+    if (anchor?.value === null || anchor?.value === undefined) continue;
+    expect(d.anchorKind).toBe(anchor.value.kind);
+  }
+  // the worked invoice has at least one bold-numeral anchor
+  expect(clean.all.some((d) => d.kind === "anchor" && d.anchorKind === "strong")).toBe(true);
+});
+
 test("a mark covers the value as the document wrote it, and nothing around it", () => {
   // the span is what a renderer will wrap; one byte wide of it eats a pipe
   for (const a of [clean, drift]) {
