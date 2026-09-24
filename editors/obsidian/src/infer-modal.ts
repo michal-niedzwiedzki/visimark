@@ -37,6 +37,21 @@ export class InferModal extends Modal {
       });
     }
 
+    // the CLI's negative result, shown rather than asserted: the comment
+    // Insert is about to write, not a summary of it
+    if (this.preview.marker !== null) {
+      contentEl.createEl("pre", { cls: "visimark-infer-block" }).createEl("code", {
+        text: this.preview.marker,
+      });
+    }
+
+    if (this.preview.removesMarker) {
+      contentEl.createEl("p", {
+        cls: "visimark-infer-note",
+        text: "This table already said it had no formulas to check. That comment will be removed, since it now does.",
+      });
+    }
+
     const { anchors } = this.preview.counts;
     if (anchors > 0) {
       contentEl.createEl("p", {
@@ -76,9 +91,14 @@ export class InferModal extends Modal {
 /**
  * Show the preview, and insert it if the reader says so.
  *
- * The write goes through the editor and in reverse offset order, for the same
- * two reasons the findings view's repair does: the buffer is what the person
- * is looking at, and earlier offsets stay valid.
+ * The write goes through the editor, as one `transaction`: the buffer is what
+ * the person is looking at, and a single dispatch is one undo step for a plan
+ * that can be several non-adjacent edits — a fence after each table, plus an
+ * anchor comment per bound number. Each edit uses both its endpoints, not
+ * just `start`: most are zero-width insertions, but the one exception — a
+ * stale `<!--vmark:no-formulas-->` this same plan makes false — is a real
+ * deletion (`infer-plan.ts`'s header), and applying it at a zero-width point
+ * would leave the marker behind for `check` to flag as `COVERAGE`.
  */
 export function offerInfer(app: App, editor: Editor, preview: InferPreview): void {
   if (isEmpty(preview)) {
@@ -86,11 +106,17 @@ export function offerInfer(app: App, editor: Editor, preview: InferPreview): voi
     return;
   }
   new InferModal(app, preview, () => {
-    const ordered = [...preview.inserts].sort((a, b) => b.start - a.start);
-    for (const insert of ordered) {
-      const at = editor.offsetToPos(insert.start);
-      editor.replaceRange(insert.text, at, at);
-    }
-    new Notice("Inserted. Nothing you had written was changed.");
+    editor.transaction({
+      changes: preview.inserts.map((insert) => ({
+        from: editor.offsetToPos(insert.start),
+        to: editor.offsetToPos(insert.end),
+        text: insert.text,
+      })),
+    });
+    new Notice(
+      preview.marker !== null
+        ? "Marked. Nothing you had written was changed."
+        : "Inserted. Nothing you had written was changed.",
+    );
   }).open();
 }

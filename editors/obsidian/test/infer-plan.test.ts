@@ -115,3 +115,48 @@ test("a note with no table at all proposes nothing and says so", () => {
   const preview = previewInfer("# Groceries\n\n- milk\n- bread\n");
   expect(isEmpty(preview)).toBe(true);
 });
+
+test("a table with no arithmetic anywhere in the note marks it, unscoped", () => {
+  // the CLI's negative result: `infer` found nothing whatsoever
+  const preview = previewInfer("| Name | Note |\n|---|---|\n| a | b |\n");
+  expect(preview.marker).toBe("<!--vmark:no-formulas-->");
+  expect(preview.blocks).toEqual([]);
+  expect(isEmpty(preview)).toBe(false);
+  expect(describePreview(preview)).toContain("mark this table");
+});
+
+test("a stale no-formulas marker is deleted, not left behind, when rules are found", () => {
+  const source =
+    "| Item | Price | Qty | Total |\n" +
+    "|---|---|---|---|\n" +
+    "| Pen  | 5     | 2   | 10    |\n" +
+    "| Cup  | 3     | 4   | 12    |\n" +
+    "| Mug  | 6     | 3   | 18    |\n" +
+    "| Bag  | 2     | 5   | 10    |\n" +
+    "\n" +
+    "<!--vmark:no-formulas-->\n";
+  const preview = previewInfer(source);
+  expect(preview.removesMarker).toBe(true);
+  expect(preview.marker).toBeNull();
+  const deletion = preview.inserts.find((i) => i.kind === "marker");
+  expect(deletion, "no deletion insert for the stale marker").toBeDefined();
+  expect(deletion!.start).toBeLessThan(deletion!.end);
+  expect(deletion!.text).toBe("");
+  // planInfer's own claim: the marker is gone from `result`, and COVERAGE
+  // (the finding a leftover marker on a ruled document would draw) is clean
+  expect(preview.result).not.toContain("no-formulas");
+  const coverage = check(build(locate(preview.result))).findings.filter(
+    (f) => f.code === "COVERAGE",
+  );
+  expect(coverage).toEqual([]);
+});
+
+test("a selection over a table infer found nothing in does not mark the whole document", () => {
+  // the other two tables in `plain` do have proposals; a document-wide
+  // marker here would be a claim the selection never made
+  const extra = `${plain}\n\n| Name | Note |\n|---|---|\n| a | b |\n`;
+  const start = extra.indexOf("| Name | Note |");
+  const preview = previewInfer(extra, { start, end: extra.length });
+  expect(preview.marker).toBeNull();
+  expect(isEmpty(preview)).toBe(true);
+});
