@@ -4,6 +4,18 @@
 
 ### Added
 
+- **A `param` may declare the set of values it accepts** (issue #241).
+  `param NAME precision N [PRESET] [in DOMAIN-EXPR] = default LITERAL` adds an
+  optional domain clause — a range (half-open ends allowed), a finite set, and/or
+  a closed preset (`integer`/`ℤ`, `natural`/`ℕ`, `positive`, `positive
+  integer`/`ℤ⁺`) — narrowing a param's legal scenario values below its declared
+  width. A default outside the domain, or a domain with no legal value, is a new
+  `DOMAIN` finding; an out-of-domain `eval --scenario` value is refused before
+  evaluation, distinct from an in-domain value that fails an `assert`. `eval` and
+  `explain` report each domain-bearing param's domain; `fmt` writes nothing new.
+  Closes a gap left open when scenario parameters shipped (#119).
+  See [`a-param-declares-the-set-of-values-it-ac-spec.md`](docs/design/a-param-declares-the-set-of-values-it-ac-spec.md).
+
 - **The committed browser bundle's size is now checked** (issue #191).
   `docs/vendor/visimark-browser.js` could grow without anything noticing — the
   `playground-bundle` CI job only checks rebuild fidelity against a fresh build, never

@@ -64,7 +64,10 @@ says the value may be supplied from outside, and `default` says what it is when
 nothing is supplied.
 
 **Grammar:** `param NAME precision N = default LITERAL`, every part required,
-in that order.
+in that order. A `param` may add an optional domain clause narrowing its
+legal scenario values below `precision N`'s width — see
+[`a-param-declares-the-set-of-values-it-ac-spec.md`](a-param-declares-the-set-of-values-it-ac-spec.md),
+which extends this spec rather than amending it.
 
 - **`NAME`** is an identifier. A quoted name (`param "Growth" …`) is refused: a
   quoted left-hand side always names a column header
@@ -259,6 +262,9 @@ stdout. Under `--json` the envelope has `status: "error"` and `error.code:
 one with no value is `USAGE`, since it is not a fault in the scenario
 ([structured-output-json-spec §3](structured-output-json-spec.md)). The
 [§10](../visimark-design.md#10-error-taxonomy) finding taxonomy does not change.
+A param with a declared domain reuses this same `SCENARIO` code for an
+out-of-domain scenario value — see
+[`a-param-declares-the-set-of-values-it-ac-spec.md` §4.2](a-param-declares-the-set-of-values-it-ac-spec.md#42-scenario-faults-usage-errors-existing-scenario-code).
 
 | Case | stderr |
 |---|---|

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- A `param` may declare the set of values it accepts. A default outside the
+  domain, or an empty domain, is now reported as a `DOMAIN` diagnostic (error
+  severity), the same way a `PRECISION` or `TYPE` finding already is.
+
 - The engine now recognises `IRR(flows)`. A call that used to be reported as
   an unknown function is evaluated, and a missing width on a written result is
   the existing `PRECISION` diagnostic.

@@ -622,6 +622,7 @@ justifies the project.
 | `SHEET` | column rules with no table, or an `assert` in a document-scope block | no |
 | `ANCHOR` | anchor with no rewritable target | no |
 | `PRECISION` | a numeric binding with no declared width and none derivable, a value too large to carry the width it has ([§7](#7-numeric-semantics)), or a `%` display sigil on a binding whose width is below 2 | no |
+| `DOMAIN` | a `param`'s default is outside its declared domain, or the domain has no legal value ([§20](#20-scenario-parameters)) | no |
 | `ASSERT` | an `assert` statement evaluated false ([§17](#17-assertions)) | no |
 | `ARTIFACT` | a declared artifact cannot be built or written ([§18](#18-generated-artifacts)) | no |
 | `IMPORT` | a declared local import cannot be resolved: unstamped, missing file, malformed stamp, bad path, malformed CSV, or a column rule attempted on a read-only imported sheet ([§19](#19-declared-local-data-imports)) | no (except the stamp itself — see below) |
@@ -1219,5 +1220,16 @@ full specification. The motivating document is
   omit their on-disk `state`.
 - **`explain`** lists each sheet's params, with width and default, apart from
   its scalars.
+- **A declared domain** narrows the legal scenario values below the declared
+  width: `param NAME precision N [PRESET] [in DOMAIN-EXPR] = default LITERAL`,
+  where `DOMAIN-EXPR` is a range (half-open ends allowed) or a finite set, and
+  `PRESET` is one of a closed list (`integer`/`ℤ`, `natural`/`ℕ`, `positive`,
+  `positive integer`/`ℤ⁺`), intersected. A default outside the domain, or a
+  domain with no legal value, is `DOMAIN`. An out-of-domain scenario value is
+  refused the same way any other malformed scenario value is — a `SCENARIO`
+  usage error, before evaluation — distinct from an in-domain value that fails
+  an `assert`. `eval` and `explain` report each domain-bearing param's domain;
+  `fmt` writes nothing new. See
+  [`design/a-param-declares-the-set-of-values-it-ac-spec.md`](design/a-param-declares-the-set-of-values-it-ac-spec.md).
 
 <!--vmark:no-formulas-->
