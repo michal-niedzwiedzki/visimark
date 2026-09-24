@@ -1,5 +1,5 @@
 /**
- * The plugin's five settings — spec §2.5, and its defaults are the spec.
+ * The plugin's six settings — spec §2.5, and its defaults are the spec.
  *
  * **`writeChartArtifacts` was not here through v1.1 row 13.** §2.5 listed it
  * off and "not settable in v1": there was no vault-backed write port at all.
@@ -46,6 +46,16 @@ export interface VisiMarkSettings {
    * the way a stale cell is.
    */
   writeChartArtifacts: boolean;
+  /**
+   * v1.1 row 17 — mirrors the CLI's `fmt --fix-dates`. On, Format also
+   * rewrites a `DATE` finding whose ISO form is decidable (an ambiguous one,
+   * such as `03/04/2026`, still needs a person). Off by default, matching
+   * the CLI flag's own default; no setting here ever makes Format decide
+   * something the engine itself calls ambiguous. Whole-note only, the same
+   * shape the flag has on the CLI — see `report.ts`'s `ReportOptions` for
+   * why this never grows a per-finding repair button of its own.
+   */
+  fixDatesOnFormat: boolean;
 }
 
 export const DEFAULT_SETTINGS: VisiMarkSettings = {
@@ -53,4 +63,5 @@ export const DEFAULT_SETTINGS: VisiMarkSettings = {
   showProvenanceInLivePreview: true,
   sweepOnOpen: false,
   writeChartArtifacts: false,
+  fixDatesOnFormat: false,
 };

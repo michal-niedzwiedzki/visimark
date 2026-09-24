@@ -9,6 +9,16 @@ Each entry says which engine version the bundle carries.
 
 ## Unreleased
 
+- **Format can fix unambiguous dates** (v1.1 row 17 of
+  [#176](https://github.com/michal-niedzwiedzki/visimark/issues/176)), behind
+  a new setting, **Fix unambiguous dates**, off by default — mirrors the
+  CLI's `fmt --fix-dates` exactly, including its default. On, Format rewrites
+  a `DATE` finding whose ISO form is decidable (`15.10.2026` → `2026-10-15`);
+  an ambiguous date (`11/12/2026`) is untouched either way, the same
+  distinction the CLI flag draws. Whole-note only, the same shape as the CLI
+  flag — no finding grows a per-row repair button for this, in the findings
+  view or anywhere else.
+
 - **CSV import stamping through the vault, proven rather than built** (v1.1
   row 16 of [#176](https://github.com/michal-niedzwiedzki/visimark/issues/176)).
   The roadmap recorded this row as blocked on the write port; it was not — an

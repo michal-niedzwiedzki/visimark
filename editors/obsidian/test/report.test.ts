@@ -161,6 +161,30 @@ test("a stale chart is a row with no repair — the --no-artifacts contract", ()
   }
 });
 
+test("fixDates off (the default) leaves a decidable date's finding unrepaired — v1.1 row 17", () => {
+  const { model, result } = analyse(drift);
+  const r = reportFor(model, result);
+  const dateEdit = r.allRepairs.some((e) => /^\d{4}-\d{2}-\d{2}$/.test(e.text));
+  expect(dateEdit).toBe(false);
+});
+
+test("fixDates on repairs a decidable date, matching fmt --fix-dates exactly", () => {
+  const { model, result } = analyse(drift);
+  const r = reportFor(model, result, undefined, { fixDates: true });
+  const viaFmt = fmt(drift, { fixDates: true });
+  const dateEdits = r.allRepairs.filter((e) => /^\d{4}-\d{2}-\d{2}$/.test(e.text));
+  expect(dateEdits).toHaveLength(1);
+  expect(dateEdits[0]!.text).toBe("2026-10-15");
+  expect(applyEdits(drift, r.allRepairs)).toBe(viaFmt.output);
+});
+
+test("fixDates on still leaves an ambiguous date alone — a person still has to decide", () => {
+  const { model, result } = analyse(drift);
+  const r = reportFor(model, result, undefined, { fixDates: true });
+  const repaired = applyEdits(drift, r.allRepairs);
+  expect(repaired).toContain("11/12/2026"); // the ambiguous one fmt --fix-dates also leaves
+});
+
 test("every worked example agrees with the engine about whether it is clean", () => {
   const files = ["example-invoice.md", "example-charts.md", "example-quote-plain.md"];
   for (const file of files) {
