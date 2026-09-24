@@ -49,11 +49,19 @@ export class VisiMarkSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Sweep the vault on open")
-      .setDesc("Start a vault-wide check automatically each time this vault opens.")
+      .setDesc(
+        "Start a vault-wide check automatically each time this vault opens, and keep a live count " +
+          "next to the ribbon icon updated as you edit (v1.1 row 13) — turning this on here starts " +
+          "that count for the rest of this session too, without waiting for the next open.",
+      )
       .addToggle((toggle) =>
         toggle.setValue(this.plugin.settings.sweepOnOpen).onChange(async (value) => {
           this.plugin.settings.sweepOnOpen = value;
           await this.plugin.saveSettings();
+          // turning this on later in the same session should not require a
+          // restart to see the badge — turning it off does not stop an
+          // index already running (`startAmbientIndex`'s own doc comment)
+          if (value) void this.plugin.startAmbientIndex();
         }),
       );
   }
