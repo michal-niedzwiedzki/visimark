@@ -283,13 +283,22 @@ export default class VisiMarkPlugin extends Plugin {
     // autosave moments later, which is what actually lands the repaired
     // bytes. Silent: a notice on every save of every note with the setting on
     // is the report's vocabulary creeping back in by another door.
+    //
+    // Unmodified only (no Shift/Alt) — Ctrl/Cmd+Shift+S and Ctrl/Cmd+Alt+S are
+    // other bindings (Obsidian's own "save as a copy" is one), not this one.
+    // And only when the keystroke actually came from the editor: the listener
+    // is on `document` so it also sees a Ctrl/Cmd+S typed into an unrelated
+    // focused control (a settings field, the search box) that happens to
+    // bubble — which must not format whatever note is merely active behind it.
     this.registerDomEvent(document, "keydown", (event: KeyboardEvent) => {
       if (!this.settings.formatOnSave) return;
+      if (event.shiftKey || event.altKey) return;
       const held = Platform.isMacOS ? event.metaKey : event.ctrlKey;
       if (!held || event.key.toLowerCase() !== "s") return;
-      const editor = this.app.workspace.getActiveViewOfType(MarkdownView)?.editor;
-      if (editor === undefined) return;
-      void this.format(editor, { silent: true });
+      const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+      if (view === null) return;
+      if (!(event.target instanceof Node) || !view.contentEl.contains(event.target)) return;
+      void this.format(view.editor, { silent: true });
     });
 
     this.status = this.addStatusBarItem();
