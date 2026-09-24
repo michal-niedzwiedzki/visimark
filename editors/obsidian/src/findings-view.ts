@@ -57,10 +57,22 @@ export class FindingsView extends ItemView {
 
   /**
    * A full re-check per keystroke is a parse, a build and a check of the whole
-   * note; debounced so typing costs one per pause. Leading-edge, so the first
-   * keystroke after a pause is answered at once.
+   * note; debounced so typing costs one per pause. The third argument is
+   * `resetTimer`, not leading-edge: each keystroke resets the 400ms timer,
+   * and `refresh` runs once, after typing stops.
    */
   private readonly refreshSoon = debounce(() => void this.refresh(), 400, true);
+
+  /**
+   * Bumped at the start of every `refresh`. `readNote` awaits a vault read, so
+   * two refreshes can be in flight at once — typing during a slow one, say —
+   * and without this an older one finishing after a newer one would paint a
+   * stale report over a current one.
+   */
+  private renderId = 0;
+
+  /** The note text `draw`'s rows were computed from, for `apply` to check. */
+  private renderedSource: string | null = null;
 
   override async onOpen(): Promise<void> {
     this.registerEvent(this.app.workspace.on("active-leaf-change", () => void this.refresh()));
@@ -71,7 +83,8 @@ export class FindingsView extends ItemView {
 
   /** Re-check the active note and redraw. */
   async refresh(): Promise<void> {
-    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+    const id = ++this.renderId;
+    const view = this.noteView();
     const file = view?.file;
     if (view === null || file === null || file === undefined) return this.drawEmpty(null);
 
@@ -80,9 +93,11 @@ export class FindingsView extends ItemView {
 
     try {
       const { model, snapshot } = await readNote(source, file.path, vaultRead(this.app.vault));
+      if (id !== this.renderId) return; // a newer refresh started; let it paint instead
       const doc = { path: snapshot.path, reader: snapshot.reader };
-      this.draw(reportFor(model, check(model, { doc }), doc), file.basename);
+      this.draw(reportFor(model, check(model, { doc }), doc), file.basename, source);
     } catch {
+      if (id !== this.renderId) return;
       // §3.1: the plugin never shows a clean state for a note it failed to
       // check. A pane that silently emptied itself would do exactly that.
       this.drawFailed(file.basename);
@@ -96,6 +111,7 @@ export class FindingsView extends ItemView {
   }
 
   private drawEmpty(note: string | null): void {
+    this.renderedSource = null;
     const root = this.container();
     root.createEl("p", {
       cls: "visimark-note-state",
@@ -107,6 +123,7 @@ export class FindingsView extends ItemView {
   }
 
   private drawFailed(note: string): void {
+    this.renderedSource = null;
     const root = this.container();
     root.createEl("p", {
       cls: "visimark-note-state",
@@ -114,7 +131,8 @@ export class FindingsView extends ItemView {
     });
   }
 
-  private draw(report: NoteReport, note: string): void {
+  private draw(report: NoteReport, note: string, source: string): void {
+    this.renderedSource = source;
     const root = this.container();
     if (isClean(report)) {
       root.createEl("p", {
@@ -182,8 +200,16 @@ export class FindingsView extends ItemView {
    *
    * Through the editor rather than the vault: the buffer is what the person is
    * looking at, `Vault.modify` on an open file fights it, and the editor keeps
-   * one undo step for the press. Applied right-to-left so earlier offsets stay
-   * valid, which is the same order `applyEdits` uses and for the same reason.
+   * one undo step for the press — `transaction` applies every edit as one
+   * CodeMirror dispatch, which is what makes that one step true for a
+   * collapsed-anchor repair's several non-adjacent edits.
+   *
+   * **The offsets are only valid against the source they were planned
+   * against.** `row.repair` was computed from `renderedSource`; the editor may
+   * have moved since — a keystroke inside the 400ms debounce window, or a
+   * slower `refresh` still in flight — and writing stale offsets into a
+   * buffer that has since changed shape would land in the wrong place. Refuse
+   * and re-check instead.
    */
   private apply(edits: Edit[], row: FindingRow): void {
     const editor = this.editor();
@@ -191,16 +217,38 @@ export class FindingsView extends ItemView {
       new Notice("Open the note in an editor to repair it.");
       return;
     }
-    const ordered = [...edits].sort((a, b) => b.start - a.start);
-    for (const edit of ordered) {
-      editor.replaceRange(edit.text, editor.offsetToPos(edit.start), editor.offsetToPos(edit.end));
+    if (editor.getValue() !== this.renderedSource) {
+      new Notice("This note changed since it was checked. Checking again before repairing.");
+      void this.refresh();
+      return;
     }
+    const ordered = [...edits].sort((a, b) => b.start - a.start);
+    editor.transaction({
+      changes: ordered.map((edit) => ({
+        from: editor.offsetToPos(edit.start),
+        to: editor.offsetToPos(edit.end),
+        text: edit.text,
+      })),
+    });
     new Notice(row.reader.row.replace(/\.$/, " — repaired."));
     void this.refresh();
   }
 
   private editor(): Editor | null {
-    return this.app.workspace.getActiveViewOfType(MarkdownView)?.editor ?? null;
+    return this.noteView()?.editor ?? null;
+  }
+
+  /**
+   * The note this pane reports on — not necessarily `getActiveViewOfType`,
+   * which answers `null` the moment this pane itself is the active leaf
+   * (opening it, or a click inside it, both do that via `setActiveLeaf`).
+   * `getMostRecentLeaf()` is Obsidian's own answer to "the leaf in the root
+   * split while a sidebar leaf might be active" — exactly this pane's shape,
+   * since it opens in the right sidebar (`getRightLeaf(false)` in `main.ts`).
+   */
+  private noteView(): MarkdownView | null {
+    const leaf = this.app.workspace.getMostRecentLeaf();
+    return leaf?.view instanceof MarkdownView ? leaf.view : null;
   }
 }
 
