@@ -432,12 +432,46 @@ the name is resolved exactly once, in phase 2, and the text and the digest come
 from that one read. No descriptor and no bytes cross the boundary — text and a
 hex digest, as the port intends.
 
-`realpath` as identity is sound because the vault adapter does not expose
-symlinks and refuses paths outside the vault root. **The plugin adds no path
-policy of its own**: a path that escapes the vault is simply not in the
-snapshot, `exists` answers false, and the engine emits the `IMPORT` finding it
-already emits for a missing file. The vault root is the gate, and it is
-Obsidian's gate, not a second one written here.
+**`realpath` as identity is not sound against a symlink, and there is no fix
+for that inside this bundle — accepted rather than solved.** The claim this
+paragraph made before #233 — that the vault adapter "does not expose
+symlinks and refuses paths outside the vault root" — was never verified and
+is false: `vault.adapter.read` is an ordinary filesystem read on desktop, and
+an ordinary filesystem read follows a symlink. The engine's own containment
+check (`gate.ts`) is written not to trust that; it compares a path against
+`reader.realpath()` specifically because a lexical check alone is not enough.
+A vault-backed `realpath` that always answers "unchanged" makes that half of
+the check a no-op: a declared import that is a symlink leaving the vault is
+refused by `onDisk()` and silently read here.
+
+**Why this is not fixed rather than patched around.** A real fix needs to
+resolve the actual filesystem path a symlink points to, and Obsidian's
+`FileSystemAdapter` does not expose that — `stat()` reports `type: "file" |
+"folder"` only, already resolved through any link with no way to tell; there
+is no `realpath` method, no equivalent, nothing the browser-safe engine
+entry's `node:path` alias pattern generalizes to. The only capability that
+*could* answer it is Node's own `fs`, and `bundle.test.ts` asserts zero
+`node:` specifiers in the shipped bundle, in the source graph, and in the
+emitted bytes, on purpose — Obsidian mobile has no Node at all, and a plugin
+that requires one fails to load there, for every note, before anything can
+report it (#176). Reaching `fs` at runtime through `window.require` with an
+obscured module string would satisfy that test's letter while defeating the
+reason it exists; that is not a fix, it is hiding the same hole from the
+check built to catch it.
+
+**The residual risk is narrower than "a symlink escapes containment"
+sounds.** Planting a symlink inside a vault directory requires local
+filesystem write access to that vault already — at which point an attacker
+can edit the Markdown directly, or write anywhere else on disk a symlink
+could point to; misdirecting one `import` read is not an escalation over
+that. Mobile has no symlinks at all, so this is desktop-only. **The plugin
+adds no path policy of its own beyond the lexical one**: a path that
+escapes the vault lexically is simply not in the snapshot, `exists` answers
+false, and the engine emits the `IMPORT` finding it already emits for a
+missing file — that half of the containment guarantee holds. The vault root
+is the gate for everything lexical; a symlink is the one thing past it this
+architecture cannot see. See
+[#233](https://github.com/michal-niedzwiedzki/visimark/issues/233).
 
 **The invariant phase 1 rests on is asserted, not assumed** — and in the
 design above it is asserted by the mechanism rather than beside it. Discovery

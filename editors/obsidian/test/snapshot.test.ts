@@ -131,6 +131,10 @@ test("path discovery settles, which is the invariant the design rests on", async
 });
 
 test("a file outside the vault is absent, and the engine says so in its own words", async () => {
+  // This is the lexical escape only — a `..` that walks past the vault root
+  // in the path text itself. A symlink that resolves outside the vault
+  // without any `..` in its own name is a different, unfixed gap: see
+  // snapshot.ts's "What this does not catch" section and #233.
   const source = [
     "| Item | Qty |",
     "|---|---|",
