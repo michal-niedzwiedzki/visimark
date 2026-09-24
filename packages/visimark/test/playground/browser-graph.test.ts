@@ -102,6 +102,15 @@ test("src/fs/node-reader.ts is not reachable from the browser entry", () => {
   ).not.toContain("src/fs/node-reader.ts");
 });
 
+test("src/fs/node-writer.ts is not reachable from the browser entry", () => {
+  // same guarantee as the reader, on the write side — see src/fs/writer.ts
+  const graph = [...browserGraph().keys()].map(shortName);
+  expect(
+    graph,
+    "the node:fs writer must stay out of the browser bundle — see src/fs/writer.ts",
+  ).not.toContain("src/fs/node-writer.ts");
+});
+
 test("the browser graph contains no dynamic import the static walk could miss", () => {
   const offenders = [...browserGraph()]
     .filter(([, text]) => DYNAMIC_RE.test(text))

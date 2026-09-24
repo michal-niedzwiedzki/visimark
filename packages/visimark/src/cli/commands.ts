@@ -1,7 +1,8 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { writeArtifact } from "../artifact/write.js";
 import { onDisk } from "../fs/node-reader.js";
+import { nodeWriter } from "../fs/node-writer.js";
 import { check } from "../eval/check.js";
 import type { Value } from "../eval/value.js";
 import { build } from "../model/build.js";
@@ -166,13 +167,16 @@ export function cmdFmt(args: string[], out: Writer, err: Writer): number {
         break;
       }
     }
+    if (refused === undefined && r.changed) {
+      const w = nodeWriter.writeText(path, r.output);
+      if ("err" in w) refused = "visimark: " + w.err;
+    }
     if (refused !== undefined) {
       err(refused);
       if (json) fileEntries.push({ path, error: { code: "WRITE", message: refused } });
       exit = 2;
       continue;
     }
-    if (r.changed) writeFileSync(path, r.output);
     // `--no-artifacts` declined a write the caller can still see the cost of:
     // the count is named so a run that touched nothing is distinguishable from
     // one that left five charts alone. It never implies the charts are fine —
@@ -295,7 +299,14 @@ export function cmdInfer(args: string[], out: Writer, err: Writer): number {
         if (!json) out(`${path}: nothing to write`);
         written = { blocks: 0, anchors: 0, marker: false };
       } else {
-        writeFileSync(path, applyEdits(source, edits));
+        const w = nodeWriter.writeText(path, applyEdits(source, edits));
+        if ("err" in w) {
+          const refused = "visimark: " + w.err;
+          err(refused);
+          if (json) fileEntries.push({ path, error: { code: "WRITE", message: refused } });
+          exit = 2;
+          continue;
+        }
         const marker = edits.some((e) => e.kind === "marker");
         const blocks = edits.filter((e) => e.kind === "block").length;
         const nAnchors = edits.filter((e) => e.kind === "anchor").length;
