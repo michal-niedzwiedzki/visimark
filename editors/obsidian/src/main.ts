@@ -11,7 +11,8 @@ import {
   type Editor,
   type WorkspaceLeaf,
 } from "obsidian";
-import { check, evalValues } from "visimark";
+import { artifactsFor, check, evalValues } from "visimark";
+import { writeCharts } from "./chart.js";
 import { FINDINGS_VIEW, FindingsView } from "./findings-view.js";
 import { hasVmarkBlock } from "./gate.js";
 import { createApi, explainBinding, type VisiMarkApi } from "./api.js";
@@ -31,7 +32,7 @@ import { sweep } from "./sweep.js";
 import { SWEEP_VIEW, SweepView } from "./sweep-view.js";
 import { TEMPLATES } from "./templates.js";
 import { ValuesModal } from "./values-modal.js";
-import { vaultSweepRead } from "./vault.js";
+import { vaultSweepRead, vaultWriter } from "./vault.js";
 import { LiveVaultIndex } from "./vault-index.js";
 
 /** the view-header icon for each of `Status`'s non-hidden states (#232) */
@@ -603,25 +604,37 @@ export default class VisiMarkPlugin extends Plugin {
   }
 
   /**
-   * **Format** — repair everything `fmt` would repair, artifacts declined.
+   * **Format** — repair everything `fmt` would repair, and, since v1.1 row
+   * 14, regenerate a stale or missing chart too when `writeChartArtifacts`
+   * is on (off by default — settings.ts).
    *
-   * The same plan the findings view offers a row at a time, applied whole,
-   * as one `editor.transaction` — the buffer has several non-adjacent edits
-   * (cells and anchors sit apart), and a loop of `replaceRange` would be one
-   * undo step per edit rather than the one explicit act v1 constraint 3
-   * promises.
+   * The text repairs are the same plan the findings view offers a row at a
+   * time, applied whole, as one `editor.transaction` — the buffer has
+   * several non-adjacent edits (cells and anchors sit apart), and a loop of
+   * `replaceRange` would be one undo step per edit rather than the one
+   * explicit act v1 constraint 3 promises. A chart write is a second file
+   * outside the editor's buffer entirely, so it cannot join that
+   * transaction — it is written first, and **only if every chart writes
+   * cleanly does the transaction run at all**, matching `cmdFmt`'s own
+   * all-or-nothing contract (`cli/commands.ts`): a half-repaired note next
+   * to a half-regenerated set of charts explains nothing to the reader that
+   * a plain refusal would not explain better.
    *
    * `silent` is row 7's format-on-save path: a notice on every save of every
    * note with the setting on — "no block", "already clean", or the applied
    * count — is the report's vocabulary creeping back in by another door, on
-   * a surface the reader did not ask a question of.
+   * a surface the reader did not ask a question of. A chart-write failure is
+   * the one thing silent mode still surfaces — declining to tell someone
+   * their vault did not accept a write is not the same restraint as
+   * declining to tell them nothing needed fixing.
    */
   private async format(editor: Editor, opts: { silent?: boolean } = {}): Promise<void> {
     const source = editor.getValue();
     const gated = await this.noteFor(editor, opts);
     if (gated === null) return;
-    const { report } = gated;
-    if (report.allRepairs.length === 0) {
+    const { report, result } = gated;
+    const artifacts = this.settings.writeChartArtifacts ? artifactsFor(result) : [];
+    if (report.allRepairs.length === 0 && artifacts.length === 0) {
       if (!opts.silent) {
         new Notice("Everything in this note already agrees with its formulas.");
       }
@@ -635,18 +648,36 @@ export default class VisiMarkPlugin extends Plugin {
       }
       return;
     }
-    editor.transaction({
-      changes: report.allRepairs.map((edit) => ({
-        from: editor.offsetToPos(edit.start),
-        to: editor.offsetToPos(edit.end),
-        text: edit.text,
-      })),
-    });
+    let chartsWritten = 0;
+    if (artifacts.length > 0) {
+      const written = await writeCharts(artifacts, vaultWriter(this.app.vault));
+      chartsWritten = written.written;
+      if (written.failed !== null) {
+        new Notice(`Could not write the "${written.failed.chart}" chart: ${written.failed.err}`);
+        return;
+      }
+    }
+    if (report.allRepairs.length > 0) {
+      editor.transaction({
+        changes: report.allRepairs.map((edit) => ({
+          from: editor.offsetToPos(edit.start),
+          to: editor.offsetToPos(edit.end),
+          text: edit.text,
+        })),
+      });
+    }
     if (!opts.silent) {
       // "repair", not "value": allRepairs can carry a splice with no value of
       // its own, such as an import-stamp insert (report.ts)
       const n = report.allRepairs.length;
-      new Notice(`Applied ${n} ${n === 1 ? "repair" : "repairs"}. No chart was written.`);
+      const repaired =
+        n > 0 ? `Applied ${n} ${n === 1 ? "repair" : "repairs"}.` : "Nothing to repair.";
+      const chartsBit = this.settings.writeChartArtifacts
+        ? chartsWritten > 0
+          ? ` Wrote ${chartsWritten} chart${chartsWritten === 1 ? "" : "s"}.`
+          : " No chart needed writing."
+        : " No chart was written.";
+      new Notice(repaired + chartsBit);
     }
   }
 

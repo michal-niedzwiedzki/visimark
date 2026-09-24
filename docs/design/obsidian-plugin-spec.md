@@ -363,7 +363,7 @@ Four, and the defaults are the spec.
 | Setting | Default | Note |
 |---|---|---|
 | Format on explicit save | off | The VS Code client defaults this *on* ([editor plugins design §13](../visimark-editor-plugins-design.md#13-known-tensions)). It defaults off here because audience B has not agreed to a tool that changes bytes they did not type, and because mobile's save is a timer far more often than it is a decision. An autosave never triggers `fmt` on either surface. |
-| Write chart artifacts | off, and not settable in v1 | v1 has a vault-backed write **primitive** (`vault.ts`'s `vaultWriter`, v1.1's write-port issue) but no caller — chart generation itself is v1.1 row 14, unbuilt (§8). Declining the write does **not** silence the finding — the shipped `--no-artifacts` contract, verbatim ([`cli-reference.md`](../cli-reference.md)). |
+| Write chart artifacts | off | Fixed and unsettable through v1.1 row 13, for lack of a caller. **Settable since v1.1 row 14** (`chart.ts`, `write/fmt.ts`'s `artifactsFor`): on, Format (the command or format-on-save) also regenerates a stale or missing chart's SVG through the vault write port. Off is still the default — a chart is a file this plugin had never created before row 14, the same bar `formatOnSave` set for editing bytes the reader did not type. Declining the write, whichever way it is declined, does **not** silence the finding — the shipped `--no-artifacts` contract, verbatim ([`cli-reference.md`](../cli-reference.md)). |
 | Show provenance in Live Preview | on | v1 row 2 covers reading mode **and** Live Preview, as #176 states it and as manual test §2.2 demands. The setting exists because §16 records that Live Preview shows the anchor comment as literal text everywhere, so the decoration sits beside a visible `<!--vmark=…-->` — a design this spec commits to and wants one toggle away from if it reads badly in practice. |
 | Sweep on vault open | off | A vault sweep on open is a scan of every note; it is a command, not a startup cost. Since v1.1 row 13, turning this on also seeds and keeps live the incremental vault index (`vault-index.ts`) — one setting for both, since the index has no scan of its own to start from. |
 
@@ -719,22 +719,27 @@ already recorded the Part 1 results, including the accepted Live Preview row.
 Everything in #176's v1.1 and v2 tables, and the whole of its rejected list. The
 ones worth naming because someone will ask:
 
-- **Chart generation in the vault.** The write-port *primitive* now exists
-  (`packages/visimark/src/fs/writer.ts`'s `WriterPort`, and `vault.ts`'s
-  `vaultWriter`, landed as v1.1's prerequisite issue) — the read snapshot
-  alone was enough for v1, and building the primitive ahead of a caller is the
-  same order v1's row 1 shipped in. Row 14 itself, the code that plans and
-  writes an SVG artifact through it, is still unbuilt. The stale-chart finding
-  still shows (§3.2) until it lands, which is the `--no-artifacts` split
-  working as intended.
-- **CSV import writes.** Same primitive, same gap — the *read* half works
-  today through §2.6; only stamp insertion (v1.1 row 16) is unbuilt. #176's v1
-  constraint 2 — "anything needing `node:fs` is desktop-only" — is stricter
-  than the engine requires and is not adopted here: the blocker was, and until
-  row 16 lands still is, a missing *caller*, not a runtime.
+- **Chart generation in the vault — landed, v1.1 row 14.** Listed here
+  through row 13 while the write-port primitive
+  (`packages/visimark/src/fs/writer.ts`'s `WriterPort`, `vault.ts`'s
+  `vaultWriter`) existed with no caller. `chart.ts`'s `writeCharts`, driven by
+  `write/fmt.ts`'s `artifactsFor`, is that caller: Format (command or
+  format-on-save) regenerates a stale or missing chart's SVG when **Write
+  chart artifacts** is on (§2.5, off by default). Off, or per-finding
+  regeneration from the findings view rather than whole-note Format, are both
+  still non-goals — see #252's "what you considered and rejected".
+- **The incremental vault index — landed, v1.1 row 13.** `vault-index.ts`'s
+  `LiveVaultIndex`, gated on the existing "Sweep the vault on open" setting.
+  See #249.
+- **CSV import writes.** Same write primitive as chart generation, same
+  remaining gap — the *read* half works today through §2.6; only stamp
+  insertion (v1.1 row 16) is unbuilt. #176's v1 constraint 2 — "anything
+  needing `node:fs` is desktop-only" — is stricter than the engine requires
+  and is not adopted here: the blocker was, and until row 16 lands still is,
+  a missing *caller*, not a runtime.
 - **Publishing scalars to YAML properties** (fork C as a feature of B),
-  **cross-note transclusion**, **the scenario panel**, **the incremental sweep
-  index**, **anything that adds Obsidian-only syntax**.
+  **cross-note transclusion**, **the scenario panel**, **anything that adds
+  Obsidian-only syntax**.
 - **A spreadsheet grid, live rewrite on keystroke, a second preview, a custom
   chart view, cross-note queries** — #176's rejected list, unchanged.
 

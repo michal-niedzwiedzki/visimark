@@ -1,14 +1,14 @@
 /**
- * The plugin's four settings — spec §2.5, and its defaults are the spec.
+ * The plugin's five settings — spec §2.5, and its defaults are the spec.
  *
- * **`writeChartArtifacts` is not here.** §2.5 lists it, off and "not settable
- * in v1": there is a vault-backed write *primitive* now (`vault.ts`'s
- * `vaultWriter`) but no chart-generation code to call it (§8 — that's v1.1
- * row 14, unbuilt), so the plugin still cannot honour a `true` value, and a
- * toggle nothing can act on is worse than no toggle. Declining the write
- * never silences the finding — the shipped `--no-artifacts` contract — which
- * is why a stale chart still gets a row with no repair, unconditionally,
- * everywhere in this plugin.
+ * **`writeChartArtifacts` was not here through v1.1 row 13.** §2.5 listed it
+ * off and "not settable in v1": there was no vault-backed write port at all.
+ * v1.1 row 14 (`chart.ts`, `write/fmt.ts`'s `artifactsFor`) is the code that
+ * calls the write primitive #247 added, so the toggle now does something —
+ * see the field doc below for what it still does not change. Declining the
+ * write never silences the finding — the shipped `--no-artifacts` contract —
+ * which is why a stale chart still gets a row with no repair, unconditionally,
+ * whenever this is off.
  */
 export interface VisiMarkSettings {
   /**
@@ -34,10 +34,23 @@ export interface VisiMarkSettings {
    * by default — a sweep is a scan of every note, a command, not a startup
    * cost every vault should pay unasked. */
   sweepOnOpen: boolean;
+  /**
+   * Regenerate a stale or missing chart's SVG through the vault, when Format
+   * (the command, or format-on-save with `formatOnSave` on) runs — v1
+   * constraint 3's "an explicit act", same as every other write this plugin
+   * makes. Off by default: audience B has not agreed to this tool creating
+   * *new files* in the vault any more than it has agreed to edited bytes in
+   * an existing one, and a chart is a file this plugin has never written
+   * before now. Turning it on does not change what `check` reports — a
+   * stale chart is still a stale chart until the next Format runs, exactly
+   * the way a stale cell is.
+   */
+  writeChartArtifacts: boolean;
 }
 
 export const DEFAULT_SETTINGS: VisiMarkSettings = {
   formatOnSave: false,
   showProvenanceInLivePreview: true,
   sweepOnOpen: false,
+  writeChartArtifacts: false,
 };

@@ -16,3 +16,7 @@ test("Live Preview provenance defaults on — row 2 covers both renderers", () =
 test("sweep-on-open defaults off — a scan is a command, not a startup cost", () => {
   expect(DEFAULT_SETTINGS.sweepOnOpen).toBe(false);
 });
+
+test("write-chart-artifacts defaults off — a chart is a file this plugin has never created before", () => {
+  expect(DEFAULT_SETTINGS.writeChartArtifacts).toBe(false);
+});
