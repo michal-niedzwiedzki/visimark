@@ -71,9 +71,15 @@ const TEXT: Record<FindingCode, ((f: Finding) => string) | null> = {
       : // the engine collapses every drifted prose anchor into one finding
         // with no site of its own, because there is no single place to point
         // at. Saying "this value" about eight of them would send the reader
-        // looking for one.
+        // looking for one. The engine only emits this when the count is at
+        // least 1 (reportAnchors, check-report.ts), so a missing count would
+        // be a hole, not a clean note — never render it as "0 values".
         f.anchorGroup === true
-        ? `${f.suppressedCount ?? 0} values in the text no longer match their formulas.`
+        ? f.suppressedCount === undefined
+          ? "Some values in the text no longer match their formulas."
+          : f.suppressedCount === 1
+            ? "1 value in the text no longer matches its formula."
+            : `${f.suppressedCount} values in the text no longer match their formulas.`
         : "This value no longer matches its formula.",
   DATE: () => "This looks like a date but is not one VisiMark can read.",
   UNIT: () => "This column mixes units.",
@@ -89,7 +95,16 @@ const TEXT: Record<FindingCode, ((f: Finding) => string) | null> = {
   ARTIFACT: () => "This chart could not be built.",
   IMPORT: () => "The data file this note reads could not be read.",
   WARN: (f) => `${subject(f)} is defined but never used.`,
-  COVERAGE: () => "Nothing in this table is checked yet.",
+  // emitCoverage (packages/visimark/src/eval/check.ts) reports two opposite
+  // cases under one code: a table with no rules at all (span undefined), and
+  // a `<!--vmark:no-formulas-->` marker on a document that already has rules
+  // (span points at the marker). Telling the marker case "nothing is checked"
+  // and offering Infer would be backwards — the fix there is deleting the
+  // marker, not adding more rules.
+  COVERAGE: (f) =>
+    f.span !== undefined
+      ? "A marker says nothing here is checked, but this table now has rules."
+      : "Nothing in this table is checked yet.",
   NOTE: null,
 };
 
@@ -103,12 +118,23 @@ const TEXT: Record<FindingCode, ((f: Finding) => string) | null> = {
  * gets none either, because v1 has no vault-backed write port (§2.5, §8):
  * declining the write never silences the finding, which is the shipped
  * `--no-artifacts` contract, so the row stays and the button does not appear.
+ *
+ * **`Finding.suggestion` is not a rename target on every code.** The engine
+ * sets it for `UNDEF` (a did-you-mean binding name), but also for `TYPE`
+ * (closest *function* name), `WARN` (closest *referenced* name for an unused
+ * scalar) and `PRECISION` (a whole `param … precision N = default …` line —
+ * an instruction, not a name at all). `COVERAGE`'s marker case has no plugin
+ * action either — the fix is deleting a marker comment, which is not
+ * something `fmt` or `infer` does — so it falls through to `null` below.
+ * Only `UNDEF`'s suggestion is a binding a reader could plausibly want to
+ * jump to.
  */
 function actionFor(f: Finding): ReaderAction {
   if (f.code === "STALE" && f.artifact === undefined) return { kind: "repair" };
-  if (f.code === "COVERAGE") return { kind: "infer" };
+  if (f.code === "COVERAGE" && f.span === undefined) return { kind: "infer" };
   if (f.code === "CYCLE" && f.cyclePath !== undefined) return { kind: "cycle", path: f.cyclePath };
-  if (f.suggestion !== undefined) return { kind: "suggest", name: f.suggestion };
+  if (f.code === "UNDEF" && f.suggestion !== undefined)
+    return { kind: "suggest", name: f.suggestion };
   return null;
 }
 

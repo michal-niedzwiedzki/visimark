@@ -106,6 +106,13 @@ test('a collapsed group of drifted anchors says how many, not "this value"', () 
   expect(group.action).toEqual({ kind: "repair" });
 });
 
+test("a collapsed group of exactly one drifted anchor is not '1 values'", () => {
+  // reportAnchors (check-report.ts) emits this finding whenever
+  // staleAnchorCount > 0, so the count can be exactly 1
+  const one = forReader(finding("STALE", { anchorGroup: true, suppressedCount: 1 }))!;
+  expect(one.row).toBe("1 value in the text no longer matches its formula.");
+});
+
 test("a stale chart is a row with no repair, and the finding is not silenced", () => {
   // the shipped --no-artifacts contract: declining the write never silences
   // the finding. v1 has no vault-backed write port, so the row stays and the
@@ -116,8 +123,20 @@ test("a stale chart is a row with no repair, and the finding is not silenced", (
   expect(chart.severity).toBe("problem");
 });
 
-test("COVERAGE offers Infer, which is the on-ramp", () => {
-  expect(forReader(finding("COVERAGE"))!.action).toEqual({ kind: "infer" });
+test("an empty table's COVERAGE offers Infer, which is the on-ramp", () => {
+  const r = forReader(finding("COVERAGE"))!;
+  expect(r.action).toEqual({ kind: "infer" });
+  expect(r.row).toBe("Nothing in this table is checked yet.");
+});
+
+test("a marker's COVERAGE is not told it is an empty table, and offers no action", () => {
+  // emitCoverage reports two opposite cases under one code: an empty table
+  // (no span) and a `<!--vmark:no-formulas-->` marker on a document that has
+  // grown rules since (span points at the marker). Infer would tell the
+  // reader to add more rules to a table that already has them.
+  const r = forReader(finding("COVERAGE", { span: { start: 0, end: 20 } }))!;
+  expect(r.action).toBeNull();
+  expect(r.row).not.toBe("Nothing in this table is checked yet.");
 });
 
 test("a did-you-mean is passed through, not recomputed", () => {
@@ -126,6 +145,17 @@ test("a did-you-mean is passed through, not recomputed", () => {
   const r = forReader(finding("UNDEF", { raw: "net_totl", suggestion: "net_total" }))!;
   expect(r.action).toEqual({ kind: "suggest", name: "net_total" });
   expect(r.row).toContain("net_totl");
+});
+
+test("a suggestion is only a rename offer on UNDEF", () => {
+  // TYPE's suggestion is the closest *function* name, WARN's is the closest
+  // *referenced* name for an unused scalar, and PRECISION's is a whole
+  // `param … precision N = default …` line — none of them are a binding the
+  // reader could jump to, and none should render as "suggest".
+  for (const code of ["TYPE", "WARN", "PRECISION"] as const) {
+    const r = forReader(finding(code, { suggestion: "something" }))!;
+    expect(r.action, `${code} offered a suggest action`).toBeNull();
+  }
 });
 
 test("a cycle offers the path", () => {
