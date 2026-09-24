@@ -125,3 +125,24 @@ test("scheduleRecheck on a debounce of 0 still lets a synchronous burst coalesce
   expect(recomputed).toBe(1);
   expect(index.count()).toBe(1);
 });
+
+test("a recheck whose token was superseded discards its answer rather than applying it late", async () => {
+  // scheduleRecheck's timer only cancels a still-*pending* recheck; one
+  // already awaiting a read is a live promise nothing can cancel. The token
+  // guard is what stops that stale answer from landing after a newer one —
+  // simulated directly here by bumping the path's generation (a real
+  // scheduleRecheck call) and then calling recheck with a token that can
+  // never match it, standing in for "this call started before the bump".
+  const { files, index } = await seeded({ "invoice.md": clean });
+  files.set("invoice.md", drifted);
+  index.scheduleRecheck("invoice.md", 50); // bumps the generation; the assertions below run first
+  await index.recheck("invoice.md", -1);
+  expect(index.count()).toBe(0); // the stale call's answer never landed
+});
+
+test("recheck's own default token still lets a direct, uncontested call apply normally", async () => {
+  const { files, index } = await seeded({ "invoice.md": clean });
+  files.set("invoice.md", drifted);
+  await index.recheck("invoice.md"); // no scheduleRecheck raced it, so its own token wins
+  expect(index.notes().map((n) => n.path)).toEqual(["invoice.md"]);
+});
