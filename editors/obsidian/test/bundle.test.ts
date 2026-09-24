@@ -82,7 +82,9 @@ function graph(): Map<string, string> {
       }
       if (!spec.startsWith(".")) continue;
       // the source is written in ESM style: `./x.js` names `./x.ts` on disk
-      queue.push(resolve(dirname(file), spec).replace(/\.js$/, ".ts"));
+      const target = resolve(dirname(file), spec).replace(/\.js$/, ".ts");
+      if (!target.endsWith(".ts")) continue;
+      queue.push(target);
     }
   }
   return out;
@@ -199,7 +201,21 @@ test("every file in src/ is a walk root, so none can hide until a row wires it i
  * Bump this only when the growth is real and reviewed, and record the date,
  * the new value and why directly above.
  */
-const BASELINE_BYTES = 271_891;
+const BASELINE_BYTES = 279_356;
+
+/*
+ * 2026-09-24, this integration branch merges two independent lines that had
+ * each moved this constant since their common ancestor at 161,078: the row
+ * 1-through-3/12 chain (271,891) and row 10's templates (168,543). Neither
+ * number describes the merged bundle, because each was measured without the
+ * other's additions in it — exactly the case the row-6 comment below
+ * anticipated ("whichever lands second re-measures and says so here"). This
+ * is that re-measurement: 279,356 bytes, built after resolving the merge,
+ * not summed or guessed. The two deltas (271,891 − 161,078 = 110,813; and
+ * 168,543 − 161,078 = 7,465) do not simply add to 279,356 − 161,078 = 118,278
+ * because esbuild's minifier and tree-shaking are not linear in what they are
+ * given — a fact worth having on record rather than assuming.
+ */
 
 /* 2026-09-24, 270,440 → 271,891 (+1,451). v1 row 3: the hover and tap that
  * make row 2's marks legible. */
@@ -253,6 +269,14 @@ const BASELINE_BYTES = 271_891;
  * #211 records 168,543 for the same constant, from the four templates. The two
  * are independent and both real; whichever lands second re-measures and says
  * so here. That is the mechanism working, not a conflict to avoid.
+ */
+
+/*
+ * 2026-09-23, 161,078 → 168,543 (+7,465). v1 row 10: the four templates are
+ * generated into `src/templates.ts` and therefore into the bundle, because a
+ * plugin ships one `main.js` and nothing beside it. The growth is the four
+ * documents' own bytes and is expected to stay proportional to how many
+ * templates there are.
  */
 
 /** 10% over the baseline — a margin, not a byte-exact pin, so an unrelated

@@ -204,6 +204,16 @@ The commands in §2.4 remain registered and are no-ops with a plain notice on a
 note with no fence — a command palette that hides and unhides entries as the
 active note changes is worse than one that answers.
 
+**A command that creates a block cannot be gated on one.** The rule above is
+about *reading* surfaces. v1 row 10's template commands, and row 5's Infer,
+exist to produce a note's first ```` ```vmark ```` block, so gating them on a
+block already being there would close the only door into the format for
+somebody who has never written one. Constraint 4 is that a vault of ordinary
+notes is *indistinguishable* from one without the plugin, and a command palette
+entry is visible only to someone who went looking for it — which is why §2.3
+already says commands stay registered and answer rather than hide. The
+distinction is creating versus reading, not row by row.
+
 **One surface was pulled forward into row 1: a status bar item that reports the
 gate.** Manual test §2.1's pass condition has a positive half — *open
 `example-invoice.md`, VisiMark activates* — and every surface that could show
@@ -258,7 +268,24 @@ plugin **does not guess**: it answers with nothing and says to move the caret,
 because Explain shows one name and showing the wrong one confidently is worse
 than asking.
 
-The sweep is the sixth and has no CLI twin — it is the row that justifies fork
+Four more have no CLI twin and are **not gated on the fence** (§2.3), because
+each one's job is to create the block the gate looks for:
+
+| Command | Inserts |
+|---|---|
+| **VisiMark: Insert invoice template** | `templates/invoice.md` |
+| **VisiMark: Insert monthly budget template** | `templates/budget.md` |
+| **VisiMark: Insert team capacity template** | `templates/capacity.md` |
+| **VisiMark: Insert experiment log template** | `templates/experiment.md` |
+
+v1 row 10. One command each rather than a picker: four palette entries are
+searchable by name, the palette is already a picker, and a modal is UI nothing
+can test. The documents are Markdown files in the repository, generated into
+the bundle by `scripts/gen-obsidian-templates.ts`, because a template's whole
+contract is that `visimark check` passes it with **zero** findings unedited —
+and a string literal can be handed to no CLI, no formatter and no renderer.
+
+The sweep is the sixth and has no CLI twin either — it is the row that justifies fork
 B over the VS Code extension (v1 row 8), and it is read-only.
 
 It is **not gated on the fence** (§2.3): that gate is a question about the
