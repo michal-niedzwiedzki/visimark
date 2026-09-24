@@ -163,6 +163,29 @@
   outline-offset: 2px;
 }
 
+/* --- the incremental vault index's ribbon badge (v1.1 row 13) ------------- */
+
+/*
+ * The ribbon icon is `position: relative` by default in Obsidian's own CSS,
+ * so this only needs to place itself, not ask for that. A count, not a dot —
+ * row 13's own line is "a badge that is simply true at all times", and a dot
+ * cannot say how many.
+ */
+.visimark-ribbon-badge {
+  background: var(--interactive-accent);
+  border-radius: var(--radius-l);
+  bottom: -2px;
+  color: var(--text-on-accent);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-medium);
+  line-height: 1;
+  min-width: 14px;
+  padding: 1px 4px;
+  position: absolute;
+  right: -4px;
+  text-align: center;
+}
+
 /* --- the infer preview (v1 row 5) ----------------------------------------- */
 
 .visimark-infer-lead {

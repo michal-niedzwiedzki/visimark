@@ -1,6 +1,7 @@
 import { ItemView, Notice, TFile, type WorkspaceLeaf } from "obsidian";
 import { sweep, type SweepResult, type SweptNote } from "./sweep.js";
 import { vaultSweepRead } from "./vault.js";
+import type { LiveVaultIndex } from "./vault-index.js";
 
 /**
  * The vault sweep's pane — v1 row 8 of #176, and the row that justifies fork B
@@ -27,8 +28,19 @@ export const SWEEP_VIEW = "visimark-sweep";
 export class SweepView extends ItemView {
   private running = false;
   private signal = { aborted: false };
+  private unsubscribe: (() => void) | null = null;
 
-  constructor(leaf: WorkspaceLeaf) {
+  /**
+   * `getIndex` rather than the index itself: a leaf that stays open across
+   * this view being closed and reopened must see `main.ts`'s index as of
+   * *this* open, not the one that existed when `registerView`'s factory ran
+   * — v1.1 row 13's index does not exist until "Sweep the vault on open" has
+   * run once, which can be after this view was already constructed.
+   */
+  constructor(
+    leaf: WorkspaceLeaf,
+    private getIndex: () => LiveVaultIndex | null = () => null,
+  ) {
     super(leaf);
   }
 
@@ -45,12 +57,61 @@ export class SweepView extends ItemView {
   }
 
   override async onOpen(): Promise<void> {
+    const index = this.getIndex();
+    if (index !== null && index.isSeeded()) {
+      this.drawFromIndex(index);
+      this.unsubscribe = index.onChange(() => this.drawFromIndex(index));
+      return;
+    }
     await this.run();
   }
 
   override onClose(): Promise<void> {
     this.signal.aborted = true;
+    this.unsubscribe?.();
+    this.unsubscribe = null;
     return Promise.resolve();
+  }
+
+  /**
+   * Draw straight from the ambient index — no scan, and this is the whole
+   * point of row 13: the pane is a read of state that was already kept
+   * current, not a new act of finding out. Subscribed for as long as the
+   * pane stays open, so an edit made while looking at the list updates it
+   * without a click.
+   *
+   * **Not routed through `drawResult`.** A `SweepResult`'s "N out of M
+   * looked at" line describes a scan that just ran; the index has no
+   * present-tense "M" to report — it never re-derives the vault's total note
+   * count between full sweeps; see `vault-index.ts`'s module note on what it
+   * does and does not track — so this says something true instead of forcing
+   * a number through the sentence that would go stale as soon as a note is
+   * added. "Look again" still runs a real sweep and reseeds the index from
+   * it, which is the true count as of that moment.
+   */
+  private drawFromIndex(index: LiveVaultIndex): void {
+    const root = this.container();
+    const notes = index.notes();
+    const n = notes.length;
+
+    const summary = root.createDiv({ cls: "visimark-sweep-status" });
+    summary.createSpan({
+      cls: "visimark-note-state",
+      text:
+        n === 0
+          ? "Nothing in this vault currently disagrees with itself."
+          : `${n} ${n === 1 ? "note disagrees" : "notes disagree"} with ${n === 1 ? "itself" : "themselves"}, kept up to date as you edit.`,
+    });
+    const again = summary.createEl("button", {
+      cls: "visimark-sweep-again",
+      text: "Look again",
+      attr: { type: "button", "aria-label": "Look through the whole vault again" },
+    });
+    again.addEventListener("click", () => void this.run());
+
+    if (n === 0) return;
+    const list = root.createEl("ul", { cls: "visimark-list" });
+    for (const note of notes) this.row(list, note);
   }
 
   /** Scan the vault, drawing as it goes. */
@@ -58,6 +119,10 @@ export class SweepView extends ItemView {
     if (this.running) return;
     this.running = true;
     this.signal = { aborted: false };
+    // a manual scan is about to draw its own progress and result; the live
+    // subscription would otherwise redraw underneath it on the next edit
+    this.unsubscribe?.();
+    this.unsubscribe = null;
 
     const files = this.app.vault.getMarkdownFiles();
     const read = vaultSweepRead(this.app.vault);
@@ -75,6 +140,12 @@ export class SweepView extends ItemView {
           signal: this.signal,
         },
       );
+      // a real, whole-vault result is the one thing row 13's index is
+      // defined to accept without question (`vault-index.ts`'s `seed`) — a
+      // manual "Look again" is therefore also how the ambient index heals
+      // from anything an incremental update could have missed (rename edge
+      // cases, a vault event the adapter never fired).
+      if (!result.cancelled) this.getIndex()?.seed(result);
       this.drawResult(result);
     } finally {
       this.running = false;

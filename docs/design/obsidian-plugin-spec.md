@@ -344,8 +344,17 @@ that hands the thread back every fifty notes so a phone keeps answering taps.
 The phone numbers behind that are an extrapolation from a desktop measurement,
 not a measurement on a phone, and
 [`obsidian-manual-test.md`](obsidian-manual-test.md) §2.8 is what corrects them.
-v1.1 row 13's index remains deferred and is still justified by the feature
-working rather than by it not working — which is now a measured claim.
+
+**v1.1 row 13 has since landed** (`editors/obsidian/src/vault-index.ts`), gated
+on the same "Sweep the vault on open" setting rather than a setting of its
+own — turning that setting on seeds a `LiveVaultIndex` from one real sweep and
+keeps it current with `vault.on("modify"/"create"/"delete"/"rename")` for the
+rest of the session, so the sweep pane and the ribbon badge answer instantly
+after the first scan instead of re-scanning every time. It was justified by
+the feature working, not by the on-demand sweep failing, exactly as this
+section predicted; see `obsidian-manual-test.md` §2.8a for its acceptance and
+row 13's own module comment for what it explicitly does not defend against
+(a vault change no Obsidian event fires for).
 
 ### 2.5 Settings
 
@@ -356,7 +365,7 @@ Four, and the defaults are the spec.
 | Format on explicit save | off | The VS Code client defaults this *on* ([editor plugins design §13](../visimark-editor-plugins-design.md#13-known-tensions)). It defaults off here because audience B has not agreed to a tool that changes bytes they did not type, and because mobile's save is a timer far more often than it is a decision. An autosave never triggers `fmt` on either surface. |
 | Write chart artifacts | off, and not settable in v1 | v1 has a vault-backed write **primitive** (`vault.ts`'s `vaultWriter`, v1.1's write-port issue) but no caller — chart generation itself is v1.1 row 14, unbuilt (§8). Declining the write does **not** silence the finding — the shipped `--no-artifacts` contract, verbatim ([`cli-reference.md`](../cli-reference.md)). |
 | Show provenance in Live Preview | on | v1 row 2 covers reading mode **and** Live Preview, as #176 states it and as manual test §2.2 demands. The setting exists because §16 records that Live Preview shows the anchor comment as literal text everywhere, so the decoration sits beside a visible `<!--vmark=…-->` — a design this spec commits to and wants one toggle away from if it reads badly in practice. |
-| Sweep on vault open | off | A vault sweep on open is a scan of every note; it is a command, not a startup cost. |
+| Sweep on vault open | off | A vault sweep on open is a scan of every note; it is a command, not a startup cost. Since v1.1 row 13, turning this on also seeds and keeps live the incremental vault index (`vault-index.ts`) — one setting for both, since the index has no scan of its own to start from. |
 
 ### 2.6 The vault reader — the one piece the engine does not supply
 
