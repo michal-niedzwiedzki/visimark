@@ -426,10 +426,11 @@ export default class VisiMarkPlugin extends Plugin {
     this.app.workspace.onLayoutReady(() => {
       this.refresh();
       // spec §2.5, off by default: a vault-wide scan is a cost every vault
-      // opens with the plugin should not pay unasked
+      // opens with the plugin should not pay unasked. Awaited before
+      // openSweep so the pane opens reading the freshly seeded index instead
+      // of racing it into a second, redundant full scan.
       if (this.settings.sweepOnOpen) {
-        void this.openSweep();
-        void this.startAmbientIndex();
+        void this.startAmbientIndex().then(() => this.openSweep());
       }
     });
   }
@@ -442,18 +443,66 @@ export default class VisiMarkPlugin extends Plugin {
    * session — both call sites are safe to call more than once, since this
    * returns immediately if `this.index` already exists.
    *
-   * **Listeners are registered only after the initial seed resolves**, not
-   * before. Registering first would let a `modify` fired mid-scan race
-   * `seed()`'s own clear-then-repopulate — a low-stakes race (the next edit
-   * or the sweep pane's "Look again" self-corrects either way) but an
-   * unnecessary one to accept when waiting costs nothing observable: a scan
-   * a person cannot watch part-way through has no "before" for a missed edit
-   * to be later than.
+   * **Every listener is registered before the scan starts, not after —
+   * but nothing reaches the index until the scan finishes.** A note edited
+   * during the scan cannot be silently missed: its event is buffered here and
+   * replayed once `seed()` has run, rather than dispatched into an index that
+   * does not exist yet or, worse, into one `seed()` is about to clear.
+   * Buffering (rather than the simpler "register after") is what makes that
+   * replay possible at all — an event that never reached anything has
+   * nothing to replay.
    */
   async startAmbientIndex(): Promise<void> {
     if (this.index !== null) return;
     const read = vaultSweepRead(this.app.vault);
     const index = new LiveVaultIndex(read);
+
+    type Change =
+      | { kind: "recheck"; path: string }
+      | { kind: "remove"; path: string }
+      | { kind: "rename"; oldPath: string; path: string };
+    // non-null while the initial scan is in flight; every event lands here
+    // instead of on `index` until the scan's own authoritative seed() has run
+    let buffered: Change[] | null = [];
+    const dispatch = (c: Change): void => {
+      if (c.kind === "recheck") index.scheduleRecheck(c.path);
+      else if (c.kind === "remove") index.remove(c.path);
+      else index.rename(c.oldPath, c.path);
+    };
+    const handle = (c: Change): void => {
+      if (buffered !== null) buffered.push(c);
+      else dispatch(c);
+    };
+
+    // every listener below is scoped to Markdown files — an image or a PDF
+    // added to the vault is not a note this index has ever claimed to track,
+    // and rechecking one on every binary asset drop would be pure waste
+    const isNote = (f: unknown): f is TFile => f instanceof TFile && f.extension === "md";
+    this.registerEvent(
+      this.app.vault.on("modify", (f) => {
+        if (isNote(f)) handle({ kind: "recheck", path: f.path });
+      }),
+    );
+    this.registerEvent(
+      this.app.vault.on("create", (f) => {
+        if (isNote(f)) handle({ kind: "recheck", path: f.path });
+      }),
+    );
+    this.registerEvent(
+      this.app.vault.on("delete", (f) => {
+        if (isNote(f)) handle({ kind: "remove", path: f.path });
+      }),
+    );
+    this.registerEvent(
+      this.app.vault.on("rename", (f, oldPath) => {
+        // the old path's extension does not survive the rename event, so a
+        // note renamed away from .md is handled as a plain removal — its
+        // entry (if any) is stale the moment it stops being Markdown
+        if (isNote(f)) handle({ kind: "rename", oldPath, path: f.path });
+        else if (oldPath.endsWith(".md")) handle({ kind: "remove", path: oldPath });
+      }),
+    );
+
     const files = this.app.vault.getMarkdownFiles();
     const result = await sweep(
       { paths: () => files.map((f) => f.path), read },
@@ -463,35 +512,10 @@ export default class VisiMarkPlugin extends Plugin {
     // while the scan above was in flight
     if (this.index !== null) return;
     index.seed(result);
+    const missed = buffered;
+    buffered = null; // future events dispatch straight to the index from here
+    for (const c of missed) dispatch(c);
     index.onChange(() => this.updateRibbonBadge());
-    // every listener below is scoped to Markdown files — an image or a PDF
-    // added to the vault is not a note this index has ever claimed to track,
-    // and rechecking one on every binary asset drop would be pure waste
-    const isNote = (f: unknown): f is TFile => f instanceof TFile && f.extension === "md";
-    this.registerEvent(
-      this.app.vault.on("modify", (f) => {
-        if (isNote(f)) index.scheduleRecheck(f.path);
-      }),
-    );
-    this.registerEvent(
-      this.app.vault.on("create", (f) => {
-        if (isNote(f)) index.scheduleRecheck(f.path);
-      }),
-    );
-    this.registerEvent(
-      this.app.vault.on("delete", (f) => {
-        if (isNote(f)) index.remove(f.path);
-      }),
-    );
-    this.registerEvent(
-      this.app.vault.on("rename", (f, oldPath) => {
-        // the old path's extension does not survive the rename event, so a
-        // note renamed away from .md is handled as a plain removal — its
-        // entry (if any) is stale the moment it stops being Markdown
-        if (isNote(f)) index.rename(oldPath, f.path);
-        else if (oldPath.endsWith(".md")) index.remove(oldPath);
-      }),
-    );
     this.index = index;
     this.updateRibbonBadge();
   }
@@ -530,6 +554,10 @@ export default class VisiMarkPlugin extends Plugin {
   override onunload(): void {
     for (const { el } of this.actionFor.values()) el.remove();
     this.actionFor.clear();
+    // a note edited within DEBOUNCE_MS of unload would otherwise still fire
+    // a recheck afterward, into a listener closing over this dead instance
+    this.index?.dispose();
+    this.index = null;
   }
 
   /**

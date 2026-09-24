@@ -74,6 +74,22 @@ export class LiveVaultIndex implements VaultIndex {
   private pending = new Map<string, ReturnType<typeof setTimeout>>();
   private seededOnce = false;
 
+  /**
+   * `recheck` awaits a read and a `check()` before it knows its own answer,
+   * so a second event for the same path can start and finish inside that
+   * window. Without a token, whichever `recheck` call happens to resolve
+   * last wins, which is not necessarily the one that started last — a
+   * `remove` racing a `scheduleRecheck`, or two edits close enough together
+   * to both be in flight, could leave the entry one recheck out of date.
+   * Every path-changing call bumps its own counter in `generation` before
+   * doing anything async; a `recheck` captures the value at its own start
+   * and refuses to write if the counter has moved by the time it would.
+   * `epoch` is the same guard for `seed`, which replaces every entry at
+   * once rather than one path's.
+   */
+  private generation = new Map<string, number>();
+  private epoch = 0;
+
   constructor(
     private read: VaultRead,
     private scheduleTimeout: (fn: () => void, ms: number) => ReturnType<typeof setTimeout> = (
@@ -104,6 +120,7 @@ export class LiveVaultIndex implements VaultIndex {
 
   /** Replace the whole index with a real sweep's result — the only way in. */
   seed(result: SweepResult): void {
+    this.epoch++;
     this.entries.clear();
     for (const note of result.notes) this.entries.set(note.path, note);
     this.seededOnce = true;
@@ -112,6 +129,7 @@ export class LiveVaultIndex implements VaultIndex {
 
   /** A note left the vault, or a rename's old path — drop it, no recheck. */
   remove(path: string): void {
+    this.bump(path);
     this.cancelPending(path);
     if (this.entries.delete(path)) this.notify();
   }
@@ -125,13 +143,22 @@ export class LiveVaultIndex implements VaultIndex {
   /** A note was created or modified — recheck it after `DEBOUNCE_MS` of quiet. */
   scheduleRecheck(path: string, delayMs = DEBOUNCE_MS): void {
     this.cancelPending(path);
+    // captured now, not when the timer fires: this is the moment this call
+    // supersedes whatever else was pending or in flight for this path
+    const token = this.bump(path);
     this.pending.set(
       path,
       this.scheduleTimeout(() => {
         this.pending.delete(path);
-        void this.recheck(path);
+        void this.recheck(path, token);
       }, delayMs),
     );
+  }
+
+  private bump(path: string): number {
+    const next = (this.generation.get(path) ?? 0) + 1;
+    this.generation.set(path, next);
+    return next;
   }
 
   private cancelPending(path: string): void {
@@ -147,16 +174,38 @@ export class LiveVaultIndex implements VaultIndex {
    * change to the sweep's chunking or progress reporting cannot alter what an
    * incremental recheck does. See `report.ts`/`snapshot.ts` for what each
    * step means; this function only sequences them.
+   *
+   * `token` defaults to a fresh bump so a direct call (there is none today,
+   * but the method is not private) is still self-consistent; `scheduleRecheck`
+   * passes the token it captured at schedule time instead, so a `remove` or a
+   * newer `scheduleRecheck` that lands while this call is awaiting can be
+   * detected and this call's answer discarded rather than applied late.
    */
-  async recheck(path: string): Promise<void> {
+  async recheck(path: string, token: number = this.bump(path)): Promise<void> {
+    const epoch = this.epoch;
     const text = await this.read(path);
     const next = text === null ? null : await this.verdictFor(path, text);
+    if (this.epoch !== epoch || this.generation.get(path) !== token) return;
     if (next === null) {
       if (this.entries.delete(path)) this.notify();
     } else {
       this.entries.set(path, next);
       this.notify();
     }
+  }
+
+  /**
+   * Cancel every pending recheck and drop every listener. `scheduleRecheck`'s
+   * timers otherwise outlive the plugin: a note edited within `DEBOUNCE_MS`
+   * of the plugin unloading would still fire `recheck` afterward, calling
+   * `notify()` into listeners that close over an unloaded plugin instance
+   * (`updateRibbonBadge`, reading `this.ribbonIcon` off a teardown-in-progress
+   * `main.ts`). `main.ts`'s `onunload` calls this.
+   */
+  dispose(): void {
+    for (const id of this.pending.values()) this.cancelScheduled(id);
+    this.pending.clear();
+    this.listeners.clear();
   }
 
   private async verdictFor(path: string, text: string): Promise<SweptNote | null> {

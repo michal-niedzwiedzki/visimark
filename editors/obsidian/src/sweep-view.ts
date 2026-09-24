@@ -144,8 +144,15 @@ export class SweepView extends ItemView {
       // defined to accept without question (`vault-index.ts`'s `seed`) — a
       // manual "Look again" is therefore also how the ambient index heals
       // from anything an incremental update could have missed (rename edge
-      // cases, a vault event the adapter never fired).
-      if (!result.cancelled) this.getIndex()?.seed(result);
+      // cases, a vault event the adapter never fired). Re-subscribing here
+      // is what keeps that promise: without it, an edit made after "Look
+      // again" would move the ribbon badge but leave this open pane showing
+      // the scan's frozen result until it is closed and reopened.
+      const index = this.getIndex();
+      if (!result.cancelled && index !== null) {
+        index.seed(result);
+        this.unsubscribe = index.onChange(() => this.drawFromIndex(index));
+      }
       this.drawResult(result);
     } finally {
       this.running = false;
