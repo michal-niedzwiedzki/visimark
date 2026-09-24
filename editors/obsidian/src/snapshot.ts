@@ -60,8 +60,38 @@ import { build, check, locate, memoryReader, type DocModel, type ReaderPort } fr
  * vault root the engine's containment boundary, exactly as the spec wants. So
  * the two spaces differ by one leading slash, and `toVaultPath` is the whole
  * translation. **The plugin adds no path policy of its own**: a path that
- * escapes the vault is simply not in the snapshot, `exists` answers false, and
- * the engine emits the `IMPORT` finding it already emits for a missing file.
+ * escapes the vault *lexically* is simply not in the snapshot, `exists`
+ * answers false, and the engine emits the `IMPORT` finding it already emits
+ * for a missing file.
+ *
+ * ## What this does not catch — a symlink, accepted rather than solved (#233)
+ *
+ * `memoryReader`'s `realpath` is identity: whatever path it is asked about,
+ * it answers back unchanged. The engine's containment check (`fs/gate.ts`)
+ * compares a path against `reader.realpath()` specifically to refuse one
+ * that resolves through a symlink leaving the document's directory — on
+ * Node that is `realpathSync`, backed at read time by `O_NOFOLLOW`
+ * (`fs/open.ts`). An identity `realpath` makes that half of the check a
+ * no-op here: a declared import that is a symlink pointing outside the
+ * vault is refused by `onDisk()` and silently read through this snapshot.
+ *
+ * This is not fixed because there is nothing in Obsidian's plugin API to
+ * fix it with. `FileSystemAdapter.stat()` reports `type: "file" | "folder"`
+ * already resolved through any link, with no way to tell; there is no
+ * `realpath` and nothing that generalizes the way `browser-path.ts`
+ * generalizes `node:path`. The one thing that *could* answer it is Node's
+ * own `fs`, and `bundle.test.ts` asserts zero `node:` specifiers in the
+ * source graph, the shipped bytes and the module requires, on purpose —
+ * Obsidian mobile has no Node, and a plugin that reaches for one fails to
+ * load there, for every note, before anything can report it. Reaching `fs`
+ * anyway through `window.require` with an obscured module string would
+ * satisfy that guard's letter while defeating the reason it exists.
+ *
+ * The residual risk is narrower than "a symlink escapes containment"
+ * sounds: planting one inside a vault requires local write access to that
+ * vault already, at which point editing the Markdown directly is no harder
+ * than placing a link. Mobile has no symlinks at all, so this is
+ * desktop-only. What holds: the lexical half of containment, unconditionally.
  */
 
 /**
