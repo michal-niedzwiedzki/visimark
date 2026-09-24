@@ -219,8 +219,12 @@ nothing are the ones that most need a person.
 
 - Open any ordinary note in the vault with no ```` ```vmark ```` block.
   **Pass:** no VisiMark UI appears anywhere — no status bar item, no
-  view-header icon, no ribbon state, no decorations, no commands doing
-  anything visible.
+  view-header icon, no ribbon state, no decorations, and the note-scoped
+  commands (Check, Format, Evaluate, Explain) do nothing visible. **Infer**,
+  **Sweep the vault**, and the template commands are the exception by design
+  (§2.3): they exist to act on a note with no block yet, or have no note to
+  gate on at all, so they remain usable and may visibly insert text or open a
+  view.
 - Open `example-invoice.md`. **Pass:** VisiMark activates — on desktop, the
   status bar reads a state and a view-header icon appears in the note's own
   tab; `addStatusBarItem` is desktop-only (#232), so on a phone the
@@ -311,9 +315,12 @@ palette on `example-invoice.md` and on `example-invoice-drift.md`.
   Not "changed and changed back" — unchanged. Repeat on mobile, where an
   autosave is easiest to trigger accidentally.
 - With **Format on explicit save** left at its default (off, Settings →
-  VisiMark), repeat the same steps but *do* press Ctrl/Cmd+S a few times.
-  **Pass condition:** still unchanged — the setting being off means the save
-  keystroke is exactly as inert as an autosave.
+  VisiMark), repeat the same steps but *do* type something and press
+  Ctrl/Cmd+S a few times. **Pass condition:** the saved file contains exactly
+  the tester's own edits and no VisiMark repair — not "unchanged": Obsidian's
+  own save can land the typed edits on disk, so `git status` reporting a diff
+  here is expected and the setting being off means that diff is the tester's
+  alone.
 
 ### 2.6 Format, and the declined artifact write — v1 row 7
 
@@ -341,7 +348,7 @@ palette on `example-invoice.md` and on `example-invoice-drift.md`.
 - Paste a plain Markdown table with a visibly arithmetic column — or use
   `example-quote-plain.md`, the repository's worked example of a document with
   nothing wired up — and run Infer.
-- Run **VisiMark: Work out the formulas**.
+- Run **VisiMark: Infer the formulas**.
 - **Pass:** a preview of what would be inserted, before anything is inserted —
   the block as it will appear, not a summary of it.
 - **Pass condition:** accepting the preview inserts a ```` ```vmark ```` block

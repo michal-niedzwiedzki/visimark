@@ -291,9 +291,10 @@ export class MyModal extends Modal {
     result: string | undefined;  // Explicitly allow undefined
 }
 
-// Pattern C: Initialize with default value
+// Pattern C: store the default in a separate property — `containerEl` is
+// inherited from ItemView and already assigned by its constructor
 export class MyView extends ItemView {
-    containerEl: HTMLElement = document.createElement('div');
+    defaultContainer: HTMLElement = document.createElement('div');
 }
 ```
 
@@ -319,7 +320,7 @@ If errors appear in IDE but build succeeds, either enable `strict: true` in tsco
 
 **Rule:** `@typescript-eslint/no-require-imports`
 
-Obsidian plugins run in Electron, so Node.js modules (`fs`, `path`, `os`, etc.) are available. Use top-level ES imports — esbuild converts them to `require()` in the CJS bundle:
+Obsidian plugins run in Electron, so Node.js modules (`fs`, `path`, `os`, etc.) are available on desktop. Use top-level ES imports — esbuild converts them to `require()` in the CJS bundle:
 
 ```typescript
 // Bad
@@ -328,6 +329,10 @@ const fs = require('fs') as typeof import('fs');
 // Good
 import * as fs from 'fs';
 ```
+
+A top-level Node.js import like this only works on desktop, so it requires
+`isDesktopOnly: true` in `manifest.json`. A mobile-enabled plugin needs the
+platform-guarded dynamic-import pattern instead — see below.
 
 For `electron`, add a minimal type declaration file since `@types/electron` is not typically installed:
 

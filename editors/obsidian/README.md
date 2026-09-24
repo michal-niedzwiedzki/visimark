@@ -67,7 +67,7 @@ Until then, side-load it:
 bun install
 bun run --filter visimark-obsidian build
 mkdir -p "$VAULT/.obsidian/plugins/visimark"
-cp manifest.json main.js styles.css "$VAULT/.obsidian/plugins/visimark/"
+cp editors/obsidian/{manifest.json,main.js,styles.css} "$VAULT/.obsidian/plugins/visimark/"
 ```
 
 Then **Settings → Community plugins → Installed plugins** and enable VisiMark.

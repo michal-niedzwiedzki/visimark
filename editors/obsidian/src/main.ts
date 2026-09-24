@@ -261,6 +261,12 @@ export default class VisiMarkPlugin extends Plugin {
     this.registerDomEvent(document, "click", (event) => {
       const el = target(event);
       if (el === null) return;
+      // a plain click in Live Preview is placing the caret, not asking a
+      // question — `target` doesn't filter CodeMirror, so a click that
+      // lands on a mark there would otherwise open the modal and steal the
+      // click from caret placement. A modified click (used to open links,
+      // never bound to anything of ours in the editor) still asks.
+      if (el.closest(".cm-editor") !== null && !(event.metaKey || event.ctrlKey)) return;
       void this.explainElement(el);
     });
     this.registerDomEvent(document, "keydown", (event: KeyboardEvent) => {
@@ -287,19 +293,41 @@ export default class VisiMarkPlugin extends Plugin {
     // Unmodified only (no Shift/Alt) — Ctrl/Cmd+Shift+S and Ctrl/Cmd+Alt+S are
     // other bindings (Obsidian's own "save as a copy" is one), not this one.
     // And only when the keystroke actually came from the editor: the listener
-    // is on `document` so it also sees a Ctrl/Cmd+S typed into an unrelated
-    // focused control (a settings field, the search box) that happens to
-    // bubble — which must not format whatever note is merely active behind it.
-    this.registerDomEvent(document, "keydown", (event: KeyboardEvent) => {
+    // checks the event's own target so it also sees a Ctrl/Cmd+S typed into
+    // an unrelated focused control (a settings field, the search box) that
+    // happens to bubble — which must not format whatever note is merely
+    // active behind it.
+    //
+    // A pop-out window is a separate document with its own global
+    // constructors (Obsidian's pop-out-window docs), so `event.target
+    // instanceof Node` — which closes over *this* module's `Node` — would
+    // silently fail for a keystroke typed there. `nodeType` is checked
+    // structurally instead, and the listener is attached to every window's
+    // document: the main one now, each pop-out already open, and any that
+    // opens later.
+    const onSaveKeydown = (event: KeyboardEvent): void => {
       if (!this.settings.formatOnSave) return;
       if (event.shiftKey || event.altKey) return;
       const held = Platform.isMacOS ? event.metaKey : event.ctrlKey;
       if (!held || event.key.toLowerCase() !== "s") return;
       const view = this.app.workspace.getActiveViewOfType(MarkdownView);
       if (view === null) return;
-      if (!(event.target instanceof Node) || !view.contentEl.contains(event.target)) return;
+      const eventTarget = event.target;
+      if (eventTarget === null || typeof (eventTarget as Node).nodeType !== "number") return;
+      if (!view.contentEl.contains(eventTarget as Node)) return;
       void this.format(view.editor, { silent: true });
-    });
+    };
+    const seenWindows = new Set<Document>();
+    const listenForSaveIn = (doc: Document): void => {
+      if (seenWindows.has(doc)) return;
+      seenWindows.add(doc);
+      this.registerDomEvent(doc, "keydown", onSaveKeydown);
+    };
+    listenForSaveIn(document);
+    this.app.workspace.iterateAllLeaves((leaf) => listenForSaveIn(leaf.view.containerEl.doc));
+    this.registerEvent(
+      this.app.workspace.on("window-open", (_win, win) => listenForSaveIn(win.document)),
+    );
 
     this.status = this.addStatusBarItem();
     this.status.addClass("visimark-status");

@@ -59,10 +59,10 @@ Each entry says which engine version the bundle carries.
   `app.plugins.plugins["visimark"].api`: `check`, `evaluate`, `get` and
   `explain`, with `apiVersion` semver'd from the first release. `get` and
   `evaluate` return the CLI's own `evalValues` — a string for a scalar, an
-  array of strings for a column — never a number. Only a scalar's string is
-  byte-identical to what `visimark eval --get` prints: that command joins a
-  column's rows with `", "` for a terminal, and this API leaves the join to
-  the caller.
+  array of strings-or-null for a column (null where the cell is blank) —
+  never a number. Only a scalar's string is byte-identical to what
+  `visimark eval --get` prints: that command joins a column's rows with
+  `", "` for a terminal, and this API leaves the join to the caller.
 
 - **Infer, with a preview** — the on-ramp. One command reads a plain Markdown
   table, works out the formulas behind its numbers, and shows the

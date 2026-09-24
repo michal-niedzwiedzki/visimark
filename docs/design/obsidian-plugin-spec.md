@@ -190,11 +190,16 @@ whole spends a reviewer's time on a draft.
 ### 2.3 Activation
 
 **Opt-in per note, and invisible otherwise** (v1 constraint 4). The plugin
-registers its lifecycle on load, but every surface — status bar item, ribbon
-state, decorations, findings view — is gated on the *active note containing at
+registers its lifecycle on load, but every note-specific surface — status bar
+item, decorations, findings view — is gated on the *active note containing at
 least one ```` ```vmark ```` fence*. A vault of ordinary notes is
 indistinguishable from one without the plugin installed. This is the pass
 condition of manual test §2.1 and it is not a preference.
+
+The sweep ribbon icon is the one exception: row 8's vault-wide scan has no
+active note to gate on, so the ribbon is always visible, including before any
+note is open. Gating it on the active note would be the gate answering a
+question it was not asked.
 
 The gate is the fence, not a frontmatter key and not a folder: the fence is
 what `locate()` already keys on, and any second gate would be a second
