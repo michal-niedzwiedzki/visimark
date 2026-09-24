@@ -355,8 +355,16 @@ whose param declares no domain — so `explain --json` on a document with no
 domain-bearing param is byte-for-byte unchanged, and a param that has a domain
 but no scenario is still fully described without running `eval`.
 
-**`ref`.** `ref --json` gains the same `domain` field, in the same shape,
-wherever it already reports a param's `precision` and `default`.
+**`ref` is unaffected.** `visimark ref` is the builtin-*function* reference —
+"the one command that reads no file: it answers about the language, not
+about a document" (`packages/visimark/src/cli/commands.ts`). It has no
+per-document param data to report a domain from, and never did; a `param`'s
+`precision` and `default` are not part of its output today either. The issue
+body and the discussion summary both listed `ref --json` as a reporting
+surface for this feature — that was a mistake, caught while grounding this
+spec against the actual command (`cmdRef` takes a function name, never a
+file). `explain --json`, not `ref`, is the per-document surface, and it
+already carries the domain above.
 
 **`infer`.** Unchanged — never proposes a domain, never rewrites one.
 
