@@ -54,3 +54,57 @@ export function vaultSweepRead(vault: Vault): VaultRead {
     return direct(path);
   };
 }
+
+/**
+ * The write side of this file, and the plugin's first call to a real Vault
+ * write primitive — see `packages/visimark/src/fs/writer.ts` for why the
+ * engine has never needed one. `check`/`fmt` produce a finished document
+ * string and artifact set entirely in memory; this is only the async step of
+ * landing already-computed text at a vault path, which `WriterPort` cannot
+ * itself be (it is synchronous, for the same reason `ReaderPort` is — see
+ * `snapshot.ts`), so the shape is the vault's own primitive rather than an
+ * implementation of the engine's port.
+ *
+ * **Not wired to any command yet.** v1 constraint 3 — explicit writes only,
+ * never a keystroke or an autosave — governs what calls this, and nothing
+ * does until v1.1 row 14 (chart artifacts) or row 16 (CSV import stamps)
+ * lands. This function only makes the primitive exist and gives it a shape
+ * those rows can build on, the same way v1's row 1 shipped the browser bundle
+ * before anything in the plugin used it.
+ *
+ * `vault.modify` for a note Obsidian already tracks as a `TFile`, `vault.create`
+ * for a new one — `vault.create` throws on an existing path, so the two are
+ * not interchangeable. A missing parent folder is created first:
+ * `vault.create` does not create one for you, and `fmt`'s own document-body
+ * write is never the one that needs this (a note being formatted already
+ * exists), but an artifact under `charts/` or an imported CSV's directory
+ * legitimately might not.
+ */
+export type VaultWrite = (
+  vaultPath: string,
+  content: string,
+) => Promise<{ ok: true } | { err: string }>;
+
+export function vaultWriter(vault: Vault): VaultWrite {
+  return async (path: string, content: string) => {
+    try {
+      const normalized = normalizePath(path);
+      const existing = vault.getAbstractFileByPath(normalized);
+      if (existing instanceof TFile) {
+        await vault.modify(existing, content);
+        return { ok: true };
+      }
+      const slash = normalized.lastIndexOf("/");
+      if (slash > 0) {
+        const dir = normalized.slice(0, slash);
+        if (!vault.getAbstractFileByPath(dir)) {
+          await vault.createFolder(dir);
+        }
+      }
+      await vault.create(normalized, content);
+      return { ok: true };
+    } catch (e) {
+      return { err: e instanceof Error ? e.message : String(e) };
+    }
+  };
+}

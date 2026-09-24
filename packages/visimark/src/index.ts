@@ -102,6 +102,11 @@ export { readVersion } from "./cli/version.js";
 // browser bundle's graph never reaches it — see `fs/reader.ts`.
 export type { DocumentFile, ReaderPort, SealedRead } from "./fs/reader.js";
 export { nodeReader, onDisk } from "./fs/node-reader.js";
+// The writer port and its `node:fs` implementation — see `fs/writer.ts` for
+// why it is smaller than the reader port, and why it stays a document-body
+// write rather than a generalisation of `artifact/write.ts`.
+export type { WriteErr, WriteOk, WriterPort } from "./fs/writer.js";
+export { nodeWriter } from "./fs/node-writer.js";
 export type { CheckOptions } from "./eval/check.js";
 
 // `analyze` is in its own module because `browser.ts` needs it and cannot

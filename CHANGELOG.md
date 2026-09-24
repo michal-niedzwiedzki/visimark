@@ -21,6 +21,20 @@
 
 ### Added
 
+- **A writer port, alongside the reader port** — `WriterPort` in the new
+  `fs/writer.ts`, and its `node:fs` implementation `nodeWriter` in
+  `fs/node-writer.ts`, both exported from the package's Node entry point.
+  `cmdFmt` and `cmdInfer --write` now write the document body through it
+  instead of a bare `writeFileSync`; behaviour is unchanged; a write failure
+  is now reported the same way a refused artifact write already was, instead
+  of throwing. Unlike `ReaderPort`, this is not something `check`/`fmt` needs
+  injected mid-evaluation — both are pure and hand back a finished document
+  string and artifact set in memory — so the port is one method,
+  `writeText(path, content)`, stated so a non-Node host (the Obsidian plugin's
+  `vault.ts`, `vaultWriter`) has a name for the same operation without
+  reaching for `node:fs`. Prerequisite for v1.1 rows 14 and 16 of
+  [#176](https://github.com/michal-niedzwiedzki/visimark/issues/176).
+
 - **The Obsidian plugin can format a note automatically on explicit save**
   (issue #239, v1 row 7 of #176) — the same repair plan the Format command
   and the findings view's per-row repair already apply, through an explicit

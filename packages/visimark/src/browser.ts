@@ -137,6 +137,7 @@ export type {
   Span,
 } from "./parse/document.js";
 export type { DocumentFile, ReaderPort, SealedRead } from "./fs/reader.js";
+export type { WriteErr, WriteOk, WriterPort } from "./fs/writer.js";
 export type { CheckOptions } from "./eval/check.js";
 // The browser's `ReaderPort` and the synchronous digest it runs on. Not in
 // `index.ts`; see the header.

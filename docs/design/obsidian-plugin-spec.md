@@ -354,7 +354,7 @@ Four, and the defaults are the spec.
 | Setting | Default | Note |
 |---|---|---|
 | Format on explicit save | off | The VS Code client defaults this *on* ([editor plugins design §13](../visimark-editor-plugins-design.md#13-known-tensions)). It defaults off here because audience B has not agreed to a tool that changes bytes they did not type, and because mobile's save is a timer far more often than it is a decision. An autosave never triggers `fmt` on either surface. |
-| Write chart artifacts | off, and not settable in v1 | There is no vault-backed write port (§8). Declining the write does **not** silence the finding — the shipped `--no-artifacts` contract, verbatim ([`cli-reference.md`](../cli-reference.md)). |
+| Write chart artifacts | off, and not settable in v1 | v1 has a vault-backed write **primitive** (`vault.ts`'s `vaultWriter`, v1.1's write-port issue) but no caller — chart generation itself is v1.1 row 14, unbuilt (§8). Declining the write does **not** silence the finding — the shipped `--no-artifacts` contract, verbatim ([`cli-reference.md`](../cli-reference.md)). |
 | Show provenance in Live Preview | on | v1 row 2 covers reading mode **and** Live Preview, as #176 states it and as manual test §2.2 demands. The setting exists because §16 records that Live Preview shows the anchor comment as literal text everywhere, so the decoration sits beside a visible `<!--vmark=…-->` — a design this spec commits to and wants one toggle away from if it reads badly in practice. |
 | Sweep on vault open | off | A vault sweep on open is a scan of every note; it is a command, not a startup cost. |
 
@@ -710,15 +710,19 @@ already recorded the Part 1 results, including the accepted Live Preview row.
 Everything in #176's v1.1 and v2 tables, and the whole of its rejected list. The
 ones worth naming because someone will ask:
 
-- **Chart generation in the vault.** Needs a vault-backed *write* port, which
-  §2.6 deliberately does not build — the read snapshot is enough for v1 and a
-  write port is a separate decision with its own failure modes. The stale-chart
-  finding still shows (§3.2), which is the `--no-artifacts` split working as
-  intended.
-- **CSV import writes.** Same port. The *read* half works today through §2.6;
-  only stamp insertion is blocked. #176's v1 constraint 2 — "anything needing
-  `node:fs` is desktop-only" — is stricter than the engine requires and is not
-  adopted here: the blocker is a missing write port, not a runtime.
+- **Chart generation in the vault.** The write-port *primitive* now exists
+  (`packages/visimark/src/fs/writer.ts`'s `WriterPort`, and `vault.ts`'s
+  `vaultWriter`, landed as v1.1's prerequisite issue) — the read snapshot
+  alone was enough for v1, and building the primitive ahead of a caller is the
+  same order v1's row 1 shipped in. Row 14 itself, the code that plans and
+  writes an SVG artifact through it, is still unbuilt. The stale-chart finding
+  still shows (§3.2) until it lands, which is the `--no-artifacts` split
+  working as intended.
+- **CSV import writes.** Same primitive, same gap — the *read* half works
+  today through §2.6; only stamp insertion (v1.1 row 16) is unbuilt. #176's v1
+  constraint 2 — "anything needing `node:fs` is desktop-only" — is stricter
+  than the engine requires and is not adopted here: the blocker was, and until
+  row 16 lands still is, a missing *caller*, not a runtime.
 - **Publishing scalars to YAML properties** (fork C as a feature of B),
   **cross-note transclusion**, **the scenario panel**, **the incremental sweep
   index**, **anything that adds Obsidian-only syntax**.
