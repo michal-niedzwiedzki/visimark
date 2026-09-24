@@ -1,6 +1,7 @@
 import {
   MarkdownView,
   Notice,
+  Platform,
   Plugin,
   TFile,
   debounce,
@@ -23,6 +24,8 @@ import { readNote } from "./snapshot.js";
 import { rowFrom, summaryFor } from "./hover.js";
 import { livePreviewMarks } from "./live-preview.js";
 import { decorateSection } from "./reading-mode.js";
+import { DEFAULT_SETTINGS, type VisiMarkSettings } from "./settings.js";
+import { VisiMarkSettingTab } from "./settings-tab.js";
 import { HIDDEN, UNKNOWN, statusFor, type Status } from "./status.js";
 import { SWEEP_VIEW, SweepView } from "./sweep-view.js";
 import { TEMPLATES } from "./templates.js";
@@ -102,13 +105,26 @@ export default class VisiMarkPlugin extends Plugin {
    * the unloaded plugin instance) in place, and the new instance would add a
    * second one beside it — `view.addAction` has no dedup of its own.
    *
-
    * The path travels with the element so `refresh` can tell "this view's
    * action describes the note now open in it" from "this view switched files
    * and the action is still showing the old one" — the two cases where
    * clearing it early matters and where it would only flicker, respectively.
    */
   private readonly actionFor = new Map<MarkdownView, { el: HTMLElement; path: string }>();
+
+  /**
+   * Spec §2.5's three real toggles. `Plugin.settings` is Obsidian's own
+   * field for this since 1.13.0 ("Assign loaded data here in onload. Declare
+   * a concrete type on your subclass to type it") — declared here rather
+   * than as a differently-named field, and loaded before `onload` does
+   * anything that reads one, so a setting is never asked for before it
+   * exists.
+   */
+  override settings: VisiMarkSettings = DEFAULT_SETTINGS;
+
+  async saveSettings(): Promise<void> {
+    await this.saveData(this.settings);
+  }
 
   /**
    * Marked elements a hover fetch is in flight for — separate from
@@ -141,7 +157,10 @@ export default class VisiMarkPlugin extends Plugin {
    */
   private readonly refreshSoon = debounce(() => this.refresh(), 400, true);
 
-  override onload(): void {
+  override async onload(): Promise<void> {
+    this.settings = { ...DEFAULT_SETTINGS, ...(await this.loadData()) };
+    this.addSettingTab(new VisiMarkSettingTab(this.app, this));
+
     // v1 row 6. The view owns its own refreshing — it is a Component, so its
     // listeners die with it — which is also why this file keeps no reference
     // to any instance of it.
@@ -209,7 +228,7 @@ export default class VisiMarkPlugin extends Plugin {
     // class on rendered output, and the note copied out of the vault is
     // untouched, which is §2.2's pass condition.
     this.registerMarkdownPostProcessor((el, ctx) => decorateSection(el, ctx));
-    this.registerEditorExtension(livePreviewMarks());
+    this.registerEditorExtension(livePreviewMarks(() => this.settings.showProvenanceInLivePreview));
 
     // v1 row 3 — what makes row 2's marks legible rather than decorative. One
     // delegated listener rather than one per decoration: the post-processor
@@ -250,6 +269,27 @@ export default class VisiMarkPlugin extends Plugin {
       if (el === null) return;
       event.preventDefault();
       void this.explainElement(el);
+    });
+
+    // v1 row 7 — the other half of "an explicit act" (v1 constraint 3). Not
+    // preventDefault'd: Obsidian's own save still runs on the same keystroke,
+    // unblocked. Obsidian has no event for an explicit save distinct from its
+    // own autosave (`vault.on("modify")` fires identically for both), so this
+    // is deliberately narrower than "on save" sounds — it answers only the
+    // keystroke, not "Save file" from the command palette and not whatever a
+    // mobile save gesture turns out to be. `format` runs asynchronously
+    // (`noteFor` awaits a vault read), so the very first press can still save
+    // the pre-repair bytes to disk; the buffer's own edit fires Obsidian's
+    // autosave moments later, which is what actually lands the repaired
+    // bytes. Silent: a notice on every save of every note with the setting on
+    // is the report's vocabulary creeping back in by another door.
+    this.registerDomEvent(document, "keydown", (event: KeyboardEvent) => {
+      if (!this.settings.formatOnSave) return;
+      const held = Platform.isMacOS ? event.metaKey : event.ctrlKey;
+      if (!held || event.key.toLowerCase() !== "s") return;
+      const editor = this.app.workspace.getActiveViewOfType(MarkdownView)?.editor;
+      if (editor === undefined) return;
+      void this.format(editor, { silent: true });
     });
 
     this.status = this.addStatusBarItem();
@@ -307,7 +347,12 @@ export default class VisiMarkPlugin extends Plugin {
 
     // the workspace is not ready during onload, and asking before it is gives
     // the wrong answer for the note the vault opens on
-    this.app.workspace.onLayoutReady(() => this.refresh());
+    this.app.workspace.onLayoutReady(() => {
+      this.refresh();
+      // spec §2.5, off by default: a vault-wide scan is a cost every vault
+      // opens with the plugin should not pay unasked
+      if (this.settings.sweepOnOpen) void this.openSweep();
+    });
   }
 
   /**
@@ -350,20 +395,29 @@ export default class VisiMarkPlugin extends Plugin {
    * (cells and anchors sit apart), and a loop of `replaceRange` would be one
    * undo step per edit rather than the one explicit act v1 constraint 3
    * promises.
+   *
+   * `silent` is row 7's format-on-save path: a notice on every save of every
+   * note with the setting on — "no block", "already clean", or the applied
+   * count — is the report's vocabulary creeping back in by another door, on
+   * a surface the reader did not ask a question of.
    */
-  private async format(editor: Editor): Promise<void> {
+  private async format(editor: Editor, opts: { silent?: boolean } = {}): Promise<void> {
     const source = editor.getValue();
-    const gated = await this.noteFor(editor);
+    const gated = await this.noteFor(editor, opts);
     if (gated === null) return;
     const { report } = gated;
     if (report.allRepairs.length === 0) {
-      new Notice("Everything in this note already agrees with its formulas.");
+      if (!opts.silent) {
+        new Notice("Everything in this note already agrees with its formulas.");
+      }
       return;
     }
     // `noteFor` awaits a vault read; a keystroke in that gap would make these
     // offsets describe a buffer that no longer exists
     if (editor.getValue() !== source) {
-      new Notice("This note changed while it was being checked. Try Format again.");
+      if (!opts.silent) {
+        new Notice("This note changed while it was being checked. Try Format again.");
+      }
       return;
     }
     editor.transaction({
@@ -373,10 +427,12 @@ export default class VisiMarkPlugin extends Plugin {
         text: edit.text,
       })),
     });
-    // "repair", not "value": allRepairs can carry a splice with no value of
-    // its own, such as an import-stamp insert (report.ts)
-    const n = report.allRepairs.length;
-    new Notice(`Applied ${n} ${n === 1 ? "repair" : "repairs"}. No chart was written.`);
+    if (!opts.silent) {
+      // "repair", not "value": allRepairs can carry a splice with no value of
+      // its own, such as an import-stamp insert (report.ts)
+      const n = report.allRepairs.length;
+      new Notice(`Applied ${n} ${n === 1 ? "repair" : "repairs"}. No chart was written.`);
+    }
   }
 
   /** **Evaluate** — every name in the note and what it works out to. */
@@ -413,10 +469,12 @@ export default class VisiMarkPlugin extends Plugin {
    * `this.api` instead would answer from `vault.cachedRead` — the saved copy
    * — and disagree with the buffer on a dirty note.
    */
-  private async noteFor(editor: Editor) {
+  private async noteFor(editor: Editor, opts: { silent?: boolean } = {}) {
     const source = editor.getValue();
     if (!hasVmarkBlock(source)) {
-      new Notice("This note has no VisiMark block, so there is nothing to check in it yet.");
+      if (!opts.silent) {
+        new Notice("This note has no VisiMark block, so there is nothing to check in it yet.");
+      }
       return null;
     }
     const file = this.app.workspace.getActiveViewOfType(MarkdownView)?.file;

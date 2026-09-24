@@ -73,6 +73,8 @@ function marksFor(view: EditorView): DecorationSet {
   return builder.finish();
 }
 
+const EMPTY: DecorationSet = new RangeSetBuilder<Decoration>().finish();
+
 /**
  * The extension to register.
  *
@@ -84,14 +86,19 @@ function marksFor(view: EditorView): DecorationSet {
  * would pay for a full `locate` + `build` + `check` (measured ~9ms on a
  * note-sized document, not the ~2.8ms of `check` alone) for no change in the
  * result.
+ *
+ * `enabled` is read fresh on every rebuild rather than baked in once, so
+ * flipping the "Show provenance in Live Preview" setting (§2.5, default on)
+ * takes effect on the next document change or the next time a note opens,
+ * with no separate mechanism to force every open editor to redraw.
  */
-export function livePreviewMarks(): Extension {
+export function livePreviewMarks(enabled: () => boolean): Extension {
   return ViewPlugin.define(
     (view: EditorView) => ({
-      decorations: marksFor(view),
+      decorations: enabled() ? marksFor(view) : EMPTY,
       update(update: { docChanged: boolean; view: EditorView }) {
         if (update.docChanged) {
-          this.decorations = marksFor(update.view);
+          this.decorations = enabled() ? marksFor(update.view) : EMPTY;
         }
       },
     }),

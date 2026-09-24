@@ -17,6 +17,15 @@ Each entry says which engine version the bundle carries.
   checked, hidden) and the same click-through to the findings view, on every
   platform; the status bar is unchanged on desktop.
 
+- **A settings tab, and format on explicit save** — off by default. Applies
+  the same repair plan Format and the per-row repair already do, on
+  Ctrl/Cmd+S with a VisiMark note focused. An autosave never triggers this;
+  neither does the command palette's "Save file" — Obsidian has no event for
+  an explicit save distinct from autosave, so this listens for the keystroke
+  specifically. Two settings that were previously fixed are real toggles now
+  too: show provenance in Live Preview (on by default) and sweep the vault
+  on open (off by default).
+
 - **A marked value answers when you ask it** — hover on the desktop, tap
   anywhere — with the formula the reader wrote, what it comes to and what it
   reads. A cell says what *that* cell comes to rather than what its column

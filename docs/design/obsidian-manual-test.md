@@ -208,7 +208,7 @@ nothing are the ones that most need a person.
 | §2.3 hover and tap | row 3 | the line's content — formula, result, inputs | the gesture, and that a cell answers for *that* cell |
 | §2.4 the five commands | row 4 | Explain's caret resolution; Format's plan | the palette, the dialogs, the presses |
 | §2.5 nothing is written unbidden | constraint 3 | — | **all of it**, and on mobile, where an autosave is easiest to trigger |
-| §2.6 format, declined artifact | rows 6–7 | the repair plan, and that it converges on `fmt` | format-on-save, which is still row 7 |
+| §2.6 format, declined artifact, format on save | rows 6–7, #239 | the repair plan, and that it converges on `fmt` | that the keystroke does it, silently, and that the setting's off default and command-palette limit hold |
 | §2.7 `infer` on a pasted table | row 5 | that no existing byte is rewritten, by reconstruction | the preview, and the insertion landing where the plan said |
 | §2.8 the vault sweep | row 8 | this section's own fixture, note for note | the phone: does it stay responsive, and does **Stop** stop it |
 | §2.9 the plugin API | row 9 | every name compared against `eval --get` | that the object is there and nothing was reached past |
@@ -306,10 +306,14 @@ palette on `example-invoice.md` and on `example-invoice-drift.md`.
 ### 2.5 Nothing is written without an explicit act — v1 constraint 3
 
 - Open `example-invoice-drift.md`, let it sit, type in it, scroll it, switch
-  notes and come back. Do not invoke Format.
+  notes and come back. Do not invoke Format. Do not press Ctrl/Cmd+S.
 - **Pass condition:** `git status` inside the vault reports the file unchanged.
   Not "changed and changed back" — unchanged. Repeat on mobile, where an
   autosave is easiest to trigger accidentally.
+- With **Format on explicit save** left at its default (off, Settings →
+  VisiMark), repeat the same steps but *do* press Ctrl/Cmd+S a few times.
+  **Pass condition:** still unchanged — the setting being off means the save
+  keystroke is exactly as inert as an autosave.
 
 ### 2.6 Format, and the declined artifact write — v1 row 7
 
@@ -321,6 +325,16 @@ palette on `example-invoice.md` and on `example-invoice-drift.md`.
   does not silence the finding. The stale chart must still be reported by the
   plugin's findings view. A plugin that hides the finding because it declined
   the write has inverted the contract.
+- Turn on **Format on explicit save** (Settings → VisiMark). Break a computed
+  cell in `example-invoice-drift.md` by hand and press Ctrl/Cmd+S.
+  **Pass:** the cell repairs itself, silently — no notice, the same way
+  Format's own "already clean" case has nothing to say when there is nothing
+  worth reporting on a surface the reader did not ask a question of.
+- **Also worth doing:** invoke the native save another way — the command
+  palette's "Save file" — with the setting on. **Pass condition:** nothing
+  repairs. This is the documented limit, not a bug: Obsidian has no event for
+  an explicit save distinct from autosave, so the setting only answers the
+  Ctrl/Cmd+S keystroke specifically.
 
 ### 2.7 `infer` on a pasted table — v1 row 5
 
