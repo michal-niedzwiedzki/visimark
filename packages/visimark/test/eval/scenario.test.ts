@@ -164,3 +164,56 @@ describe("applyScenario", () => {
     expect(String((r.values.get("budget.rate") as { d: unknown }).d)).toBe("0.19");
   });
 });
+
+// docs/design/a-param-declares-the-set-of-values-it-ac-spec.md §4.2
+describe("scenario domain refusal", () => {
+  const DOMAIN_DOC =
+    "```vmark #levers\n" +
+    "param extra_hours precision 0 integer in [0, 80] = default 0\n" +
+    "param prepay_share precision 2 in { 30%, 40%, 45%, 50% } = default 30%\n" +
+    "param code precision 0 in { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 } = default 1\n" +
+    "param volume_disc precision 2 positive = default 1%\n" +
+    "```\n";
+  const domainModel = () => build(locate(DOMAIN_DOC));
+  const domainFault = (json: string): string => {
+    try {
+      resolveScenario(domainModel(), parseScenarioJson(json, "s.json"));
+    } catch (e) {
+      if (e instanceof ScenarioError) return e.message;
+      throw e;
+    }
+    throw new Error(`resolved: ${json}`);
+  };
+
+  test("range", () => {
+    expect(domainFault('{"levers.extra_hours": "81"}')).toBe(
+      "visimark: scenario value for levers.extra_hours is not in [0, 80]: 81",
+    );
+  });
+
+  test("small finite set", () => {
+    expect(domainFault('{"levers.prepay_share": "35%"}')).toBe(
+      "visimark: scenario value for levers.prepay_share is not in { 30%, 40%, 45%, 50% }: 35%",
+    );
+  });
+
+  test("large finite set (>10 members)", () => {
+    expect(domainFault('{"levers.code": "15"}')).toBe(
+      "visimark: scenario value for levers.code is not among the 11 legal values: 15",
+    );
+  });
+
+  test("named preset", () => {
+    expect(domainFault('{"levers.volume_disc": "-1%"}')).toBe(
+      "visimark: scenario value for levers.volume_disc is not positive: -1%",
+    );
+  });
+
+  test("in-domain value resolves cleanly", () => {
+    const resolved = resolveScenario(
+      domainModel(),
+      parseScenarioJson('{"levers.extra_hours": "40"}', "s.json"),
+    );
+    expect(resolved.get("levers.extra_hours")).toBe("40");
+  });
+});

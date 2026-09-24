@@ -9,7 +9,7 @@
 ## What it looked like before
 
 `shareViaClipboard()` opens Facebook, LinkedIn, Instagram and X with
-`SHARE_URL = "https://michal-niedzwiedzki.github.io/visimark/"`. A grep of the
+`SHARE_URL = "https://visimark.dev/"`. A grep of the
 whole `docs/` tree for `og:` returned zero hits — and so did one for
 `<meta name="description">`. Every network therefore rendered the link with
 no title beyond the `<title>` tag, no summary, and no image. A visitor who

@@ -1267,7 +1267,8 @@ context the answer is almost always to leave the gate shut and let the agent
 propose a plan a human applies.
 
 The full surface — every tool, what it reads, what it writes, which annotation
-it carries — is [`mcp.md`](mcp.md).
+it carries — is [`mcp.md`](mcp.md). Setting one up, adding it to a host, and
+working through every tool by hand is [`mcp-server.md`](mcp-server.md).
 
 ---
 
@@ -1420,5 +1421,6 @@ And the things to have done around it:
 | [`playground.html`](playground.html) | The real engine in your browser, nothing to install |
 | [`example-invoice-drift.md`](example-invoice-drift.md) | One input changed and nothing else — 26 findings, each walked through |
 | [`mcp.md`](mcp.md) | The MCP server: every tool, the write gate, the plan/apply split |
+| [`mcp-server.md`](mcp-server.md) | Setting up and running the MCP server, tutorial-style |
 
 <!--vmark:no-formulas-->

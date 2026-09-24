@@ -93,7 +93,7 @@ On the clean invoice, `visimark eval --get recon.variance` prints `0` and exits 
 
 ## 8. Ask a what-if without writing the document
 
-`param budget precision 2 = default 2.00` is the cap in [`example-agent-budget.md`](https://michal-niedzwiedzki.github.io/visimark/preview.html?file=example-agent-budget.md). A scenario is an argument to `eval`, not an edit:
+`param budget precision 2 = default 2.00` is the cap in [`example-agent-budget.md`](https://visimark.dev/preview.html?file=example-agent-budget.md). A scenario is an argument to `eval`, not an edit:
 
 ```text
 $ visimark eval --scenario tight.json docs/example-agent-budget.md

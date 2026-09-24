@@ -216,3 +216,25 @@ test("a chart's STALE finding is never in the unfixable remainder", () => {
 
   rmSync(dir, { recursive: true, force: true });
 });
+
+// docs/design/a-param-declares-the-set-of-values-it-ac-spec.md — fmt never
+// writes a domain clause, in any of its spellings.
+test("fmt leaves a param's domain clause untouched, in every spelling", () => {
+  const doc =
+    "```vmark #levers\n" +
+    "param extra_hours precision 0 integer in [0, 80] = default 40\n" +
+    "param code precision 0 ℤ in [0, 5] = default 1\n" +
+    "param prepay_share precision 2 in { 30%, 40%, 45%, 50% } = default 30%\n" +
+    "param days precision 0 natural in [0, 8] = default 0\n" +
+    "param z precision 0 ℕ in [0, 8] = default 0\n" +
+    "param staff precision 0 positive integer = default 1\n" +
+    "param s2 precision 0 ℤ⁺ = default 1\n" +
+    "param share precision 2 ∈ [0%, 15%] = default 5%\n" +
+    "```\n";
+  const once = fmt(doc, {});
+  expect(once.changed).toBe(false);
+  expect(once.output).toBe(doc);
+  const twice = fmt(once.output, {});
+  expect(twice.changed).toBe(false);
+  expect(twice.output).toBe(doc);
+});

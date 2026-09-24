@@ -1,4 +1,5 @@
 import type { Expr } from "../lang/ast.js";
+import type { Domain } from "../lang/domain.js";
 import type { LangError } from "../lang/token.js";
 import type {
   ImportDecl,
@@ -24,6 +25,7 @@ export type FindingCode =
   | "ANCHOR"
   | "ASSERT"
   | "PRECISION"
+  | "DOMAIN"
   | "ARTIFACT"
   | "IMPORT"
   | "WARN"
@@ -49,6 +51,7 @@ export const ERROR_CODES: ReadonlySet<FindingCode> = new Set<FindingCode>([
   "ANCHOR",
   "ASSERT",
   "PRECISION",
+  "DOMAIN",
   "ARTIFACT",
   "IMPORT",
   "COVERAGE",
@@ -110,6 +113,9 @@ export interface Binding {
    *  command but `eval --scenario` treats it as the constant binding it is.
    *  See docs/design/scenario-params-spec.md. */
   param?: { text: string; percent: boolean };
+  /** a `param`'s optional domain clause. See
+   *  docs/design/a-param-declares-the-set-of-values-it-ac-spec.md §2. */
+  domain?: Domain;
   /** absolute source span of the binding line */
   span: { start: number; end: number };
   parseError?: LangError;

@@ -12,6 +12,7 @@ const SEVERITY: Record<string, DiagnosticSeverity> = {
   VECTOR: DiagnosticSeverity.Error,
   CYCLE: DiagnosticSeverity.Error,
   TYPE: DiagnosticSeverity.Error,
+  DOMAIN: DiagnosticSeverity.Error,
   SHEET: DiagnosticSeverity.Error,
   ANCHOR: DiagnosticSeverity.Warning,
   ASSERT: DiagnosticSeverity.Error,
@@ -76,6 +77,8 @@ export function messageOf(f: Finding): string {
       return `assertion is false: ${f.message}`;
     case "ARTIFACT":
       return f.message ?? "the artifact cannot be built";
+    case "DOMAIN":
+      return f.message ?? "outside the param's declared domain";
     default:
       return f.message ?? f.code;
   }

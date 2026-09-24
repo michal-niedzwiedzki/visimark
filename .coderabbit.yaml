@@ -1,0 +1,11 @@
+# The default branch is always reviewed. ".*" adds every other base,
+# including stacked pull requests.
+reviews:
+  auto_review:
+    enabled: true
+    base_branches:
+      - ".*"
+    ignore_usernames:
+      - "dependabot[bot]"
+    ignore_title_keywords:
+      - "WIP"

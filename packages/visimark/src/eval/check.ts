@@ -15,6 +15,7 @@ import { describeCallProblem, FUNCTIONS, isReduce } from "./functions.js";
 import { dependencies, refText, resolve, topoOrder } from "./graph.js";
 import { resolveImports } from "../import/resolve.js";
 import type { ImportStatus } from "../model/types.js";
+import { domainLiterals, formatDomain, isEmptyDomain, testDomain } from "../lang/domain.js";
 import { derivePrecision, type Width } from "./precision.js";
 import { percentDisplay } from "./percent-display.js";
 import { applyUnit, cellPrecision, parseDecorated, type Unit } from "./units.js";
@@ -375,6 +376,77 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
           sheetId: binding.sheetId,
           name: binding.name,
           message: `default ${param.text} has ${places} decimal${places === 1 ? "" : "s"}; param ${binding.name} declares ${binding.precision}`,
+          span: binding.span,
+        },
+        { sheetId: binding.sheetId },
+      );
+      return false;
+    }
+    if (binding.domain !== undefined && !paramDomainOk(binding)) return false;
+    return true;
+  }
+
+  /**
+   * A `param`'s domain clause: every literal fits `precision` and matches
+   * the param's percent-ness (widened `PRECISION`/`TYPE`, same messages as
+   * `default`); the domain has at least one legal value where that is
+   * decidable; and the default is in it. Emits `DOMAIN` and returns false
+   * otherwise. See
+   * docs/design/a-param-declares-the-set-of-values-it-ac-spec.md §4.1.
+   */
+  function paramDomainOk(binding: Binding): boolean {
+    const domain = binding.domain!;
+    const param = binding.param!;
+    for (const { value, literal } of domainLiterals(domain)) {
+      const places = new Decimal(value).decimalPlaces();
+      if (places > binding.precision!) {
+        emit(
+          {
+            code: "PRECISION",
+            sheetId: binding.sheetId,
+            name: binding.name,
+            message: `domain value ${literal.text} has ${places} decimal${places === 1 ? "" : "s"}; param ${binding.name} declares ${binding.precision}`,
+            span: binding.span,
+          },
+          { sheetId: binding.sheetId },
+        );
+        return false;
+      }
+      if (param.percent && !literal.percent) {
+        emit(
+          {
+            code: "TYPE",
+            sheetId: binding.sheetId,
+            name: binding.name,
+            message: `${binding.name} is a percent; domain value ${literal.text} must be too`,
+            span: binding.span,
+          },
+          { sheetId: binding.sheetId },
+        );
+        return false;
+      }
+    }
+    if (isEmptyDomain(domain)) {
+      emit(
+        {
+          code: "DOMAIN",
+          sheetId: binding.sheetId,
+          name: binding.name,
+          message: `param ${binding.name} declares an empty domain: ${formatDomain(domain)} has no legal value`,
+          span: binding.span,
+        },
+        { sheetId: binding.sheetId },
+      );
+      return false;
+    }
+    const defaultValue = binding.expr.type === "num" ? binding.expr.value : undefined;
+    if (defaultValue !== undefined && !testDomain(domain, defaultValue)) {
+      emit(
+        {
+          code: "DOMAIN",
+          sheetId: binding.sheetId,
+          name: binding.name,
+          message: `default ${param.text} is not in the domain of ${binding.name}: ${formatDomain(domain)}`,
           span: binding.span,
         },
         { sheetId: binding.sheetId },

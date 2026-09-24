@@ -14,7 +14,19 @@ export const GLYPH_IDENTS: Readonly<Record<string, string>> = {
   Σ: "SUM",
   "∑": "SUM",
   "√": "SQRT",
+  "∈": "in",
+  ℤ: "integer",
+  ℕ: "natural",
 };
+
+/**
+ * `ℤ⁺` (U+2124 U+207A) is the one two-codepoint glyph in the closed set: it
+ * lexes as the two identifier tokens `positive` then `integer`, in that
+ * order, so the parser reads it exactly as it would read the two keywords —
+ * no special case beyond recognising the pair. See
+ * docs/design/a-param-declares-the-set-of-values-it-ac-spec.md §2.
+ */
+export const POSITIVE_INTEGER_GLYPH = "ℤ⁺";
 
 export interface DelimPair {
   /** the glyph that closes the pair */

@@ -1,4 +1,4 @@
-import { DELIMS, GLYPH_IDENTS } from "./notation.js";
+import { DELIMS, GLYPH_IDENTS, POSITIVE_INTEGER_GLYPH } from "./notation.js";
 import { LangError, type Token, type TokenKind } from "./token.js";
 
 const WORD_OPS = new Set(["and", "or", "not"]);
@@ -45,6 +45,26 @@ export function lex(src: string): Token[] {
     }
     if (c === ",") {
       push("comma", ",", i, i + 1);
+      i++;
+      continue;
+    }
+    if (c === "[") {
+      push("lbracket", "[", i, i + 1);
+      i++;
+      continue;
+    }
+    if (c === "]") {
+      push("rbracket", "]", i, i + 1);
+      i++;
+      continue;
+    }
+    if (c === "{") {
+      push("lbrace", "{", i, i + 1);
+      i++;
+      continue;
+    }
+    if (c === "}") {
+      push("rbrace", "}", i, i + 1);
       i++;
       continue;
     }
@@ -116,6 +136,15 @@ export function lex(src: string): Token[] {
     // symbol-alias mechanism. See lang/notation.ts and the design doc, section 4.
     // Everything downstream (parser, arity/shape check, evaluator, `infer`,
     // did-you-mean) sees the plain name and has no awareness an alias exists.
+    if (src.startsWith(POSITIVE_INTEGER_GLYPH, i)) {
+      // `ℤ⁺` is the one two-codepoint glyph in the closed set — see
+      // notation.ts. It lexes as the two keywords it stands for, in order.
+      push("ident", "positive", i, i + 2);
+      push("ident", "integer", i, i + 2);
+      i += 2;
+      continue;
+    }
+
     const glyphName = GLYPH_IDENTS[c];
     if (glyphName !== undefined) {
       push("ident", glyphName, i, i + 1);

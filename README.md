@@ -134,7 +134,7 @@ finding `check` can report, and the one habit that keeps a green check meaningfu
 Every transcript in it is real.
 
 There is a side-by-side reader for it at
-[`docs/tutorial.html`](https://michal-niedzwiedzki.github.io/visimark/tutorial.html),
+[`docs/tutorial.html`](https://visimark.dev/tutorial.html),
 which shows each block's Markdown source next to its rendering, in lockstep.
 
 ## Worked examples

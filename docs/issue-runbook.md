@@ -5,7 +5,7 @@ An issue is filed on one of six
 [templates](../.github/ISSUE_TEMPLATE/), judged against the design doc's
 constraints, recorded as a comment that
 [`vocabulary-catalogue.md`](vocabulary-catalogue.md) then links, and catalogued
-through one pull request to `master`. Three slash commands carry the
+through one pull request to `master`. Four slash commands carry the
 mechanics; every judgement call is yours. Commits the agent makes are
 attributed per [`.agents/rules/ai-attribution.md`](../.agents/rules/ai-attribution.md).
 
@@ -70,6 +70,7 @@ pre-review, no PR — until it is filled in.
 
 | Command | What it does | What it writes |
 |---------|--------------|----------------|
+| `/issue-prepare [path]` | For material with no issue yet — a WIP document or an idea worked out in the session. Classifies the kind, fills that template's fields from the source, checks open issues and the catalogue for overlap, and works every unanswered field with you (a proposed answer, or leave it open by name) | A filed issue on the right template — or, if you choose **Hold**, a draft saved under `docs/WIP/` and nothing on GitHub |
 | `/issue-review <n> [--draft]` | Picks the track from the template, parses or analyses the issue, checks it against that track's rubric, runs `visimark check` / `infer` on any motivating document or the before/after CLI session, lists every open fork, drafts a recommendation | A pre-review comment on the issue and a PR adding the row as `NEW` — or, with `--draft`, nothing. A thin or misfiled issue gets only a comment. |
 | `/issue-discuss <n>` | Condenses the review conversation you had with the agent in the session into a neutral summary, shows it to you, and posts it only if you approve | A `**Discussion summary**` comment on the issue — nothing else |
 | `/issue-decide <n> [notes]` | Reconciles the pre-review with your steer, writes the decision, and lands it. **On `APPROVED` it first drafts the feature spec with you** — a gap hunt and a round of questions — and does nothing public until you call the spec ready; then it offers to draft the implementation plan, and then to execute it | A `Decision:` comment on the issue; the catalogue PR **merged** to `master` with the row at its verdict (the landing commit quotes the decision — a squash commit, the repo's merge policy, or a merge commit if squash is ever disabled instead); the issue **closed** for `DEFERRED` / `REJECTED`, left open for `APPROVED` (and closed automatically once the change ships in a release); and, for `APPROVED`, a **draft** PR carrying the spec (`docs/vocab/<slug>-spec.md` or `docs/design/<slug>-spec.md`) and, if you asked for them, the plan and the implementation — promoted out of draft only once the build and CI are green |
@@ -81,7 +82,8 @@ argument mattered and the issue thread should carry it before the decision.
 
 ```mermaid
 flowchart LR
-  review["/issue-review"] --> talk[Talk it over]
+  prepare["/issue-prepare"] -.-> review["/issue-review"]
+  review --> talk[Talk it over]
   talk -.-> discuss["/issue-discuss"]
   talk --> decide["/issue-decide"]
   discuss --> decide
@@ -100,6 +102,13 @@ flowchart LR
   unreleased --> shipped[Release tag: SHIPPED, close issue]
 ```
 
+0. **`/issue-prepare [path]`**, only when there is no issue yet — a WIP
+   document, or an idea you've just worked out with the agent. It classifies
+   the kind, drafts every template field from the source, checks for an
+   open issue or a decided catalogue row already covering it, and works any
+   gap with you before filing — so the issue that lands starts `/issue-review`
+   with nothing thin about it. Skip straight to step 1 for an issue that
+   already exists.
 1. **`/issue-review <n>`** — add `--draft` first if you want to read the
    analysis before anything is public. Without `--draft` it posts the
    pre-review and opens the `NEW`-row PR on `vocab/issue-<n>-<slug>` (VOCAB) or

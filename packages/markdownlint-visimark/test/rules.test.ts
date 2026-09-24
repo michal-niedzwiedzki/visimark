@@ -34,12 +34,12 @@ beforeEach(() => {
   resetFindingsCache();
 });
 
-test("one rule per FindingCode, seventeen of them, plus the engine-error rule", () => {
+test("one rule per FindingCode, eighteen of them, plus the engine-error rule", () => {
   // Registration order is DESCRIPTIONS' order, which transcribes the §10
   // taxonomy table rather than the FindingCode union, plus the engine-error
   // rule appended last. Nothing observable depends on order — markdownlint
   // sorts its output by rule name — so this asserts the set.
-  expect(rules).toHaveLength(18);
+  expect(rules).toHaveLength(19);
   const names = rules.map((r) => r.names[0]).sort();
   expect(names).toEqual(
     [
@@ -55,6 +55,7 @@ test("one rule per FindingCode, seventeen of them, plus the engine-error rule", 
       "visimark-anchor",
       "visimark-assert",
       "visimark-precision",
+      "visimark-domain",
       "visimark-artifact",
       "visimark-import",
       "visimark-warn",
@@ -83,9 +84,9 @@ test("every rule reads the micromark parser and describes itself", () => {
     expect(rule.parser).toBe("micromark");
     expect(rule.description.length).toBeGreaterThan(0);
   }
-  expect(rules.slice(0, 17).map((r) => r.description)).toEqual(Object.values(DESCRIPTIONS));
-  expect(rules[17]!.names[0]).toBe("visimark-engine-error");
-  expect(rules[17]!.description).toBe("VisiMark could not analyse this document");
+  expect(rules.slice(0, 18).map((r) => r.description)).toEqual(Object.values(DESCRIPTIONS));
+  expect(rules[18]!.names[0]).toBe("visimark-engine-error");
+  expect(rules[18]!.description).toBe("VisiMark could not analyse this document");
 });
 
 test("information is a URL instance, not a string", () => {
