@@ -79,7 +79,7 @@ $ echo $?
 1
 ```
 
-Twenty-six problems: a payment date ambiguous by twenty-nine days, a cell
+Twenty-seven problems: a payment date ambiguous by twenty-nine days, a cell
 someone nudged by hand to make a column look right, a circular reference — all
 invisible on the rendered page, all caught before a human had to notice.
 
@@ -145,9 +145,9 @@ total, early-payment terms, a currency conversion, and a reconciliation that
 proves the instalments sum to the invoice. Its appendix explains each mechanism.
 
 [`docs/example-invoice-drift.md`](docs/example-invoice-drift.md) is that same
-invoice with the drift shown at the top of this README — the `26 problems`
+invoice with the drift shown at the top of this README — the `27 problems`
 transcript above is `check` reading this exact file, and its appendix walks
-through every one of the 26 findings.
+through every one of the 27 problems.
 
 [`docs/example-quote-plain.md`](docs/example-quote-plain.md) is the other
 direction: a quote with no VisiMark in it at all — no `vmark` block, no
