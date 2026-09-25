@@ -308,10 +308,16 @@ export class FindingsView extends ItemView {
       return [...container.querySelectorAll<HTMLElement>(".visimark-disagrees[data-vmark]")];
     }
     if (row.span === null) return [];
-    const name = f.name;
-    if (name === undefined) return [];
+    if (f.name === undefined) return [];
+    // `data-vmark` is the *qualified* id (`decorations.ts`'s `${sheet.id}.${name}`,
+    // bare only at document scope) — `Finding.name` is always the bare
+    // binding name, with `sheetId` a separate field the engine leaves the
+    // caller to combine. Comparing the bare name against the qualified
+    // attribute directly never matches a sheeted binding at all.
+    const qualified =
+      f.sheetId === undefined || f.sheetId === "" ? f.name : `${f.sheetId}.${f.name}`;
     return [...container.querySelectorAll<HTMLElement>("[data-vmark]")].filter(
-      (el) => el.getAttribute("data-vmark") === name,
+      (el) => el.getAttribute("data-vmark") === qualified,
     );
   }
 
@@ -336,13 +342,23 @@ export class FindingsView extends ItemView {
    * clearing on mouseleave, and scrolled into view directly rather than
    * through the (possibly hidden) editor — the same idea as Ctrl-F's own
    * find-in-note highlight, which doesn't care which mode is showing either.
+   *
+   * `jumpTo` runs *first*, deliberately: CodeMirror owns the DOM inside a
+   * live editor and redraws it on a selection, scroll or focus change —
+   * exactly what `jumpTo` causes — which silently strips any class this file
+   * added to it beforehand. Marking the row only after that redraw has
+   * already happened, against elements `markedElements` re-queries fresh, is
+   * what makes the mark survive. Confirmed against the running app rather
+   * than assumed: hovering alone (no `jumpTo`) already marked the element
+   * correctly, and marking *before* `jumpTo` was exactly the case that lost
+   * it.
    */
   private select(row: FindingRow): void {
+    this.jumpTo(row);
     if (this.pinned !== null && this.pinned !== row) this.peek(this.pinned, false);
     this.pinned = row;
     this.peek(row, true);
     this.markedElements(row)[0]?.scrollIntoView({ behavior: "smooth", block: "center" });
-    this.jumpTo(row);
   }
 
   /**
