@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { readFileSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { locate } from "visimark";
-import { hasVmarkBlock } from "../src/gate.js";
+import { hasVmarkBlock, mightHaveBlock } from "../src/gate.js";
 
 /**
  * v1 constraint 4 — *activation is opt-in per note* — is one predicate, and
@@ -67,4 +67,38 @@ test("example-invoice.md activates and example-quote-plain.md does not", () => {
   // the two documents manual test §2.1 and §2.7 name by hand
   expect(hasVmarkBlock(readFileSync(join(docs, "example-invoice.md"), "utf8"))).toBe(true);
   expect(hasVmarkBlock(readFileSync(join(docs, "example-quote-plain.md"), "utf8"))).toBe(false);
+});
+
+/**
+ * `mightHaveBlock` is the half of the gate that runs before any parse — the
+ * substring scan `sweep.ts` relies on to skip ordinary notes. It must never
+ * produce a false negative: a note `locate` finds a block in must never be
+ * one the substring scan rejects, or the sweep would silently skip it.
+ */
+test("the prefilter has no false negative on the worked-example corpus", () => {
+  const files = readdirSync(docs).filter((f) => f.startsWith("example-") && f.endsWith(".md"));
+  expect(files.length).toBeGreaterThan(0);
+  for (const file of files) {
+    const source = readFileSync(join(docs, file), "utf8");
+    if (locate(source).blocks.length > 0) {
+      expect(mightHaveBlock(source), `${file} has a block the prefilter would skip`).toBe(true);
+    }
+  }
+});
+
+test("the prefilter has no false negative on any fence the engine accepts", () => {
+  // the engine takes ``` and ~~~, any length of either, indented or not
+  const table = "| n |\n|---|\n| 1 |\n\n";
+  const bodies = ["#s\ntotal = SUM(n)"];
+  const fences = ["```", "````", "~~~", "~~~~"];
+  for (const fence of fences) {
+    for (const indent of ["", "  "]) {
+      for (const body of bodies) {
+        const [id, rule] = body.split("\n") as [string, string];
+        const source = `${table}${indent}${fence}vmark ${id}\n${indent}${rule}\n${indent}${fence}\n`;
+        if (locate(source).blocks.length === 0) continue; // not a block; nothing to promise
+        expect(mightHaveBlock(source), `${JSON.stringify(source)} would be skipped`).toBe(true);
+      }
+    }
+  }
 });
