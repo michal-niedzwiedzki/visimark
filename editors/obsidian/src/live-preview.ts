@@ -1,8 +1,8 @@
 import { editorInfoField, type MarkdownFileInfo } from "obsidian";
 import { RangeSetBuilder, type Extension } from "@codemirror/state";
 import { Decoration, ViewPlugin, type DecorationSet, type EditorView } from "@codemirror/view";
-import { build, check, locate } from "visimark";
-import { decorationsFor, type Decoration as VmarkDecoration } from "./decorations.js";
+import { analyse } from "./analysis.js";
+import type { Decoration as VmarkDecoration } from "./decorations.js";
 import { hasVmarkBlock } from "./gate.js";
 
 /**
@@ -51,7 +51,8 @@ function markFor(d: VmarkDecoration, path: string | null): Decoration {
 function marksFor(view: EditorView): DecorationSet {
   const source = view.state.doc.toString();
   const builder = new RangeSetBuilder<Decoration>();
-  // the gate, before the parse: an ordinary note must cost a substring scan
+  // the gate, before the parse: an ordinary note costs a substring scan
+  // (`mightHaveBlock`, inlined into `hasVmarkBlock`) and nothing more
   if (!hasVmarkBlock(source)) return builder.finish();
 
   // absent only if this editor is not backed by a note Obsidian knows the
@@ -66,8 +67,8 @@ function marksFor(view: EditorView): DecorationSet {
   // since `StateField` has no structural difference to check instead.
   const field = editorInfoField as unknown as Parameters<typeof view.state.field>[0];
   const path = (view.state.field(field, false) as MarkdownFileInfo | undefined)?.file?.path ?? null;
-  const model = build(locate(source));
-  for (const decoration of decorationsFor(model, check(model))) {
+  const { decorations } = analyse(source);
+  for (const decoration of decorations) {
     builder.add(decoration.span.start, decoration.span.end, markFor(decoration, path));
   }
   return builder.finish();

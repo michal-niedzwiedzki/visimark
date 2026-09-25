@@ -9,6 +9,20 @@ Each entry says which engine version the bundle carries.
 
 ## Unreleased
 
+- **The activation gate no longer parses an ordinary note**, and reading mode
+  no longer re-analyses a note once per rendered section (2026-09-25 code
+  review, rows 4–5). `mightHaveBlock`, the no-false-negative substring scan
+  the vault sweep already relied on, now runs inside `hasVmarkBlock` itself,
+  so an ordinary note costs a scan instead of a `remark`+GFM parse on every
+  keystroke in Live Preview, every rendered section in reading mode, and every
+  leaf change. A new one-entry memo (`src/analysis.ts`) shares one
+  `locate`+`build`+`check`+`decorationsFor` per source string across the gate,
+  both renderers and Explain's `nameAt`, so a note that does have a block is
+  analysed once per render rather than once per section. No user-visible
+  behaviour changes; see
+  [`docs/reviews/2026-09-25-obsidian-plugin.md`](../../docs/reviews/2026-09-25-obsidian-plugin.md)
+  §2.1.
+
 - **Format can fix unambiguous dates** (v1.1 row 17 of
   [#176](https://github.com/michal-niedzwiedzki/visimark/issues/176)), behind
   a new setting, **Fix unambiguous dates**, off by default — mirrors the

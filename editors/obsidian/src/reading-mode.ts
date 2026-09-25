@@ -1,6 +1,7 @@
 import type { MarkdownPostProcessorContext } from "obsidian";
-import { build, check, locate, type AnchorTargetKind } from "visimark";
-import { decorationsFor, decorationsIn, type Decoration } from "./decorations.js";
+import type { AnchorTargetKind } from "visimark";
+import { analyse } from "./analysis.js";
+import { decorationsIn, type Decoration } from "./decorations.js";
 import { hasVmarkBlock } from "./gate.js";
 
 /**
@@ -56,8 +57,11 @@ export function decorateSection(el: HTMLElement, ctx: MarkdownPostProcessorConte
   const from = offsetOfLine(source, info.lineStart);
   const to = offsetOfLine(source, info.lineEnd + 1);
 
-  const model = build(locate(source));
-  const here = decorationsIn(decorationsFor(model, check(model)), from, to);
+  // `info.text` is the whole note, the same string for every section of one
+  // render — `analyse` runs `locate` + `build` + `check` + `decorationsFor`
+  // once per note per render instead of once per section (review row 5)
+  const { decorations } = analyse(source);
+  const here = decorationsIn(decorations, from, to);
   if (here.length === 0) return;
 
   decorateCells(el, here, ctx.sourcePath);

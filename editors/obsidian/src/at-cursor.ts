@@ -1,4 +1,4 @@
-import { locate, type DocModel } from "visimark";
+import type { DocModel } from "visimark";
 
 /**
  * What name is the cursor on?
@@ -28,7 +28,7 @@ export function nameAt(model: DocModel, offset: number): string | null {
   // they ask. Both halves count — the value the anchor binds and the comment
   // that binds it — because in reading mode the comment is invisible and in
   // Live Preview it is not, so a caret "on the number" lands in either.
-  for (const anchor of locate(model.source).anchors) {
+  for (const anchor of model.located.anchors) {
     const qualified = anchor.sheetId === "" ? anchor.name : `${anchor.sheetId}.${anchor.name}`;
     if (inside(anchor.commentSpan)) return qualified;
     if (anchor.value !== null && inside(anchor.value)) return qualified;
