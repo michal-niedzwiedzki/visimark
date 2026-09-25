@@ -191,15 +191,17 @@
 }
 
 /*
- * The two facts under a value node — `check-report.ts`'s own sentence, then
- * what the formula gives. Indented with the same vertical guide Outline uses
- * for a nested heading, not a border on the node itself.
+ * A value node has no separate header row — both lines are
+ * `visimark-node-detail` children of this one list, so both get the same
+ * hairline and indent (the vertical guide Outline uses for a nested
+ * heading, on the list rather than on either line). There is nothing above
+ * this list to give the node its own top spacing, so this carries that too.
  */
 .visimark-node-children {
   border-inline-start: 1px solid
     var(--nav-indentation-guide-color, var(--background-modifier-border));
   list-style: none;
-  margin: 0 0 var(--size-2-2) var(--size-2-1);
+  margin: var(--size-2-2) 0 var(--size-2-2) var(--size-2-1);
   padding: 0 0 0 var(--size-4-3);
 }
 
@@ -208,6 +210,32 @@
   font-size: var(--font-ui-smaller);
   line-height: var(--line-height-tight);
   padding: var(--size-2-1) 0;
+}
+
+/*
+ * The one interactive detail line — jumps to the value and previews it on
+ * hover, same as `visimark-node-self` elsewhere, but styled to match its
+ * plain-text sibling (`visimark-node-detail`'s own muted, smaller type)
+ * exactly rather than the bolder full-size look a leaf's own line gets.
+ * `display: block`, not flex, so `text-align` (unlike the flex containers
+ * above) is the correct way to left-align it.
+ */
+.visimark-findings .visimark-node-detail-action {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  color: inherit;
+  cursor: pointer;
+  display: block;
+  font: inherit;
+  min-height: 44px;
+  padding: 0;
+  text-align: left;
+  width: 100%;
+}
+
+.visimark-findings .visimark-node-detail-action:hover {
+  background: var(--background-modifier-hover);
 }
 
 .visimark-node-fact {
@@ -235,6 +263,7 @@
  * behind, and a keyboard user must never lose track of where they are.
  */
 .visimark-findings .visimark-node-self:focus-visible,
+.visimark-findings .visimark-node-detail-action:focus-visible,
 .visimark-findings .visimark-fix:focus-visible {
   outline: 2px solid var(--interactive-accent);
   outline-offset: 2px;
