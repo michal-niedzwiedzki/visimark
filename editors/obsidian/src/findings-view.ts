@@ -3,6 +3,7 @@ import {
   MarkdownView,
   Notice,
   debounce,
+  setIcon,
   type Editor,
   type WorkspaceLeaf,
 } from "obsidian";
@@ -73,6 +74,14 @@ export class FindingsView extends ItemView {
 
   /** The note text `draw`'s rows were computed from, for `apply` to check. */
   private renderedSource: string | null = null;
+
+  /**
+   * Section headings the reader has folded. `draw` rebuilds the whole pane on
+   * every refresh — a keystroke, a repair, a leaf change — so this lives on
+   * the view rather than in the DOM, or folding "Advice" would reopen itself
+   * the next time a debounced re-check ran.
+   */
+  private readonly collapsedSections = new Set<string>();
 
   override async onOpen(): Promise<void> {
     this.registerEvent(this.app.workspace.on("active-leaf-change", () => void this.refresh()));
@@ -148,9 +157,28 @@ export class FindingsView extends ItemView {
   private section(parent: HTMLElement, heading: string, rows: FindingRow[]): void {
     if (rows.length === 0) return;
     const section = parent.createDiv({ cls: "visimark-section" });
-    section.createEl("h3", { cls: "visimark-section-heading", text: heading });
+    const collapsed = this.collapsedSections.has(heading);
+
+    const head = section.createEl("button", {
+      cls: "visimark-section-heading",
+      attr: { type: "button", "aria-expanded": String(!collapsed) },
+    });
+    head.toggleClass("is-collapsed", collapsed);
+    setIcon(head.createSpan({ cls: "visimark-section-chevron" }), "chevron-right");
+    head.createSpan({ text: heading });
+
     const list = section.createEl("ul", { cls: "visimark-list" });
+    list.toggleClass("visimark-list-collapsed", collapsed);
     for (const row of rows) this.row(list, row);
+
+    head.addEventListener("click", () => {
+      const nowCollapsed = !this.collapsedSections.has(heading);
+      if (nowCollapsed) this.collapsedSections.add(heading);
+      else this.collapsedSections.delete(heading);
+      head.toggleClass("is-collapsed", nowCollapsed);
+      head.setAttr("aria-expanded", String(!nowCollapsed));
+      list.toggleClass("visimark-list-collapsed", nowCollapsed);
+    });
   }
 
   private row(list: HTMLElement, row: FindingRow): void {
@@ -170,6 +198,11 @@ export class FindingsView extends ItemView {
     const where = row.finding.rowLabel ?? row.finding.name;
     if (where !== undefined) main.createSpan({ cls: "visimark-row-where", text: where });
     main.addEventListener("click", () => this.jumpTo(row));
+    // desktop-only preview: a hover marks what the row is about in the
+    // editor without moving the cursor, so looking down the list costs
+    // nothing. Mobile has no hover, but a tap there already jumps (below).
+    main.addEventListener("mouseenter", () => this.peek(row, true));
+    main.addEventListener("mouseleave", () => this.peek(row, false));
 
     if (row.repair !== null) {
       const repair = item.createEl("button", {
@@ -180,9 +213,25 @@ export class FindingsView extends ItemView {
       const edits = row.repair;
       repair.addEventListener("click", () => this.apply(edits, row));
     }
+  }
 
-    const hint = suggestion(row);
-    if (hint !== null) item.createEl("p", { cls: "visimark-row-hint", text: hint });
+  /**
+   * Mark (or unmark) what a row is about in the editor, without moving the
+   * cursor — `jumpTo` does that, on an explicit click. Matched by name, the
+   * same key Live Preview and reading mode already stamp on every marked
+   * value as `data-vmark` (`live-preview.ts`, `reading-mode.ts`): a name
+   * bound in two places lights up both, which is no worse than the mark
+   * both places already carry from the same name.
+   */
+  private peek(row: FindingRow, on: boolean): void {
+    if (row.span === null) return;
+    const name = row.finding.name;
+    if (name === undefined) return;
+    const container = this.noteView()?.contentEl;
+    if (container == null) return;
+    for (const el of container.querySelectorAll<HTMLElement>("[data-vmark]")) {
+      if (el.getAttribute("data-vmark") === name) el.toggleClass("visimark-peek", on);
+    }
   }
 
   /** Put the cursor on what a row is about. */
@@ -266,6 +315,8 @@ function detail(row: FindingRow): string {
     parts.push(`the note says ${f.stored}, the formula gives ${f.computed}`);
   }
   if (row.reader.quote !== undefined) parts.push(row.reader.quote);
+  const hint = suggestion(row);
+  if (hint !== null) parts.push(hint);
   return parts.join(" · ");
 }
 
