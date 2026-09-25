@@ -112,17 +112,21 @@
 }
 
 /*
- * No border, no rule between rows: a plain `<li>`, the way Backlinks' own
- * list is plain — the row *button*'s hover background is what separates one
- * finding from the next while the pointer is over it, and nothing marks it
- * otherwise.
+ * A tree, like Outline: `visimark-node` is one entry (a leaf, or a value
+ * with its two detail children below it), `visimark-node-children` is the
+ * nested list, and `visimark-node-row` is the one flex line each node's own
+ * self/action pair sits on. No border, no rule anywhere — a node's own hover
+ * background is what separates it from the next while the pointer is over
+ * it, the same as the list it replaces.
  */
-.visimark-row {
+.visimark-node {
+  padding: 0 var(--size-4-2);
+}
+
+.visimark-node-row {
   align-items: center;
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--size-4-2);
-  padding: 0 var(--size-4-2);
+  gap: var(--size-2-1);
 }
 
 /*
@@ -138,7 +142,7 @@
  * (`aria-label`, via `detail()`) instead, the same place the finding code
  * already lived.
  */
-.visimark-findings .visimark-row-main {
+.visimark-findings .visimark-node-self {
   align-items: baseline;
   background: transparent;
   border: none;
@@ -151,11 +155,11 @@
   gap: var(--size-4-1);
   line-height: var(--line-height-tight);
   min-height: 44px;
-  padding: var(--size-2-2);
+  padding: var(--size-2-2) 0;
   text-align: left;
 }
 
-.visimark-findings .visimark-row-main:hover {
+.visimark-findings .visimark-node-self:hover {
   background: var(--background-modifier-hover);
 }
 
@@ -174,26 +178,50 @@
 }
 
 /*
- * An icon, sized down from Obsidian's default `clickable-icon` — this row
- * action sits next to a line of text, not in a view header, so the full
- * default size (`--clickable-icon-size`) reads as heavier than the row it is
- * attached to. `min-height`/`min-width` keep the 44px *tap* target even
- * though the visible icon is smaller — the touch-target rule is about the
- * hit area, not about how large the chrome has to look.
+ * The two facts under a value node — `check-report.ts`'s own sentence, then
+ * what the formula gives. Indented with the same vertical guide Outline uses
+ * for a nested heading, not a border on the node itself.
  */
-.visimark-findings .visimark-repair {
+.visimark-node-children {
+  border-inline-start: 1px solid
+    var(--nav-indentation-guide-color, var(--background-modifier-border));
+  list-style: none;
+  margin: 0 0 var(--size-2-2) var(--size-2-1);
+  padding: 0 0 0 var(--size-4-3);
+}
+
+.visimark-node-detail {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  line-height: var(--line-height-tight);
+  padding: var(--size-2-1) 0;
+}
+
+.visimark-node-fact {
+  align-items: center;
+  display: flex;
+  gap: var(--size-2-1);
+}
+
+/*
+ * The repair action. Deliberately *not* the 44px touch box every other
+ * control in this plugin gets: it sits inline in a sentence rather than in
+ * its own row, and at that size the box read as a gap around the icon
+ * rather than a target — `--icon-size` shrinks the glyph, and no min-height
+ * or min-width claims space beyond it.
+ */
+.visimark-findings .visimark-fix {
   --icon-size: var(--icon-s);
   flex: 0 0 auto;
-  min-height: 44px;
-  min-width: 44px;
+  margin: 0;
 }
 
 /*
  * `:focus-visible`, not `:focus`: a pointer press should not leave a ring
  * behind, and a keyboard user must never lose track of where they are.
  */
-.visimark-findings .visimark-row-main:focus-visible,
-.visimark-findings .visimark-repair:focus-visible {
+.visimark-findings .visimark-node-self:focus-visible,
+.visimark-findings .visimark-fix:focus-visible {
   outline: 2px solid var(--interactive-accent);
   outline-offset: 2px;
 }
