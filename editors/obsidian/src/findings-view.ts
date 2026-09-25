@@ -134,6 +134,13 @@ export class FindingsView extends ItemView {
   private container(): HTMLElement {
     const el = this.contentEl;
     el.empty();
+    // Not `markedElements(this.pinned)` — by the time a redraw runs,
+    // `refresh()` may already have repointed `activeView` at a different
+    // note, so re-deriving "the marked elements" here could clear the wrong
+    // note's DOM (or find nothing to clear at all) instead of the elements
+    // that actually still carry the class.
+    for (const marked of this.peeked) marked.removeClass("visimark-peek");
+    this.peeked.clear();
     // the pin points at DOM this call is about to discard, and at a
     // FindingRow instance the next `draw` will replace with a new one
     this.pinned = null;
@@ -228,6 +235,15 @@ export class FindingsView extends ItemView {
   private valueNode(item: HTMLElement, row: FindingRow): void {
     const f = row.finding;
     const children = item.createEl("ul", { cls: "visimark-node-children" });
+    // on the list, not the link: moving the pointer from the sentence down
+    // to "The formula gives …" (not itself interactive) stays inside this
+    // element the whole time, so the preview doesn't flicker off between
+    // the finding's own two lines the way it would if only the link below
+    // tracked hover.
+    children.addEventListener("mouseenter", () => this.peek(row, true));
+    children.addEventListener("mouseleave", () => {
+      if (this.pinned !== row) this.peek(row, false);
+    });
 
     const value = children.createEl("li", { cls: "visimark-node-detail" });
     const button = value.createEl("button", {
@@ -236,10 +252,6 @@ export class FindingsView extends ItemView {
     });
     button.createSpan({ text: `${f.stored}: ${row.reader.row}` });
     button.addEventListener("click", () => this.select(row));
-    button.addEventListener("mouseenter", () => this.peek(row, true));
-    button.addEventListener("mouseleave", () => {
-      if (this.pinned !== row) this.peek(row, false);
-    });
 
     const fact = children.createEl("li", { cls: "visimark-node-detail visimark-node-fact" });
     fact.createSpan({ text: `The formula gives ${f.computed}` });
@@ -323,7 +335,16 @@ export class FindingsView extends ItemView {
     if (container == null) return [];
     const f = row.finding;
     if (f.code === "STALE" && f.anchorGroup === true) {
-      return [...container.querySelectorAll<HTMLElement>(".visimark-disagrees[data-vmark]")];
+      // `:not([data-vmark-row])` is what keeps this to the group's own
+      // members: `data-vmark-row` (`live-preview.ts`'s `markFor`) is set
+      // only for a table cell's decoration, never a prose anchor's, so a
+      // note with both a stale cell and a stale anchor group no longer
+      // highlights the unrelated cell when this row previews the group.
+      return [
+        ...container.querySelectorAll<HTMLElement>(
+          ".visimark-disagrees[data-vmark]:not([data-vmark-row])",
+        ),
+      ];
     }
     if (row.span === null) return [];
     if (f.name === undefined) return [];
@@ -339,9 +360,16 @@ export class FindingsView extends ItemView {
     );
   }
 
+  /** Note elements currently carrying `visimark-peek`, whatever note they're in. */
+  private readonly peeked = new Set<HTMLElement>();
+
   /** Mark (or unmark) what a row is about, without moving the cursor. */
   private peek(row: FindingRow, on: boolean): void {
-    for (const el of this.markedElements(row)) el.toggleClass("visimark-peek", on);
+    for (const el of this.markedElements(row)) {
+      el.toggleClass("visimark-peek", on);
+      if (on) this.peeked.add(el);
+      else this.peeked.delete(el);
+    }
   }
 
   /**
