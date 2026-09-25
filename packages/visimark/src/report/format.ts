@@ -151,6 +151,8 @@ function renderGroup(f: Finding): string[] {
       return [prefix("CYCLE") + (f.cyclePath ?? []).join(" → ")];
     case "SHEET":
       return [prefix("SHEET") + id(f).padEnd(ID_FIELD) + "  " + (f.message ?? "")];
+    case "DOMAIN":
+      return [prefix("DOMAIN") + id(f).padEnd(ID_FIELD) + "  " + (f.message ?? "")];
     case "IMPORT":
       return [prefix("IMPORT") + sheetId(f).padEnd(ID_FIELD) + "  " + (f.message ?? "")];
     case "COVERAGE": {

@@ -7,7 +7,7 @@
  * `import-acceptance.test.ts` uses.
  */
 import { expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { runCli } from "../src/cli/main.js";
 import { build } from "../src/model/build.js";
@@ -91,6 +91,24 @@ test("3. a default outside its range domain: DOMAIN, exit 1", () => {
   const f = result.findings.find((x) => x.code === "DOMAIN")!;
   expect(f.message).toBe("default 100 is not in the domain of extra_hours: integer in [0, 80]");
   expect(result.exitCode).toBe(1);
+});
+
+test("3b. the DOMAIN message reaches plain-text `check` output, not just --json", async () => {
+  const source = CLEAN.replace(
+    "param extra_hours    precision 0 integer in [0, 80] = default 40",
+    "param extra_hours    precision 0 integer in [0, 80] = default 100",
+  );
+  const path = join(import.meta.dir, "fixtures", "domain", "levers-bad-default.md");
+  writeFileSync(path, source);
+  try {
+    const r = await run(["check", path]);
+    expect(r.code).toBe(1);
+    expect(r.out).toContain(
+      "DOMAIN  levers.extra_hours  default 100 is not in the domain of extra_hours: integer in [0, 80]",
+    );
+  } finally {
+    rmSync(path);
+  }
 });
 
 test("4. a default outside its finite-set domain: DOMAIN, exit 1", () => {
