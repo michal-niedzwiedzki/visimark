@@ -28,6 +28,14 @@ import { decorationsFor, type Decoration } from "./decorations.js";
  * call it `disagrees`. The seam for that is this module: a snapshot-backed
  * variant is added beside `analyse`, not folded into it, so the gate and the
  * synchronous renderers keep working from the cheap half.
+ *
+ * **`locate` itself is memoised one step below `analyse`,** and `gate.ts`
+ * reads from that step directly. Every caller that finds a block calls
+ * `hasVmarkBlock(source)` and then, immediately, `analyse(source)` on the
+ * same string — without sharing the parse, that pattern would still cost a
+ * whole-note `locate` twice for the first section of every render (CodeRabbit
+ * review of PR #264). `locatedFor` is the one place that memo lives, so the
+ * two callers can't drift apart.
  */
 export interface Analysis {
   readonly source: string;
@@ -37,12 +45,26 @@ export interface Analysis {
   readonly decorations: readonly Decoration[];
 }
 
+interface LocateEntry {
+  readonly source: string;
+  readonly located: LocatedDoc;
+}
+
+let locateCache: LocateEntry | null = null;
 let cached: Analysis | null = null;
+
+/** `locate(source)`, computed once per distinct source string. */
+export function locatedFor(source: string): LocatedDoc {
+  if (locateCache !== null && locateCache.source === source) return locateCache.located;
+  const located = locate(source);
+  locateCache = { source, located };
+  return located;
+}
 
 /** The reader-less analysis of `source`, computed once per distinct source string. */
 export function analyse(source: string): Analysis {
   if (cached !== null && cached.source === source) return cached;
-  const located = locate(source);
+  const located = locatedFor(source);
   const model = build(located);
   const result = check(model);
   const decorations = decorationsFor(model, result);
