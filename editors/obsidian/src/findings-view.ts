@@ -197,26 +197,27 @@ export class FindingsView extends ItemView {
    * The one finding shape with a stored value and a computed one to put
    * against it (`f.stored`/`f.computed` — a plain per-cell or per-anchor
    * STALE mismatch; the collapsed anchor group and a stale chart/import have
-   * neither, `isValueMismatch` below). The stored value leads its own line —
-   * plain text, no mark — instead of standing alone as a separate header:
-   * "1242.00: This value no longer matches its formula." is the row's own
-   * sentence with the number in front of it, and that line is what jumps and
-   * previews. `The formula gives {computed}` is the second line, with the
-   * repair icon inline on it.
+   * neither, `isValueMismatch` below). Both lines are `.visimark-node-detail`
+   * children of the same list, so both get the same hairline and indent —
+   * there is no separate header row above them. The stored value leads the
+   * first line ("1242.00: This value no longer matches its formula.",
+   * unmarked), and that line is what jumps and previews on hover; "The
+   * formula gives {computed}" is the second, with the repair icon inline.
    */
   private valueNode(item: HTMLElement, row: FindingRow): void {
     const f = row.finding;
-    const self = item.createDiv({ cls: "visimark-node-row" });
-    const button = self.createEl("button", {
-      cls: "visimark-node-self",
+    const children = item.createEl("ul", { cls: "visimark-node-children" });
+
+    const value = children.createEl("li", { cls: "visimark-node-detail" });
+    const button = value.createEl("button", {
+      cls: "visimark-node-detail-action",
       attr: { type: "button", "aria-label": detail(row), "data-tooltip-position": "top" },
     });
-    button.createSpan({ cls: "visimark-row-text", text: `${f.stored}: ${row.reader.row}` });
+    button.createSpan({ text: `${f.stored}: ${row.reader.row}` });
     button.addEventListener("click", () => this.jumpTo(row));
     button.addEventListener("mouseenter", () => this.peek(row, true));
     button.addEventListener("mouseleave", () => this.peek(row, false));
 
-    const children = item.createEl("ul", { cls: "visimark-node-children" });
     const fact = children.createEl("li", { cls: "visimark-node-detail visimark-node-fact" });
     fact.createSpan({ text: `The formula gives ${f.computed}` });
     if (row.repair !== null) this.fixIcon(fact, row);
