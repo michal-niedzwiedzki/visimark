@@ -117,10 +117,20 @@ test("a stale chart is a row with no repair, and the finding is not silenced", (
   // the shipped --no-artifacts contract: declining the write never silences
   // the finding. v1 has no vault-backed write port, so the row stays and the
   // button does not appear
-  const chart = forReader(finding("STALE", { artifact: "charts/sales.svg" }))!;
+  const chart = forReader(finding("STALE", { artifact: "charts/sales.svg", name: "performance" }))!;
   expect(chart.action).toBeNull();
   expect(chart.row).toBe("This chart is older than the numbers it draws.");
   expect(chart.severity).toBe("problem");
+});
+
+test("an imported CSV's stale stamp is not called a stale chart", () => {
+  // both a chart's STALE and an import stamp mismatch's STALE set `artifact`
+  // (check-charts.ts, import/resolve.ts) — only the chart's also names the
+  // chart. A note with a CSV import and no chart at all must not be told a
+  // chart went stale.
+  const r = forReader(finding("STALE", { artifact: "data/rates.csv" }))!;
+  expect(r.row).toBe("This note's data file has changed since it was last checked in.");
+  expect(r.action).toBeNull();
 });
 
 test("an empty table's COVERAGE offers Infer, which is the on-ramp", () => {
@@ -137,6 +147,22 @@ test("a marker's COVERAGE is not told it is an empty table, and offers no action
   const r = forReader(finding("COVERAGE", { span: { start: 0, end: 20 } }))!;
   expect(r.action).toBeNull();
   expect(r.row).not.toBe("Nothing in this table is checked yet.");
+});
+
+test("an unstamped import is not told its data file could not be read", () => {
+  // resolveImports only reaches "unstamped import" once the path gated, the
+  // file read, and the CSV parsed — the everyday state right after `from
+  // <path>` is typed, or the CSV changes underneath it (manual test §2.6b).
+  // Saying the file "could not be read" here would send a reader who has
+  // done nothing wrong looking for a broken path that is not broken.
+  const r = forReader(finding("IMPORT", { message: "unstamped import" }))!;
+  expect(r.row).toBe("This note has not checked in its data file yet.");
+  expect(r.action).toBeNull();
+});
+
+test("a genuinely unreadable import keeps the stronger wording", () => {
+  const r = forReader(finding("IMPORT", { message: "imported file not found: `rates.csv`" }))!;
+  expect(r.row).toBe("The data file this note reads could not be read.");
 });
 
 test("a did-you-mean is passed through, not recomputed", () => {

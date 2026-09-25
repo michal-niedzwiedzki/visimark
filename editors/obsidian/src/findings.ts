@@ -67,7 +67,14 @@ function subject(f: Finding): string {
 const TEXT: Record<FindingCode, ((f: Finding) => string) | null> = {
   STALE: (f) =>
     f.artifact !== undefined
-      ? "This chart is older than the numbers it draws."
+      ? // a chart's STALE also names the chart (check-charts.ts); an
+        // imported CSV's stamp mismatch (import/resolve.ts) only ever sets
+        // `artifact` — there is no chart to name — so `name` is what tells
+        // the two apart. Without this, a document with no chart in it was
+        // told one had gone stale.
+        f.name !== undefined
+        ? "This chart is older than the numbers it draws."
+        : "This note's data file has changed since it was last checked in."
       : // the engine collapses every drifted prose anchor into one finding
         // with no site of its own, because there is no single place to point
         // at. Saying "this value" about eight of them would send the reader
@@ -93,7 +100,17 @@ const TEXT: Record<FindingCode, ((f: Finding) => string) | null> = {
   PRECISION: () => "VisiMark cannot tell how many decimals this should have.",
   ASSERT: () => "This check does not hold.",
   ARTIFACT: () => "This chart could not be built.",
-  IMPORT: () => "The data file this note reads could not be read.",
+  // "unstamped import" is not a failure to read anything — `resolveImports`
+  // (packages/visimark/src/import/resolve.ts) only reaches it once the path
+  // gated, the file read, and the CSV parsed; the sheet is just waiting on
+  // its first stamp, the everyday state right after `from <path>` is typed
+  // or the CSV changes underneath it. Every other `IMPORT` message really is
+  // the file not being usable — a bad path, a malformed digest, a parse
+  // failure, a read-only column reassigned — and keeps the stronger wording.
+  IMPORT: (f) =>
+    f.message === "unstamped import"
+      ? "This note has not checked in its data file yet."
+      : "The data file this note reads could not be read.",
   WARN: (f) => `${subject(f)} is defined but never used.`,
   // emitCoverage (packages/visimark/src/eval/check.ts) reports two opposite
   // cases under one code: a table with no rules at all (span undefined), and
