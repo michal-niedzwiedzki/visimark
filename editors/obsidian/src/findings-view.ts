@@ -345,7 +345,16 @@ export class FindingsView extends ItemView {
     this.jumpTo(row);
   }
 
-  /** Put the cursor on what a row is about. */
+  /**
+   * Put the cursor on what a row is about.
+   *
+   * `focus()` matters as much as `setSelection` does: without it, the
+   * selection is real but keyboard focus stays on the sidebar button just
+   * clicked, and Obsidian renders a selection in an unfocused editor in its
+   * *inactive* colour — pale enough in most themes to read as no selection
+   * at all. Focusing the editor is also what Outline and Backlinks do on a
+   * click, so this matches the pane it is borrowing its grammar from.
+   */
   private jumpTo(row: FindingRow): void {
     const editor = this.editor();
     if (editor === null || row.span === null) return;
@@ -353,6 +362,7 @@ export class FindingsView extends ItemView {
     const to = editor.offsetToPos(row.span.end);
     editor.setSelection(from, to);
     editor.scrollIntoView({ from, to }, true);
+    editor.focus();
   }
 
   /**
