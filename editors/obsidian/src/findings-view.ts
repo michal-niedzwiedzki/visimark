@@ -375,8 +375,20 @@ export class FindingsView extends ItemView {
     this.jumpTo(row);
     if (this.pinned !== null && this.pinned !== row) this.peek(this.pinned, false);
     this.pinned = row;
-    this.peek(row, true);
-    this.markedElements(row)[0]?.scrollIntoView({ behavior: "smooth", block: "center" });
+    // A live editor (Live Preview/Source) owns and periodically resyncs its
+    // rendered DOM against its own decoration state, on its own schedule,
+    // independent of how far — if at all — a click scrolls it: confirmed
+    // against the running app, marking a value that was already fully
+    // visible (no scroll needed) still lost the mark less than a second
+    // later. A manually-added class on that DOM is a guest CodeMirror never
+    // promised to keep, and `jumpTo`'s own selection is what already shows
+    // "this one" there, correctly, with no such race — so the DOM mark's
+    // job is Reading mode's alone, which is static, untouched by any of
+    // that, and has no selection to fall back on.
+    if (this.targetView()?.getMode() !== "source") {
+      this.peek(row, true);
+      this.markedElements(row)[0]?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
   }
 
   /**
