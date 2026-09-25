@@ -222,38 +222,44 @@
 
 /*
  * The one interactive detail line — jumps to the value and selects it,
- * previews on hover, same behaviour as `visimark-node-self` elsewhere, but a
- * `<button>` styled as a link (Obsidian's own `--link-*` vars) rather than a
- * boxed control: no background, no border, no touch-target min-height — a
- * link sitting between two plain-text lines, not a row of its own. `display:
- * block`, not flex, so `text-align` (unlike the flex containers above) is
- * the correct way to left-align it, and nothing here disturbs the hairline
- * or indent, which belong to `visimark-node-children`, not this element.
+ * previews on hover, same behaviour as `visimark-node-self` elsewhere, but
+ * reading as plain text, not a link or a boxed control: same colour as its
+ * `visimark-node-detail` sibling (`color: inherit`), no underline, no
+ * touch-target min-height. A hover background is the only sign it does
+ * anything. `display: block`, not flex, so `text-align` (unlike the flex
+ * containers above) is the correct way to left-align it, and nothing here
+ * disturbs the hairline or indent, which belong to `visimark-node-children`,
+ * not this element.
  */
 .visimark-findings .visimark-node-detail-action {
   background: transparent;
   border: none;
   box-shadow: none;
-  color: var(--link-color, var(--text-accent));
+  color: inherit;
   cursor: pointer;
   display: block;
   font: inherit;
   padding: 0;
   text-align: left;
-  text-decoration: var(--link-decoration, none);
+  text-decoration: none;
   width: 100%;
 }
 
 .visimark-findings .visimark-node-detail-action:hover {
-  color: var(--link-color-hover, var(--text-accent-hover));
-  text-decoration: var(--link-decoration-hover, underline);
+  background: var(--background-modifier-hover);
 }
 
+/*
+ * No top padding of its own: `visimark-node-detail`'s shared top padding is
+ * for the space above the *first* line, and this is always the second —
+ * zeroing it here is what keeps the two lines of one finding close together.
+ */
 .visimark-node-fact {
   align-items: center;
   display: flex;
   gap: var(--size-2-1);
   justify-content: flex-start;
+  padding-top: 0;
 }
 
 /*
