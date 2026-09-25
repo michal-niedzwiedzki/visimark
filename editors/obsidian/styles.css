@@ -213,29 +213,32 @@
 }
 
 /*
- * The one interactive detail line — jumps to the value and previews it on
- * hover, same as `visimark-node-self` elsewhere, but styled to match its
- * plain-text sibling (`visimark-node-detail`'s own muted, smaller type)
- * exactly rather than the bolder full-size look a leaf's own line gets.
- * `display: block`, not flex, so `text-align` (unlike the flex containers
- * above) is the correct way to left-align it.
+ * The one interactive detail line — jumps to the value and selects it,
+ * previews on hover, same behaviour as `visimark-node-self` elsewhere, but a
+ * `<button>` styled as a link (Obsidian's own `--link-*` vars) rather than a
+ * boxed control: no background, no border, no touch-target min-height — a
+ * link sitting between two plain-text lines, not a row of its own. `display:
+ * block`, not flex, so `text-align` (unlike the flex containers above) is
+ * the correct way to left-align it, and nothing here disturbs the hairline
+ * or indent, which belong to `visimark-node-children`, not this element.
  */
 .visimark-findings .visimark-node-detail-action {
   background: transparent;
   border: none;
   box-shadow: none;
-  color: inherit;
+  color: var(--link-color, var(--text-accent));
   cursor: pointer;
   display: block;
   font: inherit;
-  min-height: 44px;
   padding: 0;
   text-align: left;
+  text-decoration: var(--link-decoration, none);
   width: 100%;
 }
 
 .visimark-findings .visimark-node-detail-action:hover {
-  background: var(--background-modifier-hover);
+  color: var(--link-color-hover, var(--text-accent-hover));
+  text-decoration: var(--link-decoration-hover, underline);
 }
 
 .visimark-node-fact {
