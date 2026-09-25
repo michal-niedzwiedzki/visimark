@@ -201,15 +201,23 @@
   border-inline-start: 1px solid
     var(--nav-indentation-guide-color, var(--background-modifier-border));
   list-style: none;
-  margin: var(--size-2-2) 0 var(--size-2-2) var(--size-2-1);
+  margin: var(--size-2-2) 0 var(--size-4-4) var(--size-2-1);
   padding: 0 0 0 var(--size-4-3);
 }
 
+/*
+ * Top padding only, not top-and-bottom: the gap between this line and the
+ * next used to be two paddings stacked (this one's bottom, the next one's
+ * top). One line's own top padding is enough on its own; the gap before the
+ * *next finding* comes from `visimark-node-children`'s bottom margin above,
+ * which is deliberately larger, so the pair still reads as one unit and the
+ * next finding still reads as a new one.
+ */
 .visimark-node-detail {
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
   line-height: var(--line-height-tight);
-  padding: var(--size-2-1) 0;
+  padding: var(--size-2-1) 0 0;
 }
 
 /*
