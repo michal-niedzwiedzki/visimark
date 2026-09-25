@@ -76,6 +76,20 @@ export class FindingsView extends ItemView {
   private renderedSource: string | null = null;
 
   /**
+   * The view `refresh()` most recently drew the rows against — what a click
+   * acts on, in preference to re-deriving "the note" from scratch. `editor()`
+   * and `markedElements()` used to call `noteView()` (which answers via
+   * `getMostRecentLeaf()`) fresh on every click; a click is itself an
+   * interaction with *this* pane's own leaf, and the moment a handler runs is
+   * exactly the moment "most recently active leaf" tracking can be mid-update
+   * from that same click — a race a second click, after it settles, does not
+   * hit. The view the rows were actually computed against was never in
+   * question, so acting on it instead removes the race rather than timing
+   * around it.
+   */
+  private activeView: MarkdownView | null = null;
+
+  /**
    * Section headings the reader has folded. `draw` rebuilds the whole pane on
    * every refresh — a keystroke, a repair, a leaf change — so this lives on
    * the view rather than in the DOM, or folding "Advice" would reopen itself
@@ -95,7 +109,11 @@ export class FindingsView extends ItemView {
     const id = ++this.renderId;
     const view = this.noteView();
     const file = view?.file;
-    if (view === null || file === null || file === undefined) return this.drawEmpty(null);
+    if (view === null || file === null || file === undefined) {
+      this.activeView = null;
+      return this.drawEmpty(null);
+    }
+    this.activeView = view;
 
     const source = view.getViewData();
     if (!hasVmarkBlock(source)) return this.drawEmpty(file.basename);
@@ -282,9 +300,9 @@ export class FindingsView extends ItemView {
 
   /**
    * The rendered element(s) a row is about, in whichever mode the note is
-   * currently showing — `noteView().contentEl` holds Live Preview/Source and
-   * Reading mode alike, and only one is visible at a time, so this needs no
-   * separate case for either.
+   * currently showing — `targetView().contentEl` holds Live Preview/Source
+   * and Reading mode alike, and only one is visible at a time, so this needs
+   * no separate case for either.
    *
    * A collapsed anchor-group STALE finding has no `span` and no `name`: it is
    * `check-report.ts`'s `reportAnchors`, reporting on every drifted prose
@@ -301,7 +319,7 @@ export class FindingsView extends ItemView {
    * the same name.
    */
   private markedElements(row: FindingRow): HTMLElement[] {
-    const container = this.noteView()?.contentEl;
+    const container = this.targetView()?.contentEl;
     if (container == null) return [];
     const f = row.finding;
     if (f.code === "STALE" && f.anchorGroup === true) {
@@ -421,7 +439,7 @@ export class FindingsView extends ItemView {
   }
 
   private editor(): Editor | null {
-    return this.noteView()?.editor ?? null;
+    return this.targetView()?.editor ?? null;
   }
 
   /**
@@ -431,10 +449,26 @@ export class FindingsView extends ItemView {
    * `getMostRecentLeaf()` is Obsidian's own answer to "the leaf in the root
    * split while a sidebar leaf might be active" — exactly this pane's shape,
    * since it opens in the right sidebar (`getRightLeaf(false)` in `main.ts`).
+   *
+   * Used by `refresh()` to find what to check next; a click-time action
+   * wants `targetView()` instead (below), not this directly.
    */
   private noteView(): MarkdownView | null {
     const leaf = this.app.workspace.getMostRecentLeaf();
     return leaf?.view instanceof MarkdownView ? leaf.view : null;
+  }
+
+  /**
+   * What a click acts on: the view the rows on screen were actually drawn
+   * against (`activeView`), falling back to `noteView()`'s fresh lookup only
+   * if that view's leaf has since been detached (closed, or torn down by a
+   * reload) — `containerEl.isConnected` is false once a leaf is gone.
+   */
+  private targetView(): MarkdownView | null {
+    if (this.activeView !== null && this.activeView.containerEl.isConnected) {
+      return this.activeView;
+    }
+    return this.noteView();
   }
 }
 
