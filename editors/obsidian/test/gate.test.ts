@@ -86,6 +86,31 @@ test("the prefilter has no false negative on the worked-example corpus", () => {
   }
 });
 
+test("a fence info string hidden behind a numeric character reference still opens the gate", () => {
+  // `~~~v&#109;ark` decodes to `~~~vmark`, and `locate` finds the block —
+  // a plain `source.includes("vmark")` would miss it (CodeRabbit review of PR #264)
+  const decimal = "| n |\n|---|\n| 1 |\n\n~~~v&#109;ark\ntotal = sum(n)\n~~~\n";
+  const hex = "| n |\n|---|\n| 1 |\n\n~~~v&#x6D;ark\ntotal = sum(n)\n~~~\n";
+  expect(locate(decimal).blocks.length).toBeGreaterThan(0);
+  expect(locate(hex).blocks.length).toBeGreaterThan(0);
+  expect(hasVmarkBlock(decimal)).toBe(true);
+  expect(hasVmarkBlock(hex)).toBe(true);
+});
+
+test("an unrelated numeric character reference does not itself open the gate", () => {
+  // the escape hatch forces the real parse; it must not make the gate say
+  // yes to a note that merely contains a copyright sign and no block
+  expect(hasVmarkBlock("Copyright &#169; 2026. No block here.\n")).toBe(false);
+});
+
+test("a named character reference does not need the same escape hatch", () => {
+  // no HTML5 named reference decodes to a bare ASCII letter, so `&amp;` and
+  // friends can't spell `vmark` past a substring scan the way `&#109;` can
+  const source = "| n |\n|---|\n| 1 |\n\n~~~v&amp;mark\ntotal = sum(n)\n~~~\n";
+  expect(locate(source).blocks.length).toBe(0);
+  expect(hasVmarkBlock(source)).toBe(false);
+});
+
 test("the prefilter has no false negative on any fence the engine accepts", () => {
   // the engine takes ``` and ~~~, any length of either, indented or not
   const table = "| n |\n|---|\n| 1 |\n\n";
