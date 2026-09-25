@@ -7,7 +7,7 @@ import {
   type Editor,
   type WorkspaceLeaf,
 } from "obsidian";
-import { check, type Edit } from "visimark";
+import { check, type Edit, type Finding } from "visimark";
 import { hasVmarkBlock } from "./gate.js";
 import { isClean, reportFor, type FindingRow, type NoteReport } from "./report.js";
 import { readNote } from "./snapshot.js";
@@ -169,7 +169,7 @@ export class FindingsView extends ItemView {
 
     const list = section.createEl("ul", { cls: "visimark-list" });
     list.toggleClass("visimark-list-collapsed", collapsed);
-    for (const row of rows) this.row(list, row);
+    for (const row of rows) this.node(list, row);
 
     head.addEventListener("click", () => {
       const nowCollapsed = !this.collapsedSections.has(heading);
@@ -181,13 +181,55 @@ export class FindingsView extends ItemView {
     });
   }
 
-  private row(list: HTMLElement, row: FindingRow): void {
-    const item = list.createEl("li", { cls: "visimark-row" });
+  /**
+   * One entry in the tree — a value that disagrees with its formula gets a
+   * marked header plus two detail children (`valueNode`); everything else is
+   * one leaf line, same as before (`leafNode`).
+   */
+  private node(list: HTMLElement, row: FindingRow): void {
+    const item = list.createEl("li", { cls: "visimark-node" });
+    if (isValueMismatch(row.finding)) this.valueNode(item, row);
+    else this.leafNode(item, row);
+  }
 
+  /**
+   * The one finding shape with a stored value and a computed one to put
+   * against it (`f.stored`/`f.computed` — a plain per-cell or per-anchor
+   * STALE mismatch; the collapsed anchor group and a stale chart/import have
+   * neither, `isValueMismatch` below). The header is the stored value alone,
+   * marked the way the editor already marks a disagreeing value
+   * (`.visimark-computed.visimark-disagrees` — the same classes
+   * `live-preview.ts`/`reading-mode.ts` put on the value in the note) rather
+   * than naming the finding code: v1 constraint 6 is that this UI never
+   * prints `STALE`, and a tree header is not an exception. What used to be
+   * the row's whole sentence becomes the first detail line instead.
+   */
+  private valueNode(item: HTMLElement, row: FindingRow): void {
+    const f = row.finding;
+    const self = item.createDiv({ cls: "visimark-node-row" });
+    const button = self.createEl("button", {
+      cls: "visimark-node-self",
+      attr: { type: "button", "aria-label": detail(row), "data-tooltip-position": "top" },
+    });
+    button.createSpan({ cls: "visimark-computed visimark-disagrees", text: f.stored! });
+    button.addEventListener("click", () => this.jumpTo(row));
+    button.addEventListener("mouseenter", () => this.peek(row, true));
+    button.addEventListener("mouseleave", () => this.peek(row, false));
+
+    const children = item.createEl("ul", { cls: "visimark-node-children" });
+    children.createEl("li", { cls: "visimark-node-detail", text: row.reader.row });
+    const fact = children.createEl("li", { cls: "visimark-node-detail visimark-node-fact" });
+    fact.createSpan({ text: `The formula gives ${f.computed}` });
+    if (row.repair !== null) this.fixIcon(fact, row);
+  }
+
+  /** Every finding that is not a value/formula mismatch: one leaf line, as before. */
+  private leafNode(item: HTMLElement, row: FindingRow): void {
+    const self = item.createDiv({ cls: "visimark-node-row" });
     // a button rather than a div, so it is in the tab order and answers Enter
     // and Space without this file having to reimplement either
-    const main = item.createEl("button", {
-      cls: "visimark-row-main",
+    const main = self.createEl("button", {
+      cls: "visimark-node-self",
       attr: {
         type: "button",
         "aria-label": detail(row),
@@ -204,23 +246,31 @@ export class FindingsView extends ItemView {
     main.addEventListener("mouseenter", () => this.peek(row, true));
     main.addEventListener("mouseleave", () => this.peek(row, false));
 
-    if (row.repair !== null) {
-      // an icon, not a labelled button: `clickable-icon` is Obsidian's own
-      // chrome for a compact row action (the same class the core file
-      // explorer's own hover actions use), so this reads as "this row has an
-      // action" rather than as a second button competing with the row itself
-      const repair = item.createEl("button", {
-        cls: "visimark-repair clickable-icon",
-        attr: {
-          type: "button",
-          "aria-label": `Repair: ${row.reader.row}`,
-          "data-tooltip-position": "top",
-        },
-      });
-      setIcon(repair, "wrench");
-      const edits = row.repair;
-      repair.addEventListener("click", () => this.apply(edits, row));
-    }
+    if (row.repair !== null) this.fixIcon(self, row);
+  }
+
+  /**
+   * The repair action, as an icon rather than a labelled button —
+   * `clickable-icon` is Obsidian's own chrome for a compact inline action
+   * (the same class the core file explorer's own hover actions use), sized
+   * down (`--icon-size`, in `styles.css`) so it sits on the line it repairs
+   * instead of the 44px touch box every other control in this plugin gets.
+   * That is a deliberate exception to this plugin's own mobile-first
+   * touch-target rule, made on request: inline in a sentence, the full box
+   * read as a gap rather than a target.
+   */
+  private fixIcon(parent: HTMLElement, row: FindingRow): void {
+    const fix = parent.createEl("button", {
+      cls: "visimark-fix clickable-icon",
+      attr: {
+        type: "button",
+        "aria-label": `Fix: ${row.reader.row}`,
+        "data-tooltip-position": "top",
+      },
+    });
+    setIcon(fix, "wrench");
+    const edits = row.repair!;
+    fix.addEventListener("click", () => this.apply(edits, row));
   }
 
   /**
@@ -353,4 +403,17 @@ function suggestion(row: FindingRow): string | null {
   if (action.kind === "cycle") return action.path.join(" → ");
   if (action.kind === "infer") return "VisiMark can propose the formulas for this table.";
   return null;
+}
+
+/**
+ * Whether this finding has a stored value and a computed one to show
+ * against it — a plain per-cell or per-anchor STALE mismatch, and nothing
+ * else. The collapsed anchor group (`check-report.ts`'s `reportAnchors`) and
+ * a stale chart or a stale data file — see `check-charts.ts` and
+ * `import/resolve.ts` — both set `code: "STALE"` but never `stored`/
+ * `computed`, because neither names one site; every other code never sets
+ * this pair at all.
+ */
+function isValueMismatch(f: Finding): boolean {
+  return f.code === "STALE" && f.stored !== undefined && f.computed !== undefined;
 }
