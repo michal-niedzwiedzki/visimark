@@ -205,11 +205,19 @@ export class FindingsView extends ItemView {
     main.addEventListener("mouseleave", () => this.peek(row, false));
 
     if (row.repair !== null) {
+      // an icon, not a labelled button: `clickable-icon` is Obsidian's own
+      // chrome for a compact row action (the same class the core file
+      // explorer's own hover actions use), so this reads as "this row has an
+      // action" rather than as a second button competing with the row itself
       const repair = item.createEl("button", {
-        cls: "visimark-repair",
-        text: "Repair",
-        attr: { type: "button", "aria-label": `Repair: ${row.reader.row}` },
+        cls: "visimark-repair clickable-icon",
+        attr: {
+          type: "button",
+          "aria-label": `Repair: ${row.reader.row}`,
+          "data-tooltip-position": "top",
+        },
       });
+      setIcon(repair, "wrench");
       const edits = row.repair;
       repair.addEventListener("click", () => this.apply(edits, row));
     }
@@ -217,18 +225,35 @@ export class FindingsView extends ItemView {
 
   /**
    * Mark (or unmark) what a row is about in the editor, without moving the
-   * cursor — `jumpTo` does that, on an explicit click. Matched by name, the
-   * same key Live Preview and reading mode already stamp on every marked
-   * value as `data-vmark` (`live-preview.ts`, `reading-mode.ts`): a name
-   * bound in two places lights up both, which is no worse than the mark
-   * both places already carry from the same name.
+   * cursor — `jumpTo` does that, on an explicit click.
+   *
+   * A collapsed anchor-group STALE finding has no `span` and no `name`: it is
+   * `check-report.ts`'s `reportAnchors`, reporting on every drifted prose
+   * anchor at once because "there is no single place to point at" (see this
+   * file's own top-of-file note). Pointing at nothing would make the one kind
+   * of row a reader most wants previewed the one kind that never highlights,
+   * so this marks every value the editor already has `.visimark-disagrees`
+   * on instead of none of them — the group's members, not a stand-in site.
+   *
+   * Everything else matches by name, the same key Live Preview and reading
+   * mode already stamp on every marked value as `data-vmark`
+   * (`live-preview.ts`, `reading-mode.ts`): a name bound in two places lights
+   * up both, which is no worse than the mark both places already carry from
+   * the same name.
    */
   private peek(row: FindingRow, on: boolean): void {
-    if (row.span === null) return;
-    const name = row.finding.name;
-    if (name === undefined) return;
     const container = this.noteView()?.contentEl;
     if (container == null) return;
+    const f = row.finding;
+    if (f.code === "STALE" && f.anchorGroup === true) {
+      for (const el of container.querySelectorAll<HTMLElement>(".visimark-disagrees[data-vmark]")) {
+        el.toggleClass("visimark-peek", on);
+      }
+      return;
+    }
+    if (row.span === null) return;
+    const name = f.name;
+    if (name === undefined) return;
     for (const el of container.querySelectorAll<HTMLElement>("[data-vmark]")) {
       if (el.getAttribute("data-vmark") === name) el.toggleClass("visimark-peek", on);
     }
