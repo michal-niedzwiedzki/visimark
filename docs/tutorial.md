@@ -2540,6 +2540,80 @@ three decimals wide, so a scenario may ask about `5.5%` (`0.055`) but not
 ask. It is also the width the default is written at: the default must fit, so
 `param raise precision 1 = default 3%` is an error, because `3%` is `0.03`.
 
+### Domains: which values are even askable
+
+`precision 3` only bounds the *width* `raise` is written at. Nothing stops a
+scenario asking for `raise = -50%` or `raise = 999%` — only an `assert`
+downstream would catch either, and only after the whole document has already
+been evaluated with that value. A `param` can also declare its **domain**: the
+set of values a scenario is even allowed to try.
+
+The example for this is [`tutorial/levers.md`](tutorial/levers.md):
+
+````markdown
+```vmark #levers
+param extra_hours  precision 0 integer in [0, 80] = default 40
+param prepay_share precision 2 in { 30%, 40%, 45%, 50% } = default 30%
+
+max_extra_hours = 80
+max_prepay      = 40%
+
+assert levers.extra_hours  <= max_extra_hours
+assert levers.prepay_share <= max_prepay
+```
+````
+
+A domain clause is optional, and sits between `precision N` and `= default`:
+
+```
+param NAME precision N [PRESET] [in DOMAIN-EXPR] = default LITERAL
+```
+
+- **`extra_hours`** declares `integer in [0, 80]`: a *preset* (`integer` — no
+  fractions) narrowed by a *range* (`in [0, 80]`, both ends closed). Only the
+  81 whole numbers from 0 to 80 are legal scenario values.
+- **`prepay_share`** declares `in { 30%, 40%, 45%, 50% }`: a *finite set*.
+  There is no such thing as a 35% share of this business, so 35% is not a
+  legal question to ask.
+
+Read a range the way a maths textbook would: `[0, 80]` includes both ends,
+`(0, 80)` excludes both, and `[0, 80)` or `(0, 80]` excludes exactly one — the
+two ends are independently open or closed. Either end may be left out to mean
+unbounded that way: `[0, )` means "0 or more."
+
+Four named presets cover the common cases, keyword or glyph:
+
+| Preset | Keyword | Glyph | Legal values |
+|---|---|---|---|
+| the integers, any sign | `integer` | `ℤ` | `…, -1, 0, 1, …` |
+| a positive number, any width | `positive` | *(none)* | `x > 0` |
+| the naturals | `natural` | `ℕ` | integers, `x ≥ 0` — **includes 0** |
+| the positive integers | `positive integer` | `ℤ⁺` | integers, `x > 0` — **excludes 0** |
+
+`natural` and `positive integer` differ only at the boundary: a headcount that
+may drop to zero is `natural`; one that must keep at least one seat is
+`positive integer`. A preset alone needs no range:
+
+```
+param staff_added precision 0 positive integer = default 1
+```
+
+A preset and a range narrow to their intersection, and a range end need not be
+closed on both sides:
+
+```
+param crosssell_days precision 0 ℕ in [0, 8) = default 0
+```
+
+reads as *the naturals, 0 up to but not including 8* — a half-open range on a
+`natural` preset, written with the glyph. `∈` is accepted in place of `in`
+everywhere a domain clause appears, the same way `ℕ`/`ℤ`/`ℤ⁺` are accepted in
+place of the keywords. `fmt` never rewrites one spelling to the other, the
+same rule chapter 12's `Σ`/`SUM` and `√`/`SQRT` already follow.
+
+A `param` with neither a preset nor an `in` clause is exactly today's `param`,
+unaffected by anything in this section.
+
 ### What a reader sees
 
 `explain` lists the params apart from the other scalars, with their widths and
@@ -2576,6 +2650,23 @@ That `params:` list is the document's answer to *what here is an assumption?*
 It is worth reading in every review. Everything else in the document follows
 from the inputs, the params and the rules.
 
+A param with a domain shows it right there, alongside its width and default:
+
+```console
+$ visimark explain levers.md
+#levers  (no table)
+  scalars:
+    max_extra_hours = 80   precision 0 (derived)
+    max_prepay = 40%       precision 1 (derived)
+  params:
+    extra_hours    precision 0   default 40   domain integer in [0, 80]
+    prepay_share   precision 2   default 30%   domain { 30%, 40%, 45%, 50% }
+  order:   extra_hours → prepay_share → max_extra_hours → max_prepay
+  assertions:
+    levers.extra_hours  <= max_extra_hours
+    levers.prepay_share <= max_prepay
+```
+
 ### Mistakes, and what they report
 
 ```console
@@ -2593,6 +2684,13 @@ from the inputs, the params and the rules.
 
 ```console
   TYPE    s.raise           a param default must be a number literal
+```
+
+A default outside its own domain is a `DOMAIN` error, checked before anything
+is evaluated:
+
+```console
+  DOMAIN  levers.extra_hours  default 100 is not in the domain of extra_hours: integer in [0, 80]
 ```
 
 A `param` with the same name as a column of its sheet is a `DUP` error, and one
@@ -2665,7 +2763,27 @@ Read it from the top.
 - **Exit code `1`**, because an assertion is false. The values are still
   printed first.
 
-Now look at the file:
+That is what happens when a scenario value is legal but the plan does not
+survive it. A value outside a param's declared domain (chapter 29) never gets
+that far — it is refused before the document is evaluated at all, and nothing
+is printed:
+
+```console
+$ cat too-many-hours.json
+{ "extra_hours": "100" }
+$ visimark eval --scenario too-many-hours.json levers.md
+visimark: scenario value for extra_hours is not in [0, 80]: 100
+$ echo $?
+2
+```
+
+Exit `2`, the usage-error code (chapter 3) — the same code a misspelled key or
+a wrong-width value already gets. No `scenario:` block, no values, because
+nothing was ever evaluated. `100` is a legal *width* for `extra_hours`
+(`precision 0`), which is exactly why the domain check exists: the width alone
+would have let this scenario run.
+
+Back to `runway.md`. Now look at the file:
 
 ```console
 $ git status --short runway.md
@@ -2724,6 +2842,10 @@ value must be `"5.5%"`. A bare `"5.5"` would mean 550%, and it is refused
 instead of believed.
 
 **A value must fit the declared width.** It is never rounded to fit.
+
+**A value must fit the declared domain too**, if the param has one (chapter
+29) — the `extra_hours` example above. A value that fits the width but not the
+domain is refused the same way, before evaluation.
 
 Every mistake stops the run with exit `2` before anything is evaluated, and
 says what is wrong:
