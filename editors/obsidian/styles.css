@@ -54,8 +54,14 @@
  * A button, not a heading element: it folds the list below it, the way
  * Outline and Backlinks fold their own sections — `nav-heading` grammar
  * rather than a plugin-invented control.
+ *
+ * Scoped under `.visimark-findings` (two classes, not one) rather than
+ * `.visimark-section-heading` alone: Obsidian's own base theme styles a bare
+ * `button` with a border and a shadow, at a specificity a lone plugin class
+ * does not beat. Every reset in this file that has to fight that chrome away
+ * — this heading, the row button, the repair icon — is scoped the same way.
  */
-.visimark-section-heading {
+.visimark-findings .visimark-section-heading {
   align-items: center;
   background: transparent;
   border: none;
@@ -75,11 +81,11 @@
   width: 100%;
 }
 
-.visimark-section-heading:hover {
+.visimark-findings .visimark-section-heading:hover {
   background: var(--background-modifier-hover);
 }
 
-.visimark-section-heading:focus-visible {
+.visimark-findings .visimark-section-heading:focus-visible {
   outline: 2px solid var(--interactive-accent);
   outline-offset: 2px;
 }
@@ -105,13 +111,18 @@
   padding: 0;
 }
 
+/*
+ * No border, no rule between rows: a plain `<li>`, the way Backlinks' own
+ * list is plain — the row *button*'s hover background is what separates one
+ * finding from the next while the pointer is over it, and nothing marks it
+ * otherwise.
+ */
 .visimark-row {
   align-items: center;
-  border-bottom: 1px solid var(--background-modifier-border);
   display: flex;
   flex-wrap: wrap;
   gap: var(--size-4-2);
-  padding: var(--size-4-2);
+  padding: 0 var(--size-4-2);
 }
 
 /*
@@ -127,7 +138,7 @@
  * (`aria-label`, via `detail()`) instead, the same place the finding code
  * already lived.
  */
-.visimark-row-main {
+.visimark-findings .visimark-row-main {
   align-items: baseline;
   background: transparent;
   border: none;
@@ -144,7 +155,7 @@
   text-align: left;
 }
 
-.visimark-row-main:hover {
+.visimark-findings .visimark-row-main:hover {
   background: var(--background-modifier-hover);
 }
 
@@ -162,7 +173,16 @@
   font-size: var(--font-ui-smaller);
 }
 
-.visimark-repair {
+/*
+ * An icon, sized down from Obsidian's default `clickable-icon` — this row
+ * action sits next to a line of text, not in a view header, so the full
+ * default size (`--clickable-icon-size`) reads as heavier than the row it is
+ * attached to. `min-height`/`min-width` keep the 44px *tap* target even
+ * though the visible icon is smaller — the touch-target rule is about the
+ * hit area, not about how large the chrome has to look.
+ */
+.visimark-findings .visimark-repair {
+  --icon-size: var(--icon-s);
   flex: 0 0 auto;
   min-height: 44px;
   min-width: 44px;
@@ -172,8 +192,8 @@
  * `:focus-visible`, not `:focus`: a pointer press should not leave a ring
  * behind, and a keyboard user must never lose track of where they are.
  */
-.visimark-row-main:focus-visible,
-.visimark-repair:focus-visible {
+.visimark-findings .visimark-row-main:focus-visible,
+.visimark-findings .visimark-repair:focus-visible {
   outline: 2px solid var(--interactive-accent);
   outline-offset: 2px;
 }
