@@ -546,4 +546,52 @@ then open each on GitHub.
 pleasant inside Obsidian and leaves files that only work inside Obsidian has
 failed, however well every other section scored.
 
+### Recording Part 2
+
+Run 2026-09-24 through 2026-09-25, against Obsidian 1.13.7 on desktop, vault
+`visimark` opened at the repository root, driven mostly through the `obsidian`
+CLI rather than by hand.
+
+| # | What | Result | Notes |
+|---|------|---|---|
+| 2.1 | Activation, status, ribbon | pass | |
+| 2.2 | Provenance and staleness | pass | |
+| 2.3 | Hover and tap | pass | |
+| 2.4 | Five commands vs CLI | pass | |
+| 2.5 | Nothing written unbidden | pass (desktop only) | no phone available this run |
+| 2.6 | Format, declined artifact, format on save | pass | |
+| 2.6a | Chart write on | pass | |
+| 2.6b | CSV import stamping | pass, after a fix | two findings misdescribed a CSV import's own `IMPORT`/`STALE` states in `editors/obsidian/src/findings.ts`; fixed and merged as `4faaba2` |
+| 2.6c | `fix-dates` | pass | |
+| 2.7 | `infer` preview | pass | |
+| 2.8 | Vault sweep | pass, verified at the data level | see the right-sidebar note below |
+| 2.8a | Incremental vault index | pass, verified through `plugin.index` and the ribbon badge | every sub-check held: badge count on toggle, live drop on fix, live rise on re-break, "Look again" reseeding, rename preserving the disagreeing note at its new path with no count change, delete dropping the count with no scan |
+| 2.9 | Plugin API | pass | |
+| 2.10 | Templates | pass | all four templates land with zero CLI findings and flip the status bar; one template inserted into a note with existing content left the existing prose untouched and still passed `check` |
+| 2.11 | Portability, run last | pass | every file touched in Part 2 gave the same findings from the CLI as the plugin showed; `bun test` (1834 tests) and `templates.test.ts` specifically both green; no Obsidian-only syntax in anything the plugin generated |
+
+**The right sidebar could not be visually verified for §2.8 or §2.8a.**
+Partway through an earlier session, a stray cleanup `eval` detached a live
+workspace leaf and left the right-sidebar split in a state where new
+`visimark-sweep`/`visimark-findings` leaves are created with a correct
+*model* (`workspace.rightSplit` reports the right child count, width and
+`display: flex`) but an orphaned *view*: `leaf.view.containerEl` — the actual
+`.view-header`/`.view-content` DOM the `ItemView` builds — is never appended
+into `leaf.containerEl`, so the pane paints nothing even though nothing
+throws and `obsidian dev:errors` reports clean. A full `obsidian restart`
+(process relaunch, not just a vault reload) does **not** clear it, and the
+persisted `.obsidian/workspace.json` layout is structurally ordinary — this
+is runtime attachment state, not saved-layout corruption. Core view types in
+the same split (Backlinks, Outline, Tags, …) render normally throughout, so
+this is specific to how these two custom leaves get re-attached after the
+prior session's stray `.detach()` calls, not a general sidebar failure.
+Every §2.8/§2.8a pass condition above was instead verified by driving the
+same objects the pane would have drawn from (`plugin.index`, the ribbon
+badge, and `SweepView.run()` called directly) — which is a check of the same
+underlying state, but is not the same as watching the pane. This needs a
+person, with a fresh vault window (not just a fresh app process), to confirm
+the pane itself renders before this row can be called fully closed.
+
+Obsidian version: 1.13.7  Platform(s): desktop only  Restricted Mode on: **Y**
+
 <!--vmark:no-formulas-->
