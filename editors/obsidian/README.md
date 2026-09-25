@@ -10,6 +10,17 @@ The design is [`docs/design/obsidian-plugin-spec.md`](../../docs/design/obsidian
 The fork was decided on [#176](https://github.com/michal-niedzwiedzki/visimark/issues/176);
 each v1 row is its own issue.
 
+## Screenshots
+
+![In Live Preview, a Markdown invoice table sits above a vmark block that
+derives Net, VAT, and Gross for each line; every computed cell is underlined
+to mark it as provenance-tracked rather than typed by
+hand.](https://raw.githubusercontent.com/michal-niedzwiedzki/visimark/HEAD/editors/obsidian/images/live-preview.webp)
+
+![The same note after raising the Discovery workshop line's Qty from 2 to 3:
+Net, VAT, and Gross for that row and every total beneath it recompute with no
+manual refresh.](https://raw.githubusercontent.com/michal-niedzwiedzki/visimark/HEAD/editors/obsidian/images/recalculated.webp)
+
 ## What is built so far
 
 **All twelve of v1's rows** ([#176](https://github.com/michal-niedzwiedzki/visimark/issues/176)),
