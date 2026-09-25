@@ -1,8 +1,7 @@
 import { expect, test } from "bun:test";
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { locate } from "visimark";
-import { mightHaveBlock, sweep, type SweepSource } from "../src/sweep.js";
+import { sweep, type SweepSource } from "../src/sweep.js";
 
 /**
  * **Manual test §2.8, run by a machine.** Its fixture is stated exactly: copy
@@ -12,17 +11,17 @@ import { mightHaveBlock, sweep, type SweepSource } from "../src/sweep.js";
  * not. That is a fixture a `Map` can hold, so the only part left for a person
  * is whether the list is legible on a phone.
  *
- * The other half is the prefilter. It is what makes the sweep affordable —
- * parsing every note in a 5,000-note vault is ~9.5 s of work on this machine,
- * skipping the parse for notes that cannot contain a block is ~0.09 s — and it
- * is only sound if it has **no false negatives**. That is argued in
- * `sweep.ts` and asserted here, over the corpus and over every fence shape the
- * engine accepts.
+ * The other half is the prefilter (`gate.ts`'s `mightHaveBlock`). It is what
+ * makes the sweep affordable — parsing every note in a 5,000-note vault is
+ * ~9.5 s of work on this machine, skipping the parse for notes that cannot
+ * contain a block is ~0.09 s — and it is only sound if it has **no false
+ * negatives**. That is argued in `gate.ts` and asserted in `gate.test.ts`,
+ * over the corpus and over every fence shape the engine accepts; this file
+ * only checks that the sweep actually skips what the prefilter rejects.
  */
 
 const docs = resolve(import.meta.dir, "../../../docs");
 const read = (name: string): string => readFileSync(join(docs, name), "utf8");
-const examples = readdirSync(docs).filter((f) => f.startsWith("example-") && f.endsWith(".md"));
 
 const ordinary = (n: number): string =>
   `# Note ${n}\n\nSome prose, a list and a table.\n\n| A | B |\n|---|---|\n| 1 | 2 |\n`;
@@ -81,32 +80,6 @@ test("each listed note carries the same rows the findings view would show", asyn
     expect(note.problems).toBeGreaterThan(0);
     // audience-B words, not codes — the same table every surface uses
     expect(note.report.problems[0]!.reader.row).toMatch(/[a-z] /);
-  }
-});
-
-test("the prefilter has no false negative on the worked-example corpus", async () => {
-  for (const file of examples) {
-    const source = read(file);
-    if (locate(source).blocks.length > 0) {
-      expect(mightHaveBlock(source), `${file} has a block the prefilter would skip`).toBe(true);
-    }
-  }
-});
-
-test("the prefilter has no false negative on any fence the engine accepts", () => {
-  // the engine takes ``` and ~~~, any length of either, indented or not
-  const table = "| n |\n|---|\n| 1 |\n\n";
-  const bodies = ["#s\ntotal = SUM(n)"];
-  const fences = ["```", "````", "~~~", "~~~~"];
-  for (const fence of fences) {
-    for (const indent of ["", "  "]) {
-      for (const body of bodies) {
-        const [id, rule] = body.split("\n") as [string, string];
-        const source = `${table}${indent}${fence}vmark ${id}\n${indent}${rule}\n${indent}${fence}\n`;
-        if (locate(source).blocks.length === 0) continue; // not a block; nothing to promise
-        expect(mightHaveBlock(source), `${JSON.stringify(source)} would be skipped`).toBe(true);
-      }
-    }
   }
 });
 

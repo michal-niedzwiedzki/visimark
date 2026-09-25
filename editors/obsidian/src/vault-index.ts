@@ -2,7 +2,7 @@ import { check } from "visimark";
 import { hasVmarkBlock } from "./gate.js";
 import { isClean, reportFor, type NoteReport } from "./report.js";
 import { readNote, type VaultRead } from "./snapshot.js";
-import { mightHaveBlock, type SweepResult, type SweptNote } from "./sweep.js";
+import type { SweepResult, SweptNote } from "./sweep.js";
 
 /**
  * The incremental vault health index — v1.1 row 13 of #176.
@@ -240,7 +240,7 @@ export class LiveVaultIndex implements VaultIndex {
   }
 
   private async verdictFor(path: string, text: string): Promise<SweptNote | null> {
-    if (!mightHaveBlock(text) || !hasVmarkBlock(text)) return null;
+    if (!hasVmarkBlock(text)) return null;
     try {
       const { model, snapshot } = await readNote(text, path, this.read);
       const doc = { path: snapshot.path, reader: snapshot.reader };

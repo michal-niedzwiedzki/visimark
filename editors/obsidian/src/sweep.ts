@@ -1,5 +1,5 @@
 import { check } from "visimark";
-import { hasVmarkBlock } from "./gate.js";
+import { hasVmarkBlock, mightHaveBlock } from "./gate.js";
 import { isClean, reportFor, type NoteReport } from "./report.js";
 import { readNote, type VaultRead } from "./snapshot.js";
 
@@ -69,19 +69,6 @@ export interface SweepOptions {
   onProgress?: (done: number, total: number) => void;
   /** stop early; the partial result comes back with `cancelled: true` */
   signal?: { aborted: boolean };
-}
-
-/**
- * **The prefilter, stated once.**
- *
- * `includes` rather than a regular expression: the question is only whether a
- * parse could possibly find a block, and a substring scan answers it with no
- * false negatives and no backtracking. Every refinement of this that has
- * occurred to anyone — matching the fence, anchoring to a line start — trades
- * a certainty for a speed-up that is already below measurement.
- */
-export function mightHaveBlock(source: string): boolean {
-  return source.includes("vmark");
 }
 
 export async function sweep(source: SweepSource, options: SweepOptions = {}): Promise<SweepResult> {
