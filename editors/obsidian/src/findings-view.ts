@@ -182,9 +182,10 @@ export class FindingsView extends ItemView {
   }
 
   /**
-   * One entry in the tree — a value that disagrees with its formula gets a
-   * marked header plus two detail children (`valueNode`); everything else is
-   * one leaf line, same as before (`leafNode`).
+   * One entry in the tree — a value that disagrees with its formula gets its
+   * own line plus one detail child naming what the formula gives instead
+   * (`valueNode`); everything else is one leaf line, same as before
+   * (`leafNode`).
    */
   private node(list: HTMLElement, row: FindingRow): void {
     const item = list.createEl("li", { cls: "visimark-node" });
@@ -196,13 +197,12 @@ export class FindingsView extends ItemView {
    * The one finding shape with a stored value and a computed one to put
    * against it (`f.stored`/`f.computed` — a plain per-cell or per-anchor
    * STALE mismatch; the collapsed anchor group and a stale chart/import have
-   * neither, `isValueMismatch` below). The header is the stored value alone,
-   * marked the way the editor already marks a disagreeing value
-   * (`.visimark-computed.visimark-disagrees` — the same classes
-   * `live-preview.ts`/`reading-mode.ts` put on the value in the note) rather
-   * than naming the finding code: v1 constraint 6 is that this UI never
-   * prints `STALE`, and a tree header is not an exception. What used to be
-   * the row's whole sentence becomes the first detail line instead.
+   * neither, `isValueMismatch` below). The stored value leads its own line —
+   * plain text, no mark — instead of standing alone as a separate header:
+   * "1242.00: This value no longer matches its formula." is the row's own
+   * sentence with the number in front of it, and that line is what jumps and
+   * previews. `The formula gives {computed}` is the second line, with the
+   * repair icon inline on it.
    */
   private valueNode(item: HTMLElement, row: FindingRow): void {
     const f = row.finding;
@@ -211,13 +211,12 @@ export class FindingsView extends ItemView {
       cls: "visimark-node-self",
       attr: { type: "button", "aria-label": detail(row), "data-tooltip-position": "top" },
     });
-    button.createSpan({ cls: "visimark-computed visimark-disagrees", text: f.stored! });
+    button.createSpan({ cls: "visimark-row-text", text: `${f.stored}: ${row.reader.row}` });
     button.addEventListener("click", () => this.jumpTo(row));
     button.addEventListener("mouseenter", () => this.peek(row, true));
     button.addEventListener("mouseleave", () => this.peek(row, false));
 
     const children = item.createEl("ul", { cls: "visimark-node-children" });
-    children.createEl("li", { cls: "visimark-node-detail", text: row.reader.row });
     const fact = children.createEl("li", { cls: "visimark-node-detail visimark-node-fact" });
     fact.createSpan({ text: `The formula gives ${f.computed}` });
     if (row.repair !== null) this.fixIcon(fact, row);
