@@ -116,6 +116,9 @@ export class FindingsView extends ItemView {
   private container(): HTMLElement {
     const el = this.contentEl;
     el.empty();
+    // the pin points at DOM this call is about to discard, and at a
+    // FindingRow instance the next `draw` will replace with a new one
+    this.pinned = null;
     return el.createDiv({ cls: "visimark-findings" });
   }
 
@@ -214,9 +217,11 @@ export class FindingsView extends ItemView {
       attr: { type: "button", "aria-label": detail(row), "data-tooltip-position": "top" },
     });
     button.createSpan({ text: `${f.stored}: ${row.reader.row}` });
-    button.addEventListener("click", () => this.jumpTo(row));
+    button.addEventListener("click", () => this.select(row));
     button.addEventListener("mouseenter", () => this.peek(row, true));
-    button.addEventListener("mouseleave", () => this.peek(row, false));
+    button.addEventListener("mouseleave", () => {
+      if (this.pinned !== row) this.peek(row, false);
+    });
 
     const fact = children.createEl("li", { cls: "visimark-node-detail visimark-node-fact" });
     fact.createSpan({ text: `The formula gives ${f.computed}` });
@@ -239,12 +244,14 @@ export class FindingsView extends ItemView {
     main.createSpan({ cls: "visimark-row-text", text: row.reader.row });
     const where = row.finding.rowLabel ?? row.finding.name;
     if (where !== undefined) main.createSpan({ cls: "visimark-row-where", text: where });
-    main.addEventListener("click", () => this.jumpTo(row));
+    main.addEventListener("click", () => this.select(row));
     // desktop-only preview: a hover marks what the row is about in the
     // editor without moving the cursor, so looking down the list costs
     // nothing. Mobile has no hover, but a tap there already jumps (below).
     main.addEventListener("mouseenter", () => this.peek(row, true));
-    main.addEventListener("mouseleave", () => this.peek(row, false));
+    main.addEventListener("mouseleave", () => {
+      if (this.pinned !== row) this.peek(row, false);
+    });
 
     if (row.repair !== null) this.fixIcon(self, row);
   }
@@ -274,15 +281,17 @@ export class FindingsView extends ItemView {
   }
 
   /**
-   * Mark (or unmark) what a row is about in the editor, without moving the
-   * cursor — `jumpTo` does that, on an explicit click.
+   * The rendered element(s) a row is about, in whichever mode the note is
+   * currently showing — `noteView().contentEl` holds Live Preview/Source and
+   * Reading mode alike, and only one is visible at a time, so this needs no
+   * separate case for either.
    *
    * A collapsed anchor-group STALE finding has no `span` and no `name`: it is
    * `check-report.ts`'s `reportAnchors`, reporting on every drifted prose
    * anchor at once because "there is no single place to point at" (see this
    * file's own top-of-file note). Pointing at nothing would make the one kind
    * of row a reader most wants previewed the one kind that never highlights,
-   * so this marks every value the editor already has `.visimark-disagrees`
+   * so this returns every value the editor already has `.visimark-disagrees`
    * on instead of none of them — the group's members, not a stand-in site.
    *
    * Everything else matches by name, the same key Live Preview and reading
@@ -291,22 +300,49 @@ export class FindingsView extends ItemView {
    * up both, which is no worse than the mark both places already carry from
    * the same name.
    */
-  private peek(row: FindingRow, on: boolean): void {
+  private markedElements(row: FindingRow): HTMLElement[] {
     const container = this.noteView()?.contentEl;
-    if (container == null) return;
+    if (container == null) return [];
     const f = row.finding;
     if (f.code === "STALE" && f.anchorGroup === true) {
-      for (const el of container.querySelectorAll<HTMLElement>(".visimark-disagrees[data-vmark]")) {
-        el.toggleClass("visimark-peek", on);
-      }
-      return;
+      return [...container.querySelectorAll<HTMLElement>(".visimark-disagrees[data-vmark]")];
     }
-    if (row.span === null) return;
+    if (row.span === null) return [];
     const name = f.name;
-    if (name === undefined) return;
-    for (const el of container.querySelectorAll<HTMLElement>("[data-vmark]")) {
-      if (el.getAttribute("data-vmark") === name) el.toggleClass("visimark-peek", on);
-    }
+    if (name === undefined) return [];
+    return [...container.querySelectorAll<HTMLElement>("[data-vmark]")].filter(
+      (el) => el.getAttribute("data-vmark") === name,
+    );
+  }
+
+  /** Mark (or unmark) what a row is about, without moving the cursor. */
+  private peek(row: FindingRow, on: boolean): void {
+    for (const el of this.markedElements(row)) el.toggleClass("visimark-peek", on);
+  }
+
+  /**
+   * The row a click has pinned highlighted, so a hover that follows the
+   * pointer off the button it was clicked on doesn't clear it. Cleared
+   * whenever the pane redraws (`container()`), since the DOM the pin points
+   * at is rebuilt from scratch every time.
+   */
+  private pinned: FindingRow | null = null;
+
+  /**
+   * What a click on a row does — `jumpTo` moves the editor's own cursor and
+   * selection, which is invisible in Reading mode because the editor isn't
+   * what's on screen there. This is the part that works in every mode: the
+   * same DOM mark `peek` uses for a hover preview, made to stay instead of
+   * clearing on mouseleave, and scrolled into view directly rather than
+   * through the (possibly hidden) editor — the same idea as Ctrl-F's own
+   * find-in-note highlight, which doesn't care which mode is showing either.
+   */
+  private select(row: FindingRow): void {
+    if (this.pinned !== null && this.pinned !== row) this.peek(this.pinned, false);
+    this.pinned = row;
+    this.peek(row, true);
+    this.markedElements(row)[0]?.scrollIntoView({ behavior: "smooth", block: "center" });
+    this.jumpTo(row);
   }
 
   /** Put the cursor on what a row is about. */
