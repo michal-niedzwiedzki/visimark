@@ -61,6 +61,14 @@
  * does not beat. Every reset in this file that has to fight that chrome away
  * — this heading, the row button, the repair icon — is scoped the same way.
  */
+/*
+ * `justify-content: flex-start` is explicit, not the default left as a
+ * no-op: Obsidian's base theme sets `justify-content: center` on a bare
+ * `button`, and `text-align` (which was here instead) does nothing to a flex
+ * container's own children — only `justify-content` positions them. Without
+ * this the chevron and the heading text centred instead of sitting flush
+ * left, the way every node below it does.
+ */
 .visimark-findings .visimark-section-heading {
   align-items: center;
   background: transparent;
@@ -72,11 +80,11 @@
   font-size: var(--font-ui-smaller);
   font-weight: var(--font-medium);
   gap: var(--size-2-1);
+  justify-content: flex-start;
   letter-spacing: 0.04em;
   margin: 0 0 var(--size-4-1);
   min-height: 44px;
   padding: 0 var(--size-4-2);
-  text-align: left;
   text-transform: uppercase;
   width: 100%;
 }
@@ -127,6 +135,7 @@
   align-items: center;
   display: flex;
   gap: var(--size-2-1);
+  justify-content: flex-start;
 }
 
 /*
@@ -141,6 +150,10 @@
  * the did-you-mean / cycle-path hint — is in the row's own tooltip
  * (`aria-label`, via `detail()`) instead, the same place the finding code
  * already lived.
+ *
+ * `justify-content: flex-start`, not `text-align`, for the same reason as
+ * the section heading above — this is a flex container, and `text-align`
+ * does not position flex children.
  */
 .visimark-findings .visimark-node-self {
   align-items: baseline;
@@ -153,10 +166,10 @@
   flex: 1 1 12rem;
   font-size: var(--font-ui-small);
   gap: var(--size-4-1);
+  justify-content: flex-start;
   line-height: var(--line-height-tight);
   min-height: 44px;
   padding: var(--size-2-2) 0;
-  text-align: left;
 }
 
 .visimark-findings .visimark-node-self:hover {
@@ -201,6 +214,7 @@
   align-items: center;
   display: flex;
   gap: var(--size-2-1);
+  justify-content: flex-start;
 }
 
 /*
