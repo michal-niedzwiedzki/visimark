@@ -15,7 +15,7 @@ import { artifactsFor, check, evalValues } from "visimark";
 import { analyseWithSnapshot } from "./analysis.js";
 import { writeCharts } from "./chart.js";
 import type { Decoration } from "./decorations.js";
-import { templateInsertion } from "./template-insert.js";
+import { safeTemplateInsertion } from "./template-insert.js";
 import { FINDINGS_VIEW, FindingsView } from "./findings-view.js";
 import { hasVmarkBlock } from "./gate.js";
 import { createApi, explainBinding, type VisiMarkApi } from "./api.js";
@@ -453,8 +453,16 @@ export default class VisiMarkPlugin extends Plugin {
             return;
           }
           const cursorOffset = editor.posToOffset(editor.getCursor());
-          const { at, text } = templateInsertion(editor.getValue(), cursorOffset, template.body);
-          editor.replaceRange(text, editor.offsetToPos(at));
+          const placed = safeTemplateInsertion(editor.getValue(), cursorOffset, template.body);
+          if (placed === null) {
+            // a caret inside another fenced block would insert the template
+            // as literal text there, where `locate` can never find it —
+            // refuse rather than claim success over a note with no working
+            // block (CodeRabbit review of PR #267)
+            new Notice("Could not find a place to insert the template. Try a new, empty note.");
+            return;
+          }
+          editor.replaceRange(placed.text, editor.offsetToPos(placed.at));
           new Notice(`Inserted the ${template.title.toLowerCase()} template.`);
           this.refresh();
         },
