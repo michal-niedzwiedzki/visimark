@@ -108,9 +108,13 @@ let snapshotCache: SnapshotEntry | null = null;
  * **The promise itself is the cache entry**, not just its resolved value:
  * every section of one reading-mode render calls this before the first
  * `readNote` round-trip lands, and they must all await the same fetch rather
- * than starting one each. A rejection is not cached past this call — the
- * cache is overwritten by whatever the next call computes, so a transient
- * read failure does not wedge every future call to the same note behind it.
+ * than starting one each. It is cleared again the moment it settles, success
+ * or failure alike (CodeRabbit review of PR #265) — this memo is for
+ * concurrent callers of one fetch, not a standing cache of the answer. A
+ * later call with the same `(path, source)` reads the CSV again, which is
+ * what lets a change to the imported file, not just to the note's own text,
+ * ever be seen; a rejection surviving past this call would otherwise wedge
+ * every future call to the same note behind it.
  */
 export function analyseWithSnapshot(
   source: string,
@@ -130,9 +134,9 @@ export function analyseWithSnapshot(
   })();
 
   snapshotCache = { key, promise };
-  // a failed fetch must not poison every later call to the same (path, source)
-  promise.catch(() => {
+  const clear = (): void => {
     if (snapshotCache?.promise === promise) snapshotCache = null;
-  });
+  };
+  promise.then(clear, clear);
   return promise;
 }

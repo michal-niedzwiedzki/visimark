@@ -106,3 +106,26 @@ test("a failed read does not poison later calls to the same (path, source)", asy
   const { result } = await analyseWithSnapshot(own, "failed-read-note.md", read);
   expect(result.findings.some((f) => f.code === "STALE")).toBe(true);
 });
+
+test("a settled successful call does not answer from a stale cache later", async () => {
+  // CodeRabbit review of PR #265: a successful result must not outlive its
+  // own fetch either, or a later change to the imported CSV (the note's own
+  // source text unchanged) could never be seen — `benchmark.csv`'s Mean
+  // stays 12.47 the first time and drops to 11.00 the second
+  const own = `${source}\n<!-- test: success-eviction -->\n`;
+  let value = "12.3,10.1,15.0";
+  const read: VaultRead = async (p) =>
+    p === "benchmark.csv"
+      ? `Id,Time\n1,${value.split(",")[0]}\n2,${value.split(",")[1]}\n3,${value.split(",")[2]}\n`
+      : null;
+
+  const first = await analyseWithSnapshot(own, "eviction-note.md", read);
+  const firstStale = first.decorations.find((d) => d.name === "benchmark.Mean");
+  expect(firstStale?.mark).toBe("disagrees");
+
+  value = "1.00,1.00,1.00"; // now the CSV would make Mean == the anchored 1.00
+  const second = await analyseWithSnapshot(own, "eviction-note.md", read);
+  expect(second).not.toBe(first); // the settled first call was evicted, not reused
+  const secondMark = second.decorations.find((d) => d.name === "benchmark.Mean");
+  expect(secondMark?.mark).toBe("computed");
+});
