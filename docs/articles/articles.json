@@ -43,6 +43,17 @@
       "icon": "../assets/excel.webp",
       "path": "10-things-excel-cannot-do-but-visimark-can/10-things-excel-cannot-do.md",
       "featured": true
+    },
+    {
+      "slug": "visimark-for-obsidian",
+      "title": "VisiMark for Obsidian: calculations you can review, in plain Markdown",
+      "author": "Michał Niedźwiedzki",
+      "tags": ["Obsidian", "Plugins", "Markdown", "PKM"],
+      "teaser": "Change one quantity, forget the total, and Obsidian still renders the invoice perfectly. Nothing looks broken.",
+      "icon": "../assets/obsidian.webp",
+      "banner": "visimark-for-obsidian/visimark-for-obsidian.webp",
+      "path": "visimark-for-obsidian/visimark-for-obsidian.md",
+      "featured": true
     }
   ]
 }
