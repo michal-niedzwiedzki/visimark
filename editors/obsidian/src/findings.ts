@@ -1,4 +1,4 @@
-import type { Finding, FindingCode } from "visimark";
+import { isProblem, type Finding, type FindingCode } from "visimark";
 
 /**
  * The audience-B finding vocabulary — spec §3.2, and v1 constraint 6 of #176:
@@ -156,14 +156,6 @@ function actionFor(f: Finding): ReaderAction {
 }
 
 /**
- * `WARN` and `NOTE` are advice — reported, never counted, never the reason a
- * run fails. The engine says so in one place (`isProblem`), and this agrees
- * with it by construction rather than by keeping a second list: anything that
- * is not advice is a problem.
- */
-const ADVICE: ReadonlySet<FindingCode> = new Set<FindingCode>(["WARN", "NOTE"]);
-
-/**
  * One engine finding, in audience-B words — or `null` when it is not a row.
  */
 export function forReader(f: Finding): ReaderFinding | null {
@@ -171,7 +163,11 @@ export function forReader(f: Finding): ReaderFinding | null {
   if (text === null) return null;
   return {
     code: f.code,
-    severity: ADVICE.has(f.code) ? "advice" : "problem",
+    // `WARN` and `NOTE` are advice — reported, never counted, never the
+    // reason a run fails. The engine says so in one place (`isProblem`), and
+    // this agrees with it by construction rather than by keeping a second
+    // list: anything that is not a problem is advice.
+    severity: isProblem(f) ? "problem" : "advice",
     row: text(f),
     ...(f.code === "ASSERT" && f.source !== undefined ? { quote: f.source } : {}),
     action: actionFor(f),
