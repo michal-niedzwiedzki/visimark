@@ -36,9 +36,12 @@ export function vaultRead(vault: Vault): VaultRead {
  * in-memory cache when the file is warm, and it is the documented way to read
  * a file you are not about to modify.
  *
- * It falls back to the adapter for anything that is not a Markdown file in the
- * vault — a declared CSV import, which `snapshot.ts` asks for through this
- * same function, is not a `TFile` the markdown index holds.
+ * It falls back to the adapter for anything `getAbstractFileByPath` does not
+ * resolve to a `TFile` — a path outside the vault, or one the vault's index
+ * has not (yet) synced — which a declared CSV import, read through this same
+ * function from `snapshot.ts`, can be. A CSV that *is* indexed is a `TFile`
+ * like any other vault file and takes the `cachedRead` branch above; nothing
+ * here singles CSVs out by extension.
  */
 export function vaultSweepRead(vault: Vault): VaultRead {
   const direct = vaultRead(vault);
