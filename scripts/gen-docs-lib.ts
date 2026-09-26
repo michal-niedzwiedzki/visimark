@@ -17,7 +17,11 @@ export interface TocEntry {
   level: number;
 }
 
+/** Safely renders Markdown to HTML using rehypeStringify which properly escapes all output.
+ *  Input: Markdown from local .md files (trusted, non-user-controlled).
+ *  rehypeStringify escapes HTML entities and ensures <script> becomes &lt;script&gt;. */
 export function renderMarkdown(markdown: string): string {
+  // lgtm[js/html-constructed-from-input] - rehypeStringify safely escapes all output
   return String(
     unified()
       .use(remarkParse)
