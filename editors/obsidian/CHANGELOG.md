@@ -9,6 +9,20 @@ Each entry says which engine version the bundle carries.
 
 ## Unreleased
 
+- **Both renderers decorate from the same snapshot-backed check the status
+  bar uses**, closing a bug where a value that actually disagreed with an
+  import could render as `computed` while the status bar said something was
+  wrong (2026-09-25 code review, rows 6–7). Reading mode's post-processor now
+  awaits `analyseWithSnapshot` before drawing a mark; Live Preview decorates
+  local values synchronously as before but withholds a mark on any value that
+  reads an imported sheet (`src/import-deps.ts`) until a debounced snapshot
+  resolves, then dispatches it as a `CodeMirror` `StateEffect`. `refreshState`
+  also rerenders every reading view of a note whose disagreeing set changed —
+  Obsidian's post-processor only re-runs a section whose own text changed,
+  so a table reading a scalar edited in another section previously kept its
+  stale marks — and clears the per-element hover-tooltip cache in the same
+  pass. No user-visible behaviour changes for a note with no imports.
+
 - **The activation gate no longer parses an ordinary note**, and reading mode
   no longer re-analyses a note once per rendered section (2026-09-25 code
   review, rows 4–5). `mightHaveBlock`, the no-false-negative substring scan

@@ -258,11 +258,25 @@ nothing are the ones that most need a person.
   so the case to try deliberately is **two identical bold numbers in one
   paragraph where only one is anchored**. The mark landing on the other one is
   the known limit; anything else is a defect.
-- **Try a note whose CSV import is missing.** Live Preview decorates without
-  waiting for the vault snapshot, so it checks a note whose imports are
-  unresolved. The values must not be marked as disagreeing — an unresolved
-  import is `IMPORT`, not `STALE` — and the findings view, which does wait,
-  must say what is wrong.
+- **Try a note whose CSV import is missing.** Both renderers now decorate from
+  the snapshot-backed analysis, the same one the status bar uses (2026-09-25
+  review, row 6) — Live Preview shows no mark at all on a value that reads
+  the import until the snapshot resolves, rather than asserting an answer
+  computed without ever reading the file. **Pass:** once it resolves, an
+  unresolved import's mark and the findings view agree — both `IMPORT`, never
+  one of them silently `computed`.
+- **Try a note whose CSV import disagrees with an anchored value** (a value
+  written from the CSV before its data changed). **Pass:** the mark on that
+  value is `disagrees`, not `computed` — the bug the review found was the
+  opposite: a value that actually disagreed with its import rendered as if it
+  did not, because the renderer that drew it had never read the file.
+- **In reading mode, edit a scalar in one section of a note whose table in
+  another section reads it**, then scroll back to the table without touching
+  it. **Pass:** the table's marks update — `refreshState` rerenders every
+  reading view of a note whose disagreeing set changed, since Obsidian's own
+  post-processor re-runs only for the section whose text changed (row 7). Hover
+  the table again first if you had already hovered it; **pass:** it explains
+  the current formula, not whatever answer was cached before the edit.
 
 ### 2.3 Hover and tap — v1 row 3
 
