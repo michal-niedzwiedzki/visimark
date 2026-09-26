@@ -17,6 +17,17 @@ export interface TocEntry {
   level: number;
 }
 
+/** A slug unique among every id `seen` so far, tracking full ids rather than
+ *  per-base counts — a `-1` suffix can itself collide with an earlier base
+ *  that happened to end the same way. */
+function uniqueSlug(seen: Set<string>, text: string): string {
+  const base = slugify(text);
+  let id = base;
+  for (let n = 1; seen.has(id); n++) id = `${base}-${n}`;
+  seen.add(id);
+  return id;
+}
+
 /** Renders Markdown to safely escaped HTML using the unified pipeline.
  *  rehypeStringify ensures all special characters including < and > are escaped.
  *  Input is Markdown from local .md files (trusted source, not user-supplied). */
@@ -96,7 +107,7 @@ function splitBlocks(md: string): string[] {
 export function renderTutorialPage(markdown: string): string {
   const blocks = splitBlocks(markdown);
   const tocEntries: TocEntry[] = [];
-  const seen = new Map<string, number>();
+  const seen = new Set<string>();
 
   let mainHtml = "";
   for (const block of blocks) {
@@ -105,10 +116,7 @@ export function renderTutorialPage(markdown: string): string {
     let out = rendered;
 
     if (head) {
-      const base = slugify(head[2]!);
-      const taken = seen.get(base) ?? 0;
-      const id = taken ? `${base}-${taken}` : base;
-      seen.set(base, taken + 1);
+      const id = uniqueSlug(seen, head[2]!);
       tocEntries.push({ text: head[2]!, id, level: head[1]!.length });
       out = rendered.replace(/^<h([1-6])>/, `<h$1 id="${escapeHtml(id)}">`);
     }
@@ -143,6 +151,9 @@ function createTutorialHtml(mainHtml: string, toc: TocEntry[]): string {
       does: this page's CSS is inline. An inline-style injection is a defacement, not code
       execution, so the trade is a different order of magnitude.
 
+      \`script-src 'self'\` covers this page's own bundled script
+      (vendor/visimark-site-tutorial.js), which is a sibling.
+
       \`img-src 'self'\` covers charts rendered in the tutorial
       (charts/c-trend.svg), which is a sibling.
 
@@ -152,6 +163,7 @@ function createTutorialHtml(mainHtml: string, toc: TocEntry[]): string {
     <meta
       http-equiv="Content-Security-Policy"
       content="default-src 'none';
+               script-src 'self';
                style-src 'self' 'unsafe-inline';
                img-src 'self';
                base-uri 'none';
@@ -626,7 +638,7 @@ export interface DocPageOptions {
 
 export function renderDocPage(markdown: string, options: DocPageOptions): string {
   const html = renderMarkdown(markdown);
-  const seen = new Map<string, number>();
+  const seen = new Set<string>();
   const toc: TocEntry[] = [];
 
   // Process headings to add IDs and build TOC
@@ -646,10 +658,7 @@ export function renderDocPage(markdown: string, options: DocPageOptions): string
   for (const heading of headings) {
     // Extract plain text content safely by removing HTML tags completely
     const plainText = getPlainTextFromHtml(heading.text);
-    const base = slugify(plainText);
-    const taken = seen.get(base) ?? 0;
-    const id = taken ? `${base}-${taken}` : base;
-    seen.set(base, taken + 1);
+    const id = uniqueSlug(seen, plainText);
 
     toc.push({
       text: plainText,
@@ -691,6 +700,9 @@ export function renderDocPage(markdown: string, options: DocPageOptions): string
       does: this page's CSS is inline. An inline-style injection is a defacement, not code
       execution, so the trade is a different order of magnitude.
 
+      \`script-src 'self'\` covers this page's own bundled script under
+      vendor/, which is a sibling.
+
       \`img-src 'self'\` covers charts rendered in documentation.
 
       \`frame-ancestors\` is absent because a <meta> policy cannot carry it; on
@@ -699,6 +711,7 @@ export function renderDocPage(markdown: string, options: DocPageOptions): string
     <meta
       http-equiv="Content-Security-Policy"
       content="default-src 'none';
+               script-src 'self';
                style-src 'self' 'unsafe-inline';
                img-src 'self';
                base-uri 'none';

@@ -16,6 +16,9 @@
       does: this page's CSS is inline. An inline-style injection is a defacement, not code
       execution, so the trade is a different order of magnitude.
 
+      `script-src 'self'` covers this page's own bundled script under
+      vendor/, which is a sibling.
+
       `img-src 'self'` covers charts rendered in documentation.
 
       `frame-ancestors` is absent because a <meta> policy cannot carry it; on
@@ -24,6 +27,7 @@
     <meta
       http-equiv="Content-Security-Policy"
       content="default-src 'none';
+               script-src 'self';
                style-src 'self' 'unsafe-inline';
                img-src 'self';
                base-uri 'none';

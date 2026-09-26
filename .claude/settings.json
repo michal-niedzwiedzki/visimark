@@ -1,7 +1,13 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
-    "allow": ["Bash(git rm *)", "Bash(git add *)", "Bash(git rebase *)"]
+    "allow": [
+      "Bash(git rm *)",
+      "Bash(git add *)",
+      "Bash(git rebase --continue)",
+      "Bash(git rebase --abort)",
+      "Bash(git rebase --skip)"
+    ]
   },
   "hooks": {
     "Stop": [
