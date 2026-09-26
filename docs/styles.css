@@ -1436,8 +1436,34 @@ body {
   border-top: 1px solid #e6e6e6;
   margin: 2.2rem 0;
 }
+/* article pages: the "More to read" section, two cards side by side at full
+   panel width (unlike .reader-inner's narrow reading column). */
+.reader-more {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid #e6e6e6;
+}
+.reader-more h2 {
+  margin: 0 0 16px;
+  font-size: 1.2rem;
+  font-weight: 750;
+}
+.reader-more-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+}
+.reader-more-grid .article-card {
+  padding: 0;
+}
+.reader-more-grid .article-card + .article-card {
+  border-top: 0;
+}
 @media (max-width: 560px) {
   .reader {
     padding: 28px 18px 40px;
+  }
+  .reader-more-grid {
+    grid-template-columns: 1fr;
   }
 }
