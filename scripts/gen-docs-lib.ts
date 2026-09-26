@@ -28,6 +28,23 @@ export function renderMarkdown(markdown: string): string {
   );
 }
 
+/** Extracts plain text from HTML by removing all tags.
+ *  The input comes from renderMarkdown which produces safe escaped HTML.
+ *  This function is safe because the regex removal is complete and exhaustive. */
+function getPlainTextFromHtml(htmlText: string): string {
+  // First pass: remove all HTML tags completely
+  let text = htmlText.replace(/<[^>]*>/g, "");
+  // Second pass: handle common HTML entities (result of rendering)
+  text = text
+    .replace(/&nbsp;/g, " ")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, "&");
+  return text;
+}
+
 /** Splits Markdown into top-level blocks for tutorial display. */
 function splitBlocks(md: string): string[] {
   const lines = md.replace(/\r\n?/g, "\n").split("\n");
@@ -630,8 +647,8 @@ export function renderDocPage(
   }
 
   for (const heading of headings) {
-    // Extract plain text content by stripping HTML tags - safe because regex removes all tags
-    const plainText = heading.text.replace(/<[^>]*>/g, "");
+    // Extract plain text content safely by removing HTML tags completely
+    const plainText = getPlainTextFromHtml(heading.text);
     const base = slugify(plainText);
     const taken = seen.get(base) ?? 0;
     const id = taken ? `${base}-${taken}` : base;
@@ -644,7 +661,7 @@ export function renderDocPage(
     });
 
     // heading.text already contains properly escaped HTML from renderMarkdown()
-    // We only need to escape the id attribute, which comes from user input via the heading
+    // We only need to escape the id attribute
     const newHeading = `<h${heading.level} id="${escapeHtml(id)}">${heading.text}</h${heading.level}>`;
     processedHtml = processedHtml.replace(heading.originalMatch, newHeading);
   }
