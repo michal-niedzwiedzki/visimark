@@ -6,7 +6,7 @@
  * Run with `bun run gen:articles`. CI re-runs it and fails on a diff (see
  * .github/workflows/ci.yml, job articles-pages).
  */
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { stripFrontMatter, type Article } from "../packages/visimark/src/site/articles.js";
@@ -37,4 +37,16 @@ for (const [index, article] of articles.entries()) {
   writeFileSync(join(outDir, "index.html"), renderArticlePage(article, bodyHtml, next, related));
 }
 
-console.log(`Generated docs/articles.html and ${articles.length} article page(s).`);
+const currentSlugs = new Set(articles.map((article) => article.slug));
+const staleSlugs = readdirSync(ARTICLES_DIR, { withFileTypes: true })
+  .filter((entry) => entry.isDirectory() && !currentSlugs.has(entry.name))
+  .map((entry) => entry.name);
+for (const slug of staleSlugs) {
+  const indexPath = join(ARTICLES_DIR, slug, "index.html");
+  if (existsSync(indexPath)) rmSync(indexPath);
+}
+
+console.log(
+  `Generated docs/articles.html and ${articles.length} article page(s)` +
+    (staleSlugs.length > 0 ? `, removed ${staleSlugs.length} stale page(s).` : "."),
+);
