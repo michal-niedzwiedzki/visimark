@@ -9,6 +9,16 @@ Each entry says which engine version the bundle carries.
 
 ## Unreleased
 
+- **The Explain command now answers for a caret in a computed table cell**
+  (2026-09-25 code review, row 18). A tap on a marked cell already opened a
+  row-scoped Explain; the palette command, with the caret in the same cell,
+  answered "put the cursor on a value". `nameAt` now resolves the caret
+  against `decorationsFor`'s cell spans, the same source spans the marks
+  already use, and reports which row so the modal shows that cell's value
+  rather than the whole column's. A cell of an input column (no column rule)
+  still answers nothing, for the same reason as before: a table needs a
+  column of known provenance before "which row" is answerable at all.
+
 - **Both renderers decorate from the same snapshot-backed check the status
   bar uses**, closing a bug where a value that actually disagreed with an
   import could render as `computed` while the status bar said something was
