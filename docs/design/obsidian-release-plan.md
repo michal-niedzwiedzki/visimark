@@ -2,10 +2,8 @@
 
 **Status: not decided.** This document lays out the concrete options for
 getting `editors/obsidian` onto the community registry and keeping it there.
-It does not pick one. See
-[2026-09-25 code review, §2.8](../reviews/2026-09-25-obsidian-plugin.md#28-make-the-version-and-release-story-true-row-20)
-(row 20), which asked for the options to be written down before anything is
-built.
+It does not pick one. It exists because a code review of the plugin (row 20)
+asked for the options to be written down before anything is built.
 
 ## The problems this has to answer
 
@@ -57,9 +55,11 @@ dedicated workflow (not `release.yml`) that:
    the tag doesn't match" discipline `release.yml` already has for the npm
    packages);
 2. builds `main.js` with `bun run --filter visimark-obsidian build`;
-3. cuts a GitHub Release named after the bare version (`0.1.0`, no
-   `obsidian-v` prefix, since that's the string the registry and BRAT match)
-   and attaches `main.js`, `manifest.json` and `styles.css`.
+3. creates a **separate, bare-version git tag** (`0.1.0`, no `obsidian-v`
+   prefix) pointing at the same commit, and cuts the GitHub Release against
+   *that* tag — not the `obsidian-v0.1.0` tag that triggered the workflow —
+   since the registry and BRAT match the release's tag string itself, not its
+   title, and attaches `main.js`, `manifest.json` and `styles.css` to it.
 
 **Trade-offs.** The root-level copy is a second file that could theoretically
 drift if the test guarding it is ever weakened or skipped — a check is not as

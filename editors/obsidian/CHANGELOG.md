@@ -23,15 +23,19 @@ Each entry says which engine version the bundle carries.
   (2026-09-25 code review, row 20). `manifest.json` and `versions.json` were
   already right — `869a819` raised the floor for `displayTooltip`
   (`@since 1.8.7`) — but the prose installers and reviewers read still argued
-  every API predated `1.0.0`. A new test,
-  `test/since-drift.test.ts`, walks every symbol `src/` imports from
-  `obsidian` back to its declaration in the installed `obsidian.d.ts` and
-  fails if any `@since` tag exceeds the floor, so the next API that moves it
-  can't go unnoticed the way this one did. The manual test's §2.8 also named
-  the wrong command ("Look through the vault" instead of "Sweep the vault");
-  fixed. The release mechanics the same row raised — where the registry reads
-  `manifest.json` from, and what tags and builds a release — are written up
-  as options in
+  every API predated `1.0.0` (it doesn't quite: `setTooltip` is `@since
+  1.4.4`, still under the floor, but not "before 1.0" either — both documents
+  now say so). A new test, `test/since-drift.test.ts`, walks every symbol
+  `src/` imports from `obsidian` back to its declaration in the installed
+  `obsidian.d.ts` and fails if any `@since` tag exceeds the floor, so the next
+  API that moves it can't go unnoticed the way this one did. It also walks
+  every `this.app.<member>(...)` and `this.app.<prop>.<member>(...)` call
+  reached without an import (e.g. a method straight off `App`, like
+  `isDarkMode`), since those can drift the same way a top-level import can.
+  The manual test's §2.8 also named the wrong command ("Look through the
+  vault" instead of "Sweep the vault"); fixed. The release mechanics the same
+  row raised — where the registry reads `manifest.json` from, and what tags
+  and builds a release — are written up as options in
   [`docs/design/obsidian-release-plan.md`](../../docs/design/obsidian-release-plan.md),
   not decided or built here.
 

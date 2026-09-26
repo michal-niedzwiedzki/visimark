@@ -107,11 +107,12 @@ ship another.
 (`main.ts`'s hover/tap/keyboard explain), which is `@since 1.8.7` in
 Obsidian's own typings.
 
-Every other API this plugin calls predates Obsidian 1.0: `Plugin`,
+Most other APIs this plugin calls predate Obsidian 1.0: `Plugin`,
 `MarkdownView`, `addStatusBarItem`, `registerEvent`, `workspace.on`,
 `debounce`, `getViewData`, and `registerEditorExtension` — the CodeMirror 6
-editor arrived with Live Preview, which also predates 1.0. `displayTooltip`
-is the one exception, and it's the reason the floor isn't 1.0.0 anymore.
+editor arrived with Live Preview, which also predates 1.0. `setTooltip`
+is `@since 1.4.4`, still under the floor. `displayTooltip` is the one
+that isn't, and it's the reason the floor is `1.8.7` and not `1.0.0`.
 
 `minAppVersion` is a support claim the registry's reviewers read, and
 `test/since-drift.test.ts` keeps it from going stale silently: it walks every
