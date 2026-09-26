@@ -34,7 +34,7 @@
     "lint:fix": "oxlint --fix",
     "format": "oxfmt",
     "format:check": "oxfmt --check",
-    "gen:docs": "bun scripts/gen-function-reference.ts",
+    "gen:docs": "bun scripts/gen-docs.ts && bun scripts/gen-function-reference.ts",
     "gen:mcp": "bun scripts/gen-mcp-skill.ts",
     "gen:articles": "bun scripts/gen-articles.ts",
     "serve": "bun scripts/serve.mjs",

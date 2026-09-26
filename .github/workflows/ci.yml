@@ -142,11 +142,11 @@ jobs:
             exit 1
           fi
 
-  # The generated function documents must match the registry they come from.
+  # The generated function documents and documentation pages must match their sources.
   # Modelled on `playground-bundle`, but Bun is not pinned: the output is
-  # Markdown rendered by our own script, so there is no minifier whose version
+  # HTML and Markdown rendered by our own scripts, so there is no minifier whose version
   # could churn it.
-  function-reference:
+  generated-docs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -154,11 +154,11 @@ jobs:
         with:
           bun-version: latest
       - run: bun install --frozen-lockfile
-      - name: the generated function reference must match the registry
+      - name: the generated documentation must match the sources
         run: |
           bun run gen:docs
-          if ! git diff --exit-code -- docs/function-reference.md docs/visimark-design.md; then
-            echo "::error::The generated function documents are stale. Run 'bun run gen:docs' and commit the result."
+          if ! git diff --exit-code -- docs/function-reference.md docs/visimark-design.md docs/tutorial.html docs/ci.html docs/mcp-server.html; then
+            echo "::error::The generated documentation is stale. Run 'bun run gen:docs' and commit the result."
             exit 1
           fi
 
