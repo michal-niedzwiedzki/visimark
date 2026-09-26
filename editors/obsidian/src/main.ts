@@ -747,17 +747,17 @@ export default class VisiMarkPlugin extends Plugin {
   private async explain(editor: Editor): Promise<void> {
     const gated = await this.noteFor(editor);
     if (gated === null) return;
-    const name = nameAt(gated.model, editor.posToOffset(editor.getCursor()));
-    if (name === null) {
+    const at = nameAt(gated.model, gated.result, editor.posToOffset(editor.getCursor()));
+    if (at === null) {
       new Notice("Put the cursor on a value VisiMark works out, and ask again.");
       return;
     }
-    const explanation = explainBinding(gated.model, gated.result, name);
+    const explanation = explainBinding(gated.model, gated.result, at.name);
     if (explanation === null) {
-      new Notice(`Nothing in this note is called ${name}.`);
+      new Notice(`Nothing in this note is called ${at.name}.`);
       return;
     }
-    new ExplainModal(this.app, explanation).open();
+    new ExplainModal(this.app, explanation, at.row).open();
   }
 
   /**

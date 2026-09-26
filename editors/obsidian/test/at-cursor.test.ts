@@ -18,33 +18,53 @@ const source = readFileSync(join(docs, "example-invoice.md"), "utf8");
 const model = build(locate(source));
 const at = (needle: string, offset = 2): number => source.indexOf(needle) + offset;
 
+const result = check(model);
+
 test("a caret in an anchored number names what the number is bound to", () => {
-  expect(nameAt(model, at("23300.00"))).toBe("lines.net_total");
+  expect(nameAt(model, result, at("23300.00"))).toEqual({ name: "lines.net_total" });
 });
 
 test("a caret inside the anchor comment names the same thing", () => {
   // in reading mode the comment is invisible; in Live Preview it is not, so a
   // caret "on the number" lands in either half
-  expect(nameAt(model, at("<!--vmark=lines.net_total-->", 5))).toBe("lines.net_total");
+  expect(nameAt(model, result, at("<!--vmark=lines.net_total-->", 5))).toEqual({
+    name: "lines.net_total",
+  });
 });
 
 test("a caret in the line that declares a name names it", () => {
-  expect(nameAt(model, at("net_total   = SUM(Net)", 3))).toBe("lines.net_total");
-  expect(nameAt(model, at("Net               = Qty * Rate", 1))).toBe("lines.Net");
+  expect(nameAt(model, result, at("net_total   = SUM(Net)", 3))).toEqual({
+    name: "lines.net_total",
+  });
+  expect(nameAt(model, result, at("Net               = Qty * Rate", 1))).toEqual({
+    name: "lines.Net",
+  });
 });
 
 test("a document-scope constant is named without a sheet", () => {
-  expect(nameAt(model, at("fx_eur         = 4.2650", 2))).toBe("fx_eur");
+  expect(nameAt(model, result, at("fx_eur         = 4.2650", 2))).toEqual({ name: "fx_eur" });
+});
+
+test("a caret in a computed table cell names the column and that row", () => {
+  // "Net" is a column rule (Qty * Rate); its cells carry no binding span of
+  // their own, so this can only be answered from decorationsFor's cell spans
+  expect(nameAt(model, result, at("14080.00"))).toEqual({ name: "lines.Net", row: 1 });
+});
+
+test("a caret in an input column's cell names nothing", () => {
+  // "Rate" has no column rule -- it is the human-owned input the "Net" rule
+  // reads, and there is no row to answer with until a rule says what a row is
+  expect(nameAt(model, result, at("220.00"))).toBeNull();
 });
 
 test("a caret in ordinary prose names nothing, rather than guessing", () => {
-  expect(nameAt(model, at("Services rendered"))).toBeNull();
-  expect(nameAt(model, at("Payment terms"))).toBeNull();
+  expect(nameAt(model, result, at("Services rendered"))).toBeNull();
+  expect(nameAt(model, result, at("Payment terms"))).toBeNull();
 });
 
 test("a caret in a note with no block names nothing", () => {
   const plain = build(locate("# Groceries\n\n- milk\n"));
-  expect(nameAt(plain, 5)).toBeNull();
+  expect(nameAt(plain, check(plain), 5)).toBeNull();
 });
 
 test("values are listed by name, with a column on one line", () => {
