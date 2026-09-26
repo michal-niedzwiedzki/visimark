@@ -1,0 +1,2 @@
+[test]
+preload = ["./editors/obsidian/test/harness/preload.ts"]
