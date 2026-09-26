@@ -252,9 +252,14 @@ export function livePreviewMarks(enabled: () => boolean, read: VaultRead): Exten
       };
 
       const scheduleRecompute = debounce(
-        (source: string) => {
+        // The immutable `Text` CodeMirror already holds, not a stringified
+        // copy: `state.doc` is a new instance only when the document itself
+        // changes (a selection-only transaction keeps the same one), so
+        // comparing by identity is an O(1) staleness check that never pays
+        // for the O(document length) `toString()` row 17 exists to avoid.
+        (source: typeof view.state.doc) => {
           if (destroyed) return;
-          if (view.state.doc.toString() !== source) return; // dropped: a newer edit landed first
+          if (view.state.doc !== source) return; // dropped: a newer edit landed first
           view.dispatch({ effects: setLocalMarks.of(applyFull(view)) });
         },
         RECOMPUTE_DEBOUNCE_MS,
@@ -297,7 +302,7 @@ export function livePreviewMarks(enabled: () => boolean, read: VaultRead): Exten
             // `applyFull` (below, or the snapshot effect above) ever decides
             // a mark's verdict.
             this.decorations = this.decorations.map(update.changes);
-            scheduleRecompute(update.view.state.doc.toString());
+            scheduleRecompute(update.view.state.doc);
           }
         },
         destroy() {
