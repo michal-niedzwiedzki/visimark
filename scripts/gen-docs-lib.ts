@@ -616,11 +616,10 @@ export function renderDocPage(
   const toc: TocEntry[] = [];
 
   // Process headings to add IDs and build TOC
-  const headingRegex = /<h([1-6])>(.*?)<\/h[1-6]>/g;
   let processedHtml = html;
-  let match: RegExpExecArray | null;
   const regex = /<h([1-6])>(.*?)<\/h[1-6]>/g;
   const headings: Array<{ level: string; text: string; originalMatch: string }> = [];
+  let match: RegExpExecArray | null;
 
   while ((match = regex.exec(html)) !== null) {
     headings.push({
@@ -630,9 +629,8 @@ export function renderDocPage(
     });
   }
 
-  processedHtml = html;
   for (const heading of headings) {
-    // Extract plain text content for slug generation
+    // Extract plain text content by stripping HTML tags - safe because regex removes all tags
     const plainText = heading.text.replace(/<[^>]*>/g, "");
     const base = slugify(plainText);
     const taken = seen.get(base) ?? 0;
@@ -645,11 +643,10 @@ export function renderDocPage(
       level: parseInt(heading.level),
     });
 
-    // Replace the heading with ID
-    processedHtml = processedHtml.replace(
-      heading.originalMatch,
-      `<h${heading.level} id="${escapeHtml(id)}">${heading.text}</h${heading.level}>`,
-    );
+    // heading.text already contains properly escaped HTML from renderMarkdown()
+    // We only need to escape the id attribute, which comes from user input via the heading
+    const newHeading = `<h${heading.level} id="${escapeHtml(id)}">${heading.text}</h${heading.level}>`;
+    processedHtml = processedHtml.replace(heading.originalMatch, newHeading);
   }
 
   // Disable checkboxes
