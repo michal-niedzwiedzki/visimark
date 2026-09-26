@@ -4,5 +4,9 @@
   // source (see docs/reviews/2026-09-15.md §2.5). Linting it produced 1,809 warnings —
   // 100% of the repo's total — which buried every real one. dist/ and node_modules/ are
   // already skipped via .gitignore and do not need listing here.
-  "ignorePatterns": ["docs/vendor/**"]
+  //
+  // editors/obsidian/main.js is the plugin's `esbuild` bundle, also gitignored, not
+  // source — the Stop hook runs `oxlint --fix` on explicit changed-file paths, which
+  // bypasses .gitignore, so the bundle still needs listing here.
+  "ignorePatterns": ["docs/vendor/**", "editors/obsidian/main.js"]
 }
