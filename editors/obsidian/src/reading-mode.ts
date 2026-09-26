@@ -75,7 +75,14 @@ export async function decorateSection(
   // `decorationsFor` once per note per render, not once per section (row 5),
   // and every section awaits the same in-flight fetch rather than starting
   // its own (row 6)
-  const { decorations } = await analyseWithSnapshot(source, ctx.sourcePath, read);
+  let decorations: readonly Decoration[];
+  try {
+    ({ decorations } = await analyseWithSnapshot(source, ctx.sourcePath, read));
+  } catch {
+    // a failed vault read leaves this section undecorated; the status bar
+    // (`main.ts`'s `refreshState`) reports the failure with `UNKNOWN`
+    return;
+  }
   // Obsidian may have unmounted this section while the snapshot was in
   // flight — a stale note switch, a scroll that virtualised it away
   if (!el.isConnected) return;

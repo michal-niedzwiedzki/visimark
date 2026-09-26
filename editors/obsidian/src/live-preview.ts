@@ -133,17 +133,29 @@ const setSnapshotMarks = StateEffect.define<DecorationSet>();
 export function livePreviewMarks(enabled: () => boolean, read: VaultRead): Extension {
   return ViewPlugin.define(
     (view: EditorView) => {
+      // Set in `destroy()`. `scheduleSnapshot.cancel()` only drops a *pending*
+      // debounced call; a fetch already in flight when the view is torn down
+      // has no way to be cancelled, so its `.then` checks this before ever
+      // touching `view` again.
+      let destroyed = false;
+
       const scheduleSnapshot = debounce(
         (source: string, path: string) => {
-          void analyseWithSnapshot(source, path, read).then((snapshot) => {
-            if (!enabled()) return; // the setting flipped off while the fetch was in flight
-            if (view.state.doc.toString() !== source) return; // stale; a newer edit already landed
-            const builder = new RangeSetBuilder<Decoration>();
-            for (const decoration of snapshot.decorations) {
-              builder.add(decoration.span.start, decoration.span.end, markFor(decoration, path));
-            }
-            view.dispatch({ effects: setSnapshotMarks.of(builder.finish()) });
-          });
+          analyseWithSnapshot(source, path, read)
+            .then((snapshot) => {
+              if (destroyed) return; // the view closed while the fetch was in flight
+              if (!enabled()) return; // the setting flipped off while the fetch was in flight
+              if (view.state.doc.toString() !== source) return; // stale; a newer edit already landed
+              const builder = new RangeSetBuilder<Decoration>();
+              for (const decoration of snapshot.decorations) {
+                builder.add(decoration.span.start, decoration.span.end, markFor(decoration, path));
+              }
+              view.dispatch({ effects: setSnapshotMarks.of(builder.finish()) });
+            })
+            .catch(() => {
+              // a failed vault read leaves the withheld marks withheld; the
+              // status bar (`main.ts`'s `refreshState`) reports the failure
+            });
         },
         400,
         true,
@@ -173,6 +185,7 @@ export function livePreviewMarks(enabled: () => boolean, read: VaultRead): Exten
           }
         },
         destroy() {
+          destroyed = true;
           scheduleSnapshot.cancel();
         },
       };

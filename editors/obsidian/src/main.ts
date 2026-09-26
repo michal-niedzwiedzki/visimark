@@ -886,7 +886,7 @@ export default class VisiMarkPlugin extends Plugin {
       const { decorations, report } = await analyseWithSnapshot(source, path, this.read);
       if (id !== this.renderId) return; // a newer refresh has started; let it paint instead
       this.show(statusFor(report), view);
-      this.rerenderIfVerdictChanged(path, decorations);
+      this.freshenReadingViews(path, decorations);
     } catch {
       if (id !== this.renderId) return;
       this.show(UNKNOWN, view);
@@ -897,20 +897,22 @@ export default class VisiMarkPlugin extends Plugin {
    * Review row 7. Obsidian's reading-mode post-processor re-runs only for a
    * section whose own text changed, so a table whose cells turned stale
    * because a scalar in *another* section changed keeps its old marks —
-   * unless something else asks that view to redraw. This is that ask:
-   * `refreshState` calls it every time it has a fresh, snapshot-backed
-   * decoration set for `path`, and it rerenders every reading view showing
-   * that note only when the disagreeing set actually moved.
+   * unless something else asks that view to redraw. `refreshState` calls
+   * this every time it has a fresh, snapshot-backed decoration set for
+   * `path`, and it rerenders every reading view showing that note when the
+   * disagreeing set actually moved.
    *
-   * `data-vmark-hovered` is cleared in the same pass rather than left to
-   * whatever `previewMode.rerender` does to the DOM — a rebuilt element for
-   * an unchanged value keeps the attribute if the old node survives the
-   * rerender, and dropping it either way is what makes the next hover ask
-   * again instead of repeating a possibly stale answer.
+   * **The hover cache is cleared on every fresh result, not only when the
+   * disagreeing set changes** (CodeRabbit review of PR #265): a binding can
+   * stay `disagrees` at the same span while the value behind it changes (an
+   * import re-read between two identical-looking checks), and the cached
+   * hover text is about the value, not about whether the mark's identity
+   * moved. Leaving it in place until the mark itself changes would show a
+   * stale explanation for a value that has already changed.
    */
   private readonly lastDisagreeing = new Map<string, string>();
 
-  private rerenderIfVerdictChanged(path: string, decorations: readonly Decoration[]): void {
+  private freshenReadingViews(path: string, decorations: readonly Decoration[]): void {
     const disagreeing = decorations
       .filter((d) => d.mark === "disagrees")
       .map((d) => `${d.name}@${d.span.start}-${d.span.end}`)
@@ -918,7 +920,7 @@ export default class VisiMarkPlugin extends Plugin {
       .join(",");
     const previous = this.lastDisagreeing.get(path);
     this.lastDisagreeing.set(path, disagreeing);
-    if (previous === undefined || previous === disagreeing) return;
+    const verdictChanged = previous !== undefined && previous !== disagreeing;
 
     for (const leaf of this.app.workspace.getLeavesOfType("markdown")) {
       const leafView = leaf.view;
@@ -926,7 +928,7 @@ export default class VisiMarkPlugin extends Plugin {
       leafView.containerEl
         .querySelectorAll("[data-vmark-hovered]")
         .forEach((el) => el.removeAttribute("data-vmark-hovered"));
-      if (leafView.getMode() === "preview") leafView.previewMode.rerender(true);
+      if (verdictChanged && leafView.getMode() === "preview") leafView.previewMode.rerender(true);
     }
   }
 
