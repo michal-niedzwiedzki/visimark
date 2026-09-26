@@ -32,13 +32,20 @@ export function renderMarkdown(markdown: string): string {
   return renderedAndSafeHtml;
 }
 
-/** Extracts plain text from HTML by removing tags.
- *  Input: HTML from renderMarkdown with properly escaped entities (&lt;, &gt;, etc).
- *  Output: Text with tags removed but entities still encoded (safe for attributes). */
+/** Extracts plain text from HTML by stripping all tags.
+ *  Input must be from renderMarkdown() which properly escapes &lt;script&gt;.
+ *  After tag removal, only entity-encoded special chars remain (&lt; etc). */
 function getPlainTextFromHtml(htmlText: string): string {
-  // Only remove HTML tags, keep entities encoded for safety
-  // This prevents reconstructing any markup from the input
-  return htmlText.replace(/<[^>]*>/g, "");
+  let result = htmlText;
+  let openIdx = result.indexOf("<");
+  while (openIdx !== -1) {
+    const closeIdx = result.indexOf(">", openIdx);
+    if (closeIdx === -1) break;
+    // Remove tag from openIdx to closeIdx inclusive
+    result = result.slice(0, openIdx) + result.slice(closeIdx + 1);
+    openIdx = result.indexOf("<", openIdx);
+  }
+  return result;
 }
 
 /** Splits Markdown into top-level blocks for tutorial display. */
