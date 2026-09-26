@@ -5,7 +5,6 @@
  * script only handles interactivity: the TOC dialog and mode switching.
  */
 
-import { byId } from "./dom.js";
 import { createToc, scrollToHash } from "./toc.js";
 
 const MODE_STORAGE_KEY = "visimark-tutorial-mode";

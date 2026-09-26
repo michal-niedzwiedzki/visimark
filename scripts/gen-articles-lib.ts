@@ -136,6 +136,7 @@ function pageShell(opts: {
       <a href="${base}playground.html">Try in Playground</a>
       <a href="${base}tutorial.html">Read the tutorial</a>
       <a href="${base}ci.html">Continuous integration</a>
+      <a href="${base}mcp-server.html">MCP server</a>
       <a href="${base}articles.html">Articles</a>
     </p>
 

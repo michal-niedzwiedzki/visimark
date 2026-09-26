@@ -6,16 +6,20 @@
   // fails CI on every pull request. .oxlintrc.json skips the same directory, for the
   // same reason.
   //
-  // docs/articles.html and docs/articles/*/index.html are committed generated output
-  // of `bun run gen:articles` (scripts/gen-articles.ts), not source. Their shape comes
-  // entirely from scripts/gen-articles-lib.ts's template functions; formatting the
-  // generated HTML fights every future generator run the same way formatting
-  // docs/vendor/** would fight the next bundle rebuild.
+  // docs/articles.html, docs/articles/*/index.html, docs/ci.html, docs/tutorial.html,
+  // and docs/mcp-server.html are committed generated output of `bun run gen:articles`
+  // (scripts/gen-articles.ts) and `bun run gen:docs` (scripts/gen-docs.ts), not source.
+  // Their shape comes entirely from gen-articles-lib.ts's and gen-docs-lib.ts's
+  // template functions; formatting the generated HTML fights every future generator
+  // run the same way formatting docs/vendor/** would fight the next bundle rebuild.
   "ignorePatterns": [
     "**/*.md",
     ".vscode/**",
     "docs/vendor/**",
     "docs/articles.html",
-    "docs/articles/*/index.html"
+    "docs/articles/*/index.html",
+    "docs/ci.html",
+    "docs/tutorial.html",
+    "docs/mcp-server.html"
   ]
 }

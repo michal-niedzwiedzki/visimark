@@ -96,25 +96,25 @@ function splitBlocks(md: string): string[] {
 export function renderTutorialPage(markdown: string): string {
   const blocks = splitBlocks(markdown);
   const tocEntries: TocEntry[] = [];
+  const seen = new Map<string, number>();
 
   let mainHtml = "";
   for (const block of blocks) {
     const head = /^(#{1,6})\s+(.*)$/.exec(block);
-    let id: string | null = null;
+    const rendered = renderMarkdown(block);
+    let out = rendered;
+
     if (head) {
-      id = slugify(head[2]!);
-      tocEntries.push({
-        text: head[2]!,
-        id,
-        level: head[1]!.length,
-      });
+      const base = slugify(head[2]!);
+      const taken = seen.get(base) ?? 0;
+      const id = taken ? `${base}-${taken}` : base;
+      seen.set(base, taken + 1);
+      tocEntries.push({ text: head[2]!, id, level: head[1]!.length });
+      out = rendered.replace(/^<h([1-6])>/, `<h$1 id="${escapeHtml(id)}">`);
     }
 
     const srcHtml = `<pre class="src">${escapeHtml(block)}</pre>`;
-    const outHtml = `<div class="out">${renderMarkdown(block)}${
-      id && renderMarkdown(block).includes("<") ? `<script>document.querySelector('.out').firstElementChild.id = '${escapeHtml(id)}';</script>` : ""
-    }</div>`;
-    mainHtml += srcHtml + outHtml;
+    mainHtml += `${srcHtml}<div class="out">${out}</div>`;
   }
 
   return createTutorialHtml(mainHtml, tocEntries);
@@ -122,10 +122,7 @@ export function renderTutorialPage(markdown: string): string {
 
 function createTutorialHtml(mainHtml: string, toc: TocEntry[]): string {
   const tocLinksHtml = toc
-    .map(
-      (e) =>
-        `<a href="#${escapeHtml(e.id)}" data-level="${e.level}">${escapeHtml(e.text)}</a>`,
-    )
+    .map((e) => `<a href="#${escapeHtml(e.id)}" data-level="${e.level}">${escapeHtml(e.text)}</a>`)
     .join("\n");
 
   return `<!doctype html>
@@ -627,10 +624,7 @@ export interface DocPageOptions {
   scriptName: string;
 }
 
-export function renderDocPage(
-  markdown: string,
-  options: DocPageOptions,
-): string {
+export function renderDocPage(markdown: string, options: DocPageOptions): string {
   const html = renderMarkdown(markdown);
   const seen = new Map<string, number>();
   const toc: TocEntry[] = [];
@@ -676,10 +670,7 @@ export function renderDocPage(
   );
 
   const tocLinksHtml = toc
-    .map(
-      (e) =>
-        `<a href="#${escapeHtml(e.id)}" data-level="${e.level}">${escapeHtml(e.text)}</a>`,
-    )
+    .map((e) => `<a href="#${escapeHtml(e.id)}" data-level="${e.level}">${escapeHtml(e.text)}</a>`)
     .join("\n");
 
   return `<!doctype html>

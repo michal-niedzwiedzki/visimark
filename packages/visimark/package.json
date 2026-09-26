@@ -45,7 +45,7 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.app.json",
     "build": "bun build src/cli/main.ts src/index.ts --target node --outdir dist && tsc -p tsconfig.build.json",
     "build:playground": "bun build src/playground/browser-entry.ts --target browser --format iife --minify --outfile ../../docs/vendor/visimark-browser.js && bun build src/playground/app/main.ts --target browser --format iife --minify --outfile ../../docs/vendor/visimark-playground.js && bun run build:site",
-    "build:site": "for p in index preview articles article tutorial ci mcp-server; do bun build src/site/$p-page.ts --target browser --format iife --minify --outfile ../../docs/vendor/visimark-site-$p.js || exit 1; done",
+    "build:site": "for p in index preview tutorial ci mcp-server; do bun build src/site/$p-page.ts --target browser --format iife --minify --outfile ../../docs/vendor/visimark-site-$p.js || exit 1; done",
     "prepublishOnly": "cp ../../README.md README.md && bun run typecheck && bun test && bun run build"
   },
   "dependencies": {
