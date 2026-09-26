@@ -39,6 +39,22 @@ Each entry says which engine version the bundle carries.
   [`docs/design/obsidian-release-plan.md`](../../docs/design/obsidian-release-plan.md),
   not decided or built here.
 
+- **Live Preview maps its decorations through an edit instead of recomputing
+  synchronously on every keystroke** (2026-09-25 code review, row 17). The old
+  code reran `locate` + `build` + `check` on the whole document on every
+  `docChanged`, measured at ~9ms per keystroke on a note-sized document (more
+  on mobile); now a keystroke maps the existing decorations through
+  CodeMirror's own `ChangeSet` (a cheap, synchronous position update that
+  cannot change a mark's verdict — it only moves it) and schedules the real
+  recompute on the same 400ms debounce `analyseWithSnapshot` already used, via
+  a `StateEffect` a further edit before it fires supersedes. The extension
+  also now returns nothing unless `editorLivePreviewField` says Live Preview,
+  not Source mode, is active, and recomputes immediately (not on the
+  debounce) when that field changes or when "Show provenance in Live Preview"
+  is toggled — `settings-tab.ts` dispatches straight to every open editor's
+  CodeMirror instance, instead of leaving the old marks in place until the
+  next keystroke.
+
 - **Both renderers decorate from the same snapshot-backed check the status
   bar uses**, closing a bug where a value that actually disagreed with an
   import could render as `computed` while the status bar said something was
