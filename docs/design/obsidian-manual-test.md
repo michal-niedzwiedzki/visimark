@@ -203,10 +203,10 @@ nothing are the ones that most need a person.
 
 | Section | Row | Asserted by a machine | Left to a person |
 |---|---|---|---|
-| §2.1 activation, status and ribbon | constraint 4, row 12, #232 | the gate's predicate, and every status state's wording | that the bar (desktop) and the view-header icon (desktop and mobile) appear, read right, and open the findings view |
+| §2.1 activation, status and ribbon | constraint 4, row 12, #232 | the gate's predicate, every status state's wording, and — since the row 12 harness (`test/harness/`, `onload.test.ts`) — that `onload` itself succeeds with no duplicate view registration, and that `refresh` actually reaches `HIDDEN` for an ordinary note and `VisiMark ✓` for `example-invoice.md` | that the bar (desktop) and the view-header icon (desktop and mobile) appear, read right, and open the findings view |
 | §2.2 provenance and staleness | row 2 | *where* every mark goes, and that nothing uncomputed is marked | **everything about what is on screen**, in both renderers |
-| §2.3 hover and tap | row 3 | the line's content — formula, result, inputs | the gesture, and that a cell answers for *that* cell |
-| §2.4 the five commands | row 4 | Explain's caret resolution; Format's plan | the palette, the dialogs, the presses |
+| §2.3 hover and tap | row 3 | the line's content — formula, result, inputs; and, since the row 12 harness, that a hover answers from a mark's own `data-vmark-path` rather than whichever note is active | the gesture, and that a cell answers for *that* cell |
+| §2.4 the five commands | row 4 | Explain's caret resolution; Format's plan; and, since the row 12 harness, that Format refuses (with a notice, unchanged buffer) when the note changed while the vault read it started was still in flight | the palette, the dialogs, the presses |
 | §2.5 nothing is written unbidden | constraint 3 | — | **all of it**, and on mobile, where an autosave is easiest to trigger |
 | §2.6 format, declined artifact, format on save | rows 6–7, #239 | the repair plan, and that it converges on `fmt` | that the keystroke does it, silently, and that the setting's off default and command-palette limit hold |
 | §2.7 `infer` on a pasted table | row 5 | that no existing byte is rewritten, by reconstruction | the preview, and the insertion landing where the plan said |
