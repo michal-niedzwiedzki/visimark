@@ -3,7 +3,7 @@
  * both pages that show it build from it: the landing page's carousel and the
  * full list on articles.html.
  *
- * An entry links to the reader page, article.html, which finds it by slug —
+ * An entry links to the reader page, articles/<slug>/, which finds it by slug —
  * so adding an article is one entry in the JSON, and filling in `url` once it
  * goes out elsewhere.
  */
@@ -28,9 +28,14 @@ export interface Article {
 
 const SOURCE_BASE = "https://github.com/michal-niedzwiedzki/visimark/blob/master/docs/articles/";
 
-/** Where an article's title and "Read" link go: the reader page. */
-export function articleHref(a: Article): string {
-  return `article.html?slug=${encodeURIComponent(a.slug)}`;
+/** Where an article's title and "Read" link go: its own reader page,
+ *  `articles/<slug>/`. `base` is the relative path from the current page back
+ *  to `docs/` — `""` for a page that lives in `docs/` itself (the landing
+ *  page's carousel, `articles.html`), `"../../"` for a page that lives at
+ *  `docs/articles/<slug>/` (another article's own reader page, linking to
+ *  this one from its "More to read" section). */
+export function articleHref(a: Article, base = ""): string {
+  return `${base}articles/${encodeURIComponent(a.slug)}/`;
 }
 
 /** The Markdown source on GitHub. */
@@ -65,12 +70,13 @@ export async function loadArticles(): Promise<Article[]> {
   return data.articles;
 }
 
-/** The icon, title, tags, teaser and read link, shared by a carousel slide
- *  and a list card. `heading` is the tag the title is set in. */
-export function articleBody(a: Article, heading: "h2" | "h3"): string {
-  const href = escapeHtml(articleHref(a));
+/** The icon, title, tags, teaser and read link, shared by a carousel slide,
+ *  a list card, and a "More to read" column. `heading` is the tag the title
+ *  is set in; `base` is as in {@link articleHref}. */
+export function articleBody(a: Article, heading: "h2" | "h3", base = ""): string {
+  const href = escapeHtml(articleHref(a, base));
   const icon = a.icon
-    ? `<a class="articles-icon" href="${href}" tabindex="-1" aria-hidden="true"><img src="articles/${escapeHtml(a.icon)}" width="400" height="400" alt="" /></a>`
+    ? `<a class="articles-icon" href="${href}" tabindex="-1" aria-hidden="true"><img src="${base}articles/${escapeHtml(a.icon)}" width="400" height="400" alt="" /></a>`
     : "";
   return `${icon}<div class="articles-text">
             <${heading}><a href="${href}">${escapeHtml(a.title)}</a></${heading}>

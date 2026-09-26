@@ -5,6 +5,7 @@ import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  articleBody,
   articleHref,
   articlePublishedUrl,
   stripFrontMatter,
@@ -61,7 +62,18 @@ describe("article links", () => {
   };
 
   test("the reader page is found by slug", () => {
-    expect(articleHref(base)).toBe("article.html?slug=a%20b");
+    expect(articleHref(base)).toBe("articles/a%20b/");
+  });
+
+  test("a base path is prefixed onto the reader-page link", () => {
+    expect(articleHref(base, "../../")).toBe("../../articles/a%20b/");
+  });
+
+  test("articleBody prefixes both the icon src and the href with base", () => {
+    const withIcon: Article = { ...base, icon: "../assets/x.webp" };
+    const html = articleBody(withIcon, "h3", "../../");
+    expect(html).toContain('src="../../articles/../assets/x.webp"');
+    expect(html).toContain('href="../../articles/a%20b/"');
   });
 
   test("the published url is offered only when it is https", () => {
