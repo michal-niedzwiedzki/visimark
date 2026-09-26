@@ -183,6 +183,28 @@ jobs:
             exit 1
           fi
 
+  # docs/articles.html and docs/articles/*/index.html are committed build
+  # artifacts of scripts/gen-articles.ts, generated from
+  # docs/articles/articles.json and each article's own Markdown file.
+  # Modelled on `function-reference`: the output is HTML rendered by our own
+  # script, so there is no minifier whose version could churn it and Bun is
+  # not pinned.
+  articles-pages:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - name: the generated article pages must match articles.json
+        run: |
+          bun run gen:articles
+          if ! git diff --exit-code -- docs/articles.html docs/articles/; then
+            echo "::error::The generated article pages are stale. Run 'bun run gen:articles' and commit the result."
+            exit 1
+          fi
+
   # A document has to mean the same thing whichever host evaluates it — the
   # CLI, the browser playground (already in production), the LSP, the MCP
   # server, any future client. Nothing checked that until now: each existing
