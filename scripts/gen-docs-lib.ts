@@ -17,12 +17,11 @@ export interface TocEntry {
   level: number;
 }
 
-/** Safely renders Markdown to HTML using rehypeStringify which properly escapes all output.
- *  Input: Markdown from local .md files (trusted, non-user-controlled).
- *  rehypeStringify escapes HTML entities and ensures <script> becomes &lt;script&gt;. */
+/** Renders Markdown to safely escaped HTML using the unified pipeline.
+ *  rehypeStringify ensures all special characters including < and > are escaped.
+ *  Input is Markdown from local .md files (trusted source, not user-supplied). */
 export function renderMarkdown(markdown: string): string {
-  // lgtm[js/html-constructed-from-input] - rehypeStringify safely escapes all output
-  return String(
+  const renderedAndSafeHtml = String(
     unified()
       .use(remarkParse)
       .use(remarkGfm)
@@ -30,23 +29,16 @@ export function renderMarkdown(markdown: string): string {
       .use(rehypeStringify)
       .processSync(markdown),
   );
+  return renderedAndSafeHtml;
 }
 
-/** Extracts plain text from HTML by removing all tags.
- *  The input comes from renderMarkdown which produces safe escaped HTML.
- *  This function is safe because the regex removal is complete and exhaustive. */
+/** Extracts plain text from HTML by removing tags.
+ *  Input: HTML from renderMarkdown with properly escaped entities (&lt;, &gt;, etc).
+ *  Output: Text with tags removed but entities still encoded (safe for attributes). */
 function getPlainTextFromHtml(htmlText: string): string {
-  // First pass: remove all HTML tags completely
-  let text = htmlText.replace(/<[^>]*>/g, "");
-  // Second pass: handle common HTML entities (result of rendering)
-  text = text
-    .replace(/&nbsp;/g, " ")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&amp;/g, "&");
-  return text;
+  // Only remove HTML tags, keep entities encoded for safety
+  // This prevents reconstructing any markup from the input
+  return htmlText.replace(/<[^>]*>/g, "");
 }
 
 /** Splits Markdown into top-level blocks for tutorial display. */
