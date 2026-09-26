@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { build, check, locate } from "visimark";
 import { decorationsFor, decorationsIn } from "../src/decorations.js";
+import { readNote } from "../src/snapshot.js";
 
 /**
  * **Row 2's acceptance is a person looking at a screen, and this is the half
@@ -155,4 +156,41 @@ test("a section's decorations are the ones inside it", () => {
 test("a note with no block is decorated nowhere", () => {
   const plain = analyse("# Groceries\n\n| A | B |\n|---|---|\n| 1 | 2 |\n");
   expect(plain.all).toEqual([]);
+});
+
+/**
+ * Review row 6, the regression this file pins. `benchmark.csv`'s `Time`
+ * column averages 12.4667 (rounds to 12.47) — an anchor asserting `1.00`
+ * disagrees with it, but only a `check` that actually read the CSV can say
+ * so. This is what makes both renderers wrong to decorate from a reader-less
+ * `check`: `decorationsFor` is pure and correct either way, but a
+ * reader-less `result` has no `STALE` finding to hand it, and it renders the
+ * disagreeing value as `computed`. `main.ts`, `reading-mode.ts` and
+ * `live-preview.ts` are what changed; this is the property that made the bug
+ * visible in the first place, so it stays pinned here regardless of which
+ * module calls `decorationsFor`.
+ */
+test("decorationsFor calls a value disagrees once check has actually read the import it depends on", async () => {
+  const csv = readFileSync(
+    join(import.meta.dir, "../../../packages/visimark/test/fixtures/import/benchmark.csv"),
+    "utf8",
+  );
+  const source =
+    "```vmark #benchmark from benchmark.csv labelled Id, Time " +
+    "at sha256:c4e418b2a0f4bdc584b99007dcfd39e200b51ff3555e66ae5d42694e0bbd19ee\n" +
+    "Mean precision 2 = AVG(benchmark.Time)\n" +
+    "```\n\n" +
+    "The mean is **1.00**<!--vmark=benchmark.Mean-->.\n";
+
+  const readerLess = decorationsFor(build(locate(source)), check(build(locate(source))));
+  const readerLessMark = readerLess.find((d) => d.name === "benchmark.Mean");
+  expect(readerLessMark?.mark).toBe("computed"); // the bug, pinned: wrong, but what happens with no reader
+
+  const { model, snapshot } = await readNote(source, "note.md", (p) =>
+    Promise.resolve(p === "benchmark.csv" ? csv : null),
+  );
+  const doc = { path: snapshot.path, reader: snapshot.reader };
+  const readerBacked = decorationsFor(model, check(model, { doc }));
+  const readerBackedMark = readerBacked.find((d) => d.name === "benchmark.Mean");
+  expect(readerBackedMark?.mark).toBe("disagrees"); // the right answer, once check has read the CSV
 });

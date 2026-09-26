@@ -12,7 +12,9 @@ import {
   type WorkspaceLeaf,
 } from "obsidian";
 import { artifactsFor, check, evalValues } from "visimark";
+import { analyseWithSnapshot } from "./analysis.js";
 import { writeCharts } from "./chart.js";
+import type { Decoration } from "./decorations.js";
 import { FINDINGS_VIEW, FindingsView } from "./findings-view.js";
 import { hasVmarkBlock } from "./gate.js";
 import { createApi, explainBinding, type VisiMarkApi } from "./api.js";
@@ -21,7 +23,7 @@ import { ExplainModal } from "./explain-modal.js";
 import { offerInfer } from "./infer-modal.js";
 import { previewInfer } from "./infer-plan.js";
 import { reportFor } from "./report.js";
-import { readNote } from "./snapshot.js";
+import { readNote, type VaultRead } from "./snapshot.js";
 import { rowFrom, summaryFor } from "./hover.js";
 import { livePreviewMarks } from "./live-preview.js";
 import { decorateSection } from "./reading-mode.js";
@@ -167,6 +169,17 @@ export default class VisiMarkPlugin extends Plugin {
   private readonly hoverPending = new WeakSet<HTMLElement>();
 
   /**
+   * The one `VaultRead` every snapshot-backed call shares — the status bar
+   * (`refreshState`), both renderers and `analyseWithSnapshot`'s own cache
+   * key. `(path) => vaultSweepRead(this.app.vault)(path)` rather than
+   * `vaultSweepRead(this.app.vault)` evaluated once, the same deferral
+   * `api` below already relies on: a field initializer runs before `onload`,
+   * and `this.app.vault` should not be captured before the vault it names is
+   * necessarily the one this instance will run against for its whole life.
+   */
+  private readonly read: VaultRead = (path) => vaultSweepRead(this.app.vault)(path);
+
+  /**
    * v1 row 9 — the public API, reached as
    * `app.plugins.plugins["visimark"].api`.
    *
@@ -259,8 +272,10 @@ export default class VisiMarkPlugin extends Plugin {
     // Live Preview is what an author does. Neither writes; a decoration is a
     // class on rendered output, and the note copied out of the vault is
     // untouched, which is §2.2's pass condition.
-    this.registerMarkdownPostProcessor((el, ctx) => decorateSection(el, ctx));
-    this.registerEditorExtension(livePreviewMarks(() => this.settings.showProvenanceInLivePreview));
+    this.registerMarkdownPostProcessor((el, ctx) => decorateSection(el, ctx, this.read));
+    this.registerEditorExtension(
+      livePreviewMarks(() => this.settings.showProvenanceInLivePreview, this.read),
+    );
 
     // v1 row 3 — what makes row 2's marks legible rather than decorative. One
     // delegated listener rather than one per decoration: the post-processor
@@ -864,13 +879,54 @@ export default class VisiMarkPlugin extends Plugin {
   private async refreshState(view: MarkdownView, source: string, id: number): Promise<void> {
     const path = view.file?.path ?? "untitled.md";
     try {
-      const { model, snapshot } = await readNote(source, path, vaultSweepRead(this.app.vault));
-      const doc = { path: snapshot.path, reader: snapshot.reader };
+      // the same snapshot-backed analysis both renderers decorate from
+      // (review row 6) — a status bar and a mark that read two independent
+      // vault-backed checks could disagree even when both are correct about
+      // the moment each one ran
+      const { decorations, report } = await analyseWithSnapshot(source, path, this.read);
       if (id !== this.renderId) return; // a newer refresh has started; let it paint instead
-      this.show(statusFor(reportFor(model, check(model, { doc }), doc)), view);
+      this.show(statusFor(report), view);
+      this.rerenderIfVerdictChanged(path, decorations);
     } catch {
       if (id !== this.renderId) return;
       this.show(UNKNOWN, view);
+    }
+  }
+
+  /**
+   * Review row 7. Obsidian's reading-mode post-processor re-runs only for a
+   * section whose own text changed, so a table whose cells turned stale
+   * because a scalar in *another* section changed keeps its old marks —
+   * unless something else asks that view to redraw. This is that ask:
+   * `refreshState` calls it every time it has a fresh, snapshot-backed
+   * decoration set for `path`, and it rerenders every reading view showing
+   * that note only when the disagreeing set actually moved.
+   *
+   * `data-vmark-hovered` is cleared in the same pass rather than left to
+   * whatever `previewMode.rerender` does to the DOM — a rebuilt element for
+   * an unchanged value keeps the attribute if the old node survives the
+   * rerender, and dropping it either way is what makes the next hover ask
+   * again instead of repeating a possibly stale answer.
+   */
+  private readonly lastDisagreeing = new Map<string, string>();
+
+  private rerenderIfVerdictChanged(path: string, decorations: readonly Decoration[]): void {
+    const disagreeing = decorations
+      .filter((d) => d.mark === "disagrees")
+      .map((d) => `${d.name}@${d.span.start}-${d.span.end}`)
+      .sort()
+      .join(",");
+    const previous = this.lastDisagreeing.get(path);
+    this.lastDisagreeing.set(path, disagreeing);
+    if (previous === undefined || previous === disagreeing) return;
+
+    for (const leaf of this.app.workspace.getLeavesOfType("markdown")) {
+      const leafView = leaf.view;
+      if (!(leafView instanceof MarkdownView) || leafView.file?.path !== path) continue;
+      leafView.containerEl
+        .querySelectorAll("[data-vmark-hovered]")
+        .forEach((el) => el.removeAttribute("data-vmark-hovered"));
+      if (leafView.getMode() === "preview") leafView.previewMode.rerender(true);
     }
   }
 

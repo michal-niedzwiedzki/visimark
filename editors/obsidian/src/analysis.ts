@@ -1,5 +1,7 @@
 import { build, check, locate, type CheckResult, type DocModel, type LocatedDoc } from "visimark";
 import { decorationsFor, type Decoration } from "./decorations.js";
+import { reportFor, type NoteReport } from "./report.js";
+import { readNote, type VaultRead } from "./snapshot.js";
 
 /**
  * One reader-less analysis of a note's source, shared by every caller that
@@ -24,10 +26,10 @@ import { decorationsFor, type Decoration } from "./decorations.js";
  * **This is the reader-less half only.** `check` here runs with no
  * `ReaderPort`, the same limitation `live-preview.ts` already documented, so
  * a value that depends on an import or a chart can read `computed` here even
- * when the snapshot-backed check (§2.2 of the review, not yet built) would
- * call it `disagrees`. The seam for that is this module: a snapshot-backed
- * variant is added beside `analyse`, not folded into it, so the gate and the
- * synchronous renderers keep working from the cheap half.
+ * when the snapshot-backed check (`analyseWithSnapshot`, below) would call it
+ * `disagrees`. That variant is added beside `analyse`, not folded into it, so
+ * the gate and the parts of Live Preview that don't need a reader keep
+ * working from this cheap half.
  *
  * **`locate` itself is memoised one step below `analyse`,** and `gate.ts`
  * reads from that step directly. Every caller that finds a block calls
@@ -70,4 +72,67 @@ export function analyse(source: string): Analysis {
   const decorations = decorationsFor(model, result);
   cached = { source, located, model, result, decorations };
   return cached;
+}
+
+export interface SnapshotAnalysis {
+  readonly source: string;
+  readonly path: string;
+  readonly model: DocModel;
+  readonly result: CheckResult;
+  readonly decorations: readonly Decoration[];
+  readonly report: NoteReport;
+}
+
+interface SnapshotEntry {
+  readonly key: string;
+  readonly promise: Promise<SnapshotAnalysis>;
+}
+
+let snapshotCache: SnapshotEntry | null = null;
+
+/**
+ * The snapshot-backed analysis — row 6 of the review. `main.ts`'s
+ * `refreshState` and both renderers all want the same answer to "what does
+ * this note's own imports make of it", and a status bar that says `disagrees`
+ * while a mark next to it says `computed` is exactly the bug this closes: two
+ * callers reading the reader-less `analyse` and the vault-backed `check`
+ * independently could never promise otherwise.
+ *
+ * **Cached on `(path, source)`, not `source` alone.** Two different notes can
+ * share identical bytes (two copies of the same invoice) and still resolve a
+ * relative `from` import to two different files, so the path is part of the
+ * key. `\u0000` cannot appear in either half — a vault path and a note's text
+ * are both ordinary strings, but neither one is a path separator — so it is a
+ * safe join.
+ *
+ * **The promise itself is the cache entry**, not just its resolved value:
+ * every section of one reading-mode render calls this before the first
+ * `readNote` round-trip lands, and they must all await the same fetch rather
+ * than starting one each. A rejection is not cached past this call — the
+ * cache is overwritten by whatever the next call computes, so a transient
+ * read failure does not wedge every future call to the same note behind it.
+ */
+export function analyseWithSnapshot(
+  source: string,
+  path: string,
+  read: VaultRead,
+): Promise<SnapshotAnalysis> {
+  const key = `${path}\u0000${source}`;
+  if (snapshotCache !== null && snapshotCache.key === key) return snapshotCache.promise;
+
+  const promise = (async (): Promise<SnapshotAnalysis> => {
+    const { model, snapshot } = await readNote(source, path, read);
+    const doc = { path: snapshot.path, reader: snapshot.reader };
+    const result = check(model, { doc });
+    const decorations = decorationsFor(model, result);
+    const report = reportFor(model, result, doc);
+    return { source, path, model, result, decorations, report };
+  })();
+
+  snapshotCache = { key, promise };
+  // a failed fetch must not poison every later call to the same (path, source)
+  promise.catch(() => {
+    if (snapshotCache?.promise === promise) snapshotCache = null;
+  });
+  return promise;
 }
