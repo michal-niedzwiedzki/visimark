@@ -85,6 +85,7 @@ export interface SnapshotAnalysis {
 
 interface SnapshotEntry {
   readonly key: string;
+  readonly read: VaultRead;
   readonly promise: Promise<SnapshotAnalysis>;
 }
 
@@ -115,6 +116,18 @@ let snapshotCache: SnapshotEntry | null = null;
  * what lets a change to the imported file, not just to the note's own text,
  * ever be seen; a rejection surviving past this call would otherwise wedge
  * every future call to the same note behind it.
+ *
+ * **Keyed on `read` too, not just `(path, source)`.** CodeRabbit review of
+ * PR #275: `path` and `source` alone would let two callers with *different*
+ * readers — different vaults, or one production reader and one test double —
+ * share a cache entry keyed on identical note text, so the second caller
+ * could get back an analysis built from the first caller's imported files.
+ * The plugin itself only ever builds one `VaultRead` per running instance,
+ * but `api.ts` takes its reader as a parameter precisely so it can be
+ * exercised against a `Map` in tests, and this module has no way to know a
+ * caller won't do that with two. Comparing `read` by reference is cheap and
+ * exact: the same closure is the same reader, and a different one is a
+ * different reader, with no risk of two distinct readers reading as equal.
  */
 export function analyseWithSnapshot(
   source: string,
@@ -122,7 +135,9 @@ export function analyseWithSnapshot(
   read: VaultRead,
 ): Promise<SnapshotAnalysis> {
   const key = `${path}\u0000${source}`;
-  if (snapshotCache !== null && snapshotCache.key === key) return snapshotCache.promise;
+  if (snapshotCache !== null && snapshotCache.key === key && snapshotCache.read === read) {
+    return snapshotCache.promise;
+  }
 
   const promise = (async (): Promise<SnapshotAnalysis> => {
     const { model, snapshot } = await readNote(source, path, read);
@@ -133,7 +148,7 @@ export function analyseWithSnapshot(
     return { source, path, model, result, decorations, report };
   })();
 
-  snapshotCache = { key, promise };
+  snapshotCache = { key, read, promise };
   const clear = (): void => {
     if (snapshotCache?.promise === promise) snapshotCache = null;
   };

@@ -153,3 +153,59 @@ test("a note with no vmark block answers rather than throwing", async () => {
   );
   expect(await api.evaluate("notes/plain.md")).toEqual({});
 });
+
+test("concurrent get calls for the same note share one analysis (row 19)", async () => {
+  // Row 19 of the 2026-09-26 follow-up: "an agent calling `get` for 20 names
+  // still pays for 20 full analyses." `analyse` (api.ts) now goes through
+  // `analysis.ts`'s shared `analyseWithSnapshot` cache instead of running its
+  // own read-imports-then-check pipeline per call, so several `get`s issued
+  // together for one note — the shape row 19 names — cost one pipeline, not
+  // one per name. Modelled on `analysis-snapshot.test.ts`'s own
+  // "concurrent calls... share one fetch" case, with a CSV-importing note so
+  // there is an import fetch to count.
+  const csvFixtures = resolvePath(
+    import.meta.dir,
+    "../../../packages/visimark/test/fixtures/import",
+  );
+  const csv = readFileSync(join(csvFixtures, "benchmark.csv"), "utf8");
+  const source =
+    "```vmark #benchmark from benchmark.csv labelled Id, Time at sha256:c4e418b2a0f4bdc584b99007dcfd39e200b51ff3555e66ae5d42694e0bbd19ee\n" +
+    "Mean precision 2 = AVG(benchmark.Time)\n" +
+    "Count = COUNT(benchmark.Time)\n" +
+    "```\n" +
+    "\n" +
+    "The mean is **1.00**<!--vmark=benchmark.Mean-->.\n";
+
+  const countingApi = (): { api: ReturnType<typeof createApi>; calls: () => number } => {
+    let calls = 0;
+    const countingRead: VaultRead = async (p) => {
+      calls++;
+      if (p === "row19-note.md") return source;
+      if (p === "benchmark.csv") return csv;
+      return null;
+    };
+    return {
+      api: createApi(countingRead, (f) => (typeof f === "string" ? f : null)),
+      calls: () => calls,
+    };
+  };
+
+  // what one `get` alone costs: one read of the note, plus however many
+  // rounds `vaultSnapshot`'s fixed-point discovery takes to fetch the CSV
+  const solo = countingApi();
+  await solo.api.get("row19-note.md", "benchmark.Mean");
+  const soloCalls = solo.calls();
+
+  const together = countingApi();
+  const [mean, count] = await Promise.all([
+    together.api.get("row19-note.md", "benchmark.Mean"),
+    together.api.get("row19-note.md", "benchmark.Count"),
+  ]);
+  expect(mean).toBe("12.47");
+  expect(count).toBe("3");
+  // the second concurrent caller adds one more note read (api.ts's own
+  // `analyse` still reads the note source before consulting the shared
+  // cache) but starts no pipeline of its own — it must not double the CSV
+  // fetch cost the way two fully independent `get`s would.
+  expect(together.calls()).toBeLessThan(2 * soloCalls);
+});

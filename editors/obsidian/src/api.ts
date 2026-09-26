@@ -1,5 +1,4 @@
 import {
-  check,
   dependencies,
   evalValues,
   type Binding,
@@ -8,7 +7,8 @@ import {
   type Finding,
   type JsonValue,
 } from "visimark";
-import { readNote, type VaultRead } from "./snapshot.js";
+import { analyseWithSnapshot } from "./analysis.js";
+import type { VaultRead } from "./snapshot.js";
 
 /**
  * The plugin's public API — v1 row 9 of #176, and the architectural claim of
@@ -84,15 +84,22 @@ export interface VisiMarkApi {
  * `api.test.ts` does.
  */
 export function createApi(read: VaultRead, resolve: (file: unknown) => string | null): VisiMarkApi {
+  // Row 19 of the 2026-09-26 follow-up: this used to run its own
+  // read-imports-then-check pipeline per call, so `get` called once per name
+  // for the same note paid for the whole pipeline every time. `analysis.ts`'s
+  // `analyseWithSnapshot` already keys the same pipeline's result on
+  // `(path, source)` and shares it across concurrent callers — exactly the
+  // shape of an agent asking for several names off one note at once — so this
+  // reuses that cache instead of keeping a second one. It still pays full
+  // price for truly sequential calls (the cache is cleared the moment a call
+  // settles, by design — see that file), which is the same trade-off the
+  // editor's own renderers already accept.
   async function analyse(file: unknown) {
     const path = resolve(file);
     if (path === null) throw new Error("visimark: that is not a note in this vault");
     const source = await read(path);
     if (source === null) throw new Error(`visimark: cannot read ${path}`);
-    const { model, snapshot } = await readNote(source, path, read);
-    const result = check(model, {
-      doc: { path: snapshot.path, reader: snapshot.reader },
-    });
+    const { model, result } = await analyseWithSnapshot(source, path, read);
     return { model, result };
   }
 

@@ -84,6 +84,26 @@ test("concurrent calls for the same (path, source) share one fetch", async () =>
   expect(together.calls()).toBe(soloCalls);
 });
 
+test("two different readers for the same (path, source) do not share a snapshot", async () => {
+  // CodeRabbit review of PR #275: the cache used to key on (path, source)
+  // alone, so two callers with different readers — different vaults, or a
+  // production reader and a test double, like `api.ts`'s two `createApi`
+  // instances in `api.test.ts` — could have the second caller's analysis
+  // silently answer from the first caller's imported files.
+  const own = `${source}\n<!-- test: distinct-readers -->\n`;
+  const readA: VaultRead = async (p) =>
+    p === "benchmark.csv" ? "Id,Time\n1,1.00\n2,1.00\n3,1.00\n" : null;
+  const readB: VaultRead = async (p) => (p === "benchmark.csv" ? csv : null);
+
+  const [a, b] = await Promise.all([
+    analyseWithSnapshot(own, "shared-note.md", readA),
+    analyseWithSnapshot(own, "shared-note.md", readB),
+  ]);
+  expect(a).not.toBe(b);
+  expect(a.decorations.find((d) => d.name === "benchmark.Mean")?.mark).toBe("computed");
+  expect(b.decorations.find((d) => d.name === "benchmark.Mean")?.mark).toBe("disagrees");
+});
+
 test("a different path for the same source text is a different snapshot", async () => {
   const own = `${source}\n<!-- test: different-path -->\n`;
   const read = vaultOf({ "benchmark.csv": csv, "other/benchmark.csv": csv });

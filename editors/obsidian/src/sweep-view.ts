@@ -28,6 +28,7 @@ export const SWEEP_VIEW = "visimark-sweep";
 export class SweepView extends ItemView {
   private running = false;
   private signal = { aborted: false };
+  private progressText: HTMLElement | null = null;
   private unsubscribe: (() => void) | null = null;
 
   /**
@@ -165,24 +166,36 @@ export class SweepView extends ItemView {
   private container(): HTMLElement {
     const el = this.contentEl;
     el.empty();
+    // whatever drawProgress had built no longer exists once the pane is
+    // rebuilt from under it — the next progress callback must build fresh
+    this.progressText = null;
     return el.createDiv({ cls: "visimark-sweep" });
   }
 
+  /**
+   * Called every chunk (every 50 notes) while a scan runs. Row 22 of the
+   * 2026-09-26 follow-up: this used to rebuild the whole pane — Stop button,
+   * keyboard focus and all — on every call. Now the progress line and its
+   * Stop button are built once, on the first call after a fresh `container()`,
+   * and every later call in the same scan only updates the line's text.
+   */
   private drawProgress(done: number, total: number): void {
-    const root = this.container();
-    const bar = root.createDiv({ cls: "visimark-sweep-status" });
-    bar.createSpan({
-      cls: "visimark-note-state",
-      text: `Looking at note ${done.toLocaleString()} of ${total.toLocaleString()}.`,
-    });
-    const stop = bar.createEl("button", {
-      cls: "visimark-sweep-cancel",
-      text: "Stop",
-      attr: { type: "button", "aria-label": "Stop looking through the vault" },
-    });
-    stop.addEventListener("click", () => {
-      this.signal.aborted = true;
-    });
+    if (this.progressText === null) {
+      const root = this.container();
+      const bar = root.createDiv({ cls: "visimark-sweep-status" });
+      this.progressText = bar.createSpan({ cls: "visimark-note-state" });
+      const stop = bar.createEl("button", {
+        cls: "visimark-sweep-cancel",
+        text: "Stop",
+        attr: { type: "button", "aria-label": "Stop looking through the vault" },
+      });
+      stop.addEventListener("click", () => {
+        this.signal.aborted = true;
+      });
+    }
+    this.progressText.setText(
+      `Looking at note ${done.toLocaleString()} of ${total.toLocaleString()}.`,
+    );
   }
 
   private drawResult(result: SweepResult): void {
