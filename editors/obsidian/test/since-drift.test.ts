@@ -233,6 +233,15 @@ test("no this.app member call reached from src/ requires a later Obsidian than m
       const [propName, methodName] = path as [string, string];
       const propType = propertyType(appBody, propName);
       if (propType === null) continue; // not a property this walk knows App declares
+      // the property itself can be newer than the method it exposes — a
+      // future `App#secretStorage` could carry `@since 2.0.0` even if
+      // `secretStorage.get` inherited an older tag from its own type
+      const propSince = sinceForMember(appBody, propName);
+      if (propSince !== null && exceeds(propSince, manifest.minAppVersion)) {
+        offenders.push(
+          `App#${propName} (@since ${propSince}, used by ${file}) exceeds minAppVersion ${manifest.minAppVersion}`,
+        );
+      }
       const propBody = typeBody(typings, propType);
       if (propBody === null) continue; // couldn't find that type's own declaration
       since = sinceForMember(propBody, methodName);
@@ -267,6 +276,11 @@ test("the member-call walk actually resolves a real @since tag on a known offend
   if (workspaceBody === null)
     throw new Error("could not find Workspace's declaration in the installed obsidian.d.ts");
   expect(sinceForMember(workspaceBody, "getMostRecentLeaf")).not.toBeNull();
+
+  // the property declaration itself, independent of any method on the type
+  // it names — proves the offender loop's own `App#${propName}` check (not
+  // just the method it exposes) actually resolves something real
+  expect(sinceForMember(appBody, "workspace")).toBe("0.9.7");
 });
 
 test("the walk actually resolves real @since tags, and displayTooltip is one of them", () => {
