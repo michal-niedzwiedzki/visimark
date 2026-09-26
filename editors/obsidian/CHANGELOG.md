@@ -49,6 +49,24 @@ Each entry says which engine version the bundle carries.
   note's status bar read `VisiMark ✓`. The sweep now skips a note whenever it
   has no problems; a listed note's advice count is still reported.
 
+- **A `bun test` harness for the Obsidian glue** (2026-09-25 code review, row
+  12). Seven fix commits on `obsidian-integration` repaired defects in
+  `main.ts`, the views and the renderers, and none of them had a runtime test
+  to catch them, because nothing could load the real `obsidian` module under
+  `bun test`. `test/harness/obsidian.ts` is a minimal, honest stub of the
+  subset this plugin actually imports — each export's doc comment cites the
+  `obsidian.d.ts` declaration it mirrors, and it throws `"not modelled"`
+  rather than guessing where real behaviour isn't known — registered through
+  `mock.module` in a `bun test` preload (root `bunfig.toml`; a per-workspace
+  one is not resolved when `bun test` runs from the repo root, which is how
+  every other test in this monorepo is invoked). `test/harness/app.ts` is a
+  fake `App`, and `@happy-dom/global-registrator` (new dev dependency) is
+  the DOM neither one has on its own. `onload.test.ts` is the first payoff:
+  it loads the real plugin class, calls the real `onload`, and drives
+  `refresh`, a hover and `format` end to end, replacing a regex-based guard
+  in `main.test.ts` that could only check the source text of the exact
+  defect (#214, a pasted duplicate `registerView`) it was written after.
+
 - **The activation gate no longer parses an ordinary note**, and reading mode
   no longer re-analyses a note once per rendered section (2026-09-25 code
   review, rows 4–5). `mightHaveBlock`, the no-false-negative substring scan

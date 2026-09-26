@@ -3,14 +3,13 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 /**
- * `Plugin.registerView` throws `Attempting to register an existing view type`
- * the second time it is called with the same type — Obsidian has no dedup —
- * and the throw happens inside `onload`, which disables the whole plugin.
- * PR #214 pasted the `FINDINGS_VIEW` registration and its `show-findings`
- * command a second time under row 10; nothing caught it because there is no
- * `bun test` harness that can load the real `obsidian` module and call
- * `onload`. This is the cheap static guard instead: every `registerView` call
- * in `main.ts` names a distinct view type.
+ * A regex over the source, for the one property a real harness call can't
+ * cheaply pin down: which DOM phase a listener is attached in. Everything
+ * else this file used to check this way — most notably, whether
+ * `main.ts` registers a view type twice (PR #214, row 10) — is now
+ * `onload.test.ts`'s job: it loads the real class through `test/harness/`
+ * and calls the real `onload`, so a regression there fails on the actual
+ * behaviour rather than on a string this file happened to still contain.
  */
 
 const source = readFileSync(resolve(import.meta.dir, "../src/main.ts"), "utf8");
@@ -22,12 +21,4 @@ test("format-on-save listens on Window in the capture phase", () => {
     'this.registerDomEvent(win, "keydown", onSaveKeydown, { capture: true })',
   );
   expect(source).not.toContain('registerDomEvent(doc, "keydown", onSaveKeydown');
-});
-
-test("main.ts registers each view type at most once", () => {
-  const types = [...source.matchAll(/this\.registerView\((\w+),/g)].map((m) => m[1]!);
-  expect(types.length, "no registerView call found — has the pattern changed?").toBeGreaterThan(0);
-  const seen = new Set<string>();
-  const dupes = types.filter((t) => (seen.has(t) ? true : (seen.add(t), false)));
-  expect(dupes, `registered twice: ${dupes.join(", ")}`).toEqual([]);
 });
