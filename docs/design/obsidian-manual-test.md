@@ -455,7 +455,7 @@ manual step is the "a person, not just a machine" half.
 
 - Copy `example-invoice-drift.md` to three different folders in the vault under
   three names, and leave a dozen ordinary notes around them.
-- Run **VisiMark: Look through the vault**. **Pass:** exactly the three
+- Run **VisiMark: Sweep the vault**. **Pass:** exactly the three
   disagreeing notes are listed; no ordinary note appears; the clean
   `example-invoice.md` does not appear.
 

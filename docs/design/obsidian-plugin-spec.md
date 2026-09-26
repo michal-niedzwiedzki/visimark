@@ -147,7 +147,7 @@ of the *engine*, not a second client of the *server* — which means
 |---|---|---|
 | `id` | `visimark` | matches the npm package and the CLI |
 | `isDesktopOnly` | `false` | mobile is the entire reason fork B is not a VS Code feature |
-| `minAppVersion` | `1.0.0`, recorded in `versions.json` | required by the registry; a guess here is a support claim nobody tested. Row 2 is the row that registers a CodeMirror 6 editor extension, and it does not move the floor: `registerEditorExtension` predates Obsidian 1.0, as does everything else in use. Still an inference until it is checked against the API documentation before submission |
+| `minAppVersion` | `1.8.7`, recorded in `versions.json` | required by the registry; a guess here is a support claim nobody tested. `registerEditorExtension` (row 2's CodeMirror 6 extension) predates Obsidian 1.0, as does everything else in use, **except `displayTooltip`** (commit `869a819`), which is `@since 1.8.7` and moved the floor from an earlier `1.0.0`. `editors/obsidian/test/since-drift.test.ts` walks every symbol `src/` imports from `obsidian` back to its declaration in the installed typings and fails if any `@since` tag exceeds this floor, so a future import can't quietly outrun it |
 
 Build: **esbuild**, format `cjs`, one `main.js`, with `obsidian`, `electron`
 and the CodeMirror packages Obsidian itself provides marked external.
@@ -186,6 +186,11 @@ complete and [Part 2](obsidian-manual-test.md) passes end to end, not at the
 first row. Until then the plugin installs from a GitHub release asset or
 through BRAT. Submitting a plugin whose acceptance script has never been run
 whole spends a reviewer's time on a draft.
+
+**The mechanics of that submission — where `manifest.json` needs to live for
+the registry to read it, what tags a release, and what builds and attaches
+the three assets — are options, not a decision yet.** See
+[`docs/design/obsidian-release-plan.md`](obsidian-release-plan.md).
 
 ### 2.3 Activation
 
