@@ -15,6 +15,7 @@ import { artifactsFor, check, evalValues } from "visimark";
 import { analyseWithSnapshot } from "./analysis.js";
 import { writeCharts } from "./chart.js";
 import type { Decoration } from "./decorations.js";
+import { templateInsertion } from "./template-insert.js";
 import { FINDINGS_VIEW, FindingsView } from "./findings-view.js";
 import { hasVmarkBlock } from "./gate.js";
 import { createApi, explainBinding, type VisiMarkApi } from "./api.js";
@@ -442,7 +443,18 @@ export default class VisiMarkPlugin extends Plugin {
         id: `insert-${template.id}-template`,
         name: `Insert ${template.title.toLowerCase()} template`,
         editorCallback: (editor) => {
-          editor.replaceSelection(template.body);
+          // review row 21: a note that already has a block would get a
+          // second one, and every name the template declares would collide
+          // with the first block's — say so instead of inserting a DUP
+          if (hasVmarkBlock(editor.getValue())) {
+            new Notice(
+              "This note already has a VisiMark block. Insert the template into a new note instead.",
+            );
+            return;
+          }
+          const cursorOffset = editor.posToOffset(editor.getCursor());
+          const { at, text } = templateInsertion(editor.getValue(), cursorOffset, template.body);
+          editor.replaceRange(text, editor.offsetToPos(at));
           new Notice(`Inserted the ${template.title.toLowerCase()} template.`);
           this.refresh();
         },
@@ -452,6 +464,12 @@ export default class VisiMarkPlugin extends Plugin {
     this.registerEvent(this.app.workspace.on("active-leaf-change", () => this.refresh()));
     this.registerEvent(this.app.workspace.on("file-open", () => this.refresh()));
     this.registerEvent(this.app.workspace.on("editor-change", () => this.refreshSoon()));
+    // review row 11: `actionFor` was pruned only when a view's state went
+    // `hidden` or on unload, so a closed leaf's view (and its header element)
+    // stayed reachable for the whole session. `layout-change` fires on every
+    // leaf open, close, split and move, so this is the one place that can
+    // tell a leaf that used to have an action is simply gone now.
+    this.registerEvent(this.app.workspace.on("layout-change", () => this.pruneClosedActions()));
 
     // the workspace is not ready during onload, and asking before it is gives
     // the wrong answer for the note the vault opens on
@@ -754,14 +772,25 @@ export default class VisiMarkPlugin extends Plugin {
     }
     const file = this.app.workspace.getActiveViewOfType(MarkdownView)?.file;
     const path = file?.path ?? "untitled.md";
-    const { model, snapshot } = await readNote(source, path, vaultSweepRead(this.app.vault));
-    const doc = { path: snapshot.path, reader: snapshot.reader };
-    const result = check(model, { doc });
-    return {
-      model,
-      result,
-      report: reportFor(model, result, doc, { fixDates: this.settings.fixDatesOnFormat }),
-    };
+    // review row 10: format/evaluate/explain all go through this, and a
+    // MAX_ROUNDS throw or any other engine error from readNote/check must
+    // not become an unhandled rejection with the palette command appearing
+    // to do nothing — the existing vocabulary (§3.1) says so instead
+    try {
+      const { model, snapshot } = await readNote(source, path, vaultSweepRead(this.app.vault));
+      const doc = { path: snapshot.path, reader: snapshot.reader };
+      const result = check(model, { doc });
+      return {
+        model,
+        result,
+        report: reportFor(model, result, doc, { fixDates: this.settings.fixDatesOnFormat }),
+      };
+    } catch {
+      if (!opts.silent) {
+        new Notice("This note could not be checked, so nothing was changed.");
+      }
+      return null;
+    }
   }
 
   /**
@@ -965,6 +994,27 @@ export default class VisiMarkPlugin extends Plugin {
       setIcon(existing.el, icon);
       setTooltip(existing.el, status.detail, { placement: "bottom" });
       existing.path = path;
+    }
+  }
+
+  /**
+   * Review row 11. `iterateAllLeaves` is the workspace's own definition of
+   * "still open" — every leaf actually attached, across every window — so a
+   * `MarkdownView` `actionFor` has an entry for that isn't among them was
+   * closed since the last prune. `el.remove()` on an already-detached
+   * element is a harmless no-op; the point is dropping the map entry so the
+   * view (and whatever the closure in its callback held onto) can be
+   * collected.
+   */
+  private pruneClosedActions(): void {
+    const live = new Set<MarkdownView>();
+    this.app.workspace.iterateAllLeaves((leaf) => {
+      if (leaf.view instanceof MarkdownView) live.add(leaf.view);
+    });
+    for (const [view, action] of this.actionFor) {
+      if (live.has(view)) continue;
+      action.el.remove();
+      this.actionFor.delete(view);
     }
   }
 }

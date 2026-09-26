@@ -541,6 +541,13 @@ manual step is the "a person, not just a machine" half.
   eaten, an indent added, a selection replaced that should not have been.
   That is the part only a person can check, and it is worth checking on the
   phone as well, where the editor is a different one.
+- Try a template command again with the caret in the **middle of a sentence**
+  in an otherwise-ordinary note. **Pass:** the template lands as its own
+  block, on fresh lines, never sharing a line with the prose the caret was
+  in (review row 21).
+- Try a template command with the caret **inside a note that already has a
+  VisiMark block**. **Pass:** a notice says the note already has one and
+  points at inserting into a new note instead; nothing is inserted.
 
 ### 2.11 The portability test, run last and run on everything
 
