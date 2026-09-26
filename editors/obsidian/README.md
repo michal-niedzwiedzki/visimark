@@ -103,23 +103,23 @@ ship another.
 
 ## `minAppVersion`
 
-`1.0.0`, and `versions.json` records it against the plugin's first version.
+`1.8.7`, raised from an earlier `1.0.0` for `displayTooltip`
+(`main.ts`'s hover/tap/keyboard explain), which is `@since 1.8.7` in
+Obsidian's own typings.
 
-Row 1 uses only APIs that predate Obsidian 1.0: `Plugin`, `MarkdownView`,
-`addStatusBarItem`, `registerEvent`, `workspace.on`, `debounce` and
-`getViewData`. 1.0.0 is therefore a floor the code actually meets rather than a
-number chosen to look safe.
+Every other API this plugin calls predates Obsidian 1.0: `Plugin`,
+`MarkdownView`, `addStatusBarItem`, `registerEvent`, `workspace.on`,
+`debounce`, `getViewData`, and `registerEditorExtension` — the CodeMirror 6
+editor arrived with Live Preview, which also predates 1.0. `displayTooltip`
+is the one exception, and it's the reason the floor isn't 1.0.0 anymore.
 
-**Row 2 is the row the spec said would settle this**, because it is the one
-that registers a CodeMirror 6 editor extension. It does not move the floor:
-`registerEditorExtension` and the CodeMirror 6 editor arrived with Live
-Preview, which predates Obsidian 1.0, so every API this plugin uses still
-predates the floor it declares.
-
-That leaves 1.0.0 as an honest floor rather than a guess — but it is still an
-*inference*, and a `minAppVersion` is a support claim the registry's reviewers
-read. Before submission it is checked against the API documentation, and the
-manual test is run on the oldest Obsidian the floor claims.
+`minAppVersion` is a support claim the registry's reviewers read, and
+`test/since-drift.test.ts` keeps it from going stale silently: it walks every
+symbol `src/` imports from `obsidian` back to its declaration in the
+installed `obsidian.d.ts` and fails if any `@since` tag exceeds the floor
+above. Before submission, the floor is still checked against the API
+documentation by hand, and the manual test is run on the oldest Obsidian it
+claims.
 
 ## Versioning
 
