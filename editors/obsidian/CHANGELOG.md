@@ -23,6 +23,23 @@ Each entry says which engine version the bundle carries.
   stale marks — and clears the per-element hover-tooltip cache in the same
   pass. No user-visible behaviour changes for a note with no imports.
 
+- **Three glue-layer hardening fixes** (2026-09-25 code review, rows 10, 11,
+  21):
+  - Format, Evaluate and Explain now show "This note could not be checked,
+    so nothing was changed." instead of leaving an unhandled rejection and
+    a palette command that appears to do nothing, if the vault read or
+    check throws (row 10).
+  - `actionFor`'s per-view mobile action is now pruned on `layout-change`,
+    not only when a view's state goes hidden or on unload — a closed leaf's
+    view and its header element no longer stay reachable for the rest of
+    the session (row 11).
+  - The four **Insert … template** commands insert on a fresh, blank-line-
+    padded line instead of at the literal caret, so the template's heading
+    and opening fence can no longer land mid-sentence and fail to be a
+    block; inserting into a note that already has a VisiMark block now
+    shows a notice instead of producing a second block that would `DUP`
+    every name the first one already declares (row 21).
+
 - **The sweep no longer lists a note whose only findings are advice**
   (2026-09-25 code review, row 8). `status.ts`'s rule for the status bar was
   already "advice never changes a note's state — a note whose only finding
