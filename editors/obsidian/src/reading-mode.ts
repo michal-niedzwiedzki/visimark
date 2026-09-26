@@ -1,8 +1,9 @@
 import type { MarkdownPostProcessorContext } from "obsidian";
 import type { AnchorTargetKind } from "visimark";
-import { analyse } from "./analysis.js";
+import { analyseWithSnapshot } from "./analysis.js";
 import { decorationsIn, type Decoration } from "./decorations.js";
 import { hasVmarkBlock } from "./gate.js";
+import type { VaultRead } from "./snapshot.js";
 
 /**
  * Reading mode's half of v1 row 2 — and the harder half, because what is on
@@ -39,6 +40,14 @@ import { hasVmarkBlock } from "./gate.js";
  * **Nothing here writes**, and that is what makes manual test §2.2's pass
  * condition hold: a decoration is a `<span>` wrapped around rendered output,
  * and the note copied out of the vault is untouched.
+ *
+ * **Every mark comes from `analyseWithSnapshot`, never from a reader-less
+ * `check`** — review row 6. A post-processor is allowed to return a
+ * `Promise`, and Obsidian waits for it before moving on, so there is no
+ * synchronous path here to protect the way there is in `live-preview.ts`.
+ * Marking nothing until the snapshot resolves, rather than marking from an
+ * answer that has not read the note's own imports, is what keeps a value that
+ * disagrees from ever rendering as if it did not.
  */
 
 /** the tag a rendered anchor of each kind becomes, or `null` for bare text */
@@ -48,7 +57,11 @@ const ANCHOR_TAG: Partial<Record<AnchorTargetKind, string>> = {
   inlineCode: "code",
 };
 
-export function decorateSection(el: HTMLElement, ctx: MarkdownPostProcessorContext): void {
+export async function decorateSection(
+  el: HTMLElement,
+  ctx: MarkdownPostProcessorContext,
+  read: VaultRead,
+): Promise<void> {
   const info = ctx.getSectionInfo(el);
   if (info === null) return;
   const source = info.text;
@@ -57,10 +70,15 @@ export function decorateSection(el: HTMLElement, ctx: MarkdownPostProcessorConte
   const from = offsetOfLine(source, info.lineStart);
   const to = offsetOfLine(source, info.lineEnd + 1);
 
-  // `info.text` is the whole note, the same string for every section of one
-  // render — `analyse` runs `locate` + `build` + `check` + `decorationsFor`
-  // once per note per render instead of once per section (review row 5)
-  const { decorations } = analyse(source);
+  // `info.text` is the whole note, the same (path, source) pair for every
+  // section of one render — `analyseWithSnapshot` runs `readNote` + `check` +
+  // `decorationsFor` once per note per render, not once per section (row 5),
+  // and every section awaits the same in-flight fetch rather than starting
+  // its own (row 6)
+  const { decorations } = await analyseWithSnapshot(source, ctx.sourcePath, read);
+  // Obsidian may have unmounted this section while the snapshot was in
+  // flight — a stale note switch, a scroll that virtualised it away
+  if (!el.isConnected) return;
   const here = decorationsIn(decorations, from, to);
   if (here.length === 0) return;
 
