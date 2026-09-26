@@ -147,7 +147,7 @@ of the *engine*, not a second client of the *server* — which means
 |---|---|---|
 | `id` | `visimark` | matches the npm package and the CLI |
 | `isDesktopOnly` | `false` | mobile is the entire reason fork B is not a VS Code feature |
-| `minAppVersion` | `1.8.7`, recorded in `versions.json` | required by the registry; a guess here is a support claim nobody tested. `registerEditorExtension` (row 2's CodeMirror 6 extension) predates Obsidian 1.0, as does everything else in use, **except `displayTooltip`** (commit `869a819`), which is `@since 1.8.7` and moved the floor from an earlier `1.0.0`. `editors/obsidian/test/since-drift.test.ts` walks every symbol `src/` imports from `obsidian` back to its declaration in the installed typings and fails if any `@since` tag exceeds this floor, so a future import can't quietly outrun it |
+| `minAppVersion` | `1.8.7`, recorded in `versions.json` | required by the registry; a guess here is a support claim nobody tested. `registerEditorExtension` (row 2's CodeMirror 6 extension) predates Obsidian 1.0, as does most else in use — `setTooltip` is `@since 1.4.4`, still under the floor. `displayTooltip` (commit `869a819`) is `@since 1.8.7` and is the reason the floor moved from an earlier `1.0.0`. `editors/obsidian/test/since-drift.test.ts` walks every symbol `src/` imports from `obsidian` back to its declaration in the installed typings and fails if any `@since` tag exceeds this floor, so a future import can't quietly outrun it |
 
 Build: **esbuild**, format `cjs`, one `main.js`, with `obsidian`, `electron`
 and the CodeMirror packages Obsidian itself provides marked external.
