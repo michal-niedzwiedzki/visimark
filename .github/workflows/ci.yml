@@ -200,7 +200,8 @@ jobs:
       - name: the generated article pages must match articles.json
         run: |
           bun run gen:articles
-          if ! git diff --exit-code -- docs/articles.html docs/articles/; then
+          if [ -n "$(git status --porcelain -- docs/articles.html docs/articles/)" ]; then
+            git status --porcelain -- docs/articles.html docs/articles/
             echo "::error::The generated article pages are stale. Run 'bun run gen:articles' and commit the result."
             exit 1
           fi

@@ -117,6 +117,18 @@ describe("renderArticlesListPage", () => {
   test("has no script tag left to grant in the Content-Security-Policy", () => {
     expect(renderArticlesListPage(articles)).not.toMatch(/<script\b/i);
   });
+
+  test('sets og:type to "website" and uses the generic site description and card image', () => {
+    const html = renderArticlesListPage(articles);
+    expect(html).toContain('<meta property="og:type" content="website" />');
+    expect(html).toContain(
+      '<meta name="description" content="Articles about VisiMark: keeping the numbers in Markdown checked, on every commit." />',
+    );
+    expect(html).toContain(
+      '<meta property="og:image" content="https://michal-niedzwiedzki.github.io/visimark/og-card.png" />',
+    );
+    expect(html).toContain('<meta property="og:image:width" content="1200" />');
+  });
 });
 
 describe("renderArticlePage", () => {
@@ -165,5 +177,40 @@ describe("renderArticlePage", () => {
   test("renders no banner element when the article has none", () => {
     const html = renderArticlePage(articles[0]!, "<p>Body.</p>", next, related);
     expect(html).not.toContain("reader-banner");
+  });
+
+  test("uses the article's own teaser, escaped, as its description and og:description", () => {
+    const withTeaser = { ...articles[0]!, teaser: 'A "quoted" <teaser> & more.' };
+    const html = renderArticlePage(withTeaser, "<p>Body.</p>", next, related);
+    expect(html).not.toContain("Articles about VisiMark: keeping the numbers");
+    expect(html).toContain(
+      `<meta name="description" content="A &quot;quoted&quot; &lt;teaser&gt; &amp; more." />`,
+    );
+    expect(html).toContain(
+      `<meta property="og:description" content="A &quot;quoted&quot; &lt;teaser&gt; &amp; more." />`,
+    );
+  });
+
+  test('sets og:type to "article"', () => {
+    const html = renderArticlePage(articles[0]!, "<p>Body.</p>", next, related);
+    expect(html).toContain('<meta property="og:type" content="article" />');
+  });
+
+  test("points og:image at the article's own banner and omits width/height when it has one", () => {
+    const withBanner = { ...articles[0]!, banner: "a/cover.webp" };
+    const html = renderArticlePage(withBanner, "<p>Body.</p>", next, related);
+    expect(html).toContain(
+      '<meta property="og:image" content="https://michal-niedzwiedzki.github.io/visimark/articles/a/cover.webp" />',
+    );
+    expect(html).not.toContain("og:image:width");
+  });
+
+  test("falls back to the generic og-card image with known dimensions when the article has no banner", () => {
+    const html = renderArticlePage(articles[0]!, "<p>Body.</p>", next, related);
+    expect(html).toContain(
+      '<meta property="og:image" content="https://michal-niedzwiedzki.github.io/visimark/og-card.png" />',
+    );
+    expect(html).toContain('<meta property="og:image:width" content="1200" />');
+    expect(html).toContain('<meta property="og:image:height" content="630" />');
   });
 });

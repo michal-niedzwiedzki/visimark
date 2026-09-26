@@ -75,10 +75,21 @@ function pageShell(opts: {
   title: string;
   ogTitle: string;
   ogUrl: string;
+  description: string;
+  ogType: "website" | "article";
+  ogImage: string;
+  ogImageDimensions: { width: number; height: number } | undefined;
   body: string;
 }): string {
-  const { base, title, ogTitle, ogUrl, body } = opts;
+  const { base, title, ogTitle, ogUrl, description, ogType, ogImage, ogImageDimensions, body } =
+    opts;
   const home = base === "" ? "./" : base;
+  const ogImageDimensionTags = ogImageDimensions
+    ? `
+    <meta property="og:image:width" content="${ogImageDimensions.width}" />
+    <meta property="og:image:height" content="${ogImageDimensions.height}" />
+    <meta property="og:image:alt" content="VisiMark" />`
+    : "";
   return `<!doctype html>
 <html lang="en">
   <head>
@@ -99,16 +110,13 @@ function pageShell(opts: {
                form-action 'none'"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="${SITE_DESCRIPTION}" />
-    <meta property="og:type" content="website" />
+    <meta name="description" content="${escapeHtml(description)}" />
+    <meta property="og:type" content="${ogType}" />
     <meta property="og:site_name" content="VisiMark" />
     <meta property="og:title" content="${escapeHtml(ogTitle)}" />
-    <meta property="og:description" content="${SITE_DESCRIPTION}" />
+    <meta property="og:description" content="${escapeHtml(description)}" />
     <meta property="og:url" content="${escapeHtml(ogUrl)}" />
-    <meta property="og:image" content="${SITE_URL}og-card.png" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="VisiMark" />
+    <meta property="og:image" content="${ogImage}" />${ogImageDimensionTags}
     <meta name="twitter:card" content="summary_large_image" />
     <title>${escapeHtml(title)}</title>
     <link rel="icon" type="image/webp" href="${base}assets/visimark.webp" />
@@ -148,6 +156,10 @@ export function renderArticlesListPage(articles: Article[]): string {
     title: "VisiMark articles",
     ogTitle: "VisiMark articles",
     ogUrl: `${SITE_URL}articles.html`,
+    description: SITE_DESCRIPTION,
+    ogType: "website",
+    ogImage: `${SITE_URL}og-card.png`,
+    ogImageDimensions: { width: 1200, height: 630 },
     body: `      <main class="articles-list">
 ${cards}
       </main>`,
@@ -201,6 +213,12 @@ export function renderArticlePage(
     title: `${article.title} — VisiMark`,
     ogTitle: article.title,
     ogUrl: `${SITE_URL}articles/${article.slug}/`,
+    description: article.teaser,
+    ogType: "article",
+    ogImage: article.banner
+      ? `${SITE_URL}articles/${escapeHtml(article.banner)}`
+      : `${SITE_URL}og-card.png`,
+    ogImageDimensions: article.banner ? undefined : { width: 1200, height: 630 },
     body: `      <main class="reader">
         <div class="reader-inner">
           ${bannerHtml(article)}
