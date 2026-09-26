@@ -18,6 +18,10 @@ export interface Article {
   teaser: string;
   /** A 400x400 icon, relative to docs/articles/. */
   icon?: string;
+  /** A cover image shown at the top of this article's own reader page,
+   *  relative to docs/articles/ — same base path as `icon` and `path`.
+   *  Optional; an article with no banner renders without one. */
+  banner?: string;
   /** The Markdown file, relative to docs/articles/. */
   path: string;
   /** Where the article was published, once it has been. */

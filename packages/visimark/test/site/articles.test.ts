@@ -35,6 +35,12 @@ describe("articles.json", () => {
     }
   });
 
+  test("every banner exists", () => {
+    for (const a of articles.filter((x) => x.banner)) {
+      expect(existsSync(join(dir, a.banner!)), `${a.slug}: ${a.banner}`).toBe(true);
+    }
+  });
+
   test("every entry has an author, and its Markdown names the same one", () => {
     for (const a of articles) {
       expect(a.author.trim(), a.slug).not.toBe("");

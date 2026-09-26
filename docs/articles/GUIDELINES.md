@@ -43,9 +43,10 @@ Every article also gets an entry in `articles.json` in this folder (slug,
 title, author, tags, teaser, icon, path). That file is the table of contents:
 `scripts/gen-articles.ts` reads it to generate `articles.html` and one reader
 page per article, `articles/<slug>/index.html`, which shows the Markdown file
-below the title, without the metadata block. Run `bun run gen:articles` after
-adding or editing an entry, and commit the regenerated pages — CI fails if
-they are stale.
+below the title, without the metadata block. An entry's optional `banner`
+field is a cover image shown at the top of that reader page, above the
+title. Run `bun run gen:articles` after adding or editing an entry, and
+commit the regenerated pages — CI fails if they are stale.
 
 Syndicated copies point their canonical URL back at the original posting, so
 the copies do not compete with it.

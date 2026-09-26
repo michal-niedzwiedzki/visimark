@@ -1354,6 +1354,13 @@ body {
 .reader-body a {
   color: #0b5cad;
 }
+.reader-banner {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  margin: 0 0 24px;
+}
 .reader-head {
   padding-bottom: 20px;
   margin-bottom: 8px;

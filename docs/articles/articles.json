@@ -7,6 +7,7 @@
       "tags": ["Markdown", "CI", "AI", "GitHub"],
       "teaser": "A table lines up, GitHub renders it beautifully, the pull request is green, and you merge it. And the invoice is wrong.",
       "icon": "../assets/report.webp",
+      "banner": "looks-good-is-wrong/markdown-woes-looks-right-is-wrong.webp",
       "path": "looks-good-is-wrong/markdown-woes-looks-right-is-wrong.md",
       "url": "https://dev.to/holdmybear/markdown-woes-looks-right-is-wrong-4ep0",
       "featured": true
@@ -18,6 +19,7 @@
       "tags": ["Markdown", "Spreadsheets", "CI", "AI"],
       "teaser": "He needed one number. Calc wanted a relationship. At 11pm he wanted a sticky note with arithmetic, not a conference room.",
       "icon": "../assets/table.webp",
+      "banner": "better-in-spreadsheeting-than-spreadsheet/markdown-wins-better-in-spreadsheeting-than-spreadsheet.webp",
       "path": "better-in-spreadsheeting-than-spreadsheet/markdown-wins-better-in-spreadsheeting-than-spreadsheet.md",
       "url": "https://dev.to/holdmybear/markdown-wins-better-in-spreadsheeting-than-spreadsheet-52c8",
       "featured": true

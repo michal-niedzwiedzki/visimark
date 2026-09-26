@@ -154,4 +154,16 @@ describe("renderArticlePage", () => {
     const html = renderArticlePage(dangerous, "<p>Body.</p>", next, related);
     expect(html).not.toContain('<img src=x onerror="alert(1)">');
   });
+
+  test("renders the banner image at the top of the page when the article has one", () => {
+    const withBanner = { ...articles[0]!, banner: "a/cover.webp" };
+    const html = renderArticlePage(withBanner, "<p>Body.</p>", next, related);
+    expect(html).toContain('<img class="reader-banner" src="../a/cover.webp" alt="" />');
+    expect(html.indexOf("reader-banner")).toBeLessThan(html.indexOf("reader-head"));
+  });
+
+  test("renders no banner element when the article has none", () => {
+    const html = renderArticlePage(articles[0]!, "<p>Body.</p>", next, related);
+    expect(html).not.toContain("reader-banner");
+  });
 });

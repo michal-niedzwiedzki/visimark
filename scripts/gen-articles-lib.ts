@@ -154,6 +154,14 @@ ${cards}
   });
 }
 
+/** The optional cover image at the top of the reader page, above the title.
+ *  `banner` is relative to docs/articles/, same base as `icon`/`path`; the
+ *  page itself lives one level below that, at docs/articles/<slug>/, so a
+ *  single `../` reaches it. Empty string when the article has none. */
+function bannerHtml(a: Article): string {
+  return a.banner ? `<img class="reader-banner" src="../${escapeHtml(a.banner)}" alt="" />` : "";
+}
+
 function readerHeader(a: Article): string {
   const published = articlePublishedUrl(a);
   return `<header class="reader-head">
@@ -195,6 +203,7 @@ export function renderArticlePage(
     ogUrl: `${SITE_URL}articles/${article.slug}/`,
     body: `      <main class="reader">
         <div class="reader-inner">
+          ${bannerHtml(article)}
           ${readerHeader(article)}
           <div class="reader-body">${bodyHtml}</div>
         </div>
