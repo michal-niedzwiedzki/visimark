@@ -1,6 +1,6 @@
 import { check } from "visimark";
 import { hasVmarkBlock, mightHaveBlock } from "./gate.js";
-import { isClean, reportFor, type NoteReport } from "./report.js";
+import { reportFor, type NoteReport } from "./report.js";
 import { readNote, type VaultRead } from "./snapshot.js";
 
 /**
@@ -111,7 +111,11 @@ export async function sweep(source: SweepSource, options: SweepOptions = {}): Pr
       const { model, snapshot } = await readNote(text, path, source.read);
       const doc = { path: snapshot.path, reader: snapshot.reader };
       const report = reportFor(model, check(model, { doc }), doc);
-      if (isClean(report)) continue;
+      // review row 8: advice never changes a note's state (`status.ts`'s own
+      // rule for the status bar), so the sweep must not list a note whose
+      // only findings are advice — `isClean` would, since it means "no
+      // problems *and* no advice"
+      if (report.problems.length === 0) continue;
       result.notes.push({
         path,
         problems: report.problems.length,

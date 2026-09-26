@@ -23,6 +23,15 @@ Each entry says which engine version the bundle carries.
   stale marks — and clears the per-element hover-tooltip cache in the same
   pass. No user-visible behaviour changes for a note with no imports.
 
+- **The sweep no longer lists a note whose only findings are advice**
+  (2026-09-25 code review, row 8). `status.ts`'s rule for the status bar was
+  already "advice never changes a note's state — a note whose only finding
+  is 'defined but never used' is a note that agrees with itself." The sweep
+  skipped a note only when it had no problems *and* no advice, so an
+  advice-only note was listed under "disagrees with itself" while that same
+  note's status bar read `VisiMark ✓`. The sweep now skips a note whenever it
+  has no problems; a listed note's advice count is still reported.
+
 - **The activation gate no longer parses an ordinary note**, and reading mode
   no longer re-analyses a note once per rendered section (2026-09-25 code
   review, rows 4–5). `mightHaveBlock`, the no-false-negative substring scan

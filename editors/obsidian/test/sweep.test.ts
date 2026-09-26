@@ -105,6 +105,34 @@ test("an unreadable note is reported, never silently clean", async () => {
   expect(r.notes.length).toBe(1);
 });
 
+/**
+ * Review row 8. `status.ts` states the rule for the status bar: "a note
+ * whose only finding is 'defined but never used' is a note that agrees with
+ * itself." The sweep must agree — a note whose only finding is advice
+ * (`WARN`) is `checked`, but it must not appear in `notes`, or the sweep's
+ * summary and the note's own status bar would tell two different stories
+ * about the same note.
+ */
+test("a note whose only finding is advice is checked, but not listed", async () => {
+  const adviceOnly = [
+    "| Qty | Twice |",
+    "|---|---|",
+    "|   5 |    10 |",
+    "",
+    "```vmark #t",
+    "Twice = Qty * 2",
+    "bonus = 5", // never referenced or anchored: WARN, advice-only
+    "total = SUM(Twice)",
+    "```",
+    "",
+    "The total is **10**<!--vmark=t.total-->.",
+    "",
+  ].join("\n");
+  const r = await sweep(vault({ "advice-only.md": adviceOnly }));
+  expect(r.checked).toBe(1);
+  expect(r.notes).toEqual([]);
+});
+
 test("the sweep yields the thread, so a phone stays responsive", async () => {
   const files: Record<string, string> = {};
   for (let i = 0; i < 200; i++) files[`n-${i}.md`] = ordinary(i);
