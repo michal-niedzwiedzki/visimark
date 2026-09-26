@@ -5,5 +5,17 @@
   // un-minifies it, and the next rebuild puts it back — a permanent `git diff` that
   // fails CI on every pull request. .oxlintrc.json skips the same directory, for the
   // same reason.
-  "ignorePatterns": ["**/*.md", ".vscode/**", "docs/vendor/**"]
+  //
+  // docs/articles.html and docs/articles/*/index.html are committed generated output
+  // of `bun run gen:articles` (scripts/gen-articles.ts), not source. Their shape comes
+  // entirely from scripts/gen-articles-lib.ts's template functions; formatting the
+  // generated HTML fights every future generator run the same way formatting
+  // docs/vendor/** would fight the next bundle rebuild.
+  "ignorePatterns": [
+    "**/*.md",
+    ".vscode/**",
+    "docs/vendor/**",
+    "docs/articles.html",
+    "docs/articles/*/index.html"
+  ]
 }

@@ -37,7 +37,9 @@ describe("renderMarkdown", () => {
   });
 
   test("escapes HTML found inside the source text", () => {
-    expect(renderMarkdown("<script>alert(1)</script>\n")).not.toContain("<script>alert(1)</script>");
+    expect(renderMarkdown("<script>alert(1)</script>\n")).not.toContain(
+      "<script>alert(1)</script>",
+    );
   });
 });
 

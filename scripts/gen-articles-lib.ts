@@ -160,7 +160,9 @@ function readerHeader(a: Article): string {
             <h1>${escapeHtml(a.title)}</h1>
             <p class="reader-meta">By ${escapeHtml(a.author)} &middot; ${a.tags.map(escapeHtml).join(", ")}</p>
             <p class="reader-links">${
-              published ? `<a href="${escapeHtml(published)}">Also published here</a> &middot; ` : ""
+              published
+                ? `<a href="${escapeHtml(published)}">Also published here</a> &middot; `
+                : ""
             }<a href="${escapeHtml(articleSourceUrl(a))}">Markdown source</a> &middot; <a href="../../articles.html">All articles</a></p>
           </header>`;
 }
@@ -168,7 +170,9 @@ function readerHeader(a: Article): string {
 function moreToRead(next: Article, related: Article | undefined): string {
   const cards = [next, related]
     .filter((a): a is Article => a !== undefined)
-    .map((a) => `          <article class="article-card">${articleBody(a, "h3", "../../")}</article>`)
+    .map(
+      (a) => `          <article class="article-card">${articleBody(a, "h3", "../../")}</article>`,
+    )
     .join("\n");
   return `        <div class="reader-more">
           <h2>More to read</h2>
