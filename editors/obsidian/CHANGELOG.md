@@ -19,6 +19,22 @@ Each entry says which engine version the bundle carries.
   still answers nothing, for the same reason as before: a table needs a
   column of known provenance before "which row" is answerable at all.
 
+- **`README.md` and the spec now say `minAppVersion` is `1.8.7`, not `1.0.0`**
+  (2026-09-25 code review, row 20). `manifest.json` and `versions.json` were
+  already right — `869a819` raised the floor for `displayTooltip`
+  (`@since 1.8.7`) — but the prose installers and reviewers read still argued
+  every API predated `1.0.0`. A new test,
+  `test/since-drift.test.ts`, walks every symbol `src/` imports from
+  `obsidian` back to its declaration in the installed `obsidian.d.ts` and
+  fails if any `@since` tag exceeds the floor, so the next API that moves it
+  can't go unnoticed the way this one did. The manual test's §2.8 also named
+  the wrong command ("Look through the vault" instead of "Sweep the vault");
+  fixed. The release mechanics the same row raised — where the registry reads
+  `manifest.json` from, and what tags and builds a release — are written up
+  as options in
+  [`docs/design/obsidian-release-plan.md`](../../docs/design/obsidian-release-plan.md),
+  not decided or built here.
+
 - **Both renderers decorate from the same snapshot-backed check the status
   bar uses**, closing a bug where a value that actually disagreed with an
   import could render as `computed` while the status bar said something was
