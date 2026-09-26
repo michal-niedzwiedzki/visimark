@@ -1,3 +1,7 @@
+import { CmState } from "./cm-state.js";
+
+const { StateEffect, StateField } = CmState;
+
 /**
  * A minimal, honest stub of the subset of `obsidian` this plugin imports at
  * runtime — review row 12. It is not meant to be a full Obsidian: every
@@ -135,13 +139,46 @@ export function displayTooltip(el: HTMLElement, tooltip: string, _options?: unkn
 
 /**
  * `live-preview.ts` reads this through `view.state.field(field, false)` and
- * an `as unknown as` cast documented there — the harness never needs to
- * resolve a real CodeMirror `StateField`, only to exist as *a* value the
- * cast can point at. `main.test.ts`'s onload test does not exercise Live
- * Preview's CodeMirror extension at all (no CodeMirror `EditorView` in this
- * harness), so nothing ever calls `.field()` on this in a test yet.
+ * an `as unknown as` cast documented there. Kept as an inert stub, not a real
+ * `StateField`: `state.field(field, false)` on a real `EditorState` simply
+ * returns `undefined` for a field it was never given as an extension, which
+ * is exactly the "no path known yet" case `pathFor` already handles — a test
+ * that needs a path registers its own real field instead (`live-preview.test.ts`).
  */
 export const editorInfoField = { __harnessStub: "editorInfoField" };
+
+// ---------------------------------------------------------------------------
+// editorLivePreviewField — @public const editorLivePreviewField: StateField<boolean>
+// ---------------------------------------------------------------------------
+
+/**
+ * Unlike `editorInfoField` above, review row 17's fix reads this on every
+ * CodeMirror transaction — gating decorations on Live Preview vs. Source
+ * mode, and recomputing immediately when it flips — so a test has to be able
+ * to make it say something. Modelled as a real `StateField<boolean>` (from
+ * this workspace's own `@codemirror/state`, the same copy `live-preview.ts`'s
+ * tests build their `EditorView`s with) rather than an inert stub, defaulting
+ * to Live Preview being active, the common case. Real Obsidian keeps this in
+ * step with the editor's own mode switch; nothing in this harness can drive
+ * that, so a test flips it directly by dispatching `setLivePreviewForTest`.
+ */
+export const setLivePreviewForTest = StateEffect.define<boolean>();
+
+// no type annotation: `StateField` is a value destructured from `CmState`
+// (see `cm-state.ts`), and letting `.define()`'s own return type flow
+// through — rather than naming `StateField<boolean>` against a separately
+// imported type — is what keeps this from hitting the same dual-package
+// mismatch a bare `import type { StateField } from "@codemirror/state"`
+// would reintroduce.
+export const editorLivePreviewField = StateField.define<boolean>({
+  create: () => true,
+  update(value, tr) {
+    for (const effect of tr.effects) {
+      if (effect.is(setLivePreviewForTest)) return effect.value;
+    }
+    return value;
+  },
+});
 
 // ---------------------------------------------------------------------------
 // PluginSettingTab / Setting — @public classes, settings-tab.ts's whole surface

@@ -1,4 +1,5 @@
-import { PluginSettingTab, Setting, type App } from "obsidian";
+import { MarkdownView, PluginSettingTab, Setting, type App } from "obsidian";
+import { editorViewOf, forceLivePreviewRecompute } from "./live-preview.js";
 import type VisiMarkPlugin from "./main.js";
 
 /**
@@ -44,6 +45,16 @@ export class VisiMarkSettingTab extends PluginSettingTab {
           .onChange(async (value) => {
             this.plugin.settings.showProvenanceInLivePreview = value;
             await this.plugin.saveSettings();
+            // Review row 17: a setting flip is not a document change or a
+            // mode switch, so `livePreviewMarks`'s own extension would
+            // otherwise leave every open editor showing the old marks (or
+            // none) until its next keystroke. Dispatching straight to each
+            // one's CodeMirror instance makes it immediate.
+            this.app.workspace.iterateAllLeaves((leaf) => {
+              if (!(leaf.view instanceof MarkdownView)) return;
+              const cm = editorViewOf(leaf.view.editor);
+              cm?.dispatch({ effects: forceLivePreviewRecompute.of(undefined) });
+            });
           }),
       );
 
