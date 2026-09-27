@@ -31,6 +31,7 @@
       "tags": ["AI", "Agents", "Markdown", "CI"],
       "teaser": "The prompt said keep the session under $2. At breakfast the provider dashboard said $46, and every step of the way had sounded reasonable.",
       "icon": "../assets/agent.webp",
+      "banner": "agent-budget/budget-an-agent-cannot-talk-itself-out-of.webp",
       "path": "agent-budget/budget-an-agent-cannot-talk-itself-out-of.md",
       "featured": true
     },
