@@ -1,14 +1,17 @@
 # VisiMark — code review: the Obsidian plugin, final
 
-**Date:** 2026-09-27 · **Scope:** the "What's left" list of
+**Date:** 2026-09-27, updated same day · **Scope:** the "What's left" list of
 [`2026-09-26-obsidian-plugin-followup.md`](2026-09-26-obsidian-plugin-followup.md)
 (rows 14/23, 19, 22, plus the `vault.ts` comment), closed by
 [PR #275](https://github.com/michal-niedzwiedzki/visimark/pull/275), merged
-into `obsidian-integration` at `ab499cd`.
+into `obsidian-integration` at `ab499cd`; then both of that follow-up's open
+maintainer questions, decided the same day and closed by
+[PR #278](https://github.com/michal-niedzwiedzki/visimark/pull/278), merged
+at `d0b47d7`.
 
-This is a close-out, not a fresh pass over the plugin: it verifies the four
-remaining rows against the code that actually landed, and records the one
-defect a review caught along the way, rather than re-deriving everything the
+This is a close-out, not a fresh pass over the plugin: it verifies the rows
+and the two decisions against the code that actually landed, and records the
+defects a review caught along the way, rather than re-deriving everything the
 prior two reviews already established.
 
 ## 1. What PR #275 closed
@@ -58,7 +61,7 @@ was a second review pass — not the existing test harness — that caught it,
 because the harness has no reason to construct two readers over one note
 unless something asks it to.
 
-## 3. Verification run against the merged state
+## 3. Verification run against PR #275's merged state
 
 - `bun test editors/obsidian` — **236 pass, 0 fail** (up from 234 at the
   prior follow-up; +1 for row 19's concurrency case, +1 for the
@@ -76,31 +79,86 @@ unless something asks it to.
 - CI on PR #275: all actionable checks green, including CodeRabbit's own
   gate, before merge.
 
-## 4. What is still open, unchanged from the prior review
+## 4. What PR #278 closed: both open maintainer decisions
 
-Nothing in PR #275 touched either open maintainer question from
-§3 of the 2026-09-26 follow-up:
+§3 of the 2026-09-26 follow-up left two questions open. The maintainer
+decided both on 2026-09-27, and PR #278 built the decisions:
 
-- Whether advice deserves a vault-wide count, beyond "a note whose only
-  finding is advice is checked, but not listed."
-- Which of the three drafted release-mechanics options
-  (`docs/design/obsidian-release-plan.md`) to build before the
-  community-registry submission.
+| Question | Decision | Verified |
+|---|---|---|
+| Whether advice deserves a vault-wide count | **Yes.** `SweepResult` gains `adviceOnly` (paths whose only findings are advice); `LiveVaultIndex` gains `adviceCount()`; the sweep pane's summary reports both counts, never folded together. | Reproduced. `sweep.test.ts`'s new cases assert `adviceOnly` lists the advice-only note and excludes it from `notes`, and that it's tracked separately even alongside a genuinely disagreeing note in the same sweep. |
+| Which release-mechanics option to build | **Option C.** New `.github/workflows/obsidian-release.yml`: a bare-version tag verifies against `manifest.json`, builds `main.js`, and attaches it with `manifest.json`/`styles.css` to a GitHub Release. Confirmed against Obsidian's own release and submission docs before building, per the original review's §2.8 ask. | Read, plus a real external check: the tag-format and required-assets claims were verified against `docs.obsidian.md`'s own release and submission pages, not just against this repo's design doc, before the workflow was written. Not exercised by an actual tag push — no tag was pushed as part of either PR — so the workflow's happy path is validated by YAML parsing and by reading the steps, not by a live run. |
 
-Both remain maintainer decisions, not defects, and both are still marked
-"not decided" in their own documents. There is no more "what's left" list to
-carry forward: the 2026-09-26 follow-up's four open rows are closed, and the
-one thing a review pass found along the way is closed too.
+Building the advice-count feature surfaced a real inconsistency the follow-up
+review's own scope (row 8, and its own note that `vault-index.ts`'s
+`drawFromIndex` was "new v1.1 feature work, not a fix for this row") had
+explicitly left unexamined: `LiveVaultIndex`'s incremental `verdictFor` used
+`isClean` (advice *or* problems both counted as "not clean"), which
+`seed()`'s own `sweep()`-derived data never would after row 8's fix. A note
+edited into an advice-only state could show as "disagrees with itself" in the
+live pane until the next full "Look again" silently dropped it — the same
+shape of bug row 8 closed in the cold-scan path, latent in the incremental
+one. Fixed in the same PR, because correctly implementing a *live* advice
+count required `entries` and the new `advice` set to agree with `sweep()`
+about what counts as which, and that agreement is what the fix is.
+`vault-index.test.ts` gained cases for both directions (a note edited into and
+out of advice-only) and for `remove()`.
 
-## 5. Overall grade: **A-**
+CodeRabbit's review of PR #278 caught one more thing before merge:
+`softprops/action-gh-release@v3` defaults `fail_on_unmatched_files` to
+`false`, so a build that silently produced no `main.js` would still cut a
+"successful" release missing the one file the registry actually installs.
+Fixed in the same PR, same pattern as row 19's reader-identity bug in
+PR #275 — a review catching a real defect in new code before it merged, not
+after.
 
-Every row the prior review left open is now closed and re-verified against
-the code that actually merged, not trusted from a commit message. The one
-process worth naming is unusual for this project's own history: row 19's fix
-introduced a real, if narrow, data-integrity defect — sharing an analysis
-cache across callers with different readers — and it was caught and closed
-*within the same PR*, before merge, rather than in a subsequent follow-up
-review the way row 17's performance regression was. That is what the
-harness-plus-review discipline this whole review sequence has been arguing
-for is supposed to look like once it is working: not zero defects introduced,
-but no defect surviving past the PR that introduced it.
+## 5. Verification run against PR #278's merged state
+
+- `bun test editors/obsidian` — **241 pass, 0 fail** (up from 236 after
+  PR #275; +5 for `adviceOnly`/`adviceCount` coverage in `sweep.test.ts` and
+  `vault-index.test.ts`).
+- `bun test` (repo root) — **1889 pass, 0 fail**.
+- `bun run typecheck` / `lint --max-warnings 0` / `format:check` — all clean.
+- `bun scripts/check-changelog-entries.ts` — clean; `editors/obsidian/CHANGELOG.md`
+  gained two `## Unreleased` entries for this round.
+- `main.js` builds to **295.2 KB** — up slightly from PR #275's 294.6 KB (the
+  new advice-count tracking and summary text), still under the 301,642-byte
+  margin recorded at the 2026-09-26 follow-up.
+- CI on PR #278: all actionable checks green, including CodeRabbit's own
+  gate, before merge. The one finding it raised (the missing-asset workflow
+  bug in §4, above) was fixed and its thread resolved before merge.
+- The new workflow itself was not exercised end to end — no tag was pushed
+  by either PR — so "the release actually works" rests on reading the steps
+  and validating the YAML, not on a live run. Recorded here rather than
+  implied.
+
+## 6. What is still open
+
+Nothing. The 2026-09-26 follow-up's four "what's left" rows are closed
+(PR #275), both of its open maintainer decisions are made and built
+(PR #278), and every defect a review caught along either PR's way is closed
+within that same PR. There is no further list to carry forward from this
+review sequence.
+
+One thing PR #278 named but did not build, on purpose: submitting the plugin
+to the community registry for the first time needs a `manifest.json` at the
+repository's default-branch root, which the registry's own review reads from
+there — confirmed against `docs.obsidian.md`. That is a one-time, by-hand
+step for the actual submission, recorded in `docs/design/obsidian-release-plan.md`
+and `docs/releasing.md` so it isn't forgotten, not something either PR
+automated, because nothing recurring depends on it.
+
+## 7. Overall grade: **A**
+
+Every row the prior review left open is closed and re-verified against the
+code that actually merged, not trusted from a commit message; both
+maintainer decisions the follow-up deliberately left open are now made and
+built, with the design doc updated in place to say so rather than left
+stale and contradicted by the workflow that shipped. The pattern worth
+naming twice now: PR #275 introduced and closed a reader-identity cache bug
+within itself, and PR #278 introduced and closed a missing-asset workflow
+bug and a latent live-index inconsistency within itself. Three PRs into this
+review sequence, that is no longer one clean instance — it is what this
+project's review discipline is supposed to produce as a matter of course:
+not the absence of defects in new code, but the absence of a defect
+surviving past the PR that introduced it.
