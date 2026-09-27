@@ -47,7 +47,7 @@
     "reward": {
       "text": "Install VisiMark now.",
       "kind": "link",
-      "link": "https://michal-niedzwiedzki.github.io/visimark/#installation-header"
+      "link": "https://visimark.dev/#installation-header"
     },
     "badge": {
       "name": "Rookie",

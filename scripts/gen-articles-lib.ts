@@ -21,7 +21,7 @@ import { escapeHtml } from "../packages/visimark/src/site/dom.js";
 
 const SITE_DESCRIPTION =
   "Articles about VisiMark: keeping the numbers in Markdown checked, on every commit.";
-const SITE_URL = "https://michal-niedzwiedzki.github.io/visimark/";
+const SITE_URL = "https://visimark.dev/";
 
 export function renderMarkdown(markdown: string): string {
   return String(
