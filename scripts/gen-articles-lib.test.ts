@@ -125,7 +125,7 @@ describe("renderArticlesListPage", () => {
       '<meta name="description" content="Articles about VisiMark: keeping the numbers in Markdown checked, on every commit." />',
     );
     expect(html).toContain(
-      '<meta property="og:image" content="https://michal-niedzwiedzki.github.io/visimark/og-card.png" />',
+      '<meta property="og:image" content="https://visimark.dev/og-card.png" />',
     );
     expect(html).toContain('<meta property="og:image:width" content="1200" />');
   });
@@ -200,7 +200,7 @@ describe("renderArticlePage", () => {
     const withBanner = { ...articles[0]!, banner: "a/cover.webp" };
     const html = renderArticlePage(withBanner, "<p>Body.</p>", next, related);
     expect(html).toContain(
-      '<meta property="og:image" content="https://michal-niedzwiedzki.github.io/visimark/articles/a/cover.webp" />',
+      '<meta property="og:image" content="https://visimark.dev/articles/a/cover.webp" />',
     );
     expect(html).not.toContain("og:image:width");
   });
@@ -208,7 +208,7 @@ describe("renderArticlePage", () => {
   test("falls back to the generic og-card image with known dimensions when the article has no banner", () => {
     const html = renderArticlePage(articles[0]!, "<p>Body.</p>", next, related);
     expect(html).toContain(
-      '<meta property="og:image" content="https://michal-niedzwiedzki.github.io/visimark/og-card.png" />',
+      '<meta property="og:image" content="https://visimark.dev/og-card.png" />',
     );
     expect(html).toContain('<meta property="og:image:width" content="1200" />');
     expect(html).toContain('<meta property="og:image:height" content="630" />');
