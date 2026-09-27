@@ -34,7 +34,7 @@ const finding = (code: FindingCode, extra: Partial<Finding> = {}): Finding => ({
 test("the taxonomy this file covers is the taxonomy the engine has", () => {
   // the type makes a missing row a compile error; this makes a *stale* row —
   // one for a code the engine no longer emits — a visible one
-  expect(ALL_CODES.length).toBe(17);
+  expect(ALL_CODES.length).toBe(18);
   for (const code of ALL_CODES) {
     expect(forReader(finding(code)), `${code} has no translation`).not.toBeUndefined();
   }

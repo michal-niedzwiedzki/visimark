@@ -100,6 +100,14 @@ const TEXT: Record<FindingCode, ((f: Finding) => string) | null> = {
   PRECISION: () => "VisiMark cannot tell how many decimals this should have.",
   ASSERT: () => "This check does not hold.",
   ARTIFACT: () => "This chart could not be built.",
+  // paramDomainOk (packages/visimark/src/eval/check.ts) emits DOMAIN for two
+  // distinct problems with a param's declared domain: the domain itself has
+  // no legal value, or the default sits outside a domain that does. The
+  // engine's own `message` is the only thing that tells them apart.
+  DOMAIN: (f) =>
+    f.message?.includes("empty domain")
+      ? `${subject(f)} is declared with no allowed value at all.`
+      : `${subject(f)}'s default is not one of the values it allows.`,
   // "unstamped import" is not a failure to read anything — `resolveImports`
   // (packages/visimark/src/import/resolve.ts) only reaches it once the path
   // gated, the file read, and the CSV parsed; the sheet is just waiting on

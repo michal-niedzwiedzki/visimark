@@ -201,7 +201,15 @@ test("every file in src/ is a walk root, so none can hide until a row wires it i
  * Bump this only when the growth is real and reviewed, and record the date,
  * the new value and why directly above.
  */
-const BASELINE_BYTES = 279_356;
+const BASELINE_BYTES = 307_881;
+
+/*
+ * 2026-09-27, rebasing this branch onto master brought in master's own
+ * commits since the last measurement, including the `param` domain-clause
+ * feature (#241) and its new `DOMAIN` finding code, which findings.ts now
+ * has a row for. 279,356 → 307,881 (+28,525) reflects everything master
+ * gained in that window, not just the one new row.
+ */
 
 /*
  * 2026-09-24, this integration branch merges two independent lines that had
