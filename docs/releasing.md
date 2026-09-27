@@ -81,6 +81,36 @@ issues — it has no tag to point at, and it says so in the run log. Pass
 `-f tag=vX.Y.Z` to backfill those two as well; the run then checks that tag out
 and builds from it.
 
+## Releasing the Obsidian plugin
+
+**A separate, bare-version tag — not `vX.Y.Z`.** The plugin's version is its
+own (`editors/obsidian/manifest.json`, not tied to the engine's — see
+`editors/obsidian/CHANGELOG.md`'s own header), and the community registry and
+BRAT both match a GitHub Release's tag against that version *exactly*, with
+no `v` prefix. Pushing `0.1.0` (not `v0.1.0`) runs
+[`.github/workflows/obsidian-release.yml`](../.github/workflows/obsidian-release.yml),
+which fails if that tag disagrees with the manifest, builds `main.js`, and
+attaches `main.js`, `manifest.json` and `styles.css` to a GitHub Release cut
+against the same tag. It cannot fire from the same push that runs
+`release.yml`'s own `v*`-tagged release: the two tag schemes cannot collide,
+since every tag `release.yml` creates starts with `v` and this workflow's
+trigger requires the first character to be a digit.
+
+This is [Option C of `docs/design/obsidian-release-plan.md`](design/obsidian-release-plan.md),
+decided 2026-09-27. It has no `workflow_dispatch`-free backfill loop, no
+multi-registry verification gate, and no issue-closing bookkeeping the way
+`release.yml` does — the plugin publishes to exactly one place (a GitHub
+Release) rather than four registries, so there is nothing analogous to
+verify afterward beyond checking the release exists with its three assets.
+`workflow_dispatch` with a required `tag` input covers a backfill by hand.
+
+**What this does not do.** Submitting the plugin to the community registry
+for the first time needs a `manifest.json` at the repository's root, on the
+default branch — the registry's own review reads it from there
+(`docs/design/obsidian-release-plan.md`'s "The decision"). That is a one-time,
+by-hand step for the submission itself, not something a tagged release
+triggers.
+
 ## Before you tag
 
 1. **Green locally**, from a clean tree on `master`:

@@ -9,6 +9,20 @@ const read = (name: string): string => readFileSync(join(docs, name), "utf8");
 const clean = read("example-invoice.md");
 const drifted = read("example-invoice-drift.md");
 const ordinary = "# Note\n\nSome prose, a list and a table.\n\n| A | B |\n|---|---|\n| 1 | 2 |\n";
+const adviceOnly = [
+  "| Qty | Twice |",
+  "|---|---|",
+  "|   5 |    10 |",
+  "",
+  "```vmark #t",
+  "Twice = Qty * 2",
+  "bonus = 5", // never referenced or anchored: WARN, advice-only
+  "total = SUM(Twice)",
+  "```",
+  "",
+  "The total is **10**<!--vmark=t.total-->.",
+  "",
+].join("\n");
 
 /** a vault as a mutable `Map`, so a test can edit, add, remove and rename */
 function vault(entries: Record<string, string>): {
@@ -162,6 +176,7 @@ test("beginSeed()/seed() replay a vault event that happened during the scan, ins
     candidates: 1,
     checked: 1,
     notes: [],
+    adviceOnly: [],
     unreadable: [],
     cancelled: false,
   });
@@ -183,10 +198,65 @@ test("beginSeed()/seed() replay a removal that happened during the scan", async 
     candidates: 1,
     checked: 1,
     notes: [{ path: "invoice.md", problems: 1, advice: 0, report }],
+    adviceOnly: [],
     unreadable: [],
     cancelled: false,
   });
   expect(index.count()).toBe(1); // the stale seed briefly wins
   await Bun.sleep(5); // the replayed scheduleRecheck(path, 0) fires
   expect(index.count()).toBe(0); // read() now returns null for the deleted path
+});
+
+/**
+ * §2.3, decided 2026-09-27: `adviceCount()` is the live index's answer to
+ * `sweep.ts`'s `adviceOnly`, kept current the same way `count()` is.
+ */
+test("seed() populates adviceCount from a real sweep's adviceOnly, separately from count()", async () => {
+  const { index } = await seeded({
+    "advice-only.md": adviceOnly,
+    "invoice.md": drifted,
+    "clean.md": clean,
+  });
+  expect(index.count()).toBe(1); // only invoice.md needs attention
+  expect(index.adviceCount()).toBe(1); // advice-only.md, counted but not listed
+  expect(index.notes().map((n) => n.path)).toEqual(["invoice.md"]);
+});
+
+/**
+ * Before this fix, `verdictFor` kept an advice-only note in `entries` via
+ * `isClean` (advice *or* problems both counted as "not clean"), which
+ * `seed()` — built from `sweep()`'s row-8-correct `notes` — never would. A
+ * note edited into an advice-only state would show as "disagrees with
+ * itself" until the next full "Look again" silently dropped it. It must now
+ * go to `adviceCount()` instead, matching what a fresh sweep would say from
+ * the start.
+ */
+test("a note edited into an advice-only state moves to adviceCount, not count", async () => {
+  const { files, index } = await seeded({ "invoice.md": clean });
+  expect(index.count()).toBe(0);
+  expect(index.adviceCount()).toBe(0);
+  files.set("invoice.md", adviceOnly);
+  index.scheduleRecheck("invoice.md", 0);
+  await Bun.sleep(5);
+  expect(index.count()).toBe(0);
+  expect(index.adviceCount()).toBe(1);
+  expect(index.notes()).toEqual([]);
+});
+
+test("a note edited from advice-only to clean drops out of adviceCount too", async () => {
+  const { files, index } = await seeded({ "invoice.md": adviceOnly });
+  expect(index.adviceCount()).toBe(1);
+  files.set("invoice.md", clean);
+  index.scheduleRecheck("invoice.md", 0);
+  await Bun.sleep(5);
+  expect(index.adviceCount()).toBe(0);
+  expect(index.count()).toBe(0);
+});
+
+test("remove() drops an advice-only path from adviceCount", async () => {
+  const { files, index } = await seeded({ "advice-only.md": adviceOnly });
+  expect(index.adviceCount()).toBe(1);
+  files.delete("advice-only.md");
+  index.remove("advice-only.md");
+  expect(index.adviceCount()).toBe(0);
 });
