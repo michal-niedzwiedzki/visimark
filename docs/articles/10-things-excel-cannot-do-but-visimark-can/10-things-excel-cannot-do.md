@@ -36,7 +36,7 @@ $ visimark check docs/example-invoice-drift.md
   STALE   lines.VAT       · On-call support          717.60 ≠ 1196.00    Net * vat
   STALE   lines.Gross     · On-call support         3837.60 ≠ 6396.00    Net + VAT
   ...
-  26 problems (21 stale, 5 errors)
+  27 problems (22 stale, 5 errors)
 $ echo $?
 1
 ```

@@ -105,6 +105,63 @@ rather than by a user. The policy and how it is enforced are in
 `engines.node` floor in every published manifest is asserted against the live
 LTS by `ci.yml`'s `node-support-policy` job, so it cannot quietly rot.
 
+### Building the Obsidian plugin and side-loading it
+
+`editors/obsidian` is a client of the engine rather than of the language
+server, and it is not published to npm or to the community registry yet. Build
+it and copy three files into a vault:
+
+```console
+$ bun run --filter visimark-obsidian build
+$ mkdir -p "$VAULT/.obsidian/plugins/visimark"
+$ cp editors/obsidian/{manifest.json,main.js,styles.css} "$VAULT/.obsidian/plugins/visimark/"
+```
+
+Then enable it under **Settings → Community plugins**. `main.js` is a build
+artifact and is gitignored.
+
+Two things about this package are stricter than the rest of the repository, and
+both are enforced by `editors/obsidian/test/bundle.test.ts`:
+
+- **No `node:` specifier may reach `main.js`.** Not one — the playground's
+  `node:path` allowance does not transfer, because Obsidian mobile is not
+  Electron and has no Node to fall back on. The build substitutes
+  `editors/obsidian/src/browser-path.ts`.
+- **The plugin enters the engine at `packages/visimark/src/browser.ts`**, its
+  browser-safe entry point, and never at `src/index.ts` — which reaches
+  `node:fs`, `node:crypto`, `node:module` and `node:url` and cannot be bundled
+  for a browser at all.
+
+The plugin's version lives in `manifest.json` only, and is deliberately **not**
+one of the numbers `ci.yml`'s version-agreement step keeps in lockstep: an
+Obsidian release goes through a human registry review and must not be coupled
+to an engine patch. `scripts/check-changelog-entries.ts` holds it honest
+instead.
+
+#### Developing and debugging it against a running vault
+
+`bun test` and the cross-host equivalence checks run against the engine, not
+against Obsidian's own event handling, keymap, or window lifecycle — a bug in
+those is invisible to everything in the tree except a person driving a real
+Obsidian instance. `.agents/skills/obsidian-cli` (a Claude skill, but its
+`obsidian` CLI is a plain binary) drives one from the command line:
+
+1. Enable **Settings → General → Advanced → Command line interface** in
+   Obsidian once, in the vault you side-load into.
+2. After a rebuild, `obsidian plugin:reload id=visimark` picks up the new
+   `main.js` without restarting Obsidian.
+3. `obsidian dev:errors` and `obsidian dev:console level=error` surface
+   exceptions and console warnings; `obsidian dev:screenshot path=...`
+   confirms what actually rendered.
+4. `obsidian dev:cdp method="Input.dispatchKeyEvent" params='...'` drives a
+   Chrome DevTools Protocol key event against the app. This is not the same
+   as a real keystroke: it showed up empty when issue #243 was diagnosed —
+   no debugger was attached, and the synthetic event never reached a
+   `document`-level listener at all — while a `keydown` dispatched directly
+   on the focused element (`.cm-content` for the editor) reproduced the bug.
+   Prefer dispatching on the element over `dev:cdp` when a DOM-level listener
+   is what's under test, and attach the debugger if the two disagree.
+
 ### Running the MCP server from your working tree
 
 ```console
@@ -148,6 +205,7 @@ enforces the same check in CI either way.
 | `bun run build` | Builds every package |
 | `bun run gen:docs` | Regenerates the function reference from the engine's own registry |
 | `bun run gen:mcp` | Regenerates the MCP server's served skill and doc copies |
+| `bun run gen:obsidian-templates` | Regenerates the Obsidian plugin's templates module from `editors/obsidian/templates/*.md` |
 | `bun run --filter visimark build:playground` | Rebuilds the browser bundles committed under `docs/vendor/` |
 | `bun run serve` | Serves `docs/` on `http://localhost:8080` — needed for the playground and the tutorial pages, which fetch their content and cannot run from `file://` |
 | `bun run vscode-install` | Builds, packages and installs the VS Code extension locally |
@@ -171,6 +229,7 @@ the matching regeneration and **commit the result**:
 ```console
 $ bun run gen:docs                              # if you changed a builtin function
 $ bun run gen:mcp                               # if you changed SKILL.md or a served doc
+$ bun run gen:obsidian-templates                # if you changed an Obsidian template
 $ bun run --filter visimark build:playground    # if you changed engine or playground source
 ```
 

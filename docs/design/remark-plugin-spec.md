@@ -198,7 +198,7 @@ $ bun run packages/visimark/src/cli/main.ts check docs/example-invoice-drift.md
 docs/example-invoice-drift.md
   STALE   lines.Net       · On-call support         3120.00 ≠ 5200.00    Qty * Rate
   ...
-  26 problems (21 stale, 5 errors)
+  27 problems (22 stale, 5 errors)
 $ echo $?
 1
 ```

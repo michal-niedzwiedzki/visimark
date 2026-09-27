@@ -460,7 +460,7 @@ Every outcome, with its literal result. This doubles as acceptance.
 | Case | Result |
 |---|---|
 | `visimark_check { path: "invoice.md" }`, clean | `status: "ok"`, `findings: []` |
-| `visimark_check { path: "example-invoice-drift.md" }` | `status: "problems"`, 26 findings (21 stale, 5 errors) |
+| `visimark_check { path: "example-invoice-drift.md" }` | `status: "problems"`, 21 findings, summing to 27 problems (22 stale, 5 errors) |
 | `visimark_check { content: "\| Item \| Qty \|…" }` | `status: "problems"`, `COVERAGE` finding, `skipped: {}` |
 | `visimark_check { content }` on a document with an `import` | `status` per the other findings; `skipped.imports` names the sheet; **no** `IMPORT` finding |
 | `visimark_check { path, content }` | tool error, `error.code: "USAGE"` |
