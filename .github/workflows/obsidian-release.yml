@@ -69,11 +69,15 @@ jobs:
       # The three files the registry's own submission docs require attached
       # to the release: main.js, manifest.json, and styles.css. main.js is
       # gitignored and exists only after the build step above; the other two
-      # are committed as-is.
+      # are committed as-is. `fail_on_unmatched_files` defaults to false
+      # (CodeRabbit review of PR #278) — without it, a build that silently
+      # produced no main.js would still cut a "successful" release missing
+      # the one file the registry actually installs.
       - name: GitHub Release
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ inputs.tag || github.ref_name }}
+          fail_on_unmatched_files: true
           files: |
             editors/obsidian/main.js
             editors/obsidian/manifest.json
