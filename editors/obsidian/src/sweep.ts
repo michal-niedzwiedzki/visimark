@@ -55,6 +55,15 @@ export interface SweepResult {
   checked: number;
   /** the ones that disagree with themselves, in vault order */
   notes: SweptNote[];
+  /**
+   * A checked note whose only findings are advice (`WARN`/`NOTE`) — agrees
+   * with itself by row 8's own rule, so it is never in `notes`, but "never
+   * listed" should not mean "never counted anywhere" either. §2.3 of the
+   * 2026-09-25 review asked whether the maintainer wants advice surfaced
+   * vault-wide at all; this is that count, in vault order, for a caller that
+   * does.
+   */
+  adviceOnly: string[];
   /** a note that could not be read or checked; reported, never silently clean */
   unreadable: string[];
   cancelled: boolean;
@@ -81,6 +90,7 @@ export async function sweep(source: SweepSource, options: SweepOptions = {}): Pr
     candidates: 0,
     checked: 0,
     notes: [],
+    adviceOnly: [],
     unreadable: [],
     cancelled: false,
   };
@@ -115,7 +125,10 @@ export async function sweep(source: SweepSource, options: SweepOptions = {}): Pr
       // rule for the status bar), so the sweep must not list a note whose
       // only findings are advice — `isClean` would, since it means "no
       // problems *and* no advice"
-      if (report.problems.length === 0) continue;
+      if (report.problems.length === 0) {
+        if (report.advice.length > 0) result.adviceOnly.push(path);
+        continue;
+      }
       result.notes.push({
         path,
         problems: report.problems.length,

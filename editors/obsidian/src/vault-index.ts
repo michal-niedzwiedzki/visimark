@@ -1,6 +1,6 @@
 import { check } from "visimark";
 import { hasVmarkBlock } from "./gate.js";
-import { isClean, reportFor, type NoteReport } from "./report.js";
+import { reportFor, type NoteReport } from "./report.js";
 import { readNote, type VaultRead } from "./snapshot.js";
 import type { SweepResult, SweptNote } from "./sweep.js";
 
@@ -48,12 +48,27 @@ import type { SweepResult, SweptNote } from "./sweep.js";
  * typist would otherwise produce; a rename cancels a pending recheck of the
  * new path's own before-content and re-derives from what is actually there
  * now.
+ *
+ * **`verdictFor` used to keep an advice-only note in `entries` (`isClean`,
+ * not row 8's `problems.length === 0`), which `seed()` never would — a
+ * "Look again" right after an edit that only added advice would make the
+ * note it had just shown disappear.** Fixed alongside adding `adviceCount`
+ * (2026-09-27): `entries` is `problems.length > 0` only, matching `seed()`
+ * and `sweep()` exactly; an advice-only verdict goes in `advice` instead of
+ * being folded into "clean" the way it was before.
  */
 export interface VaultIndex {
   /** every note currently known to disagree with itself, vault order */
   notes(): readonly SweptNote[];
   /** `notes().length` — the number a badge draws */
   count(): number;
+  /**
+   * How many notes currently have advice (`WARN`/`NOTE`) and nothing else —
+   * `sweep.ts`'s `adviceOnly`, kept live the same way `notes()` is. Never
+   * folded into `count()`: advice is not a reason a note needs attention, and
+   * the badge that draws from `count()` must keep saying so.
+   */
+  adviceCount(): number;
   /**
    * Has `seed()` run at least once? `count() === 0` is ambiguous on its own —
    * a genuinely clean vault and an index nothing has seeded yet look
@@ -70,6 +85,7 @@ const DEBOUNCE_MS = 750;
 
 export class LiveVaultIndex implements VaultIndex {
   private entries = new Map<string, SweptNote>();
+  private advice = new Set<string>();
   private listeners = new Set<() => void>();
   private pending = new Map<string, ReturnType<typeof setTimeout>>();
   private seededOnce = false;
@@ -105,6 +121,10 @@ export class LiveVaultIndex implements VaultIndex {
 
   count(): number {
     return this.entries.size;
+  }
+
+  adviceCount(): number {
+    return this.advice.size;
   }
 
   isSeeded(): boolean {
@@ -148,7 +168,9 @@ export class LiveVaultIndex implements VaultIndex {
     this.touched = null;
     this.epoch++;
     this.entries.clear();
+    this.advice.clear();
     for (const note of result.notes) this.entries.set(note.path, note);
+    for (const path of result.adviceOnly) this.advice.add(path);
     this.seededOnce = true;
     this.notify();
     // 0ms: these are not new events needing a debounce window, they are
@@ -161,7 +183,9 @@ export class LiveVaultIndex implements VaultIndex {
     this.touched?.add(path);
     this.bump(path);
     this.cancelPending(path);
-    if (this.entries.delete(path)) this.notify();
+    const hadEntry = this.entries.delete(path);
+    const hadAdvice = this.advice.delete(path);
+    if (hadEntry || hadAdvice) this.notify();
   }
 
   /** A rename: the old path's entry is gone, the new path gets its own recheck. */
@@ -217,12 +241,17 @@ export class LiveVaultIndex implements VaultIndex {
     const text = await this.read(path);
     const next = text === null ? null : await this.verdictFor(path, text);
     if (this.epoch !== epoch || this.generation.get(path) !== token) return;
-    if (next === null) {
-      if (this.entries.delete(path)) this.notify();
-    } else {
-      this.entries.set(path, next);
-      this.notify();
+    const hadEntry = this.entries.delete(path);
+    const hadAdvice = this.advice.delete(path);
+    let changed = hadEntry || hadAdvice;
+    if (next?.kind === "problem") {
+      this.entries.set(path, next.note);
+      changed = true;
+    } else if (next?.kind === "advice") {
+      this.advice.add(path);
+      changed = true;
     }
+    if (changed) this.notify();
   }
 
   /**
@@ -239,14 +268,28 @@ export class LiveVaultIndex implements VaultIndex {
     this.listeners.clear();
   }
 
-  private async verdictFor(path: string, text: string): Promise<SweptNote | null> {
+  /**
+   * `"problem"` — needs attention, goes in `entries`. `"advice"` — row 8's
+   * "agrees with itself," but not clean either; goes in `advice` instead of
+   * disappearing outright. `null` — genuinely nothing to say (no block, no
+   * findings at all, or unreadable/unparseable).
+   */
+  private async verdictFor(
+    path: string,
+    text: string,
+  ): Promise<{ kind: "problem"; note: SweptNote } | { kind: "advice" } | null> {
     if (!hasVmarkBlock(text)) return null;
     try {
       const { model, snapshot } = await readNote(text, path, this.read);
       const doc = { path: snapshot.path, reader: snapshot.reader };
       const report: NoteReport = reportFor(model, check(model, { doc }), doc);
-      if (isClean(report)) return null;
-      return { path, problems: report.problems.length, advice: report.advice.length, report };
+      if (report.problems.length === 0) {
+        return report.advice.length > 0 ? { kind: "advice" } : null;
+      }
+      return {
+        kind: "problem",
+        note: { path, problems: report.problems.length, advice: report.advice.length, report },
+      };
     } catch {
       // never a wrong "clean" for a note that could not be checked — see the
       // module note on what this index does and does not claim
