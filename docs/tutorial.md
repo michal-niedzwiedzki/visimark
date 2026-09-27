@@ -3267,6 +3267,7 @@ the decision on it. The review process is
 | Document | What it answers |
 |---|---|
 | [`ci.md`](ci.md) | Protect your Markdown numbers with CI — the Action, globs, annotations, pinning and rollout |
+| [`mcp-server.md`](mcp-server.md) | Set up and run `visimark-mcp` — a host, the write gate, the plan/apply split |
 | [`cli-reference.md`](cli-reference.md) | Every command, option, exit code and finding, in tables |
 | [`function-reference.md`](function-reference.md) | What each of the sixteen builtins does, with examples that run in CI |
 | [`visimark-design.md`](visimark-design.md) | The normative specification, the deferred work, and the known tensions |

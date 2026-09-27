@@ -36,7 +36,7 @@ $ visimark check docs/example-invoice-drift.md
   STALE   lines.VAT       · On-call support          717.60 ≠ 1196.00    Net * vat
   STALE   lines.Gross     · On-call support         3837.60 ≠ 6396.00    Net + VAT
   ...
-  26 problems (21 stale, 5 errors)
+  27 problems (22 stale, 5 errors)
 $ echo $?
 1
 ```
@@ -93,7 +93,7 @@ On the clean invoice, `visimark eval --get recon.variance` prints `0` and exits 
 
 ## 8. Ask a what-if without writing the document
 
-`param budget precision 2 = default 2.00` is the cap in [`example-agent-budget.md`](https://michal-niedzwiedzki.github.io/visimark/preview.html?file=example-agent-budget.md). A scenario is an argument to `eval`, not an edit:
+`param budget precision 2 = default 2.00` is the cap in [`example-agent-budget.md`](https://visimark.dev/preview.html?file=example-agent-budget.md). A scenario is an argument to `eval`, not an edit:
 
 ```text
 $ visimark eval --scenario tight.json docs/example-agent-budget.md

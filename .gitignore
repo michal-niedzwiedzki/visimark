@@ -8,3 +8,6 @@ docs/superpowers/
 docs/WIP/
 .obsidian/
 .worktrees/
+
+# built by editors/obsidian/esbuild.config.mjs; shipped as a release asset, never committed
+editors/obsidian/main.js

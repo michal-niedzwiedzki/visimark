@@ -10,7 +10,7 @@ does it.
 Read the site and the README first, so the article argues from what the tool
 actually does today rather than from what it did a release ago:
 
-- <https://michal-niedzwiedzki.github.io/visimark/>
+- <https://visimark.dev/>
 - <https://github.com/michal-niedzwiedzki/visimark/blob/master/README.md>
 
 Pick one hook and one problem. An article carries a single conceptual hook,
@@ -41,9 +41,12 @@ Reposted: https://visimark.hashnode.dev/...
 
 Every article also gets an entry in `articles.json` in this folder (slug,
 title, author, tags, teaser, icon, path). That file is the table of contents:
-the home page's carousel, `articles.html` and the reader page `article.html`
-(`article.html?slug=<slug>`) all read it, and the reader shows the Markdown
-file below the title, without the metadata block.
+`scripts/gen-articles.ts` reads it to generate `articles.html` and one reader
+page per article, `articles/<slug>/index.html`, which shows the Markdown file
+below the title, without the metadata block. An entry's optional `banner`
+field is a cover image shown at the top of that reader page, above the
+title. Run `bun run gen:articles` after adding or editing an entry, and
+commit the regenerated pages — CI fails if they are stale.
 
 Syndicated copies point their canonical URL back at the original posting, so
 the copies do not compete with it.
@@ -145,7 +148,7 @@ not a second pitch. It does three things:
    no sales team, no signup. An article cannot be promoting a business if there
    is no business to promote. Check the README and LICENSE still say what the
    disclosure claims before publishing.
-3. Points to the [Playground](https://michal-niedzwiedzki.github.io/visimark/playground.html)
+3. Points to the [Playground](https://visimark.dev/playground.html)
    alongside the repository and the project website. A skeptical reader can
    verify the article's claims there in under a minute with no install, which is
    worth more than another paragraph of explanation.

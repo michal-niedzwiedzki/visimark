@@ -1,6 +1,6 @@
 {
   "name": "markdownlint-rule-visimark",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "markdownlint custom rules that run visimark check over a document and report its findings alongside your other rules.",
   "keywords": [
     "lint",
@@ -42,7 +42,7 @@
     "prepublishOnly": "bun run typecheck && bun test && bun run build"
   },
   "dependencies": {
-    "visimark": "0.1.7"
+    "visimark": "0.1.8"
   },
   "devDependencies": {
     "markdownlint": "^0.41.1",

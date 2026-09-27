@@ -46,10 +46,10 @@ function directive(page: string, name: string): string[] {
 
 test("there are seven pages, so this sweep is sweeping something", () => {
   expect(pages).toEqual([
-    "article.html",
     "articles.html",
     "ci.html",
     "index.html",
+    "mcp-server.html",
     "playground.html",
     "preview.html",
     "tutorial.html",

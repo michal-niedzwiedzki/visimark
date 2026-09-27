@@ -1,6 +1,6 @@
 {
   "name": "remark-lint-visimark",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "A unified/remark plugin that runs visimark check over a document and reports findings as VFile messages.",
   "keywords": [
     "lint",
@@ -40,7 +40,7 @@
     "prepublishOnly": "bun run typecheck && bun test && bun run build"
   },
   "dependencies": {
-    "visimark": "0.1.7"
+    "visimark": "0.1.8"
   },
   "devDependencies": {
     "@types/mdast": "^4.0.4",

@@ -1,7 +1,14 @@
 export { locate } from "./parse/document.js";
 export { build } from "./model/build.js";
 export { check, type CheckResult } from "./eval/check.js";
-export { fmt, planFmt, type FmtOptions, type FmtResult, type PlannedEdit } from "./write/fmt.js";
+export {
+  artifactsFor,
+  fmt,
+  planFmt,
+  type FmtOptions,
+  type FmtResult,
+  type PlannedEdit,
+} from "./write/fmt.js";
 export { applyEdits, type Edit } from "./write/splice.js";
 export { topoOrder, dependencies, resolve, refText } from "./eval/graph.js";
 export { FUNCTIONS, isReduce, type FnKind, type FnSpec } from "./eval/functions.js";
@@ -33,6 +40,13 @@ export { planInfer, type PlannedInsert } from "./infer/write.js";
 export { writeArtifact } from "./artifact/write.js";
 export type { ArtifactWrite } from "./write/fmt.js";
 export { resolveArtifactPath, type PathResult } from "./artifact/path.js";
+// `readMarker` is pure string parsing — no reader, no I/O — so a host with
+// its own write primitive (the Obsidian plugin's `vaultWriter`) can use it to
+// re-prove a target's ownership immediately before writing, the same check
+// `artifact/write.ts`'s `confirmOwnership` makes against a file descriptor on
+// the Node side. `classify` itself stays unexported: it takes a `ReaderPort`,
+// which is exactly the synchronous, Node-shaped seam a vault cannot satisfy.
+export { readMarker } from "./artifact/stale.js";
 export { describeFinding, formatCheck } from "./report/format.js";
 // The `--json` envelope's own pieces. A second front end over this engine —
 // `visimark-mcp` — consumes the envelope specified in
@@ -42,7 +56,6 @@ export { describeFinding, formatCheck } from "./report/format.js";
 // consumer that re-derives it is a second serialisation that can drift from
 // this one. Additive; no existing consumer changes.
 export {
-  errorEnvelope,
   evalValues,
   findingSummary,
   inferSummary,
@@ -61,7 +74,11 @@ export {
 // over the same envelope: `explain`'s view and its JSON shape, `ref`'s
 // did-you-mean, and `eval`'s scenario machinery. Same reasoning as the block
 // above — each of these is a contract a consumer would otherwise re-derive.
-export { explainJson, explainText, explainView, type ExplainView } from "./report/explain.js";
+export { explainText, explainView, type ExplainView } from "./report/explain.js";
+// `errorEnvelope` and `explainJson`, unchanged in name, signature and output.
+// They moved to the one module in `src/report/` that reads the engine version,
+// so the rest of `src/report/` can be bundled for a browser — issue #204.
+export { errorEnvelope, explainJson } from "./report/envelope.js";
 export { closest, levenshtein } from "./report/levenshtein.js";
 export {
   ScenarioError,
@@ -78,6 +95,7 @@ export { applyUnit, parseDecorated, type Unit } from "./eval/units.js";
 export type { Binding, DocModel, Finding, FindingCode, Sheet } from "./model/types.js";
 export { ERROR_CODES, isProblem } from "./model/types.js";
 export type {
+  AnchorTargetKind,
   LocatedDoc,
   RawAnchor,
   RawBlock,
@@ -98,18 +116,13 @@ export { readVersion } from "./cli/version.js";
 // browser bundle's graph never reaches it — see `fs/reader.ts`.
 export type { DocumentFile, ReaderPort, SealedRead } from "./fs/reader.js";
 export { nodeReader, onDisk } from "./fs/node-reader.js";
+// The writer port and its `node:fs` implementation — see `fs/writer.ts` for
+// why it is smaller than the reader port, and why it stays a document-body
+// write rather than a generalisation of `artifact/write.ts`.
+export type { WriteErr, WriteOk, WriterPort } from "./fs/writer.js";
+export { nodeWriter } from "./fs/node-writer.js";
 export type { CheckOptions } from "./eval/check.js";
 
-import { check as runCheck, type CheckResult } from "./eval/check.js";
-import { build as buildModel } from "./model/build.js";
-import { locate as locateDoc } from "./parse/document.js";
-import type { DocModel } from "./model/types.js";
-
-/** Parse, model and check a document in one pass — what an editor wants. */
-export function analyze(source: string): {
-  model: DocModel;
-  result: CheckResult;
-} {
-  const model = buildModel(locateDoc(source));
-  return { model, result: runCheck(model) };
-}
+// `analyze` is in its own module because `browser.ts` needs it and cannot
+// import this file — see `analyze.ts`, and issue #201.
+export { analyze } from "./analyze.js";

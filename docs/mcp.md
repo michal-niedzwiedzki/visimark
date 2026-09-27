@@ -2,7 +2,9 @@
 
 Everything `visimark-mcp` exposes, in one place. The CLI's equivalent is
 [`cli-reference.md`](cli-reference.md); this is the lookup table for agents and
-for the people who run them.
+for the people who run them. New to the server? [`mcp-server.md`](mcp-server.md)
+walks through installing it, adding it to a host, and using every tool once,
+in order.
 
 `visimark-mcp` is a stdio [MCP](https://modelcontextprotocol.io) server over the
 same engine the CLI uses. It imports the engine as a library and never shells

@@ -11,9 +11,9 @@
 if command -v visimark >/dev/null 2>&1; then
   exec visimark check "$@"
 elif command -v bunx >/dev/null 2>&1; then
-  exec bunx visimark@0.1.7 check "$@"
+  exec bunx visimark@0.1.8 check "$@"
 elif command -v npx >/dev/null 2>&1; then
-  exec npx --yes visimark@0.1.7 check "$@"
+  exec npx --yes visimark@0.1.8 check "$@"
 else
   echo "visimark: needs npx (Node) or bunx (Bun) on PATH" >&2
   exit 127
