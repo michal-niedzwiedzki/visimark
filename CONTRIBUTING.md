@@ -189,9 +189,11 @@ of the docs it serves.
 This repository dogfoods its own [pre-commit](https://pre-commit.com) hook
 (`.pre-commit-config.yaml`) — run `pre-commit install` once, after `pip install
 pre-commit`, to have `git commit` run `visimark check` over this repo's own
-tracked documents locally. It is a convenience, the way `bun run
+tracked documents locally, and `git push` regenerate `docs/articles/` from
+`articles.json` if it's stale (committing the fix and refusing that push, so
+you re-run it with the fix included). Both are a convenience, the way `bun run
 vscode-install` is a from-a-clone step rather than a requirement: `dogfood.yml`
-enforces the same check in CI either way.
+and `articles-pages` enforce the same checks in CI either way.
 
 ## The commands
 
