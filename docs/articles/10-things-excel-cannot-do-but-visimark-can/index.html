@@ -23,8 +23,8 @@
     <meta property="og:site_name" content="VisiMark" />
     <meta property="og:title" content="10 things Excel cannot do but VisiMark can" />
     <meta property="og:description" content="An .xlsx is a zip of XML. A VisiMark document is a Markdown file. What follows is what that difference does." />
-    <meta property="og:url" content="https://michal-niedzwiedzki.github.io/visimark/articles/10-things-excel-cannot-do-but-visimark-can/" />
-    <meta property="og:image" content="https://michal-niedzwiedzki.github.io/visimark/og-card.png" />
+    <meta property="og:url" content="https://visimark.dev/articles/10-things-excel-cannot-do-but-visimark-can/" />
+    <meta property="og:image" content="https://visimark.dev/og-card.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="VisiMark" />
@@ -112,7 +112,7 @@ $ echo $?
 </code></pre>
 <p>On the clean invoice, <code>visimark eval --get recon.variance</code> prints <code>0</code> and exits 0. If the schedule stops adding up, <code>check</code> reports <code>ASSERT</code> and exits 1. The claim lives next to the numbers.</p>
 <h2>8. Ask a what-if without writing the document</h2>
-<p><code>param budget precision 2 = default 2.00</code> is the cap in <a href="https://michal-niedzwiedzki.github.io/visimark/preview.html?file=example-agent-budget.md"><code>example-agent-budget.md</code></a>. A scenario is an argument to <code>eval</code>, not an edit:</p>
+<p><code>param budget precision 2 = default 2.00</code> is the cap in <a href="https://visimark.dev/preview.html?file=example-agent-budget.md"><code>example-agent-budget.md</code></a>. A scenario is an argument to <code>eval</code>, not an edit:</p>
 <pre><code class="language-text">$ visimark eval --scenario tight.json docs/example-agent-budget.md
   ASSERT  #calls   spent &#x3C;= rates.budget
           0.4266 &#x3C;= 0.40   is false under scenario (holds on defaults)

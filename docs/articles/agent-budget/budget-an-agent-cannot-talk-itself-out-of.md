@@ -45,7 +45,7 @@ assert spent <= rates.budget
 ```
 ````
 
-The cap itself is one line in another block, `param budget precision 2 = default 2.00`, and only the human who opened the task edits it. The harness writes the rows; the agent has no write access to the file. The whole ledger is [on the site](https://michal-niedzwiedzki.github.io/visimark/preview.html?file=example-agent-budget.md&highlight=1), with its rate card and the five calls that have run so far.
+The cap itself is one line in another block, `param budget precision 2 = default 2.00`, and only the human who opened the task edits it. The harness writes the rows; the agent has no write access to the file. The whole ledger is [on the site](https://visimark.dev/preview.html?file=example-agent-budget.md&highlight=1), with its rate card and the five calls that have run so far.
 
 ## Dana goes to bed again
 

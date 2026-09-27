@@ -10,7 +10,7 @@ does it.
 Read the site and the README first, so the article argues from what the tool
 actually does today rather than from what it did a release ago:
 
-- <https://michal-niedzwiedzki.github.io/visimark/>
+- <https://visimark.dev/>
 - <https://github.com/michal-niedzwiedzki/visimark/blob/master/README.md>
 
 Pick one hook and one problem. An article carries a single conceptual hook,
@@ -148,7 +148,7 @@ not a second pitch. It does three things:
    no sales team, no signup. An article cannot be promoting a business if there
    is no business to promote. Check the README and LICENSE still say what the
    disclosure claims before publishing.
-3. Points to the [Playground](https://michal-niedzwiedzki.github.io/visimark/playground.html)
+3. Points to the [Playground](https://visimark.dev/playground.html)
    alongside the repository and the project website. A skeptical reader can
    verify the article's claims there in under a minute with no install, which is
    worth more than another paragraph of explanation.

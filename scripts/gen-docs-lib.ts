@@ -184,11 +184,11 @@ function createTutorialHtml(mainHtml: string, toc: TocEntry[]): string {
     />
     <meta
       property="og:url"
-      content="https://michal-niedzwiedzki.github.io/visimark/tutorial.html"
+      content="https://visimark.dev/tutorial.html"
     />
     <meta
       property="og:image"
-      content="https://michal-niedzwiedzki.github.io/visimark/og-card.png"
+      content="https://visimark.dev/og-card.png"
     />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
@@ -732,11 +732,11 @@ export function renderDocPage(markdown: string, options: DocPageOptions): string
     />
     <meta
       property="og:url"
-      content="https://michal-niedzwiedzki.github.io/visimark/${options.scriptName}.html"
+      content="https://visimark.dev/${options.scriptName}.html"
     />
     <meta
       property="og:image"
-      content="https://michal-niedzwiedzki.github.io/visimark/og-card.png"
+      content="https://visimark.dev/og-card.png"
     />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
