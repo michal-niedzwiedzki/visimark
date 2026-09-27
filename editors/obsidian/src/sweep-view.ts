@@ -25,6 +25,19 @@ import type { LiveVaultIndex } from "./vault-index.js";
 
 export const SWEEP_VIEW = "visimark-sweep";
 
+/**
+ * §2.3 of the 2026-09-25 review, decided by the maintainer on 2026-09-27:
+ * yes, advice-only notes (row 8's "agrees with itself by construction") get
+ * a vault-wide count, alongside the count of notes that need attention — not
+ * folded into it, and never able to make the sweep report a problem where
+ * there is none. Empty string when there is nothing to say, so callers can
+ * append it unconditionally.
+ */
+function adviceSuffix(n: number): string {
+  if (n === 0) return "";
+  return ` ${n} more ${n === 1 ? "has" : "have"} nothing to fix, but something worth knowing.`;
+}
+
 export class SweepView extends ItemView {
   private running = false;
   private signal = { aborted: false };
@@ -99,9 +112,10 @@ export class SweepView extends ItemView {
     summary.createSpan({
       cls: "visimark-note-state",
       text:
-        n === 0
+        (n === 0
           ? "Nothing in this vault currently disagrees with itself."
-          : `${n} ${n === 1 ? "note disagrees" : "notes disagree"} with ${n === 1 ? "itself" : "themselves"}, kept up to date as you edit.`,
+          : `${n} ${n === 1 ? "note disagrees" : "notes disagree"} with ${n === 1 ? "itself" : "themselves"}, kept up to date as you edit.`) +
+        adviceSuffix(index.adviceCount()),
     });
     const again = summary.createEl("button", {
       cls: "visimark-sweep-again",
@@ -232,13 +246,18 @@ export class SweepView extends ItemView {
   private summaryLine(result: SweepResult): string {
     const n = result.notes.length;
     const scanned = result.scanned.toLocaleString();
+    const advice = adviceSuffix(result.adviceOnly.length);
     if (result.cancelled) {
-      return n === 0
-        ? `Stopped after ${scanned} notes. Nothing so far disagrees with itself.`
-        : `Stopped after ${scanned} notes. ${n} of them ${n === 1 ? "disagrees" : "disagree"} with ${n === 1 ? "itself" : "themselves"}.`;
+      return (
+        (n === 0
+          ? `Stopped after ${scanned} notes. Nothing so far disagrees with itself.`
+          : `Stopped after ${scanned} notes. ${n} of them ${n === 1 ? "disagrees" : "disagree"} with ${n === 1 ? "itself" : "themselves"}.`) +
+        advice
+      );
     }
-    if (n === 0) return `Nothing in this vault disagrees with itself. ${scanned} notes looked at.`;
-    return `${n} ${n === 1 ? "note disagrees" : "notes disagree"} with ${n === 1 ? "itself" : "themselves"}, out of ${scanned} looked at.`;
+    if (n === 0)
+      return `Nothing in this vault disagrees with itself. ${scanned} notes looked at.${advice}`;
+    return `${n} ${n === 1 ? "note disagrees" : "notes disagree"} with ${n === 1 ? "itself" : "themselves"}, out of ${scanned} looked at.${advice}`;
   }
 
   private row(list: HTMLElement, note: SweptNote): void {

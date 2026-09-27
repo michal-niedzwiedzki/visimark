@@ -1,9 +1,38 @@
-# The Obsidian plugin's release mechanics — options, not a decision
+# The Obsidian plugin's release mechanics
 
-**Status: not decided.** This document lays out the concrete options for
-getting `editors/obsidian` onto the community registry and keeping it there.
-It does not pick one. It exists because a code review of the plugin (row 20)
-asked for the options to be written down before anything is built.
+**Status: decided 2026-09-27 — Option C.** This document originally laid out
+the options for getting `editors/obsidian` onto the community registry and
+keeping it there, without picking one, because a code review of the plugin
+(row 20) asked for the options to be written down before anything was built.
+The options below are kept as the record of that comparison; the decision and
+what it built follow immediately after.
+
+## The decision
+
+**Option C**, built in
+[`.github/workflows/obsidian-release.yml`](../../.github/workflows/obsidian-release.yml).
+A bare-version tag (`0.1.0`, not `v0.1.0` or `obsidian-v0.1.0`) pushed to this
+repository triggers a dedicated workflow — `release.yml`'s own `v*` trigger
+cannot fire on it, since every tag that workflow creates starts with a literal
+`v` and this one's glob (`[0-9]*.[0-9]*.[0-9]*`) requires the first character
+to be a digit. The workflow fails the run if the pushed tag disagrees with
+`editors/obsidian/manifest.json`'s `version`, builds `main.js`, and attaches
+`main.js`, `manifest.json` and `styles.css` to a GitHub Release cut against
+that same tag — the three files and the tag-equals-version rule the registry's
+own submission documentation states outright
+(<https://docs.obsidian.md/Plugins/Releasing/Release+your+plugin+with+GitHub+Actions>).
+
+**What this decision does not do.** It does not solve problem 1 below (a root
+`manifest.json` for the *submission* PR's automated check) with any ongoing
+automation — no root-level file, no test guarding a copy. That check runs once,
+at submission time, against whatever the default branch's root holds
+(<https://docs.obsidian.md/Plugins/Releasing/Submit+your+plugin>: "The
+directory processes the `manifest.json` at the HEAD of your repository's
+default branch"), not on every tagged release, so it is a manual, one-time
+step the maintainer does by hand when actually submitting to the registry —
+recorded here so it is not forgotten, not automated because nothing recurring
+depends on it. `docs/releasing.md` documents the recurring leg this decision
+did build.
 
 ## The problems this has to answer
 
@@ -116,11 +145,11 @@ also match a future npm-package tag.
   case the plugin's "installs via BRAT" story needs adjusting to match
   whichever tag/asset shape gets chosen.
 
-## This is a maintainer decision, not decided here
+## This was a maintainer decision, and it was made here
 
 The review that asked for this document was explicit: draft the options with
-their trade-offs, and stop. No workflow file changes, and no new workflow, are
-part of this document or the change that introduced it. Picking between A, B,
-C, or a variant is a call for the maintainer to make once the plugin is closer
-to a registry submission — the "not decided" status at the top of this file
-stays until that happens.
+their trade-offs, and stop — no workflow file changes, and no new workflow,
+as part of that document or the change that introduced it. Picking between A,
+B, C, or a variant was left for the maintainer to make once the plugin was
+closer to a registry submission, and it was made on 2026-09-27: Option C,
+built in `.github/workflows/obsidian-release.yml`. See "The decision," above.

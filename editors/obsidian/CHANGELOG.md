@@ -9,6 +9,34 @@ Each entry says which engine version the bundle carries.
 
 ## Unreleased
 
+- **The vault sweep now counts advice-only notes vault-wide** (§2.3 of the
+  2026-09-25 code review, decided 2026-09-27). A note whose only findings are
+  advice (`WARN`/`NOTE`) still agrees with itself by row 8's own rule and is
+  never listed under "Needs attention" — but it was previously invisible
+  vault-wide too. `SweepResult` gains `adviceOnly`, the ambient
+  `LiveVaultIndex` gains `adviceCount()`, and the sweep pane's summary line
+  now says how many notes have "nothing to fix, but something worth
+  knowing," alongside the count that does need attention — kept live the same
+  way the existing count is. Fixing this surfaced a real, if narrow,
+  inconsistency in the ambient index: `verdictFor`'s incremental recheck used
+  `isClean` (advice *or* problems both counted as "not clean"), which a fresh
+  `sweep()` never would after row 8's own fix — an edit that left a note with
+  only advice could show it as "disagrees with itself" until the next full
+  "Look again" silently dropped it. `verdictFor` now agrees with `sweep()`
+  exactly: `entries` holds `problems.length > 0` only, and an advice-only
+  verdict goes to the new `advice` set instead.
+
+- **A GitHub Release workflow for the plugin itself**
+  (`.github/workflows/obsidian-release.yml`), closing
+  [`docs/design/obsidian-release-plan.md`](../../docs/design/obsidian-release-plan.md)'s
+  Option C, decided 2026-09-27. A bare-version tag (`0.1.0`, not `v0.1.0`) —
+  the exact string the community registry and BRAT match against — builds
+  `main.js` and attaches it with `manifest.json` and `styles.css` to a GitHub
+  Release cut against that tag, after failing the run if the tag disagrees
+  with the manifest's own version. It cannot collide with `release.yml`'s
+  `v*`-triggered releases of the npm packages and the VS Code extension. See
+  [`docs/releasing.md`](../../docs/releasing.md#releasing-the-obsidian-plugin).
+
 - **The Explain command now answers for a caret in a computed table cell**
   (2026-09-25 code review, row 18). A tap on a marked cell already opened a
   row-scoped Explain; the palette command, with the caret in the same cell,

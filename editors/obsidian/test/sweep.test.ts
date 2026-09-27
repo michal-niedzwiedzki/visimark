@@ -131,6 +131,27 @@ test("a note whose only finding is advice is checked, but not listed", async () 
   const r = await sweep(vault({ "advice-only.md": adviceOnly }));
   expect(r.checked).toBe(1);
   expect(r.notes).toEqual([]);
+  // §2.3, decided 2026-09-27: never listed, but not invisible either — a
+  // caller that wants a vault-wide advice count has somewhere to read it
+  expect(r.adviceOnly).toEqual(["advice-only.md"]);
+});
+
+test("adviceOnly counts vault-wide, separately from the notes a problem also lists", async () => {
+  const adviceOnly = [
+    "```vmark #t",
+    "bonus = 5", // never referenced or anchored: WARN, advice-only
+    "```",
+    "",
+  ].join("\n");
+  const r = await sweep(
+    vault({
+      "advice-only.md": adviceOnly,
+      "example-invoice-drift.md": read("example-invoice-drift.md"),
+      "example-invoice.md": read("example-invoice.md"),
+    }),
+  );
+  expect(r.adviceOnly).toEqual(["advice-only.md"]);
+  expect(r.notes.map((n) => n.path)).toEqual(["example-invoice-drift.md"]);
 });
 
 test("the sweep yields the thread, so a phone stays responsive", async () => {
