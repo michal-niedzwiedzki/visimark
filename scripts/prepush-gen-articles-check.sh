@@ -15,15 +15,23 @@ bun run gen:articles >/dev/null
 # Scoped to the generated outputs only, not the docs/articles/ tree in
 # general — a dirty *source* file (an in-progress article edit, say) must not
 # be mistaken for stale output, staged, and swept into this commit.
-outputs="docs/articles.html docs/articles/*/index.html"
+#
+# `set --` (not a shell variable) so the glob reaches git unexpanded: a
+# shell-expanded glob only matches files that still exist, so a deleted
+# stale page (gen-articles.ts prunes dropped slugs) would silently vanish
+# from both the status check and the commit. Quoted here, git's own
+# pathspec glob still matches the deletion.
+set -- docs/articles.html 'docs/articles/*/index.html'
 
-# shellcheck disable=SC2086
-if [ -n "$(git status --porcelain -- $outputs)" ]; then
-  # `commit --only` takes these paths' working-tree content and commits it
-  # regardless of anything else staged, so a contributor's own staged (but
-  # unrelated) changes are left exactly as they were, still staged.
-  # shellcheck disable=SC2086
-  git commit --only -m "build: regenerate article pages" -- $outputs >/dev/null
+if [ -n "$(git status --porcelain -- "$@")" ]; then
+  # `add` before `commit --only`: a brand-new page is untracked, and
+  # `--only` commits already-tracked or already-staged content at these
+  # paths — it won't pick up a path git has never seen before.
+  git add -- "$@"
+  # `commit --only` takes these paths' content and commits it regardless of
+  # anything else staged, so a contributor's own staged (but unrelated)
+  # changes are left exactly as they were, still staged.
+  git commit --only -m "build: regenerate article pages" -- "$@" >/dev/null
   echo "gen:articles: article pages were stale; regenerated and committed. Re-run git push." >&2
   exit 1
 fi
