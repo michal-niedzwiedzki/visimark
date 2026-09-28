@@ -41,9 +41,8 @@ fi
 for workflow in ci dogfood; do
   # Only runs on master count: a pull-request run on the same SHA is not the
   # run that gates master. The newest run on this commit decides: an older red
-  # one that was re-run
-  # green does not count against it, and a green one that was superseded by a
-  # red re-run does not count for it.
+  # one that was re-run green does not count against it, and a green one that
+  # was superseded by a red re-run does not count for it.
   verdict="$(gh run list --workflow "$workflow.yml" --branch master --commit "$head" --limit 1 \
     --json status,conclusion --jq '.[0] | "\(.status)/\(.conclusion)"' 2>/dev/null || true)"
   [ "$verdict" = "completed/success" ] || die "$workflow is not green on ${head:0:9} (latest run: ${verdict:-none})."
