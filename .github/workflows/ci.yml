@@ -551,10 +551,13 @@ jobs:
           # exact `visimark` pin against it instead of fetching the registry
           # copy; the version check below proves it did. `markdownlint` is the
           # host the rule runs in, so it comes from the registry.
+          engine_tgz="$(pwd)/$(ls visimark-[0-9]*.tgz)"
+          remark_tgz="$(pwd)/$(ls remark-lint-visimark-*.tgz)"
+          mdl_tgz="$(pwd)/$(ls markdownlint-rule-visimark-*.tgz)"
           mkdir lib && cd lib
           npm init -y >/dev/null
-          npm i "../$(ls ../visimark-[0-9]*.tgz)" "../$(ls ../remark-lint-visimark-*.tgz)" "../$(ls ../markdownlint-rule-visimark-*.tgz)" markdownlint@0.41
-          packed=$(tar -xzOf "../$(ls ../visimark-[0-9]*.tgz)" package/package.json | tr -d ' \n')
+          npm i "$engine_tgz" "$remark_tgz" "$mdl_tgz" markdownlint@0.41
+          packed=$(tar -xzOf "$engine_tgz" package/package.json | tr -d ' \n')
           installed=$(tr -d ' \n' < node_modules/visimark/package.json)
           [ "$packed" = "$installed" ] || { echo "::error::the engine under test is not the packed one"; exit 1; }
           cp ../plugins-smoke.mjs .
