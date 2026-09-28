@@ -1,7 +1,7 @@
 {
   "name": "visimark-obsidian",
   "private": true,
-  "description": "The Obsidian client for VisiMark: the numbers in a note, checked where the note is read.",
+  "description": "The Obsidian client for VisiMark, a document integrity layer for Markdown: the numbers in a note, checked where the note is read.",
   "license": "MIT",
   "author": {
     "name": "Michał Niedźwiedzki"

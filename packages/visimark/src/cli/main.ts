@@ -10,7 +10,7 @@ import {
 } from "./commands.js";
 import { readVersion } from "./version.js";
 
-const USAGE = `visimark — spreadsheet mechanics for Markdown
+const USAGE = `visimark — a document integrity layer for Markdown
 
 usage:
   visimark check FILE... [--json]      read-only; exit 1 if any finding.

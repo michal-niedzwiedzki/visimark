@@ -1,7 +1,7 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json",
   "name": "io.github.michal-niedzwiedzki/visimark",
-  "description": "MCP server for VisiMark: lets an agent verify a Markdown document's numbers match their formulas.",
+  "description": "MCP server for VisiMark, a document integrity layer for Markdown: lets an agent check that a document's numbers still match their formulas, so a correct formula can't ship with a wrong total.",
   "repository": {
     "url": "https://github.com/michal-niedzwiedzki/visimark",
     "source": "github"

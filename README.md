@@ -1,15 +1,8 @@
 # VisiMark
 
-**The numbers in your Markdown, checked on every commit.**
+**A document integrity layer for Markdown: it checks that every number in a document still matches the formula that produced it, so an agent's correct formula can't ship with a wrong total.**
 
-Markdown is a fine way to write a document and a terrible way to keep its
-arithmetic honest. Change a `12` to a `20` in an invoice, forget the totals
-that depend on it, and the document still renders perfectly. GitHub does not
-complain. Your Markdown preview does not complain. A reviewer may not notice.
-
-VisiMark makes those numbers verifiable. It turns the calculations in a
-document into explicit formulas, recomputes them, reports exactly what no
-longer agrees, and fails CI when a document contradicts its own arithmetic.
+VisiMark checks the numbers in Markdown documents, especially ones an agent wrote. Every computed value carries its formula, a machine proves the two still agree, and CI fails when they don't. The document stays plain Markdown.
 
 This matters most when the Markdown is written or edited by an AI agent.
 Agents are reliable at writing formulas and unreliable at the arithmetic those

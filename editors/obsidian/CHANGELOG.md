@@ -9,6 +9,10 @@ Each entry says which engine version the bundle carries.
 
 ## Unreleased
 
+The plugin description now leads with the new pitch: it checks that every
+number in a note still matches the formula that produced it. No behaviour
+change.
+
 ## 0.2.2 - 2026-09-28
 
 Fixes what the community scanner's first pass on 0.2.1 flagged. No behaviour

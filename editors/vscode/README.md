@@ -1,9 +1,8 @@
 # VisiMark for VS Code
 
-**The numbers in your Markdown, checked on every commit.**
+**A document integrity layer for Markdown: it checks that every number in a document still matches the formula that produced it, so an agent's correct formula can't ship with a wrong total.**
 
-VisiMark makes calculations explicit, changes reviewable, and numerical
-correctness enforceable — while keeping the document as plain Markdown. This
+VisiMark checks the numbers in Markdown documents, especially ones an agent wrote. Every computed value carries its formula, a machine proves the two still agree, and CI fails when they don't. The document stays plain Markdown. This
 extension is where that starts: the wrong number is squiggled as you type, and
 gone by the time you save.
 

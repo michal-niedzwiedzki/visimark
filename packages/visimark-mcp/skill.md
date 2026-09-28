@@ -10,8 +10,9 @@ description: Use when authoring, editing, or verifying a Markdown document conta
 
 ## Overview
 
-VisiMark makes a number in a Markdown document carry the formula that produced
-it, so a machine can prove the two still agree. You are unreliable at
+VisiMark is a document integrity layer for Markdown. It makes a number carry
+the formula that produced it, so a machine can prove the two still agree and a
+correct formula never ships with a wrong total. You are unreliable at
 arithmetic and reliable at writing formulas. Write the formula; let the tool do
 the arithmetic.
 

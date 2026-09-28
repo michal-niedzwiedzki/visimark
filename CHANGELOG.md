@@ -4,6 +4,19 @@
 
 ### Changed
 
+- **VisiMark is now described as a document integrity layer for Markdown, not
+  "spreadsheet mechanics".** The audience is agent builders, and the failure
+  the tool prevents is an agent writing a correct formula and the wrong total.
+  The new one-line pitch is: *a document integrity layer for Markdown: it
+  checks that every number in a document still matches the formula that
+  produced it, so an agent's correct formula can't ship with a wrong total.*
+  It replaces the old wording in the `visimark` and VS Code descriptions, the
+  README and VS Code README, the site (title, `og:title`, description,
+  subtitle and share card), `server.json`, `action.yml`, both Obsidian
+  manifests, the skill and the tutorial. `visimark --help` now opens with
+  `visimark — a document integrity layer for Markdown`; no command or flag
+  changed. The `spreadsheet` npm keyword became
+  `document-integrity`.
 - **`remark-lint-visimark` and `markdownlint-rule-visimark` now declare
   `engines` (`node >=24`, `bun >=1.0.0`), the same floor as `visimark`.** CI
   now packs both, installs the tarballs into a scratch project under Node
