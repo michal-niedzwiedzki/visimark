@@ -183,6 +183,9 @@ jobs:
             exit 1
           fi
 
+  # docs/examples.html and docs/examples/*/index.html are checked here too, as
+  # artifacts of scripts/gen-examples.ts.
+  #
   # docs/articles.html and docs/articles/*/index.html are committed build
   # artifacts of scripts/gen-articles.ts, generated from
   # docs/articles/articles.json and each article's own Markdown file.
@@ -203,6 +206,14 @@ jobs:
           if [ -n "$(git status --porcelain -- docs/articles.html docs/articles/)" ]; then
             git status --porcelain -- docs/articles.html docs/articles/
             echo "::error::The generated article pages are stale. Run 'bun run gen:articles' and commit the result."
+            exit 1
+          fi
+      - name: the generated example pages must match examples.json
+        run: |
+          bun run gen:examples
+          if [ -n "$(git status --porcelain -- docs/examples.html docs/examples/)" ]; then
+            git status --porcelain -- docs/examples.html docs/examples/
+            echo "::error::The generated example pages are stale. Run 'bun run gen:examples' and commit the result."
             exit 1
           fi
 

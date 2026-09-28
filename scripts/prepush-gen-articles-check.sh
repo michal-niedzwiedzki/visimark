@@ -1,6 +1,7 @@
 #!/bin/sh
 # Pre-push hook: regenerate docs/articles.html and docs/articles/**/index.html
-# from docs/articles/articles.json before the push leaves this machine. CI's
+# from docs/articles/articles.json, and likewise docs/examples.html and
+# docs/examples/**/index.html from docs/examples/examples.json before the push leaves this machine. CI's
 # `articles-pages` job (ci.yml) enforces the same invariant server-side, but
 # by then it's a red check and a round trip; this catches it locally instead.
 #
@@ -11,6 +12,7 @@ root="$(git rev-parse --show-toplevel)"
 cd "$root"
 
 bun run gen:articles >/dev/null
+bun run gen:examples >/dev/null
 
 # Scoped to the generated outputs only, not the docs/articles/ tree in
 # general — a dirty *source* file (an in-progress article edit, say) must not
@@ -21,7 +23,7 @@ bun run gen:articles >/dev/null
 # stale page (gen-articles.ts prunes dropped slugs) would silently vanish
 # from both the status check and the commit. Quoted here, git's own
 # pathspec glob still matches the deletion.
-set -- docs/articles.html 'docs/articles/*/index.html'
+set -- docs/articles.html 'docs/articles/*/index.html' docs/examples.html 'docs/examples/*/index.html'
 
 if [ -n "$(git status --porcelain -- "$@")" ]; then
   # `add` before `commit --only`: a brand-new page is untracked, and

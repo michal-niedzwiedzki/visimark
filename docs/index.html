@@ -266,6 +266,7 @@ Total: **35.00**<span class="c">&lt;!--vmark=order.total--&gt;</span>
       <a href="tutorial.html">Read the tutorial</a>
       <a href="ci.html">Continuous integration</a>
       <a href="mcp-server.html">MCP server</a>
+      <a href="examples.html">Examples</a>
       <a href="articles.html">Articles</a>
     </p>
 
@@ -398,10 +399,12 @@ Total: **35.00**<span class="c">&lt;!--vmark=order.total--&gt;</span>
               <h3>Playground</h3>
               <ul>
                 <li>Edit formulas with live preivew</li>
-                <li>Learn with tutorial scenarios</li>
+                <li>Learn with tutorial scenarios and earn badges for completing quests</li>
                 <li>
-                  Watch inference, reasoning and knowledge extraction live for your AI workflow
+                  Watch inference, reasoning and knowledge extraction live for your CI and AI
+                  workflow
                 </li>
+                <li>Access language reference</li>
               </ul>
             </div>
           </div>
@@ -430,6 +433,29 @@ Total: **35.00**<span class="c">&lt;!--vmark=order.total--&gt;</span>
             >Install in VS Code &rarr;</a
           >
         </article>
+
+        <article class="tryout-item">
+          <div class="tryout-top">
+            <img
+              class="tryout-image"
+              src="assets/obsidian.webp"
+              alt="The VisiMark Obsidian plugin"
+            />
+            <div class="tryout-body">
+              <h3>Obsidian plugin</h3>
+              <ul>
+                <li>See which values are computed, right in reading mode and Live Preview</li>
+                <li>Hover or tap a value to see the formula behind it</li>
+                <li>Check, format and infer from the command palette, or sweep the whole vault</li>
+              </ul>
+            </div>
+          </div>
+          <a
+            class="tryout-btn"
+            href="https://github.com/michal-niedzwiedzki/visimark/tree/master/editors/obsidian"
+            >Get the Obsidian plugin &rarr;</a
+          >
+        </article>
       </section>
 
       <header class="section-head">
@@ -438,13 +464,6 @@ Total: **35.00**<span class="c">&lt;!--vmark=order.total--&gt;</span>
       </header>
 
       <section class="features" id="explore">
-        <p class="lede">
-          <strong
-            >VisiMark turns numbers in Markdown from claims into auditable derivations.</strong
-          >
-          Ten ways that shows up, from the first formula to a red build.
-        </p>
-
         <nav class="toc" aria-label="Feature sections">
           <a href="#feature-computes">Computes itself</a>
           <a href="#feature-wrong">Looks right, is wrong</a>
@@ -828,12 +847,12 @@ Process completed with exit code 1</pre>
         <article class="feature feature--sm" id="feature-renderers">
           <div class="feature-head">
             <h3>Works wherever Markdown works</h3>
-            <p class="feature-statement">GitHub, VS Code, pandoc</p>
+            <p class="feature-statement">GitHub, VS Code, Obsidian, pandoc</p>
           </div>
           <p>
             VisiMark adds computational semantics without taking Markdown away from the tools that
             already understand it. Readers don't need VisiMark to read the document &mdash; verified
-            against GitHub, VS Code, pandoc and four other renderers.
+            against GitHub, VS Code, Obsidian, pandoc and four other renderers.
           </p>
           <div class="renderer-row">
             <div class="renderer-card">
@@ -848,6 +867,13 @@ Process completed with exit code 1</pre>
                 alt="VS Code preview rendering"
               />
               <h4>VS Code preview</h4>
+              <p>
+                <span class="verdict">&#10003; pass</span> &mdash; anchors pass through as a comment
+              </p>
+            </div>
+            <div class="renderer-card">
+              <img class="renderer-image" src="assets/obsidian.webp" alt="Obsidian rendering" />
+              <h4>Obsidian</h4>
               <p>
                 <span class="verdict">&#10003; pass</span> &mdash; anchors pass through as a comment
               </p>
@@ -1019,351 +1045,85 @@ Process completed with exit code 1</pre>
         </article>
       </section>
 
-      <header class="section-head" id="demonstration-header">
-        <h2>Demonstration</h2>
-        <p class="subtitle">
-          Two documents from the repository, beside what they render to &mdash; scrolling in
-          lockstep, not screenshots.
-        </p>
-      </header>
-
-      <section class="features" id="demonstration">
-        <article class="feature">
-          <div class="feature-head">
-            <h3>Guarantee of artifact integrity</h3>
-            <p class="feature-statement">A picture derived from the data, and proven to match it</p>
-          </div>
-          <p>
-            A <code>chart</code> statement names columns the sheet already has.
-            <code>fmt</code> draws the SVG and <code>check</code> proves the bytes on disk are still
-            what the current table renders to &mdash; so the picture cannot quietly drift away from
-            the numbers underneath it.
-          </p>
-          <div class="chart-demo">
-            <div class="chart-pane">
-              <h4>docs/example-charts.md</h4>
-              <pre class="chart-source" id="chart-source" tabindex="0"></pre>
-            </div>
-            <div class="chart-pane">
-              <h4>Rendered preview</h4>
-              <div class="chart-preview" id="chart-preview" tabindex="0"></div>
-            </div>
-          </div>
-          <p class="chart-caption">
-            <code>docs/example-charts.md</code> as committed, rendered client-side with
-            <a href="https://marked.js.org/" target="_blank" rel="noopener">marked</a>.
-          </p>
-          <script type="text/plain" id="chart-source-md">
-            # Quarterly review — a worked example with charts
-
-            This document is part of the acceptance suite. It exists to exercise
-            **generated artifacts**: the two charts below are derived from the tables on
-            this page, written by `visimark fmt`, and verified by `visimark check`.
-
-            Nothing here is an invoice. Charts belong on data that is worth looking at as a
-            shape — a trend over months, a split across segments — and the worked invoice
-            is deliberately left alone.
-
-            ## Sales
-
-            Revenue and cost are human input; profit is computed.
-
-            | Month | Revenue  | Cost     | Profit   |
-            |-------|---------:|---------:|---------:|
-            | Jan   | 48200.00 | 31100.00 | 17100.00 |
-            | Feb   | 51400.00 | 33250.00 | 18150.00 |
-            | Mar   | 46900.00 | 32800.00 | 14100.00 |
-            | Apr   | 55300.00 | 34100.00 | 21200.00 |
-            | May   | 58750.00 | 36400.00 | 22350.00 |
-
-            ```vmark #sales
-            Profit = Revenue - Cost
-            total_revenue = SUM(Revenue)
-            total_profit = SUM(Profit)
-            assert total_profit > 0
-            chart performance as bar of Revenue, Cost, Profit labelled Month aspect 16:9
-            ```
-
-            Revenue across the five months totals **260550.00**<!--vmark=sales.total_revenue-->,
-            against a profit of **92900.00**<!--vmark=sales.total_profit-->.
-
-            ![revenue, cost and profit by month](charts/example-charts-sales.svg)<!--vmark=sales.performance-->
-
-            The chart takes three series from one sheet, so they share a row count by
-            construction. It carries an explicit `aspect 16:9`; the pie below takes the
-            default `16:10`.
-
-            ## Audience
-
-            | Segment     | Headcount |
-            |-------------|----------:|
-            | Under 25    |      1240 |
-            | 25 to 39    |      3180 |
-            | 40 to 54    |      2470 |
-            | 55 and over |      1610 |
-
-            ```vmark #audience
-            total = SUM(Headcount)
-            chart mix as pie of Headcount labelled Segment
-            ```
-
-            The sample covers **8500**<!--vmark=audience.total--> people.
-
-            ![audience by segment](charts/example-charts-audience.svg)<!--vmark=audience.mix-->
-
-            `Headcount` is a human-written input column with no decimals, so its total
-            writes bare — the same precision inference every other value gets.
-
-            ## What `check` guarantees here
-
-            `visimark check` proves that both SVGs on disk are exactly what the current
-            data renders to. Change a `Revenue` cell and the bar chart is `STALE` until
-            `fmt` regenerates it; delete either file and it is `STALE` as missing. What
-            `check` does **not** prove is that the picture is a faithful depiction of the
-            numbers — an artifact's provenance is verifiable, its draughtsmanship is not.
-          </script>
-        </article>
-
-        <article class="feature">
-          <div class="feature-head">
-            <h3>Executable documentation</h3>
-            <p class="feature-statement">The document is the source; tooling reads it directly</p>
-          </div>
-          <p>
-            An operating budget where the worker-node count is derived rather than typed. The prose
-            is the specification, the tables are its inputs, and <code>eval</code> hands the results
-            to whatever needs them next &mdash; documentation to computation to machine-readable
-            output, not code to generated documentation.
-          </p>
-          <div class="chart-demo">
-            <div class="chart-pane">
-              <h4>docs/example-executable-documentation.md</h4>
-              <pre class="chart-source" id="eval-source" tabindex="0"></pre>
-            </div>
-            <div class="chart-pane">
-              <h4>Rendered preview</h4>
-              <div class="chart-preview" id="eval-preview" tabindex="0"></div>
-            </div>
-          </div>
-          <p class="chart-caption">The same document, read by the CLI instead of a browser:</p>
-          <pre>
-$ visimark eval infrastructure-budget.md --json
-{
-  "budget": {
-    "WorkerBudget": 12000,
-    "WorkerBudgetPercentage": 50
-  },
-  "kubernetes": {
-    "MaxNodes": 48,
-    "TotalCPU": 384,
-    "UsableCPU": 307,
-    "TotalMemory": 1536,
-    "UsableMemory": 1228
-  }
-}</pre>
-          <script type="text/plain" id="eval-source-md">
-            # IT Infrastructure Operating Budget
-
-            **Planning period:** 2026
-            **Environment:** Production
-            **Currency:** USD
-
-            The infrastructure operating budget for production is **$24,000/month**.
-
-            The Kubernetes cluster must run continuously and is expected to maintain enough spare capacity for normal workload fluctuations. We reserve **20% of compute capacity** as headroom.
-
-            ## Monthly operating budget
-
-            | Cost | Monthly USD |
-            |---|---:|
-            | Total infrastructure budget | 24000 |
-            | Managed Kubernetes control plane | 300 |
-            | Load balancers | 400 |
-            | Persistent storage | 1800 |
-            | Database | 4200 |
-            | Network egress | 2200 |
-            | Monitoring and logging | 1600 |
-            | Backups | 800 |
-            | Other infrastructure | 700 |
-
-            The remaining budget is available for Kubernetes worker nodes.
-
-            ```vmark #budget
-            WorkerBudget = TotalInfrastructureBudget
-                         - ManagedKubernetesControlPlane
-                         - LoadBalancers
-                         - PersistentStorage
-                         - Database
-                         - NetworkEgress
-                         - MonitoringAndLogging
-                         - Backups
-                         - OtherInfrastructure
-
-            WorkerBudgetPercentage = WorkerBudget / TotalInfrastructureBudget * 100
-            ```
-
-            **Worker-node budget:** **$12,000/month**<!--vmark=budget.WorkerBudget-->
-
-            **Available for worker nodes:** **50.00%** of the infrastructure budget<!--vmark=budget.WorkerBudgetPercentage-->
-
-            ## Kubernetes worker nodes
-
-            The standard production worker is an `m6i.2xlarge` instance.
-
-            | Parameter | Value |
-            |---|---:|
-            | Worker node monthly cost | 250 |
-            | CPU per worker (vCPU) | 8 |
-            | Memory per worker (GB) | 32 |
-            | Reserved capacity | 20% |
-
-            The cluster may spend at most the worker-node budget, while 20% of the resulting capacity must remain available as operational headroom.
-
-            ```vmark #kubernetes
-            MaxNodes = FLOOR(WorkerBudget / WorkerNodeMonthlyCost)
-
-            UsableNodes = FLOOR(MaxNodes * (1 - ReservedCapacity))
-
-            TotalCPU = MaxNodes * CPUPerWorker
-            UsableCPU = FLOOR(TotalCPU * (1 - ReservedCapacity))
-
-            TotalMemory = MaxNodes * MemoryPerWorker
-            UsableMemory = FLOOR(TotalMemory * (1 - ReservedCapacity))
-            ```
-
-            Therefore the maximum affordable Kubernetes cluster is:
-
-            **Maximum worker nodes:** **48**<!--vmark=kubernetes.MaxNodes-->
-
-            This provides:
-
-            **Total CPU:** **384 vCPU**<!--vmark=kubernetes.TotalCPU-->
-            **Usable CPU after 20% headroom:** **307 vCPU**<!--vmark=kubernetes.UsableCPU-->
-
-            **Total memory:** **1,536 GB**<!--vmark=kubernetes.TotalMemory-->
-            **Usable memory after 20% headroom:** **1,228 GB**<!--vmark=kubernetes.UsableMemory-->
-
-            ## Capacity decision
-
-            The production Kubernetes cluster is therefore budgeted for a maximum of **48 worker nodes**.
-
-            The number **48 is not an independently maintained configuration value**. It is derived from:
-
-            1. the total infrastructure budget,
-            2. all non-Kubernetes operating costs,
-            3. the worker-node price,
-            4. and the required capacity reserve.
-
-            If any of those assumptions change, the documented cluster capacity changes with them.
-
-            ## Machine-readable output
-
-            The same document can be queried by tooling:
-
-            ```text
-            visimark eval infrastructure-budget.md --json
-            ```
-
-            For example:
-
-            ```json
-            {
-              "budget": {
-                "WorkerBudget": 12000,
-                "WorkerBudgetPercentage": 50
-              },
-              "kubernetes": {
-                "MaxNodes": 48,
-                "TotalCPU": 384,
-                "UsableCPU": 307,
-                "TotalMemory": 1536,
-                "UsableMemory": 1228
-              }
-            }
-            ```
-
-            A deployment tool could consume `kubernetes.MaxNodes` directly rather than maintaining a second configuration file.
-
-            ## Why this is executable documentation
-
-            This document is not **code explaining a budget**.
-
-            It is **budget documentation that executes**.
-
-            The tables are the inputs.
-            The VisiMark formulas are the rules.
-            The anchored numbers are materialized results.
-            `eval` exposes those results to other tools.
-
-            For example, changing the worker price from `$250` to `$300` automatically changes the derived maximum cluster size:
-
-            ```text
-            $12,000 / $300 = 40 workers
-            ```
-
-            The document therefore remains the single place where both the **decision** and the **reasoning behind the decision** live.
-
-            The important direction is:
-
-            **documentation → computation → machine-readable output**
-
-            rather than:
-
-            **code → generated documentation**
-          </script>
-        </article>
-      </section>
-
       <header class="section-head" id="installation-header">
         <h2>Installation</h2>
         <p class="subtitle">Two ways to bring VisiMark into a project.</p>
       </header>
 
       <section class="features" id="installation">
-        <article class="feature">
-          <div class="feature-head">
-            <h3>As an npm package</h3>
-          </div>
-          <p>
-            Install the <code>visimark</code> command globally, or run it without installing at all
-            &mdash; either way it runs under whichever of Bun or Node is on your <code>PATH</code>.
-          </p>
-          <pre>
-$ npm i -g visimark
-<span class="c"># or</span>
-$ bun add -g visimark
-<span class="c"># or, with no install at all</span>
-$ npx visimark check invoice.md</pre>
-        </article>
+        <div class="install-main">
+          <article class="feature">
+            <div class="feature-head">
+              <h3>As an npm package</h3>
+            </div>
+            <p>
+              Install the <code>visimark</code> command globally, or run it without installing at
+              all &mdash; either way it runs under whichever of Bun or Node is on your
+              <code>PATH</code>.
+            </p>
+            <pre>
+  $ npm i -g visimark
+  <span class="c"># or</span>
+  $ bun add -g visimark
+  <span class="c"># or, with no install at all</span>
+  $ npx visimark check invoice.md</pre>
+          </article>
 
-        <article class="feature">
-          <div class="feature-head">
-            <h3>As an agent skill</h3>
-          </div>
-          <p>
-            VisiMark ships an agent skill &mdash; install it and an agent picks up authoring and
-            verification discipline automatically, no prompting required.
-          </p>
-          <pre>
-$ npx skills add michal-niedzwiedzki/visimark
-<span class="c"># or, copied in by hand</span>
-$ cp -r skills/visimark ~/.claude/skills/visimark</pre>
-          <p style="margin-top: 14px">
-            Its central warning is worth stating here too: a green check is evidence of agreement,
-            not of derivation. Change an input and confirm the checker starts complaining before
-            trusting a document is wired up.
-          </p>
-          <p class="chart-caption">
-            See
-            <a
-              href="https://github.com/michal-niedzwiedzki/visimark/blob/master/skills/visimark/SKILL.md"
-              target="_blank"
-              rel="noopener"
-              >skills/visimark/SKILL.md</a
-            >
-            for the full skill.
-          </p>
-        </article>
+          <article class="feature">
+            <div class="feature-head">
+              <h3>As an agent skill</h3>
+            </div>
+            <p>
+              VisiMark ships an agent skill &mdash; install it and an agent picks up authoring and
+              verification discipline automatically, no prompting required.
+            </p>
+            <pre>
+  $ npx skills add michal-niedzwiedzki/visimark
+  <span class="c"># or, copied in by hand</span>
+  $ cp -r skills/visimark ~/.claude/skills/visimark</pre>
+            <p style="margin-top: 14px">
+              Its central warning is worth stating here too: a green check is evidence of agreement,
+              not of derivation. Change an input and confirm the checker starts complaining before
+              trusting a document is wired up.
+            </p>
+            <p class="chart-caption">
+              See
+              <a
+                href="https://github.com/michal-niedzwiedzki/visimark/blob/master/skills/visimark/SKILL.md"
+                target="_blank"
+                rel="noopener"
+                >skills/visimark/SKILL.md</a
+              >
+              for the full skill.
+            </p>
+          </article>
+        </div>
+        <aside class="runtimes">
+          <h3>Two runtimes, both first-class</h3>
+          <p>VisiMark runs on Node.js with npm, and on Bun. Use whichever you already have.</p>
+          <ul>
+            <li>
+              <img src="assets/nodejs.webp" alt="" width="40" height="40" />
+              <span
+                ><strong>Node.js</strong> &mdash; current LTS and latest stable, tested in CI</span
+              >
+            </li>
+            <li>
+              <img src="assets/npm.webp" alt="" width="40" height="40" />
+              <span
+                ><strong>npm</strong> &mdash; <code>npm i -g visimark</code> or
+                <code>npx</code></span
+              >
+            </li>
+            <li>
+              <img src="assets/bun.webp" alt="" width="40" height="40" />
+              <span
+                ><strong>Bun</strong> &mdash; <code>bun add -g visimark</code> or
+                <code>bunx</code></span
+              >
+            </li>
+          </ul>
+        </aside>
       </section>
 
       <header class="section-head" id="featured-head">

@@ -1,0 +1,85 @@
+{
+  "examples": [
+    {
+      "slug": "invoice",
+      "title": "An invoice that checks its own arithmetic",
+      "tags": ["Invoice", "Assertions", "Anchors"],
+      "teaser": "Line items, a payment schedule, early-payment terms and a reconciliation, all in one Markdown file. check recomputes every number and fails if any stored figure, or the schedule's total, disagrees.",
+      "icon": "../assets/table.webp",
+      "path": "../example-invoice.md"
+    },
+    {
+      "slug": "invoice-csv-import",
+      "title": "The same invoice, imported from a CSV",
+      "tags": ["Invoice", "CSV", "Imports"],
+      "teaser": "The line items live in a CSV and the document pins it by hash. Edit the CSV and the import goes stale until it is regenerated, so the figures cannot drift from their source.",
+      "icon": "../assets/excel.webp",
+      "path": "../example-invoice-csv-import.md",
+      "attachments": ["../example-invoice-csv-import.csv"]
+    },
+    {
+      "slug": "ci-sharding",
+      "title": "Build tool: test-suite sharding",
+      "tags": ["CI", "eval", "Build"],
+      "teaser": "CI needs to split a test suite across parallel runners. Here the sharding policy is the document, and visimark eval is what CI reads to build the matrix.",
+      "icon": "../assets/actions.webp",
+      "path": "../example-ci-sharding.md"
+    },
+    {
+      "slug": "agent-budget",
+      "title": "AI agent harness: a spending ledger",
+      "tags": ["AI", "Agents", "Budget"],
+      "teaser": "An autonomous coding agent needs a spending cap it cannot talk itself out of. The cap and the running spend live in a document the harness checks before the next tool call.",
+      "icon": "../assets/agent.webp",
+      "path": "../example-agent-budget.md"
+    },
+    {
+      "slug": "structural-check",
+      "title": "Human error verifier: a deck joist calc",
+      "tags": ["Verification", "Engineering", "Assertions"],
+      "teaser": "A structural calc gets retyped between engineer, permit office and contractor, and every retyping risks a transposed digit. This sheet catches that before anyone builds the deck.",
+      "icon": "../assets/scenarios.webp",
+      "path": "../example-structural-check.md"
+    },
+    {
+      "slug": "pricing-policy",
+      "title": "Executable documentation: a pricing policy",
+      "tags": ["Pricing", "eval", "Documentation"],
+      "teaser": "The pricing page, the sales deck and the billing config usually restate the same numbers until one lags a tier change. Here the policy's prose and the values billing reads are one file.",
+      "icon": "../assets/html.webp",
+      "path": "../example-pricing-policy.md"
+    },
+    {
+      "slug": "onboarding-dashboard",
+      "title": "Safety net for stale artifacts: an onboarding dashboard",
+      "tags": ["Charts", "SVG", "CI"],
+      "teaser": "A funnel chart pasted into a slide looks current forever. Here the chart is a generated artifact of the document, and check refuses to let it disagree with the table beside it.",
+      "icon": "../assets/report.webp",
+      "path": "../example-onboarding-dashboard.md"
+    },
+    {
+      "slug": "charts",
+      "title": "Guarantee of artifact integrity",
+      "tags": ["Charts", "SVG", "CI"],
+      "teaser": "A chart statement names columns the sheet already has. fmt draws the SVG and check proves the bytes on disk are still what the current table renders to, so the picture cannot quietly drift away from the numbers underneath it.",
+      "icon": "../assets/pie.webp",
+      "path": "../example-charts.md"
+    },
+    {
+      "slug": "executable-documentation",
+      "title": "Executable documentation",
+      "tags": ["eval", "JSON", "Kubernetes"],
+      "teaser": "An operating budget where the worker-node count is derived rather than typed. The prose is the specification, the tables are its inputs, and eval hands the results to whatever needs them next.",
+      "icon": "../assets/json.webp",
+      "path": "../example-executable-documentation.md"
+    },
+    {
+      "slug": "deal-desk",
+      "title": "Deal desk: five levers on one quote",
+      "tags": ["eval", "Scenarios", "Assertions"],
+      "teaser": "A quote with five scenario parameters and a set of guardrails. eval --scenario tries a combination for one run without writing anything, and check rejects any that breaks margin, discount, budget or capacity.",
+      "icon": "../assets/actions.webp",
+      "path": "../example-deal-desk.md"
+    }
+  ]
+}

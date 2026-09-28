@@ -77,6 +77,7 @@ const EXPLAIN_ONLY_EXCLUDED_KEYS: Record<string, string[]> = {
   ],
   "example-charts.md": ["state"],
   "example-onboarding-dashboard.md": ["state"],
+  "example-deal-desk.md": ["state"],
 };
 
 /** every exact JSON path under `envelope` whose last segment is one of `keys` */
