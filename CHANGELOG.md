@@ -14,8 +14,8 @@
   README and VS Code README, the site (title, `og:title`, description,
   subtitle and share card), `server.json`, `action.yml`, both Obsidian
   manifests, the skill and the tutorial. `visimark --help` now opens with
-  `visimark — a document integrity layer for Markdown`; only the wording
-  changed, no command, flag or output. The `spreadsheet` npm keyword became
+  `visimark — a document integrity layer for Markdown`; no command or flag
+  changed. The `spreadsheet` npm keyword became
   `document-integrity`.
 - **`remark-lint-visimark` and `markdownlint-rule-visimark` now declare
   `engines` (`node >=24`, `bun >=1.0.0`), the same floor as `visimark`.** CI
