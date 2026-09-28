@@ -9,6 +9,11 @@ Each entry says which engine version the bundle carries.
 
 ## Unreleased
 
+## 0.2.0 - 2026-09-28
+
+First public release: all twelve v1 rows, listed below. 0.1.0 was an internal
+build and was never tagged or published.
+
 - **The vault sweep now counts advice-only notes vault-wide** (§2.3 of the
   2026-09-25 code review, decided 2026-09-27). A note whose only findings are
   advice (`WARN`/`NOTE`) still agrees with itself by row 8's own rule and is
@@ -320,6 +325,8 @@ Each entry says which engine version the bundle carries.
   CSV imports and generated chart artifacts resolve out of an Obsidian vault,
   whose API is asynchronous, through a `ReaderPort` that is synchronous. No
   surface uses it yet; the rows that call `check` will.
+
+Bundles engine 0.1.9.
 
 ## 0.1.0 - 2026-09-23
 
