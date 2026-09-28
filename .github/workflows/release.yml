@@ -192,8 +192,34 @@ jobs:
           curl -sSL -o /tmp/mcp-publisher.tar.gz \
             "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/').tar.gz"
           tar -xzf /tmp/mcp-publisher.tar.gz -C /tmp mcp-publisher
+          # npm accepts a publish before it serves the version: the registry
+          # validates the entry against npm and refuses one for a version npm
+          # does not list yet (v0.1.9 and v0.1.10 both hit this, the latter
+          # after a fix, and npm took up to ~7 minutes to settle). Wait for
+          # npm the way the final gate does, rather than racing it.
+          npm_has() { npm view "visimark-mcp@$ENGINE_VERSION" version >/dev/null 2>&1; }
+          for delay in 0 15 15 30 30 60 60 60 90 90 90; do
+            sleep "$delay"
+            if npm_has; then break; fi
+            echo "::warning::npm does not list visimark-mcp@$ENGINE_VERSION yet; waiting..." >&2
+          done
+          if ! npm_has; then
+            echo "::error::npm still does not list visimark-mcp@$ENGINE_VERSION after ~9 minutes; not asking the MCP registry to validate against it."
+            exit 1
+          fi
           /tmp/mcp-publisher login github-oidc
-          /tmp/mcp-publisher publish
+          # A 5xx from the registry is its gateway, not a verdict on the entry
+          # (a 504 failed the first v0.1.10 backfill). Retry those only; a 4xx
+          # means the entry itself is wrong and retrying cannot fix it.
+          for attempt in 1 2 3; do
+            /tmp/mcp-publisher publish 2>&1 | tee /tmp/mcp-publish.log
+            status="${PIPESTATUS[0]}"
+            if [ "$status" -eq 0 ]; then exit 0; fi
+            grep -q "status 5[0-9][0-9]" /tmp/mcp-publish.log || exit 1
+            echo "::warning::the MCP registry answered 5xx (attempt $attempt of 3); retrying in 30s..." >&2
+            sleep 30
+          done
+          exit 1
 
       - name: Package the extension
         id: package

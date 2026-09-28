@@ -17,7 +17,7 @@ and left an untraceable tarball on the registry for good.
 | `remark-lint-visimark` on npm, with a provenance attestation | `packages/remark-visimark/package.json` | `npm view remark-lint-visimark@<v>` — skip if already there |
 | `markdownlint-rule-visimark` on npm, with a provenance attestation | `packages/markdownlint-visimark/package.json` | `npm view markdownlint-rule-visimark@<v>` — skip if already there |
 | `visimark-mcp` on npm, with a provenance attestation | `packages/visimark-mcp/package.json` | `npm view visimark-mcp@<v>` — skip if already there |
-| `io.github.michal-niedzwiedzki/visimark` on the MCP registry | `server.json`, rewritten from the tag | `GET /v0/servers?search=visimark` — skip if this version is listed; runs only if the npm leg succeeded, since the entry points at the npm package |
+| `io.github.michal-niedzwiedzki/visimark` on the MCP registry | `server.json`, rewritten from the tag | `GET /v0/servers?search=visimark` — skip if this version is listed; runs only if the npm leg succeeded, since the entry points at the npm package, then waits (up to ~9 minutes) for npm to actually list the version — the registry validates against npm and refuses an entry npm cannot yet serve — and retries a 5xx from the registry, never a 4xx |
 | `visimark-vscode` on the VS Code Marketplace | `editors/vscode/package.json` | `vsce show` — skip if the version is listed |
 | `visimark-vscode` on Open VSX | `editors/vscode/package.json` | Open VSX API — skip if the version is there; create the namespace only if it is genuinely missing |
 | GitHub Release, with the `.vsix` attached | the tag | needs a tag — the pushed one, or the `tag` input on a `workflow_dispatch` |
