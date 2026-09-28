@@ -22,7 +22,7 @@
  */
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join, relative } from "node:path";
+import { dirname, join, posix, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -79,6 +79,41 @@ function referencingFiles(basename: string, ownRelPath: string): string[] {
     .filter((p) => p !== ownRelPath);
 }
 
+/** Tracked files among `paths` with staged or unstaged edits. */
+function dirtyFiles(paths: string[], touched: Set<string>): string[] {
+  paths = paths.filter((p) => !touched.has(p));
+  if (paths.length === 0) return [];
+  return git(["status", "--porcelain", "--", ...paths])
+    .split("\n")
+    .filter(Boolean)
+    .map((l) => l.slice(3));
+}
+
+/**
+ * Replaces `basename` with `webpBasename` only where the reference resolves to
+ * the image being converted (relative to the referencing file, or to the repo
+ * root), so a same-named image elsewhere is left alone.
+ */
+function rewriteReferences(
+  text: string,
+  refRelPath: string,
+  imageRelPath: string,
+  basename: string,
+  webpBasename: string,
+): string {
+  const escaped = basename.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(`([\\w./@~-]*?)${escaped}`, "gi");
+  return text.replace(pattern, (match, prefix: string) => {
+    const target = prefix + basename;
+    const candidates = [
+      posix.normalize(posix.join(posix.dirname(refRelPath), target)),
+      posix.normalize(target.replace(/^\//, "")),
+    ];
+    const isImage = candidates.some((c) => c.toLowerCase() === imageRelPath.toLowerCase());
+    return isImage ? prefix + webpBasename : match;
+  });
+}
+
 async function findImages(): Promise<string[]> {
   const glob = new Bun.Glob("**/*.{png,jpg,jpeg,PNG,JPG,JPEG}");
   const results: string[] = [];
@@ -103,6 +138,7 @@ async function main() {
   const images = await findImages();
   let converted = 0;
   let skippedExcluded = 0;
+  const touched = new Set<string>(); // reference files this run already rewrote and staged
 
   for (const relPath of images) {
     if (EXCLUDE.has(relPath)) {
@@ -133,13 +169,22 @@ async function main() {
       continue;
     }
 
+    const dirty = dirtyFiles(refs, touched);
+    if (dirty.length > 0) {
+      console.error(
+        `refusing to convert ${relPath}: commit or stash edits in ${dirty.join(", ")} first`,
+      );
+      process.exit(1);
+    }
+
     convert(absPath, webpAbsPath, quality);
 
     for (const refRelPath of refs) {
       const refAbsPath = join(ROOT, refRelPath);
       const text = readFileSync(refAbsPath, "utf8");
-      const updated = text.split(basename).join(webpBasename);
+      const updated = rewriteReferences(text, refRelPath, relPath, basename, webpBasename);
       if (updated !== text) writeFileSync(refAbsPath, updated);
+      touched.add(refRelPath);
     }
 
     const tracked = isTracked(relPath);
