@@ -400,6 +400,7 @@ jobs:
           MCP_SERVER_OUTCOME: ${{ steps.mcp-server.outcome }}
           PACKAGE_OUTCOME: ${{ steps.package.outcome }}
           NOTES_OUTCOME: ${{ steps.notes.outcome }}
+          TAG: ${{ steps.tag.outputs.tag }}
         run: |
           fail=0
           for pair in \
@@ -409,8 +410,16 @@ jobs:
             "npm publish --dry-run (visimark-mcp)=$MCP_SERVER_OUTCOME" \
             "Package the extension=$PACKAGE_OUTCOME" \
             "Extract the release notes=$NOTES_OUTCOME"; do
-            if [ "${pair##*=}" = failure ]; then
-              echo "::error::dry run: '${pair%%=*}' failed; read that step's log."
+            # Anything but success fails: a skipped leg is a leg that did not
+            # rehearse. The notes step is the one legitimate skip, on a
+            # dispatch with no tag.
+            outcome="${pair##*=}"
+            if [ "$outcome" = skipped ] && [ -z "$TAG" ] && [ "${pair%%=*}" = "Extract the release notes" ]; then
+              echo "::warning::no tag, so the release notes were not rehearsed."
+              continue
+            fi
+            if [ "$outcome" != success ]; then
+              echo "::error::dry run: '${pair%%=*}' ended '$outcome'; read that step's log."
               fail=1
             fi
           done
