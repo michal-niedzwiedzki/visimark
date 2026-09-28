@@ -98,4 +98,4 @@ Ines still had five knobs. Now she also had a quote she could defend, and she ha
 
 I wrote this article with AI. VisiMark is a MIT-licensed project with no business model, sales team or signup behind it.
 
-The [Playground](https://michal-niedzwiedzki.github.io/visimark/playground.html) runs the tool in your browser with nothing to install. The [repository](https://github.com/michal-niedzwiedzki/visimark) and the [project site](https://michal-niedzwiedzki.github.io/visimark/) have the rest.
+The [Playground](https://visimark.dev/playground.html) runs the tool in your browser with nothing to install. The [repository](https://github.com/michal-niedzwiedzki/visimark) and the [project site](https://visimark.dev/) have the rest.
