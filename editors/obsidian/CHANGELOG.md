@@ -9,6 +9,21 @@ Each entry says which engine version the bundle carries.
 
 ## Unreleased
 
+## 0.2.2 - 2026-09-28
+
+Fixes what the community scanner's first pass on 0.2.1 flagged. No behaviour
+change.
+
+- **`authorUrl` now points at the author's profile**
+  (`https://github.com/michal-niedzwiedzki`), not the plugin's own repository,
+  which the registry's manifest check rejects.
+- **The README now says what the plugin touches.** The scanner's behaviour
+  scan lists vault enumeration and clipboard access as things a reader should
+  know before installing; both are deliberate, and the README says why, in one
+  place.
+
+Bundles engine 0.1.10.
+
 ## 0.2.1 - 2026-09-28
 
 Lint and release hygiene ahead of the community-registry submission. No
