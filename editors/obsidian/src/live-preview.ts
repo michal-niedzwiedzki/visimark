@@ -126,7 +126,7 @@ function markFor(d: VmarkDecoration, path: string | null): Decoration {
  * just one dependency edge further down.
  */
 function fieldValue<T>(state: EditorView["state"], field: unknown): T | undefined {
-  return state.field(field as unknown as Parameters<typeof state.field>[0], false) as T | undefined;
+  return state.field(field as Parameters<typeof state.field>[0], false) as T | undefined;
 }
 
 // absent only if this editor is not backed by a note Obsidian knows the path
@@ -183,7 +183,7 @@ const setLocalMarks = StateEffect.define<DecorationSet>();
 
 /**
  * Dispatched by `settings-tab.ts` to every open Live Preview editor when
- * "Show provenance in Live Preview" is toggled — a setting flip is not a
+ * "Show provenance in live preview" is toggled — a setting flip is not a
  * document change or a mode switch, and would otherwise sit unapplied until
  * the next keystroke or the next time the note opened (review row 17).
  */

@@ -153,7 +153,7 @@ export class SweepView extends ItemView {
           chunk: 50,
           // the thread goes back to Obsidian here, which is what keeps the
           // app answering taps while a large vault is scanned
-          pause: () => new Promise((resolve) => activeWindow.setTimeout(resolve, 0)),
+          pause: () => new Promise((resolve) => window.setTimeout(resolve, 0)),
           onProgress: (done, total) => this.drawProgress(done, total),
           signal: this.signal,
         },

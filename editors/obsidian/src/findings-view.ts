@@ -340,11 +340,11 @@ export class FindingsView extends ItemView {
       // only for a table cell's decoration, never a prose anchor's, so a
       // note with both a stale cell and a stale anchor group no longer
       // highlights the unrelated cell when this row previews the group.
-      return [
-        ...container.querySelectorAll<HTMLElement>(
+      return Array.from(
+        container.querySelectorAll<HTMLElement>(
           ".visimark-disagrees[data-vmark]:not([data-vmark-row])",
         ),
-      ];
+      );
     }
     if (row.span === null) return [];
     if (f.name === undefined) return [];
@@ -355,7 +355,7 @@ export class FindingsView extends ItemView {
     // attribute directly never matches a sheeted binding at all.
     const qualified =
       f.sheetId === undefined || f.sheetId === "" ? f.name : `${f.sheetId}.${f.name}`;
-    return [...container.querySelectorAll<HTMLElement>("[data-vmark]")].filter(
+    return Array.from(container.querySelectorAll<HTMLElement>("[data-vmark]")).filter(
       (el) => el.getAttribute("data-vmark") === qualified,
     );
   }

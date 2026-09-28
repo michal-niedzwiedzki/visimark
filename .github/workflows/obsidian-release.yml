@@ -32,6 +32,8 @@ on:
 
 permissions:
   contents: write # cut the GitHub Release
+  id-token: write # mint the OIDC token the build attestation is signed with
+  attestations: write # store the attestation against this repository
 
 jobs:
   release:
@@ -65,6 +67,18 @@ jobs:
           fi
 
       - run: bun run --filter visimark-obsidian build
+
+      # The community scanner's Scorecard looks for a verified GitHub artifact
+      # attestation on `main.js` and `styles.css` (the two files that run in a
+      # user's vault). It has to be made from the same bytes the release step
+      # uploads, so it sits between the build and the upload with nothing in
+      # between that could rewrite either file.
+      - name: Attest the build
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: |
+            editors/obsidian/main.js
+            editors/obsidian/styles.css
 
       # The three files the registry's own submission docs require attached
       # to the release: main.js, manifest.json, and styles.css. main.js is

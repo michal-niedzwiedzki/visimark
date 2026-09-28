@@ -103,6 +103,10 @@ jobs:
         run: bun scripts/check-changelog-entries.ts
 
       - run: bun run lint
+      # The Obsidian community scanner's ruleset. Errors fail the build; the
+      # warnings that remain are known and listed in editors/obsidian's
+      # changelog, because the scanner shows them publicly on the Scorecard.
+      - run: bun run --filter visimark-obsidian lint
       - run: bun run format:check
       - run: bun run typecheck
       - run: bun run build

@@ -110,7 +110,7 @@ test("format refuses a repair if the buffer changed while it was being checked",
   for (let i = 0; i < 10; i++) await Promise.resolve();
 
   expect(notices.slice(before)).toContain(
-    "This note changed while it was being checked. Try Format again.",
+    "This note changed while it was being checked. Try format again.",
   );
   // the repair was refused, so the buffer holds exactly the edit the test
   // made and none of `fmt`'s own repairs

@@ -91,7 +91,11 @@ no `v` prefix. Pushing `0.2.0` (not `v0.2.0`) runs
 [`.github/workflows/obsidian-release.yml`](../.github/workflows/obsidian-release.yml),
 which fails if that tag disagrees with the manifest, builds `main.js`, and
 attaches `main.js`, `manifest.json` and `styles.css` to a GitHub Release cut
-against the same tag. It cannot fire from the same push that runs
+against the same tag, after recording a build-provenance attestation for
+`main.js` and `styles.css` (the community scanner's Scorecard looks for one).
+Before tagging, `bun run --filter visimark-obsidian lint` must show no errors,
+and the root `manifest.json` and `versions.json` are copies to refresh with the
+plugin's. It cannot fire from the same push that runs
 `release.yml`'s own `v*`-tagged release: the two tag schemes cannot collide,
 since every tag `release.yml` creates starts with `v` and this workflow's
 trigger requires the first character to be a digit.

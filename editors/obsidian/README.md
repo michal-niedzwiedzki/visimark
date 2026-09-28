@@ -60,19 +60,26 @@ be. Show-provenance-in-Live-Preview and sweep-on-open, shipped in rows 2 and
 
 `docs/design/obsidian-manual-test.md` Part 2 is runnable end to end. Its table
 says, per section, what a machine already asserts and what still needs a
-person — nothing has been run inside a real vault, so §2.2 (everything on
+person — the plugin has been smoke-tested by hand in one vault, but Part 2 has
+not been run whole, so §2.2 (everything on
 screen), §2.5 (nothing written unbidden, especially on mobile) and §2.11
 (portability, which outranks every other section) are where that matters most.
 
 ## Installing it
 
-Not in the community registry, and deliberately: the registry submission is a
-human review, and it waits until the v1 rows are complete and
-[Part 2 of the manual test](../../docs/design/obsidian-manual-test.md) passes
-end to end. Submitting a plugin whose acceptance script has never been run
-whole spends a reviewer's time on a draft.
+Every plugin release is a GitHub Release tagged with the plugin's version and
+no `v` (`0.2.1`, not `v0.2.1`), carrying `main.js`, `manifest.json` and
+`styles.css`. Releases tagged `vX.Y.Z` are the engine and the VS Code
+extension, not this.
 
-Until then, side-load it:
+**With BRAT.** Install the BRAT community plugin, choose *Add beta plugin*, and
+paste `https://github.com/michal-niedzwiedzki/visimark`. If BRAT picks the wrong
+release, give it the plugin's version explicitly.
+
+**By hand.** Download the three files from the latest plugin release into
+`<vault>/.obsidian/plugins/visimark/`.
+
+**From source:**
 
 ```sh
 bun install
