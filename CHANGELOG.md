@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+## 0.1.10 - 2026-09-28
+
+### Fixed
+
+- **`visimark-mcp` now carries `mcpName`, so it can be listed on the official
+  MCP registry.** 0.1.9's first attempt to register the server was refused
+  because the npm package did not name the registry entry it belongs to
+  (`io.github.michal-niedzwiedzki/visimark`). npm versions are immutable, so
+  the fix ships as a new version; the engine and the other packages have no
+  other change.
+
 ## 0.1.9 - 2026-09-28
 
 ### Fixed
@@ -803,6 +814,7 @@ record that the publish happened, and making the history read clean after the
 fact is the kind of underived edit this project exists to catch. There is no
 0.1.0 of the VS Code extension.
 
+[0.1.10]: https://github.com/michal-niedzwiedzki/visimark/releases/tag/v0.1.10
 [0.1.9]: https://github.com/michal-niedzwiedzki/visimark/releases/tag/v0.1.9
 [0.1.8]: https://github.com/michal-niedzwiedzki/visimark/releases/tag/v0.1.8
 [0.1.7]: https://github.com/michal-niedzwiedzki/visimark/releases/tag/v0.1.7

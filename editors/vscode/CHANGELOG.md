@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.10 - 2026-09-28
+
+No editor-visible changes. Bundles engine 0.1.10.
+
 ## 0.1.9 - 2026-09-28
 
 - A scalar bound into prose at more than one place (`<!--vmark=…-->`) that has
