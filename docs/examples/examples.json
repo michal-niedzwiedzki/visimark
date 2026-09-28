@@ -72,6 +72,14 @@
       "teaser": "An operating budget where the worker-node count is derived rather than typed. The prose is the specification, the tables are its inputs, and eval hands the results to whatever needs them next.",
       "icon": "../assets/json.webp",
       "path": "../example-executable-documentation.md"
+    },
+    {
+      "slug": "deal-desk",
+      "title": "Deal desk: five levers on one quote",
+      "tags": ["eval", "Scenarios", "Assertions"],
+      "teaser": "A quote with five scenario parameters and a set of guardrails. eval --scenario tries a combination for one run without writing anything, and check rejects any that breaks margin, discount, budget or capacity.",
+      "icon": "../assets/actions.webp",
+      "path": "../example-deal-desk.md"
     }
   ]
 }

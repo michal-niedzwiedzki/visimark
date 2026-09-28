@@ -64,6 +64,12 @@ describe("withBase", () => {
     expect(withBase(html, "../../")).toBe(html);
   });
 
+  test("rebases a relative href as well as a src", () => {
+    expect(withBase('<a href="a.md">x</a><a href="#t">y</a>', "../../")).toBe(
+      '<a href="../../a.md">x</a><a href="#t">y</a>',
+    );
+  });
+
   test("is the identity for a page in docs/", () => {
     expect(withBase('<img src="a.svg">', "")).toBe('<img src="a.svg">');
   });

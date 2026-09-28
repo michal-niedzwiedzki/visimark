@@ -65,11 +65,13 @@ function referencingFiles(basename: string, ownRelPath: string): string[] {
       "--files-with-matches",
       "--fixed-strings",
       "-I",
-      "--",
+      "-e",
       basename,
+      "--",
     ]);
-  } catch {
-    return []; // git grep exits 1 when nothing matches
+  } catch (err) {
+    if ((err as { status?: number }).status === 1) return []; // exit 1: nothing matches
+    throw err;
   }
   return out
     .split("\n")

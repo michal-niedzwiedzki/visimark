@@ -104,12 +104,12 @@ function splitBlocks(md: string): string[] {
   return blocks;
 }
 
-/** Re-points every relative `src` in rendered HTML (a chart SVG, say) so a
+/** Re-points every relative `src` and `href` in rendered HTML (a chart SVG, say) so a
  *  Markdown file written to be read from docs/ still resolves from a page
  *  nested `base` below it. */
 export function withBase(html: string, base: string): string {
   if (base === "") return html;
-  return html.replace(/(\ssrc=")(?![a-z][a-z0-9+.-]*:|\/|#)/gi, `$1${base}`);
+  return html.replace(/(\s(?:src|href)=")(?![a-z][a-z0-9+.-]*:|\/|#)/gi, `$1${base}`);
 }
 
 const TUTORIAL_PAGE: SplitPageOptions = {

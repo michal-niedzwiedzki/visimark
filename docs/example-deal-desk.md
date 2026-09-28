@@ -109,10 +109,15 @@ on_call_hours     = 12
 buyer_budget      = 40000.00
 
 assert lines.margin >= min_margin
+assert levers.volume_disc >= 0
 assert levers.volume_disc <= max_discount
+assert levers.prepay_share >= 0
 assert levers.prepay_share <= max_prepay
+assert levers.extra_hours >= 0
 assert levers.extra_hours <= max_extra_hours
+assert levers.crosssell_days >= 0
 assert levers.crosssell_days <= security_capacity
+assert levers.premium_hours >= 0
 assert levers.premium_hours <= on_call_hours
 assert lines.gross_total <= buyer_budget
 ```
