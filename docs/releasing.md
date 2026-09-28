@@ -211,7 +211,12 @@ What the scanner looks at, learned from 0.2.0 to 0.2.2:
    run on every push to `master`. Wait for both before tagging — `release.yml`
    checks out the tag, not your working tree, so an unpushed or red commit
    cannot be in the release.
-3. **Bump the version** to the same `X.Y.Z` in all eight version-carrying files:
+3. **Bump the version** to the same `X.Y.Z` in all eight version-carrying files.
+   `bun scripts/prepare-release.ts X.Y.Z` does this and step 4's changelog
+   turnover in one go (it refuses if nothing is under `## Unreleased`, or if
+   `X.Y.Z` is not newer, and writes nothing on any refusal); read the diff and
+   rewrite the extension changelog's placeholder line afterwards. By hand, the
+   files are:
    ```
    packages/visimark/package.json
    packages/visimark-lsp/package.json

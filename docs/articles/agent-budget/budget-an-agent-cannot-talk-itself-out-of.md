@@ -3,8 +3,9 @@
 Tags: AI, Agents, Markdown, CI
 Author: Michał Niedźwiedzki
 
-Posted:
-Reposted:
+Posted: https://visimark.dev/articles/agent-budget/
+Reposted: https://dev.to/holdmybear/the-budget-an-agent-cannot-talk-itself-out-of-3fpi
+Reposted: https://visimark.hashnode.dev/the-budget-an-agent-cannot-talk-itself-out-of
 
 ## The prompt said two dollars. Breakfast said forty-six.
 
@@ -78,3 +79,5 @@ The prompt still says two dollars. This time, so does breakfast.
 ## Disclosure
 
 I wrote this article with AI. VisiMark is a MIT-licensed project with no business model or sales team behind it.
+
+The [Playground](https://visimark.dev/playground.html) runs the tool in your browser with nothing to install. The [repository](https://github.com/michal-niedzwiedzki/visimark) and the [project site](https://visimark.dev/) have the rest.
