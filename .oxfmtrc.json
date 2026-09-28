@@ -15,7 +15,8 @@
   // to do with the templates. Edit the Markdown in editors/obsidian/templates/
   // and run `bun run gen:obsidian-templates`.
   //
-  // docs/articles.html, docs/articles/*/index.html, docs/ci.html, docs/tutorial.html,
+  // docs/articles.html, docs/articles/*/index.html, docs/examples.html,
+  // docs/examples/*/index.html, docs/ci.html, docs/tutorial.html,
   // and docs/mcp-server.html are committed generated output of `bun run gen:articles`
   // (scripts/gen-articles.ts) and `bun run gen:docs` (scripts/gen-docs.ts), not source.
   // Their shape comes entirely from gen-articles-lib.ts's and gen-docs-lib.ts's
@@ -28,6 +29,8 @@
     "editors/obsidian/src/templates.ts",
     "docs/articles.html",
     "docs/articles/*/index.html",
+    "docs/examples.html",
+    "docs/examples/*/index.html",
     "docs/ci.html",
     "docs/tutorial.html",
     "docs/mcp-server.html"

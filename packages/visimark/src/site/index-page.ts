@@ -45,7 +45,7 @@ function initDiagrams(): void {
  *  index.html and docs/charts/ are siblings — the relative `<img>` src the
  *  Markdown already carries just works. */
 function renderDemos(): void {
-  for (const name of ["chart", "eval", "computes", "drift", "power-chart", "power-import"]) {
+  for (const name of ["computes", "drift", "power-chart", "power-import"]) {
     renderDemo(`${name}-source`, `${name}-preview`, `${name}-source-md`);
   }
 }

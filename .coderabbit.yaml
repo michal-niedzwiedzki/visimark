@@ -16,6 +16,8 @@ reviews:
   path_filters:
     - "!docs/articles.html"
     - "!docs/articles/**/index.html"
+    - "!docs/examples.html"
+    - "!docs/examples/**/index.html"
     - "!**/*.webp"
     - "!**/*.png"
     - "!**/*.svg"

@@ -104,7 +104,30 @@ function splitBlocks(md: string): string[] {
   return blocks;
 }
 
-export function renderTutorialPage(markdown: string): string {
+/** Re-points every relative `src` in rendered HTML (a chart SVG, say) so a
+ *  Markdown file written to be read from docs/ still resolves from a page
+ *  nested `base` below it. */
+export function withBase(html: string, base: string): string {
+  if (base === "") return html;
+  return html.replace(/(\ssrc=")(?![a-z][a-z0-9+.-]*:|\/|#)/gi, `$1${base}`);
+}
+
+const TUTORIAL_PAGE: SplitPageOptions = {
+  title: "The VisiMark tutorial",
+  description:
+    "From a plain Markdown table to a checked document and back out to CI, one concept at a time — tables, inference, anchors, aggregates, assertions, charts and imports.",
+  ogTitle: "The VisiMark tutorial",
+  navLabel: "tutorial",
+  ogPath: "tutorial.html",
+  base: "",
+};
+
+/** The side-by-side page: each Markdown block beside what it renders to.
+ *  Without `options` it is docs/tutorial.html; an example passes its own. */
+export function renderTutorialPage(
+  markdown: string,
+  options: SplitPageOptions = TUTORIAL_PAGE,
+): string {
   const blocks = splitBlocks(markdown);
   const tocEntries: TocEntry[] = [];
   const seen = new Set<string>();
@@ -122,13 +145,14 @@ export function renderTutorialPage(markdown: string): string {
     }
 
     const srcHtml = `<pre class="src">${escapeHtml(block)}</pre>`;
-    mainHtml += `${srcHtml}<div class="out">${out}</div>`;
+    mainHtml += `${srcHtml}<div class="out">${withBase(out, options.base)}</div>`;
   }
 
-  return createTutorialHtml(mainHtml, tocEntries);
+  return createTutorialHtml(mainHtml, tocEntries, options);
 }
 
-function createTutorialHtml(mainHtml: string, toc: TocEntry[]): string {
+function createTutorialHtml(mainHtml: string, toc: TocEntry[], options: SplitPageOptions): string {
+  const { base } = options;
   const tocLinksHtml = toc
     .map((e) => `<a href="#${escapeHtml(e.id)}" data-level="${e.level}">${escapeHtml(e.text)}</a>`)
     .join("\n");
@@ -152,7 +176,8 @@ function createTutorialHtml(mainHtml: string, toc: TocEntry[]): string {
       execution, so the trade is a different order of magnitude.
 
       \`script-src 'self'\` covers this page's own bundled script
-      (vendor/visimark-site-tutorial.js), which is a sibling.
+      (vendor/visimark-site-tutorial.js), which the example pages reach through
+      their base path.
 
       \`img-src 'self'\` covers charts rendered in the tutorial
       (charts/c-trend.svg), which is a sibling.
@@ -173,18 +198,18 @@ function createTutorialHtml(mainHtml: string, toc: TocEntry[]): string {
 
     <meta
       name="description"
-      content="From a plain Markdown table to a checked document and back out to CI, one concept at a time — tables, inference, anchors, aggregates, assertions, charts and imports."
+      content="${escapeHtml(options.description)}"
     />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="VisiMark" />
-    <meta property="og:title" content="The VisiMark tutorial" />
+    <meta property="og:title" content="${escapeHtml(options.ogTitle)}" />
     <meta
       property="og:description"
-      content="From a plain Markdown table to a checked document and back out to CI, one concept at a time — tables, inference, anchors, aggregates, assertions, charts and imports."
+      content="${escapeHtml(options.description)}"
     />
     <meta
       property="og:url"
-      content="https://visimark.dev/tutorial.html"
+      content="https://visimark.dev/${options.ogPath}"
     />
     <meta
       property="og:image"
@@ -197,8 +222,8 @@ function createTutorialHtml(mainHtml: string, toc: TocEntry[]): string {
       content="VisiMark: a vmark block computing grand_total = SUM(Total), and the prose value it keeps in step"
     />
     <meta name="twitter:card" content="summary_large_image" />
-    <title>The VisiMark tutorial</title>
-    <link rel="icon" type="image/webp" href="assets/visimark.webp" />
+    <title>${escapeHtml(options.title)}</title>
+    <link rel="icon" type="image/webp" href="${base}assets/visimark.webp" />
 
     <style>
       :root {
@@ -584,12 +609,13 @@ function createTutorialHtml(mainHtml: string, toc: TocEntry[]): string {
   <body data-mode="split">
     <header class="bar">
       <div class="bar-side">
-        <span class="title"><a href="index.html">VisiMark</a> — tutorial</span>
+        <span class="title"><a href="${base}index.html">VisiMark</a> — ${escapeHtml(options.navLabel)}</span>
         <nav class="nav" aria-label="Site">
-          <a href="index.html">Home</a>
-          <a href="playground.html">Playground</a>
-          <a href="ci.html">Continuous integration</a>
-          <a href="mcp-server.html">MCP server</a>
+          <a href="${base}index.html">Home</a>
+          <a href="${base}playground.html">Playground</a>
+          <a href="${base}ci.html">Continuous integration</a>
+          <a href="${base}mcp-server.html">MCP server</a>
+          <a href="${base}examples.html">Examples</a>
           <a href="https://github.com/michal-niedzwiedzki/visimark" rel="noopener">GitHub</a>
         </nav>
       </div>
@@ -623,9 +649,20 @@ ${tocLinksHtml}
 ${mainHtml}
     </main>
 
-    <script src="vendor/visimark-site-tutorial.js"></script>
+    <script src="${base}vendor/visimark-site-tutorial.js"></script>
   </body>
 </html>`;
+}
+
+export interface SplitPageOptions {
+  title: string;
+  description: string;
+  ogTitle: string;
+  navLabel: string;
+  /** The page's path under docs/, for `og:url`. */
+  ogPath: string;
+  /** Path from the page back to docs/, as in {@link DocPageOptions}. */
+  base: string;
 }
 
 export interface DocPageOptions {
@@ -634,10 +671,18 @@ export interface DocPageOptions {
   ogTitle: string;
   navLabel: string;
   scriptName: string;
+  /** Path from this page back to docs/ — `""` for a page in docs/ itself,
+   *  `"../../"` for one at docs/examples/<slug>/. Prefixes every site link,
+   *  the icon, the bundle and any relative image in the Markdown. */
+  base?: string;
+  /** The page's path under docs/, for `og:url`. Defaults to
+   *  `<scriptName>.html`. */
+  ogPath?: string;
 }
 
 export function renderDocPage(markdown: string, options: DocPageOptions): string {
-  const html = renderMarkdown(markdown);
+  const base = options.base ?? "";
+  const html = withBase(renderMarkdown(markdown), base);
   const seen = new Set<string>();
   const toc: TocEntry[] = [];
 
@@ -732,7 +777,7 @@ export function renderDocPage(markdown: string, options: DocPageOptions): string
     />
     <meta
       property="og:url"
-      content="https://visimark.dev/${options.scriptName}.html"
+      content="https://visimark.dev/${options.ogPath ?? `${options.scriptName}.html`}"
     />
     <meta
       property="og:image"
@@ -746,7 +791,7 @@ export function renderDocPage(markdown: string, options: DocPageOptions): string
     />
     <meta name="twitter:card" content="summary_large_image" />
     <title>${escapeHtml(options.title)}</title>
-    <link rel="icon" type="image/webp" href="assets/visimark.webp" />
+    <link rel="icon" type="image/webp" href="${base}assets/visimark.webp" />
 
     <style>
       :root {
@@ -1062,13 +1107,14 @@ export function renderDocPage(markdown: string, options: DocPageOptions): string
   <body>
     <header class="bar">
       <div class="bar-side">
-        <span class="title"><a href="index.html">VisiMark</a> — ${escapeHtml(options.navLabel)}</span>
+        <span class="title"><a href="${base}index.html">VisiMark</a> — ${escapeHtml(options.navLabel)}</span>
         <nav class="nav" aria-label="Site">
-          <a href="index.html">Home</a>
-          <a href="playground.html">Playground</a>
-          <a href="tutorial.html">Tutorial</a>
-          <a href="ci.html">Continuous integration</a>
-          <a href="mcp-server.html">MCP server</a>
+          <a href="${base}index.html">Home</a>
+          <a href="${base}playground.html">Playground</a>
+          <a href="${base}tutorial.html">Tutorial</a>
+          <a href="${base}ci.html">Continuous integration</a>
+          <a href="${base}mcp-server.html">MCP server</a>
+          <a href="${base}examples.html">Examples</a>
           <a href="https://github.com/michal-niedzwiedzki/visimark" rel="noopener">GitHub</a>
         </nav>
       </div>
@@ -1096,7 +1142,7 @@ ${tocLinksHtml}
 ${processedHtml}
     </main>
 
-    <script src="vendor/visimark-site-${escapeHtml(options.scriptName)}.js"></script>
+    <script src="${base}vendor/visimark-site-${escapeHtml(options.scriptName)}.js"></script>
   </body>
 </html>`;
 }

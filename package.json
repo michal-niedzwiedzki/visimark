@@ -38,6 +38,8 @@
     "gen:mcp": "bun scripts/gen-mcp-skill.ts",
     "gen:obsidian-templates": "bun scripts/gen-obsidian-templates.ts",
     "gen:articles": "bun scripts/gen-articles.ts",
+    "gen:examples": "bun scripts/gen-examples.ts",
+    "images:webp": "bun scripts/convert-images-to-webp.ts",
     "serve": "bun scripts/serve.mjs",
     "vscode-install": "cd editors/vscode && bun run install-local",
     "vscode-uninstall": "cd editors/vscode && bun run uninstall-local",
