@@ -34,7 +34,7 @@ export class VisiMarkSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Show provenance in Live Preview")
+      .setName("Show provenance in live preview")
       .setDesc(
         "Mark a computed value while you type, the same way reading mode always does. Turn off if the " +
           "anchor comment behind a mark reads badly as literal text next to it.",

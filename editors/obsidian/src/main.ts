@@ -204,7 +204,8 @@ export default class VisiMarkPlugin extends Plugin {
   private readonly refreshSoon = debounce(() => this.refresh(), 400, true);
 
   override async onload(): Promise<void> {
-    this.settings = { ...DEFAULT_SETTINGS, ...(await this.loadData()) };
+    const saved = (await this.loadData()) as Partial<VisiMarkSettings> | null;
+    this.settings = { ...DEFAULT_SETTINGS, ...saved };
     this.addSettingTab(new VisiMarkSettingTab(this.app, this));
 
     // v1 row 6. The view owns its own refreshing — it is a Component, so its
@@ -570,7 +571,7 @@ export default class VisiMarkPlugin extends Plugin {
     const files = this.app.vault.getMarkdownFiles();
     const result = await sweep(
       { paths: () => files.map((f) => f.path), read },
-      { chunk: 50, pause: () => new Promise((resolve) => activeWindow.setTimeout(resolve, 0)) },
+      { chunk: 50, pause: () => new Promise((resolve) => window.setTimeout(resolve, 0)) },
     );
     // unloaded mid-scan, or a second call already published — either way,
     // nothing below may run
@@ -641,7 +642,7 @@ export default class VisiMarkPlugin extends Plugin {
     const leaf = existing[0] ?? this.app.workspace.getRightLeaf(false);
     if (leaf === null) return;
     await leaf.setViewState({ type: FINDINGS_VIEW, active: true });
-    this.app.workspace.revealLeaf(leaf);
+    await this.app.workspace.revealLeaf(leaf);
   }
 
   /**
@@ -685,7 +686,7 @@ export default class VisiMarkPlugin extends Plugin {
     // offsets describe a buffer that no longer exists
     if (editor.getValue() !== source) {
       if (!opts.silent) {
-        new Notice("This note changed while it was being checked. Try Format again.");
+        new Notice("This note changed while it was being checked. Try format again.");
       }
       return;
     }
@@ -707,7 +708,7 @@ export default class VisiMarkPlugin extends Plugin {
       // to a buffer that moved under this await would corrupt the note.
       if (editor.getValue() !== source) {
         if (!opts.silent) {
-          new Notice("This note changed while writing its charts. Try Format again.");
+          new Notice("This note changed while writing its charts. Try format again.");
         }
         return;
       }
@@ -862,7 +863,7 @@ export default class VisiMarkPlugin extends Plugin {
     const leaf = existing[0] ?? this.app.workspace.getRightLeaf(false);
     if (leaf === null) return;
     await leaf.setViewState({ type: SWEEP_VIEW, active: true });
-    this.app.workspace.revealLeaf(leaf);
+    await this.app.workspace.revealLeaf(leaf);
   }
 
   /**

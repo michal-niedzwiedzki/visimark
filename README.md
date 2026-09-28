@@ -454,13 +454,18 @@ instead — that runs the extension straight from `editors/vscode` in a separate
 Extension Development Host, so uninstall the packaged copy first or you will see
 every diagnostic twice.
 
-An Obsidian client is being built row by row under
-[#176](https://github.com/michal-niedzwiedzki/visimark/issues/176), for people
-who read their notes on a phone and will never open a terminal. It is a client
-of the engine rather than of the language server, it is not published to npm,
-and so far it loads and activates only on a note that contains a `vmark` block —
-[`editors/obsidian/README.md`](editors/obsidian/README.md) says what is built
-and how to side-load it.
+The **Obsidian plugin** is for people who keep notes in Obsidian, read them on
+a phone and will never open a terminal. It marks every computed value in reading
+mode and Live Preview, explains where a value came from, and sweeps a whole vault
+for notes that disagree with themselves. It is a client of the engine rather than
+of the language server, it is not published to npm, and it does nothing on a note
+that has no `vmark` block. Install it from the
+[latest plugin release](https://github.com/michal-niedzwiedzki/visimark/releases)
+(the ones tagged without a `v`, such as `0.2.1`) with
+[BRAT](https://github.com/TfTHacker/obsidian42-brat) or by copying its three
+files into a vault —
+[`editors/obsidian/README.md`](editors/obsidian/README.md) has the steps and
+says what each feature does.
 
 Releases are tag-driven: pushing a `vX.Y.Z` tag publishes the engine to npm and
 the extension to both the VS Code Marketplace and Open VSX. The workflow needs

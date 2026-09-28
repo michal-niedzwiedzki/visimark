@@ -9,6 +9,37 @@ Each entry says which engine version the bundle carries.
 
 ## Unreleased
 
+## 0.2.1 - 2026-09-28
+
+Lint and release hygiene ahead of the community-registry submission. No
+behaviour change beyond two wording tweaks.
+
+- **The plugin now passes the community scanner's ESLint ruleset with no
+  errors** (`eslint-plugin-obsidianmd` 0.4.2, `editors/obsidian/eslint.config.mjs`,
+  run in CI). Fixed: an `any` read from `loadData()` is now typed before it is
+  merged into the settings; two `revealLeaf()` calls that returned an unawaited
+  promise are awaited (a failure to reveal a pane was silently dropped); the
+  timer in the sweep's chunk pause and in the sweep pane's progress drawing is
+  `window.setTimeout`, as the popout-window rule asks; and two DOM lookups in
+  the findings pane no longer spread a `NodeList`, which the type-aware rules
+  read as `any`.
+- **Two UI strings now follow sentence case:** "Try format again." (was "Try
+  Format again.") and the setting "Show provenance in live preview".
+- **Release builds are attested.** `obsidian-release.yml` now records a GitHub
+  build-provenance attestation for `main.js` and `styles.css`, the check the
+  scanner's Scorecard looks for.
+- **Known warnings left, and why.** Three remain because fixing them would be
+  a change of behaviour or of the supported Obsidian range, not lint: settings
+  do not implement the 1.13-only `getSettingDefinitions()` (`minAppVersion` is
+  1.8.7, and the change cannot be tried here); `reading-mode.ts` builds a span
+  with `createElement` because the rule's suggested `doc.win.createSpan()` does
+  not typecheck; `LiveVaultIndex`'s default timer stays a bare `setTimeout` so
+  tests can inject their own. The scanner also flags the product's own name,
+  "VisiMark", in UI text as a sentence-case warning, because it cannot be told
+  the name is a brand; the local config does.
+
+Bundles engine 0.1.10.
+
 ## 0.2.0 - 2026-09-28
 
 First public release: all twelve v1 rows, listed below. 0.1.0 was an internal
