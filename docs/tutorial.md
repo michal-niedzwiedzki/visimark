@@ -214,7 +214,7 @@ Everywhere below, `visimark` means "the command you just installed", or
 
 ```console
 $ visimark --help
-visimark — spreadsheet mechanics for Markdown
+visimark — a document integrity layer for Markdown
 
 usage:
   visimark check FILE... [--json]      read-only; exit 1 if any finding.

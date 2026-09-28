@@ -1,7 +1,7 @@
 {
   "name": "visimark-monorepo",
   "private": true,
-  "description": "Monorepo for VisiMark: spreadsheet mechanics for Markdown, plus its editor integrations.",
+  "description": "Monorepo for VisiMark, a document integrity layer for Markdown, plus its editor integrations.",
   "keywords": [
     "agent",
     "ai",

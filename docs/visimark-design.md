@@ -9,9 +9,9 @@ Both are normative: the implementation must reproduce their behaviour exactly.
 ## 1. Purpose
 
 Markdown made prose reviewable in a diff. Nothing does that for calculation.
-VisiMark adds spreadsheet mechanics to Markdown so that a number in a document
-can carry the formula that produced it, and so that a machine can prove the two
-still agree.
+VisiMark is a document integrity layer for Markdown: a number in a document
+carries the formula that produced it, and a machine proves the two still
+agree.
 
 The intended user is a developer or an agent working in a text editor, not a
 spreadsheet user. The value is not the arithmetic — it is that the arithmetic

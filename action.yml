@@ -1,5 +1,5 @@
 name: "VisiMark check"
-description: "Verify that a VisiMark Markdown document's formulas still agree with its numbers, and fail the build if they don't."
+description: "Document integrity check for Markdown: verify that a document's formulas still agree with its numbers, and fail the build if they don't."
 author: "VisiMark"
 branding:
   icon: "check-square"
