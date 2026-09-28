@@ -128,4 +128,49 @@ describe("prepare-release", () => {
     expect(run(next, "--date", "yesterday").code).toBe(2);
     expect(run().code).toBe(2);
   });
+
+  test("exits 2 on a version with a leading zero, which npm refuses", () => {
+    expect(run("01.2.3").code).toBe(2);
+    expect(run("1.02.3").code).toBe(2);
+  });
+
+  test("exits 2 on a date that has the shape but not the calendar", () => {
+    const root = tree();
+    const before = snapshot(root);
+    for (const d of ["2030-02-30", "2030-13-01", "2030-00-10"]) {
+      expect(run(next, "--date", d, root).code).toBe(2);
+    }
+    expect(snapshot(root)).toEqual(before);
+  });
+
+  test("refuses when action.yml's version input has lost its default", () => {
+    const root = tree();
+    const action = read(root, "action.yml").replace(
+      /(^  version:[\s\S]*?)^    default: .*\n/m,
+      "$1",
+    );
+    writeFileSync(join(root, "action.yml"), action);
+    const before = snapshot(root);
+    const r = run(next, root);
+    expect(r.code).toBe(1);
+    expect(r.out).toContain("action.yml");
+    expect(snapshot(root)).toEqual(before);
+  });
+
+  test("refuses when one pre-commit pin is no longer numeric", () => {
+    const root = tree();
+    const file = join(root, "scripts/precommit-visimark-check.sh");
+    writeFileSync(
+      file,
+      read(root, "scripts/precommit-visimark-check.sh").replace(
+        /npx --yes visimark@\S+/,
+        "npx --yes visimark@latest",
+      ),
+    );
+    const before = snapshot(root);
+    const r = run(next, root);
+    expect(r.code).toBe(1);
+    expect(r.out).toContain("exactly two numeric");
+    expect(snapshot(root)).toEqual(before);
+  });
 });

@@ -35,7 +35,18 @@ for (let i = 0; i < args.length; i++) {
 }
 if (positional.length < 1 || positional.length > 2) usage();
 const version = positional[0]!;
-if (!/^\d+\.\d+\.\d+$/.test(version) || !/^\d{4}-\d{2}-\d{2}$/.test(date)) usage();
+// Strict semver: no leading zeros, which npm refuses to publish.
+if (!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(version)) usage();
+// The shape is not enough: 2030-02-30 has the shape. It has to round-trip.
+const realDate = (d: string): boolean => {
+  const t = new Date(`${d}T00:00:00Z`).getTime();
+  return (
+    /^\d{4}-\d{2}-\d{2}$/.test(d) &&
+    !Number.isNaN(t) &&
+    new Date(t).toISOString().slice(0, 10) === d
+  );
+};
+if (!realDate(date)) usage();
 const root = resolve(positional[1] ?? join(dirname(fileURLToPath(import.meta.url)), ".."));
 
 const refuse = (file: string, message: string): never => {
@@ -92,18 +103,26 @@ for (const [file, pinsEngine] of manifests) {
   }
 }
 
+// The block is `version:` and the lines indented under it, so the match cannot
+// run on into a later input's `default` if this one loses its own.
 edit(
   "action.yml",
-  /(^  version:[\s\S]*?^    default: ")[^"]*(")/m,
+  /(^  version:[ \t]*\n(?:(?: {4}.*)?\n)*? {4}default: ")[^"]*(")/m,
   `$1${version}$2`,
-  "the `version` input's default",
+  "the `version` input's own default",
 );
-edit(
-  "scripts/precommit-visimark-check.sh",
-  /visimark@\d+\.\d+\.\d+/g,
-  `visimark@${version}`,
-  "a visimark@<version> pin",
-);
+
+// Exactly the two pins (the bunx and npx branches), both numeric. One branch
+// drifting to `visimark@latest` must refuse, not be half-bumped.
+const hook = "scripts/precommit-visimark-check.sh";
+const pins = read(hook).match(/visimark@\S+/g) ?? [];
+if (pins.length !== 2 || !pins.every((pin) => /^visimark@\d+\.\d+\.\d+$/.test(pin))) {
+  refuse(
+    hook,
+    `${hook}: expected exactly two numeric visimark@<version> pins, found: ${pins.join(" ") || "none"}.`,
+  );
+}
+edit(hook, /visimark@\d+\.\d+\.\d+/g, `visimark@${version}`, "a visimark@<version> pin");
 
 // Root changelog: Unreleased becomes the release, a fresh Unreleased opens
 // above it, and the link reference goes at the head of the reference block.
