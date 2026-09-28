@@ -20,7 +20,7 @@ and left an untraceable tarball on the registry for good.
 | `io.github.michal-niedzwiedzki/visimark` on the MCP registry | `server.json`, rewritten from the tag | `GET /v0/servers?search=visimark` — skip if this version is listed; runs only if the npm leg succeeded, since the entry points at the npm package, then waits (up to ~9 minutes) for npm to actually list the version — the registry validates against npm and refuses an entry npm cannot yet serve — and retries a 5xx from the registry, never a 4xx |
 | `visimark-vscode` on the VS Code Marketplace | `editors/vscode/package.json` | `vsce show` — skip if the version is listed |
 | `visimark-vscode` on Open VSX | `editors/vscode/package.json` | Open VSX API — skip if the version is there; create the namespace only if it is genuinely missing |
-| GitHub Release, with the `.vsix` attached | the tag | needs a tag — the pushed one, or the `tag` input on a `workflow_dispatch` |
+| GitHub Release, with the `.vsix` attached | the tag | needs a tag — the pushed one, or the `tag` input on a `workflow_dispatch`. The body is that version's own section of `CHANGELOG.md` (extracted by `scripts/changelog-section.ts`), followed by GitHub's generated "What's Changed" list |
 | Each request issue whose change ships in this release, closed | the `vocab/issue-<n>-<slug>-impl` or `issue/<n>-<slug>-impl` merge commit is an ancestor of the tag | the issue is still open — a re-run skips what is already closed |
 
 `packages/visimark-lsp` is bundled into the extension and is not published on
@@ -81,6 +81,52 @@ issues — it has no tag to point at, and it says so in the run log. Pass
 `-f tag=vX.Y.Z` to backfill those two as well; the run then checks that tag out
 and builds from it.
 
+### What the run refuses, and how to rehearse it
+
+Before any leg publishes, given a tag, the run fails unless:
+
+- the tag equals `packages/visimark`'s version at that commit — `v0.1.9` was
+  once pushed on a 0.1.8 tree, every leg found its version "already there", and
+  the run still cut a GitHub Release; and
+- the tagged commit is an ancestor of `origin/master`.
+
+Runs are serialised per tag (`concurrency`, `cancel-in-progress: false`): a
+second push or dispatch for the same tag queues behind the first instead of
+racing it to the registries.
+
+To rehearse without publishing, dispatch with `dry_run`:
+
+```bash
+gh workflow run release.yml -f tag=vX.Y.Z -f dry_run=true
+```
+
+It builds, tests, runs the tag checks above, runs `npm publish --dry-run` for
+the four packages, packages the `.vsix` and extracts the release notes. It
+publishes nothing, cuts no GitHub Release, closes no issues, and skips **every
+leg must have landed** (there is nothing to land); a *dry run verdict* step
+fails the run if any rehearsed step did not succeed. It runs `npm publish`
+without `--provenance`, so it does not rehearse the attestation.
+
+## Release order
+
+Core first, plugin second, and never the other way round. The plugin bundles
+the engine, so its changelog says "Bundles engine X.Y.Z." and that version has to
+be on the registries before a plugin release names it — #286 was once merged
+before core had shipped.
+
+1. Merge the core release commit (`chore: release vX.Y.Z`) and wait for `ci`
+   and `dogfood` on it.
+2. Tag it with `scripts/release-tag.sh vX.Y.Z` and wait for `release.yml`.
+3. Run `scripts/verify-release.sh vX.Y.Z` ([Verify every leg](#verify-every-leg)).
+4. Only now merge the plugin release PR, and wait for `ci` on `master`.
+5. Tag it with `scripts/release-tag.sh X.Y.Z` and wait for
+   `obsidian-release.yml`.
+6. Check the release page has `main.js`, `manifest.json` and `styles.css`, and
+   that the attestation verifies (see below).
+
+Pushing a tag is the maintainer's action; an agent opens the PRs, watches the
+runs and verifies, and does not tag unless asked.
+
 ## Releasing the Obsidian plugin
 
 **A separate, bare-version tag — not `vX.Y.Z`.** The plugin's version is its
@@ -93,9 +139,14 @@ which fails if that tag disagrees with the manifest, builds `main.js`, and
 attaches `main.js`, `manifest.json` and `styles.css` to a GitHub Release cut
 against the same tag, after recording a build-provenance attestation for
 `main.js` and `styles.css` (the community scanner's Scorecard looks for one).
-Before tagging, `bun run --filter visimark-obsidian lint` must show no errors,
-and the root `manifest.json` and `versions.json` are copies to refresh with the
-plugin's. It cannot fire from the same push that runs
+Before tagging, `bun run --filter visimark-obsidian lint` must show no errors.
+The workflow also fails unless the newest dated entry in
+`editors/obsidian/CHANGELOG.md` says "Bundles engine X." for the engine version
+in `packages/visimark` at the tagged commit
+(`scripts/check-obsidian-engine-line.ts`). That check is deliberately not in
+`ci.yml`: a core-only bump would turn every PR red until the plugin was
+re-released. The release body is that version's own section of the plugin
+changelog. The workflow cannot fire from the same push that runs
 `release.yml`'s own `v*`-tagged release: the two tag schemes cannot collide,
 since every tag `release.yml` creates starts with `v` and this workflow's
 trigger requires the first character to be a digit.
@@ -108,16 +159,43 @@ Release) rather than four registries, so there is nothing analogous to
 verify afterward beyond checking the release exists with its three assets.
 `workflow_dispatch` with a required `tag` input covers a backfill by hand.
 
-**What this does not do.** Submitting the plugin to the community registry
-for the first time needs a `manifest.json` at the repository's root, on the
-default branch — the registry's own review reads it from there
-(`docs/design/obsidian-release-plan.md`'s "The decision"). That is a one-time,
-by-hand step for the submission itself, not something a tagged release
-triggers. The root `manifest.json` and `versions.json` are copies of
-`editors/obsidian/`'s, added at the first submission (0.2.0). Nothing keeps
-them in sync: the registry re-reads the version from each GitHub Release's own
-`manifest.json` asset, so a stale root copy does no harm after listing, but
-refresh both when you next touch the submission.
+**Keeping the root copies in step.** The community registry reads
+`manifest.json` from the repository's root on the default branch, while the
+build and the release read `editors/obsidian/`. The root `manifest.json` and
+`versions.json` must stay byte-equal to the `editors/obsidian/` copies; `ci.yml`
+fails ("release metadata must agree") when they drift, so copy both in the plugin
+release commit.
+
+### Submitting to the community registry
+
+Pull requests to `obsidianmd/obsidian-releases` are disabled; the registry is the
+**community.obsidian.md** portal. Submitting is a by-hand, one-time step, not
+something a tagged release triggers:
+
+1. Sign in at community.obsidian.md and link the GitHub account.
+2. Plugins, then New plugin; enter the repository URL and confirm the developer
+   policies.
+3. The portal takes `manifest.json` from the default branch's root (which is
+   why the root copy exists, and it makes the scanner treat this whole monorepo
+   as the plugin) and reviews the plugin automatically.
+4. Answer the review's feedback by publishing a **new release with an
+   incremented version** — each fix is a normal plugin release, in the order
+   above.
+
+What the scanner looks at, learned from 0.2.0 to 0.2.2:
+
+- It lints with `eslint-plugin-obsidianmd`. Errors fail
+  `bun run --filter visimark-obsidian lint`; three warnings are known and
+  accepted (see the plugin changelog). Warnings show on the public Scorecard.
+- It lints the whole repository, so about twenty warnings from `packages/*` and
+  `editors/vscode` appear on the Scorecard too. Known, accepted.
+- It looks for a **build-provenance attestation** on `main.js` and `styles.css`.
+  `obsidian-release.yml` makes one from the same bytes it uploads. Verify with
+  `gh attestation verify <file> --repo michal-niedzwiedzki/visimark`, which
+  prints nothing on success — check the exit code is 0.
+- `authorUrl` must be the author's profile, not the plugin repository (0.2.1
+  was flagged for this).
+- The README must say what the plugin touches (vault enumeration, clipboard).
 
 ## Before you tag
 
@@ -128,7 +206,8 @@ refresh both when you next touch the submission.
    bun test
    bun run build
    ```
-2. **Green in CI on the commit you will tag.** The `ci` and `dogfood` workflows
+2. **Green in CI on the commit you will tag.** `scripts/release-tag.sh` (step 7)
+   refuses if it is not, but knowing first saves a round trip. The `ci` and `dogfood` workflows
    run on every push to `master`. Wait for both before tagging — `release.yml`
    checks out the tag, not your working tree, so an unpushed or red commit
    cannot be in the release.
@@ -179,9 +258,13 @@ refresh both when you next touch the submission.
    that commit to pass.
 7. **Tag and push the tag** — and only now:
    ```bash
-   git tag vX.Y.Z
-   git push origin vX.Y.Z
+   scripts/release-tag.sh vX.Y.Z
    ```
+   It refuses unless you are on `master`, the tree is clean, `HEAD` equals
+   `origin/master`, the tag matches the manifest version and is unused (locally
+   and on origin), and the latest `ci` and `dogfood` runs on `master` for
+   `HEAD` are green. Then it creates the tag (signed, if your git config signs
+   tags) and pushes it. For the plugin, pass the bare version: `X.Y.Z`.
 
 ```mermaid
 flowchart LR
@@ -200,8 +283,10 @@ Two files. Both are read by machines at release time, so both are part of the
 release, not an afterthought. CI checks that each has an entry for the release;
 it does not check what the entry says.
 
-- **[`CHANGELOG.md`](../CHANGELOG.md)** — the whole file becomes the GitHub
-  Release body, so it has to read correctly top-to-bottom as of the tag.
+- **[`CHANGELOG.md`](../CHANGELOG.md)** — the release's own section becomes the
+  GitHub Release body (`scripts/changelog-section.ts` extracts everything under
+  the version's heading, up to the next `##`), so that section has to read
+  correctly on its own. The run fails if the heading is missing or empty.
   - Keep a `## Unreleased` section at the top and add each user-facing change
     to it *as you make it*, under `Added` / `Changed` / `Fixed` / `Removed`.
   - At release time, rename `## Unreleased` to `## X.Y.Z - YYYY-MM-DD` and open
@@ -224,6 +309,10 @@ it does not check what the entry says.
     widened finding usually belongs here. CI cannot check this; you do.
   - `## Unreleased` is optional in this file. Write the entry when you cut the
     release.
+- **[`editors/obsidian/CHANGELOG.md`](../editors/obsidian/CHANGELOG.md)** — the
+  plugin has its own version, so it has its own entry, and it becomes the plugin
+  release's body. End each entry with "Bundles engine X.Y.Z." — the plugin
+  release run checks it against the engine in the tree.
 
 If a change only touches CI, the build, or the tests, it does not need a
 changelog line — unless a consumer can observe it (the provenance attestation
@@ -231,48 +320,31 @@ did, so it got one).
 
 ## Verify every leg
 
-`release.yml`'s own final step now asserts all four registries have the
+`release.yml`'s own final step asserts all four registries have the
 version, so a green run is no longer the empty signal it was for v0.1.1. It
-still does not check the provenance attestation or the GitHub Release, and
-`check` refuses to call a formula-free table verified — hold a release to the
-same bar. After the run, for the version you released:
+still does not check the provenance attestation, the GitHub Release or that the
+server starts, and `check` refuses to call a formula-free table verified — hold
+a release to the same bar. After the run:
 
 ```bash
-# This is also the Action's pinned default (ci.yml asserts the two agree), so
-# it doubles as proof that a consumer's `npx visimark@<default>` can resolve.
-# CI proves the number matches the manifests; only npm proves it was ever
-# published, and v0.1.0 is the standing reminder that those are different
-# questions.
-npm view visimark@X.Y.Z version
-npm view visimark@X.Y.Z dist.attestations            # provenance must be present
-
-# The other three npm packages ship from the same tag and are just as easy to
-# miss — each publishes on its own guarded leg, so any one of them can be the
-# only thing absent from an otherwise green run.
-for pkg in remark-lint-visimark markdownlint-rule-visimark visimark-mcp; do
-  npm view "$pkg@X.Y.Z" version
-  npm view "$pkg@X.Y.Z" dist.attestations
-done
-
-# The MCP registry. An agent discovers the server here and nowhere else, so an
-# entry that is absent or stuck on the previous version is a release that
-# shipped to npm and reached no one.
-curl -sS 'https://registry.modelcontextprotocol.io/v0/servers?search=visimark' \
-  | grep -o '"version":"[^"]*"'                      # expect X.Y.Z
-
-npx @vscode/vsce show visimark-michal-niedzwiedzki.visimark-vscode
-curl -sS -o /dev/null -w '%{http_code}\n' \
-  https://open-vsx.org/api/visimark-michal-niedzwiedzki/visimark-vscode/X.Y.Z   # expect 200
-gh release view vX.Y.Z
+scripts/verify-release.sh vX.Y.Z
 ```
 
-Then prove the published MCP server actually runs, the way CI does — under
-each runtime, from the registry rather than from a tarball you built:
+It is read-only, and needs only `curl`, `gh` and `node` or Bun. It checks:
 
-```bash
-npx -y visimark-mcp@X.Y.Z --nope    # expect exit 2 and a usage line on stderr
-bunx visimark-mcp@X.Y.Z --nope      # the same, on a machine with Bun
-```
+- all four npm packages are at that version **and** carry a provenance
+  attestation (`dist.attestations`). CI proves the version number matches the
+  manifests; only npm proves it was ever published, and `visimark@0.1.0` is the
+  standing reminder that those are different questions;
+- the MCP registry lists the version. An agent discovers the server there and
+  nowhere else, so an entry that is absent or stuck on the previous version is a
+  release that reached no one;
+- the VS Code Marketplace and Open VSX list the extension version;
+- `gh release view vX.Y.Z` finds the release;
+- the published MCP server starts, from the registry rather than a tarball you
+  built: `npx -y visimark-mcp@X.Y.Z --nope` and `bunx visimark-mcp@X.Y.Z --nope`
+  must each exit 2 with a usage line. It runs whichever of the two is installed
+  and says which it skipped, so run it on a machine with each.
 
 A server that cannot start is not visible in any registry check. If either
 form fails to resolve `visimark`, read
@@ -337,7 +409,16 @@ Publishing both from one tag is what makes this safe, and it is why the
 lockstep pin is exact rather than a caret. **Never publish a dependent package
 against an engine version older than the tag**, however convenient it looks.
 
-**4. A new registry needs its ownership settled once.** For npm that is the
+**4. An npm package that is listed on the MCP registry needs `mcpName`.** The
+registry validates the entry against the npm package and refuses one whose
+`package.json` does not carry `"mcpName"` equal to `server.json`'s `name`.
+`visimark-mcp@0.1.9` shipped without it, its registry leg was refused, npm
+versions are immutable, and the fix had to ship as 0.1.10 — 0.1.9 stays
+unlisted on the registry for good. `ci.yml` now fails when the two disagree
+(`scripts/check-mcp-name.ts`), so add the field in the same PR that adds the
+package.
+
+**5. A new registry needs its ownership settled once.** For npm that is the
 `NPM_TOKEN` scope; for Open VSX the workflow creates the namespace on first
 publish. For the MCP registry, `io.github.<owner>/<name>` is owned by the
 GitHub identity that publishes it, proven by OIDC — so there is nothing to
@@ -346,9 +427,9 @@ fails, read the leg's log before assuming a credential problem: the guard
 `GET /v0/servers?search=` runs first, and a network failure there looks like a
 publish failure.
 
-**5. Verify the first release by hand, even though the gate is green.** Run the
-whole of [Verify every leg](#verify-every-leg) including the two `npx`/`bunx`
-smoke commands. The final gate proves a version is *listed*; only running it
+**6. Verify the first release by hand, even though the gate is green.** Run
+`scripts/verify-release.sh` (see [Verify every leg](#verify-every-leg)) on a machine
+with each runtime, so both smoke commands run. The final gate proves a version is *listed*; only running it
 proves it *starts*.
 
 ## Rules that bite
@@ -357,15 +438,16 @@ proves it *starts*.
 |------|------------------------|
 | The tag is the only publisher. No hand-run `npm publish` / `vsce publish` / `ovsx publish`. | npm keeps the version number forever on the first publish it sees. `visimark@0.1.0` is a mis-publish that can never be reissued. |
 | All six `package.json` versions equal the tag, exactly — and the three `dependencies.visimark` pins with them. | One tag then publishes mismatched version numbers, or a leg fails mid-release with the others already out. |
-| The changelog entry is written, dated and merged **before** the tag. | The GitHub Release body is built from `CHANGELOG.md` at the tagged commit — a tag ahead of the changelog ships the previous version's notes. |
+| The changelog entry is written, dated and merged **before** the tag. | The GitHub Release body is that version's section of `CHANGELOG.md` at the tagged commit — a tag ahead of the changelog has no section to extract, and the release step fails. |
 | Each changelog has a dated `## X.Y.Z - YYYY-MM-DD` heading for the release's version, in the release commit. | `ci.yml`'s "every release must have a changelog entry" step fails the release commit. Without the entry the GitHub Release body ships the previous version's notes, or the Marketplace page silently skips the version. The check proves the heading exists, not that the entry is accurate. |
 | The Shipped-register **Released** cells are filled **before** the tag (step 5). | The released `vocabulary-catalogue.md` shows shipped primitives as still pending, while `release.yml` closes their issues — the catalogue and the tracker disagree. |
-| Tag a commit already on `origin/master` with green `ci` and `dogfood`. | `release.yml` builds from the tag. Uncommitted, unpushed or red work is silently not in the release. |
+| Tag a commit already on `origin/master` with green `ci` and `dogfood` — use `scripts/release-tag.sh`. | `release.yml` builds from the tag, and now refuses a tag whose commit is not on master or whose version disagrees with the manifest. Red work still ships if you tag it by hand past the script. |
 | `action.yml`'s `version` default is bumped with the manifests. | Every consumer who pins the new Action ref keeps running the previous engine, with nothing at run time to tell them. Nothing fails; it just quietly verifies with the old code. |
 | Changelog dates are ISO 8601, `YYYY-MM-DD`. | The project's own date rule. A release heading with no date fails CI; every other date in a changelog is unchecked, because nothing runs `check` with date repair on it. |
 | A dependent package is never published against an engine older than the tag. | It inherits every bug that engine has, including ones already fixed on `master`, and no check in this repository would notice. `visimark@0.1.7`'s #170 `bun` exports condition would have made `bun add -g visimark-mcp` fail for every user. |
+| Core ships before the plugin that bundles it (see [Release order](#release-order)). | The plugin changelog names an engine version the registries do not have yet — #286 was merged before core shipped. |
 | Never retag, force-push a tag, or `npm unpublish` to tidy a botched release. | It rewrites history to look like the pipeline did something it did not. Bump to the next patch and let the record stand — the move `infer`'s near-miss refusal exists to enforce, applied to the release instead of a spreadsheet. |
-| A green `release` run is not a fully released package. Verify each leg. | The run's final step asserts the four registries have the version, but nothing automated checks the provenance attestation or the GitHub Release. The v0.1.1 run reported success with npm and the GitHub Release done and both extension registries empty — that gap is closed; the remaining ones are yours. |
+| A green `release` run is not a fully released package. Run `scripts/verify-release.sh`. | The run's final step asserts the four registries have the version, but not the provenance attestation, the GitHub Release or that the server starts. The v0.1.1 run reported success with npm and the GitHub Release done and both extension registries empty — that gap is closed; the remaining ones are yours. |
 
 ## Secrets the workflow needs
 
