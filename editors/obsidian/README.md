@@ -95,6 +95,18 @@ does not.
 
 `main.js` is a build artifact and is not committed.
 
+## What it touches
+
+The plugin makes no network requests. Two things it does are worth knowing
+before you install it:
+
+- **It lists your vault's Markdown files.** The vault sweep reads every note to
+  find the ones that disagree with themselves, and the ambient count keeps that
+  current as you edit. Nothing leaves the device, and a note with no `vmark`
+  block is skipped after a cheap check.
+- **It can write to the clipboard.** Only when you press the copy button in the
+  values dialog; it never reads the clipboard.
+
 ## What the build guarantees
 
 **No `node:` specifier reaches `main.js`, and that is stricter than the rest of
