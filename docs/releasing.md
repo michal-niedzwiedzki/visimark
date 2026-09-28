@@ -109,7 +109,11 @@ for the first time needs a `manifest.json` at the repository's root, on the
 default branch — the registry's own review reads it from there
 (`docs/design/obsidian-release-plan.md`'s "The decision"). That is a one-time,
 by-hand step for the submission itself, not something a tagged release
-triggers.
+triggers. The root `manifest.json` and `versions.json` are copies of
+`editors/obsidian/`'s, added at the first submission (0.2.0). Nothing keeps
+them in sync: the registry re-reads the version from each GitHub Release's own
+`manifest.json` asset, so a stale root copy does no harm after listing, but
+refresh both when you next touch the submission.
 
 ## Before you tag
 
