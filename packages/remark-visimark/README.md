@@ -9,7 +9,9 @@ already use.
 ## Install
 
 ```sh
-npm install --save-dev remark-lint-visimark
+npm i -D remark-lint-visimark
+# or
+bun add -d remark-lint-visimark
 ```
 
 ## Use

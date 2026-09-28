@@ -276,7 +276,7 @@ jobs:
           lts=$(node -p "process.versions.node.split('.')[0]")
           echo "current LTS major: $lts"
           fail=0
-          for manifest in packages/visimark/package.json packages/visimark-mcp/package.json; do
+          for manifest in packages/visimark/package.json packages/visimark-mcp/package.json packages/remark-visimark/package.json packages/markdownlint-visimark/package.json; do
             declared=$(node -p "require('./$manifest').engines?.node ?? ''")
             floor=$(printf '%s' "$declared" | sed -n 's/^>=\([0-9][0-9]*\).*/\1/p')
             if [ -z "$floor" ]; then
@@ -418,6 +418,16 @@ jobs:
       - name: pack the MCP server tarball
         working-directory: packages/visimark-mcp
         run: npm pack --pack-destination "$RUNNER_TEMP"
+      # The two lint plugins have no `bin`, so #29 cannot break them; they are
+      # packed to prove the tarball imports as a library under each runtime
+      # alone (the #190 class). Their names do not match the `visimark-*`
+      # glob below, which keeps the engine/MCP tarball shapes unambiguous.
+      - name: pack the remark plugin tarball
+        working-directory: packages/remark-visimark
+        run: npm pack --pack-destination "$RUNNER_TEMP"
+      - name: pack the markdownlint rule tarball
+        working-directory: packages/markdownlint-visimark
+        run: npm pack --pack-destination "$RUNNER_TEMP"
       - uses: actions/upload-artifact@v7
         with:
           name: visimark-tarball
@@ -425,16 +435,23 @@ jobs:
           # visimark-mcp-X.Y.Z.tgz. The smoke jobs pick them apart by shape —
           # `visimark-[0-9]*` is the engine — because `visimark-*.tgz` would
           # hand `npm i -g` two packages where one was meant.
-          path: ${{ runner.temp }}/visimark-*.tgz
+          path: |
+            ${{ runner.temp }}/visimark-*.tgz
+            ${{ runner.temp }}/remark-lint-visimark-*.tgz
+            ${{ runner.temp }}/markdownlint-rule-visimark-*.tgz
           if-no-files-found: error
       # The smoke jobs have no checkout — they are deliberately bare
       # single-runtime environments — so the handshake driver rides along with
       # the tarballs it exercises.
-      - run: cp scripts/mcp-handshake.mjs "$RUNNER_TEMP/handshake.mjs"
+      - run: |
+          cp scripts/mcp-handshake.mjs "$RUNNER_TEMP/handshake.mjs"
+          cp scripts/plugins-smoke.mjs "$RUNNER_TEMP/plugins-smoke.mjs"
       - uses: actions/upload-artifact@v7
         with:
           name: mcp-handshake
-          path: ${{ runner.temp }}/handshake.mjs
+          path: |
+            ${{ runner.temp }}/handshake.mjs
+            ${{ runner.temp }}/plugins-smoke.mjs
           if-no-files-found: error
 
   smoke-node:
@@ -525,6 +542,26 @@ jobs:
             console.log(`import("visimark-mcp") ok — engine ${mcp.engineVersion()}`);
           ')
           node handshake.mjs "$MCP_BIN"
+      - name: the lint plugins import and report under Node only
+        run: |
+          set -e
+          # A scratch project, not a global install: these packages have no
+          # `bin`, and a library is consumed as a dependency. The engine
+          # tarball is named in the same install so npm dedupes the plugins'
+          # exact `visimark` pin against it instead of fetching the registry
+          # copy; the version check below proves it did. `markdownlint` is the
+          # host the rule runs in, so it comes from the registry.
+          engine_tgz="$(pwd)/$(ls visimark-[0-9]*.tgz)"
+          remark_tgz="$(pwd)/$(ls remark-lint-visimark-*.tgz)"
+          mdl_tgz="$(pwd)/$(ls markdownlint-rule-visimark-*.tgz)"
+          mkdir lib && cd lib
+          npm init -y >/dev/null
+          npm i "$engine_tgz" "$remark_tgz" "$mdl_tgz" markdownlint@0.41
+          packed=$(tar -xzOf "$engine_tgz" package/package.json | tr -d ' \n')
+          installed=$(tr -d ' \n' < node_modules/visimark/package.json)
+          [ "$packed" = "$installed" ] || { echo "::error::the engine under test is not the packed one"; exit 1; }
+          cp ../plugins-smoke.mjs .
+          node plugins-smoke.mjs
 
   smoke-bun:
     needs: pack
@@ -630,3 +667,25 @@ jobs:
             console.log(`import("visimark-mcp") ok — engine ${mcp.engineVersion()}`);
           ')
           bun handshake.mjs "$MCP_BIN"
+      - name: the lint plugins import and report under Bun only
+        run: |
+          set -e
+          export PATH="$(bun pm bin -g):/usr/local/bin:/usr/bin:/bin"
+          if command -v node >/dev/null 2>&1; then
+            echo "::error::node still on PATH; smoke-bun must be Bun-only"; exit 1
+          fi
+          # Same scratch project as smoke-node. `bun add` does not dedupe the
+          # plugins' exact `visimark` pin against a named tarball, so an
+          # `overrides` entry forces it to the local one — the reason the
+          # global-install step above gives — and the byte comparison proves it.
+          engine_tgz="$(pwd)/$(ls visimark-[0-9]*.tgz)"
+          remark_tgz="$(pwd)/$(ls remark-lint-visimark-*.tgz)"
+          mdl_tgz="$(pwd)/$(ls markdownlint-rule-visimark-*.tgz)"
+          mkdir lib && cd lib
+          printf '{"name":"lib","private":true,"overrides":{"visimark":"file:%s"}}' "$engine_tgz" > package.json
+          bun add "$engine_tgz" "$remark_tgz" "$mdl_tgz" markdownlint@0.41
+          packed=$(tar -xzOf "$engine_tgz" package/package.json | tr -d ' \n')
+          installed=$(tr -d ' \n' < node_modules/visimark/package.json)
+          [ "$packed" = "$installed" ] || { echo "::error::the engine under test is not the packed one"; exit 1; }
+          cp ../plugins-smoke.mjs .
+          bun plugins-smoke.mjs

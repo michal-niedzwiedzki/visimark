@@ -47,5 +47,9 @@
   "devDependencies": {
     "markdownlint": "^0.41.1",
     "markdownlint-cli2": "^0.23.3"
+  },
+  "engines": {
+    "bun": ">=1.0.0",
+    "node": ">=24"
   }
 }

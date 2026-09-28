@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Changed
+
+- **`remark-lint-visimark` and `markdownlint-rule-visimark` now declare
+  `engines` (`node >=24`, `bun >=1.0.0`), the same floor as `visimark`.** CI
+  now packs both, installs the tarballs into a scratch project under Node
+  alone and under Bun alone, and runs a false `assert` through each plugin.
+
 ## 0.1.10 - 2026-09-28
 
 ### Fixed

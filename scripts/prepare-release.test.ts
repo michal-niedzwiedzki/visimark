@@ -34,7 +34,7 @@ function tree(unreleased = "### Fixed\n\n- Something.\n"): string {
   const changelog = readFileSync(join(root, "CHANGELOG.md"), "utf8");
   writeFileSync(
     join(root, "CHANGELOG.md"),
-    changelog.replace(/^## Unreleased\n\n?/m, `## Unreleased\n\n${unreleased}\n`),
+    changelog.replace(/^## Unreleased\n[\s\S]*?(?=^## )/m, `## Unreleased\n\n${unreleased}\n`),
   );
   return root;
 }
