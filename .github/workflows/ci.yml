@@ -102,6 +102,15 @@ jobs:
       - name: every release must have a changelog entry
         run: bun scripts/check-changelog-entries.ts
 
+      # Two release inputs no package build reads. The MCP registry refuses a
+      # publish whose npm `mcpName` differs from server.json's `name` (v0.1.9),
+      # and the Obsidian registry reads the root manifest.json/versions.json
+      # while the release reads editors/obsidian/'s copies.
+      - name: release metadata must agree
+        run: |
+          bun scripts/check-mcp-name.ts
+          bun scripts/check-obsidian-root-mirror.ts
+
       - run: bun run lint
       # The Obsidian community scanner's ruleset. Errors fail the build; the
       # warnings that remain are known and listed in editors/obsidian's
