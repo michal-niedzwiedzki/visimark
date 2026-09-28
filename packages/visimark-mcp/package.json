@@ -1,6 +1,6 @@
 {
   "name": "visimark-mcp",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "A stdio MCP server exposing the VisiMark engine to agents: every command as a tool, the authoring discipline as resources, read-only unless an operator opens the write gate.",
   "keywords": [
     "agent",
@@ -49,7 +49,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.30.1",
-    "visimark": "0.1.8"
+    "visimark": "0.1.9"
   },
   "engines": {
     "bun": ">=1.0.0",
