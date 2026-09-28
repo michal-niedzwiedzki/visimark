@@ -87,7 +87,7 @@ and builds from it.
 own (`editors/obsidian/manifest.json`, not tied to the engine's — see
 `editors/obsidian/CHANGELOG.md`'s own header), and the community registry and
 BRAT both match a GitHub Release's tag against that version *exactly*, with
-no `v` prefix. Pushing `0.1.0` (not `v0.1.0`) runs
+no `v` prefix. Pushing `0.2.0` (not `v0.2.0`) runs
 [`.github/workflows/obsidian-release.yml`](../.github/workflows/obsidian-release.yml),
 which fails if that tag disagrees with the manifest, builds `main.js`, and
 attaches `main.js`, `manifest.json` and `styles.css` to a GitHub Release cut
