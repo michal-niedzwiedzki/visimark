@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.9 - 2026-09-28
+
+- A scalar bound into prose at more than one place (`<!--vmark=…-->`) that has
+  drifted at several of them now gets a `STALE` diagnostic on each drifted
+  site, not just the first.
+
 ## 0.1.8 - 2026-09-25
 
 - A `param` may declare the set of values it accepts. A default outside the
