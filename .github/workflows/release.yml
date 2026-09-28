@@ -18,11 +18,23 @@ on:
         description: "Release tag to back-fill, e.g. v0.1.3. Must already exist. Leave empty to repair only the npm / Marketplace / Open VSX legs."
         required: false
         type: string
+      dry_run:
+        description: "Rehearse: build, test, check the tag, `npm publish --dry-run` for the four packages and `vsce package`. Publishes nothing, cuts no GitHub Release, closes no issues."
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write # cut the GitHub Release
   id-token: write # mint the OIDC token that signs the npm provenance attestation
   issues: write # close vocabulary-request issues whose primitive ships in this release
+
+# One run per tag. The first v0.1.9 push started two at once, racing each other
+# to the same registries. `cancel-in-progress: false` queues the second rather
+# than killing a run that may be halfway through publishing.
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
 
 jobs:
   release:
@@ -76,6 +88,22 @@ jobs:
             echo "::error file=.github/workflows/release.yml::tag '$tag' does not exist in this repository. Pass an existing tag to the workflow_dispatch input — see docs/releasing.md."
             exit 1
           fi
+          if [ -n "$tag" ]; then
+            # A tag is a claim about the tree it points at. v0.1.9 was once
+            # pushed on a 0.1.8 tree: every publish leg found its version "already
+            # on the registry", skipped, and the run still cut a GitHub Release.
+            tree_version="$(node -p "require('./packages/visimark/package.json').version")"
+            if [ "$tag" != "v$tree_version" ]; then
+              echo "::error file=.github/workflows/release.yml::tag '$tag' does not match packages/visimark's version '$tree_version' at that commit. Tag the release commit itself, not an earlier one — see docs/releasing.md."
+              exit 1
+            fi
+            # ...and a release comes from master. fetch-depth: 0 has brought
+            # origin/master along.
+            if ! git merge-base --is-ancestor "refs/tags/$tag^{commit}" origin/master; then
+              echo "::error file=.github/workflows/release.yml::tag '$tag' is not on master (its commit is not an ancestor of origin/master). Release from a merged commit — see docs/releasing.md."
+              exit 1
+            fi
+          fi
           if [ -z "$tag" ]; then
             echo "::warning::No tag for this run, so the GitHub Release and the request-issue bookkeeping will be skipped. Re-dispatch with the 'tag' input to backfill those too — see docs/releasing.md."
           else
@@ -112,8 +140,11 @@ jobs:
         working-directory: packages/visimark
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          DRY_RUN: ${{ inputs.dry_run }}
         run: |
-          if npm view "visimark@$ENGINE_VERSION" version >/dev/null 2>&1; then
+          if [ "$DRY_RUN" = true ]; then
+            npm publish --dry-run --access public
+          elif npm view "visimark@$ENGINE_VERSION" version >/dev/null 2>&1; then
             echo "visimark@$ENGINE_VERSION is already on npm; skipping."
           else
             npm publish --provenance --access public
@@ -125,8 +156,11 @@ jobs:
         working-directory: packages/remark-visimark
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          DRY_RUN: ${{ inputs.dry_run }}
         run: |
-          if npm view "remark-lint-visimark@$ENGINE_VERSION" version >/dev/null 2>&1; then
+          if [ "$DRY_RUN" = true ]; then
+            npm publish --dry-run --access public
+          elif npm view "remark-lint-visimark@$ENGINE_VERSION" version >/dev/null 2>&1; then
             echo "remark-lint-visimark@$ENGINE_VERSION is already on npm; skipping."
           else
             npm publish --provenance --access public
@@ -138,8 +172,11 @@ jobs:
         working-directory: packages/markdownlint-visimark
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          DRY_RUN: ${{ inputs.dry_run }}
         run: |
-          if npm view "markdownlint-rule-visimark@$ENGINE_VERSION" version >/dev/null 2>&1; then
+          if [ "$DRY_RUN" = true ]; then
+            npm publish --dry-run --access public
+          elif npm view "markdownlint-rule-visimark@$ENGINE_VERSION" version >/dev/null 2>&1; then
             echo "markdownlint-rule-visimark@$ENGINE_VERSION is already on npm; skipping."
           else
             npm publish --provenance --access public
@@ -151,8 +188,11 @@ jobs:
         working-directory: packages/visimark-mcp
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          DRY_RUN: ${{ inputs.dry_run }}
         run: |
-          if npm view "visimark-mcp@$ENGINE_VERSION" version >/dev/null 2>&1; then
+          if [ "$DRY_RUN" = true ]; then
+            npm publish --dry-run --access public
+          elif npm view "visimark-mcp@$ENGINE_VERSION" version >/dev/null 2>&1; then
             echo "visimark-mcp@$ENGINE_VERSION is already on npm; skipping."
           else
             npm publish --provenance --access public
@@ -169,7 +209,7 @@ jobs:
         # Only after the bytes are on npm: the registry entry points at an npm
         # package, and an entry for a version npm does not have is a listing
         # that fails for every agent that follows it.
-        if: steps.mcp-server.outcome == 'success'
+        if: steps.mcp-server.outcome == 'success' && !inputs.dry_run
         run: |
           set -e
           if curl -sS "https://registry.modelcontextprotocol.io/v0/servers?search=visimark" \
@@ -229,7 +269,7 @@ jobs:
 
       - name: Publish to the VS Code Marketplace
         id: marketplace
-        if: steps.package.outcome == 'success'
+        if: steps.package.outcome == 'success' && !inputs.dry_run
         continue-on-error: true
         working-directory: editors/vscode
         env:
@@ -260,7 +300,7 @@ jobs:
 
       - name: Publish to Open VSX
         id: ovsx
-        if: steps.package.outcome == 'success'
+        if: steps.package.outcome == 'success' && !inputs.dry_run
         continue-on-error: true
         working-directory: editors/vscode
         env:
@@ -283,15 +323,26 @@ jobs:
       # nothing else — a marketplace credential problem is not a reason to
       # withhold it. `action-gh-release` is idempotent on an existing release,
       # so a backfill dispatch repairs a missing one and leaves a present one.
+      # Only this version's section, not the whole file: the changelog is ~800
+      # lines. It runs in a dry run too, so a tag ahead of its changelog entry
+      # is caught by the rehearsal and not by the release.
+      - name: Extract the release notes
+        id: notes
+        if: steps.tag.outputs.tag != ''
+        continue-on-error: true
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: bun scripts/changelog-section.ts CHANGELOG.md "${TAG#v}" > "$RUNNER_TEMP/release-notes.md"
+
       - name: GitHub Release
         id: ghrelease
-        if: steps.tag.outputs.tag != '' && steps.package.outcome == 'success'
+        if: steps.tag.outputs.tag != '' && steps.package.outcome == 'success' && steps.notes.outcome == 'success' && !inputs.dry_run
         continue-on-error: true
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
           files: editors/vscode/visimark.vsix
-          body_path: CHANGELOG.md
+          body_path: ${{ runner.temp }}/release-notes.md
           generate_release_notes: true
 
       # An approved request is implemented on a branch named
@@ -306,7 +357,7 @@ jobs:
       # cooperate is bookkeeping that gets done by hand, or missed.
       - name: Close shipped request issues
         id: issues
-        if: steps.tag.outputs.tag != ''
+        if: steps.tag.outputs.tag != '' && !inputs.dry_run
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
@@ -337,6 +388,44 @@ jobs:
               fi
             done
 
+      # A rehearsal's verdict. The legs above swallowed their own failures
+      # (`continue-on-error`) and the real gate is skipped, so without this a
+      # dry run whose `npm publish --dry-run` failed would come back green.
+      - name: dry run verdict
+        if: inputs.dry_run
+        env:
+          NPM_OUTCOME: ${{ steps.npm.outcome }}
+          REMARK_PLUGIN_OUTCOME: ${{ steps.remark-plugin.outcome }}
+          MARKDOWNLINT_RULE_OUTCOME: ${{ steps.markdownlint-rule.outcome }}
+          MCP_SERVER_OUTCOME: ${{ steps.mcp-server.outcome }}
+          PACKAGE_OUTCOME: ${{ steps.package.outcome }}
+          NOTES_OUTCOME: ${{ steps.notes.outcome }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          fail=0
+          for pair in \
+            "npm publish --dry-run (visimark)=$NPM_OUTCOME" \
+            "npm publish --dry-run (remark-lint-visimark)=$REMARK_PLUGIN_OUTCOME" \
+            "npm publish --dry-run (markdownlint-rule-visimark)=$MARKDOWNLINT_RULE_OUTCOME" \
+            "npm publish --dry-run (visimark-mcp)=$MCP_SERVER_OUTCOME" \
+            "Package the extension=$PACKAGE_OUTCOME" \
+            "Extract the release notes=$NOTES_OUTCOME"; do
+            # Anything but success fails: a skipped leg is a leg that did not
+            # rehearse. The notes step is the one legitimate skip, on a
+            # dispatch with no tag.
+            outcome="${pair##*=}"
+            if [ "$outcome" = skipped ] && [ -z "$TAG" ] && [ "${pair%%=*}" = "Extract the release notes" ]; then
+              echo "::warning::no tag, so the release notes were not rehearsed."
+              continue
+            fi
+            if [ "$outcome" != success ]; then
+              echo "::error::dry run: '${pair%%=*}' ended '$outcome'; read that step's log."
+              fail=1
+            fi
+          done
+          if [ "$fail" -eq 0 ]; then echo "Dry run clean: nothing was published."; fi
+          exit $fail
+
       # The verdict. Two halves, because a green run has twice told this repo
       # something false: v0.1.1 went green with both marketplace legs empty, and
       # v0.1.3's failure sat unnoticed for a day with npm ahead of Open VSX.
@@ -354,6 +443,7 @@ jobs:
       # No `set -e`: every check below is explicitly tested and accumulated into
       # `fail`, so one missing package or registry still reports the others.
       - name: every leg must have landed
+        if: ${{ !inputs.dry_run }}
         env:
           NPM_OUTCOME: ${{ steps.npm.outcome }}
           REMARK_PLUGIN_OUTCOME: ${{ steps.remark-plugin.outcome }}
@@ -365,6 +455,7 @@ jobs:
           OVSX_OUTCOME: ${{ steps.ovsx.outcome }}
           GHRELEASE_OUTCOME: ${{ steps.ghrelease.outcome }}
           ISSUES_OUTCOME: ${{ steps.issues.outcome }}
+          NOTES_OUTCOME: ${{ steps.notes.outcome }}
         run: |
           set -uo pipefail
           fail=0
@@ -381,6 +472,7 @@ jobs:
             "Package the extension=$PACKAGE_OUTCOME" \
             "Publish to the VS Code Marketplace=$MARKETPLACE_OUTCOME" \
             "Publish to Open VSX=$OVSX_OUTCOME" \
+            "Extract the release notes=$NOTES_OUTCOME" \
             "GitHub Release=$GHRELEASE_OUTCOME" \
             "Close shipped request issues=$ISSUES_OUTCOME"; do
             leg="${pair%%=*}"; outcome="${pair##*=}"

@@ -66,6 +66,19 @@ jobs:
             exit 1
           fi
 
+      # Not in ci.yml: a core-only bump would turn every PR red until the
+      # plugin was re-released. Here it asks the one question that matters, at
+      # the one commit that is about to ship — does the "Bundles engine X."
+      # line tell the truth about what main.js carries.
+      - name: Verify the changelog names the bundled engine
+        run: bun scripts/check-obsidian-engine-line.ts
+
+      # Only this version's section; the whole file is history, not notes.
+      - name: Extract the release notes
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: bun scripts/changelog-section.ts editors/obsidian/CHANGELOG.md "$TAG" > "$RUNNER_TEMP/release-notes.md"
+
       - run: bun run --filter visimark-obsidian build
 
       # The community scanner's Scorecard looks for a verified GitHub artifact
@@ -96,4 +109,4 @@ jobs:
             editors/obsidian/main.js
             editors/obsidian/manifest.json
             editors/obsidian/styles.css
-          body_path: editors/obsidian/CHANGELOG.md
+          body_path: ${{ runner.temp }}/release-notes.md
