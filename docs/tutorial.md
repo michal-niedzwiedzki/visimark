@@ -752,11 +752,12 @@ rewrite the whole thing.
 
 ### One current limit
 
-Today only **numeric** anchored values are rewritten and checked. If a value is
-a string or a date, the anchor is left alone and no `STALE` is reported for it.
-Until that changes, keep strings and dates out of prose anchors, or accept that
-they are documentation rather than verified figures. Numbers — which is almost
-everything you want to anchor — are fully checked.
+**Numeric** anchored values are rewritten and checked. A string anchor that
+carries `|nbsp` is checked too (chapter 15). A plain string anchor, and any date
+anchor, is still left alone, and no `STALE` is reported for it. Keep those out
+of prose anchors, or accept that they are documentation rather than verified
+figures. Numbers — which is almost everything you want to anchor — are fully
+checked.
 
 ## 10. More than one table: sheets
 
@@ -1333,7 +1334,7 @@ plain decimal. Percent display exists only in prose.
 
 Put `|percent` directly after the name inside the anchor comment — a
 **display rule**, one of a small closed set of named prose transforms
-(chapter 15 covers only `percent`; nothing else ships yet):
+(chapter 15 covers the two that ship, `percent` and `nbsp`):
 
 ```markdown
 The engagement clears a margin of **0**<!--vmark=lines.margin|percent-->, or
@@ -1402,7 +1403,7 @@ A wrong number is `STALE` as usual, and the report shows the percent form:
 | You wrote | Finding |
 |---|---|
 | `\|percent` on a binding narrower than 2 decimals | `PRECISION` — `percent display needs precision 2 or more; a has 1` |
-| `\|percent` on a date or a string | `TYPE` — `a display rule is only legal on a value it accepts (percent: numeric only)` |
+| `\|percent` on a date or a string | `TYPE` — `a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only)` |
 | `\|percent` on a chart image | `TYPE`, the same message |
 | `\|percent` with a currency in the same span, such as `**$0.25**` | `UNIT` — `cannot mix a unit with a display rule` |
 | `\|percent` with a bare, undelimited seed, as in `40.26%<!--vmark=s.m\|percent-->` | `ANCHOR` — `a display rule needs a delimited seed` |
@@ -1421,6 +1422,49 @@ A percent value also matters in Part 8. A `param` whose default is written as a
 percent, such as `param vat_rate precision 2 = default 23%`, only accepts a
 percent from a scenario. The capstone (chapter 31) uses such a `param` and
 prints it with a `|percent` anchor.
+
+### A multi-word string: add `|nbsp`
+
+*New after 0.1.10: this ships in the next release.*
+
+A plain string anchor is never compared with its prose. Change the value and
+`check` still reports nothing:
+
+````markdown
+```vmark #s
+status = "past due"
+```
+
+Account status: **past due**<!--vmark=s.status--> as of today.
+````
+
+Add `|nbsp` and the anchor becomes an output. `fmt` writes the words joined
+with the `&nbsp;` entity, which every renderer shows as the plain words, kept
+on one line:
+
+```markdown
+Account status: **past&nbsp;due**<!--vmark=s.status|nbsp--> as of today.
+```
+
+Change `status` to `"paid in full"` and `check` reports the span:
+
+```console
+  STALE   s.status                            past&nbsp;due ≠ paid&nbsp;in&nbsp;full
+```
+
+`fmt` rewrites it to `**paid&nbsp;in&nbsp;full**`. Before it writes, it
+re-reads the document with the new text in place, and writes only if the
+anchor still wraps exactly the stored words.
+
+| You wrote | Finding |
+|---|---|
+| `\|nbsp` in a code span, as in `` `past due` `` | `ANCHOR` — `` display rule `nbsp` cannot render inside a code span `` |
+| `\|nbsp` on a value holding Markdown syntax, such as `a *b* c` | `ANCHOR` — `` display rule `nbsp` cannot write this value inside **…** and read it back unchanged — it contains Markdown syntax: * `` |
+| `\|nbsp` on an empty value | `ANCHOR` — `` display rule `nbsp` cannot write an empty value inside **…** `` |
+| `\|nbsp` on a number or a date | `TYPE` — `a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only)` |
+
+As with `|percent`, `fmt` never adds `|nbsp` to an anchor you wrote without
+one, and `infer --write` never proposes it.
 
 ## 16. Currency and units
 

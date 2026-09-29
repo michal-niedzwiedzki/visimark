@@ -555,6 +555,7 @@
 <a href="#how-check-reads-it" data-level="3">How `check` reads it</a>
 <a href="#what-percent-refuses" data-level="3">What `|percent` refuses</a>
 <a href="#a-percent-in-a-what-if" data-level="3">A percent in a what-if</a>
+<a href="#a-multi-word-string-add-nbsp" data-level="3">A multi-word string: add `|nbsp`</a>
 <a href="#16-currency-and-units" data-level="2">16. Currency and units</a>
 <a href="#decoration-in-a-cell" data-level="3">Decoration in a cell</a>
 <a href="#one-column-means-one-thing" data-level="3">One column means one thing</a>
@@ -1552,15 +1553,17 @@ writes the percent. The stored value does not change. Chapter 15 covers it.</p><
 **158.00 PLN**&#x3C;!--vmark=order.net_total-->     ← wrong
 </code></pre></div><pre class="src">In the second form, `PLN` is inside the value the tool owns, and the tool will
 rewrite the whole thing.</pre><div class="out"><p>In the second form, <code>PLN</code> is inside the value the tool owns, and the tool will
-rewrite the whole thing.</p></div><pre class="src">### One current limit</pre><div class="out"><h3 id="one-current-limit">One current limit</h3></div><pre class="src">Today only **numeric** anchored values are rewritten and checked. If a value is
-a string or a date, the anchor is left alone and no `STALE` is reported for it.
-Until that changes, keep strings and dates out of prose anchors, or accept that
-they are documentation rather than verified figures. Numbers — which is almost
-everything you want to anchor — are fully checked.</pre><div class="out"><p>Today only <strong>numeric</strong> anchored values are rewritten and checked. If a value is
-a string or a date, the anchor is left alone and no <code>STALE</code> is reported for it.
-Until that changes, keep strings and dates out of prose anchors, or accept that
-they are documentation rather than verified figures. Numbers — which is almost
-everything you want to anchor — are fully checked.</p></div><pre class="src">## 10. More than one table: sheets</pre><div class="out"><h2 id="10-more-than-one-table-sheets">10. More than one table: sheets</h2></div><pre class="src">A real document has several tables. Each `vmark` block names a **sheet**, and a
+rewrite the whole thing.</p></div><pre class="src">### One current limit</pre><div class="out"><h3 id="one-current-limit">One current limit</h3></div><pre class="src">**Numeric** anchored values are rewritten and checked. A string anchor that
+carries `|nbsp` is checked too (chapter 15). A plain string anchor, and any date
+anchor, is still left alone, and no `STALE` is reported for it. Keep those out
+of prose anchors, or accept that they are documentation rather than verified
+figures. Numbers — which is almost everything you want to anchor — are fully
+checked.</pre><div class="out"><p><strong>Numeric</strong> anchored values are rewritten and checked. A string anchor that
+carries <code>|nbsp</code> is checked too (chapter 15). A plain string anchor, and any date
+anchor, is still left alone, and no <code>STALE</code> is reported for it. Keep those out
+of prose anchors, or accept that they are documentation rather than verified
+figures. Numbers — which is almost everything you want to anchor — are fully
+checked.</p></div><pre class="src">## 10. More than one table: sheets</pre><div class="out"><h2 id="10-more-than-one-table-sheets">10. More than one table: sheets</h2></div><pre class="src">A real document has several tables. Each `vmark` block names a **sheet**, and a
 sheet owns the table immediately above it.</pre><div class="out"><p>A real document has several tables. Each <code>vmark</code> block names a <strong>sheet</strong>, and a
 sheet owns the table immediately above it.</p></div><pre class="src">Here is the second half of [`tutorial/order.md`](tutorial/order.md):</pre><div class="out"><p>Here is the second half of <a href="tutorial/order.md"><code>tutorial/order.md</code></a>:</p></div><pre class="src">````markdown
 | Band     | Rate |   Base |   Tax |
@@ -2261,9 +2264,9 @@ margin precision 4 = (net_total - cost_total) / net_total
 plain decimal. Percent display exists only in prose.</pre><div class="out"><p><code>fmt</code> writes <code>0.3121</code> and <code>0.6879</code> into <code>Share</code>. A computed cell is always a
 plain decimal. Percent display exists only in prose.</p></div><pre class="src">### In a sentence: add `|percent` to the anchor</pre><div class="out"><h3 id="in-a-sentence-add-percent-to-the-anchor">In a sentence: add <code>|percent</code> to the anchor</h3></div><pre class="src">*New after 0.1.6: this ships in the next release.*</pre><div class="out"><p><em>New after 0.1.6: this ships in the next release.</em></p></div><pre class="src">Put `|percent` directly after the name inside the anchor comment — a
 **display rule**, one of a small closed set of named prose transforms
-(chapter 15 covers only `percent`; nothing else ships yet):</pre><div class="out"><p>Put <code>|percent</code> directly after the name inside the anchor comment — a
+(chapter 15 covers the two that ship, `percent` and `nbsp`):</pre><div class="out"><p>Put <code>|percent</code> directly after the name inside the anchor comment — a
 <strong>display rule</strong>, one of a small closed set of named prose transforms
-(chapter 15 covers only <code>percent</code>; nothing else ships yet):</p></div><pre class="src">```markdown
+(chapter 15 covers the two that ship, <code>percent</code> and <code>nbsp</code>):</p></div><pre class="src">```markdown
 The engagement clears a margin of **0**&lt;!--vmark=lines.margin|percent--&gt;, or
 **0**&lt;!--vmark=lines.margin--&gt; as a ratio.
 ```</pre><div class="out"><pre><code class="language-markdown">The engagement clears a margin of **0**&#x3C;!--vmark=lines.margin|percent-->, or
@@ -2358,7 +2361,7 @@ not in the text.</p></div><pre class="src">A wrong number is `STALE` as usual, a
 </code></pre></div><pre class="src">### What `|percent` refuses</pre><div class="out"><h3 id="what-percent-refuses">What <code>|percent</code> refuses</h3></div><pre class="src">| You wrote | Finding |
 |---|---|
 | `\|percent` on a binding narrower than 2 decimals | `PRECISION` — `percent display needs precision 2 or more; a has 1` |
-| `\|percent` on a date or a string | `TYPE` — `a display rule is only legal on a value it accepts (percent: numeric only)` |
+| `\|percent` on a date or a string | `TYPE` — `a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only)` |
 | `\|percent` on a chart image | `TYPE`, the same message |
 | `\|percent` with a currency in the same span, such as `**$0.25**` | `UNIT` — `cannot mix a unit with a display rule` |
 | `\|percent` with a bare, undelimited seed, as in `40.26%&lt;!--vmark=s.m\|percent--&gt;` | `ANCHOR` — `a display rule needs a delimited seed` |
@@ -2377,7 +2380,7 @@ not in the text.</p></div><pre class="src">A wrong number is `STALE` as usual, a
 </tr>
 <tr>
 <td><code>|percent</code> on a date or a string</td>
-<td><code>TYPE</code> — <code>a display rule is only legal on a value it accepts (percent: numeric only)</code></td>
+<td><code>TYPE</code> — <code>a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only)</code></td>
 </tr>
 <tr>
 <td><code>|percent</code> on a chart image</td>
@@ -2410,7 +2413,66 @@ percent from a scenario. The capstone (chapter 31) uses such a `param` and
 prints it with a `|percent` anchor.</pre><div class="out"><p>A percent value also matters in Part 8. A <code>param</code> whose default is written as a
 percent, such as <code>param vat_rate precision 2 = default 23%</code>, only accepts a
 percent from a scenario. The capstone (chapter 31) uses such a <code>param</code> and
-prints it with a <code>|percent</code> anchor.</p></div><pre class="src">## 16. Currency and units</pre><div class="out"><h2 id="16-currency-and-units">16. Currency and units</h2></div><pre class="src">A currency or unit is decoration around a number. It is not part of the value,
+prints it with a <code>|percent</code> anchor.</p></div><pre class="src">### A multi-word string: add `|nbsp`</pre><div class="out"><h3 id="a-multi-word-string-add-nbsp">A multi-word string: add <code>|nbsp</code></h3></div><pre class="src">*New after 0.1.10: this ships in the next release.*</pre><div class="out"><p><em>New after 0.1.10: this ships in the next release.</em></p></div><pre class="src">A plain string anchor is never compared with its prose. Change the value and
+`check` still reports nothing:</pre><div class="out"><p>A plain string anchor is never compared with its prose. Change the value and
+<code>check</code> still reports nothing:</p></div><pre class="src">````markdown
+```vmark #s
+status = &quot;past due&quot;
+```
+
+Account status: **past due**&lt;!--vmark=s.status--&gt; as of today.
+````</pre><div class="out"><pre><code class="language-markdown">```vmark #s
+status = "past due"
+```
+
+Account status: **past due**&#x3C;!--vmark=s.status--> as of today.
+</code></pre></div><pre class="src">Add `|nbsp` and the anchor becomes an output. `fmt` writes the words joined
+with the `&amp;nbsp;` entity, which every renderer shows as the plain words, kept
+on one line:</pre><div class="out"><p>Add <code>|nbsp</code> and the anchor becomes an output. <code>fmt</code> writes the words joined
+with the <code>&#x26;nbsp;</code> entity, which every renderer shows as the plain words, kept
+on one line:</p></div><pre class="src">```markdown
+Account status: **past&amp;nbsp;due**&lt;!--vmark=s.status|nbsp--&gt; as of today.
+```</pre><div class="out"><pre><code class="language-markdown">Account status: **past&#x26;nbsp;due**&#x3C;!--vmark=s.status|nbsp--> as of today.
+</code></pre></div><pre class="src">Change `status` to `&quot;paid in full&quot;` and `check` reports the span:</pre><div class="out"><p>Change <code>status</code> to <code>"paid in full"</code> and <code>check</code> reports the span:</p></div><pre class="src">```console
+  STALE   s.status                            past&amp;nbsp;due ≠ paid&amp;nbsp;in&amp;nbsp;full
+```</pre><div class="out"><pre><code class="language-console">  STALE   s.status                            past&#x26;nbsp;due ≠ paid&#x26;nbsp;in&#x26;nbsp;full
+</code></pre></div><pre class="src">`fmt` rewrites it to `**paid&amp;nbsp;in&amp;nbsp;full**`. Before it writes, it
+re-reads the document with the new text in place, and writes only if the
+anchor still wraps exactly the stored words.</pre><div class="out"><p><code>fmt</code> rewrites it to <code>**paid&#x26;nbsp;in&#x26;nbsp;full**</code>. Before it writes, it
+re-reads the document with the new text in place, and writes only if the
+anchor still wraps exactly the stored words.</p></div><pre class="src">| You wrote | Finding |
+|---|---|
+| `\|nbsp` in a code span, as in `` `past due` `` | `ANCHOR` — `` display rule `nbsp` cannot render inside a code span `` |
+| `\|nbsp` on a value holding Markdown syntax, such as `a *b* c` | `ANCHOR` — `` display rule `nbsp` cannot write this value inside **…** and read it back unchanged — it contains Markdown syntax: * `` |
+| `\|nbsp` on an empty value | `ANCHOR` — `` display rule `nbsp` cannot write an empty value inside **…** `` |
+| `\|nbsp` on a number or a date | `TYPE` — `a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only)` |</pre><div class="out"><table>
+<thead>
+<tr>
+<th>You wrote</th>
+<th>Finding</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>|nbsp</code> in a code span, as in <code>`past due`</code></td>
+<td><code>ANCHOR</code> — <code>display rule `nbsp` cannot render inside a code span</code></td>
+</tr>
+<tr>
+<td><code>|nbsp</code> on a value holding Markdown syntax, such as <code>a *b* c</code></td>
+<td><code>ANCHOR</code> — <code>display rule `nbsp` cannot write this value inside **…** and read it back unchanged — it contains Markdown syntax: *</code></td>
+</tr>
+<tr>
+<td><code>|nbsp</code> on an empty value</td>
+<td><code>ANCHOR</code> — <code>display rule `nbsp` cannot write an empty value inside **…**</code></td>
+</tr>
+<tr>
+<td><code>|nbsp</code> on a number or a date</td>
+<td><code>TYPE</code> — <code>a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only)</code></td>
+</tr>
+</tbody>
+</table></div><pre class="src">As with `|percent`, `fmt` never adds `|nbsp` to an anchor you wrote without
+one, and `infer --write` never proposes it.</pre><div class="out"><p>As with <code>|percent</code>, <code>fmt</code> never adds <code>|nbsp</code> to an anchor you wrote without
+one, and <code>infer --write</code> never proposes it.</p></div><pre class="src">## 16. Currency and units</pre><div class="out"><h2 id="16-currency-and-units">16. Currency and units</h2></div><pre class="src">A currency or unit is decoration around a number. It is not part of the value,
 and a display rule like `|percent` is not one of them (chapter 15). In prose,
 keep it outside the anchor
 (chapter 9).</pre><div class="out"><p>A currency or unit is decoration around a number. It is not part of the value,
