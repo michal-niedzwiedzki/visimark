@@ -10,8 +10,12 @@ Each entry says which engine version the bundle carries.
 ## Unreleased
 
 The plugin description now leads with the new pitch: it checks that every
-number in a note still matches the formula that produced it. No behaviour
-change.
+number in a note still matches the formula that produced it. That is a
+wording change only.
+
+A `|nbsp` anchor on a string value (`**past&nbsp;due**<!--vmark=s.status|nbsp-->`)
+now gets a `STALE` diagnostic when its prose drifts, with a formatting fix, and
+`ANCHOR` when the value cannot be written there.
 
 ## 0.2.2 - 2026-09-28
 

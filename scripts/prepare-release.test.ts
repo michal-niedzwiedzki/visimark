@@ -24,7 +24,7 @@ afterEach(() => {
 });
 
 /** A temp tree of the real release files, so the layout it edits is the real one. */
-function tree(unreleased = "### Fixed\n\n- Something.\n"): string {
+function tree(unreleased = "### Fixed\n\n- Something.\n", editorUnreleased?: string): string {
   const root = mkdtempSync(join(tmpdir(), "prepare-release-"));
   temps.push(root);
   for (const file of FILES) {
@@ -35,6 +35,18 @@ function tree(unreleased = "### Fixed\n\n- Something.\n"): string {
   writeFileSync(
     join(root, "CHANGELOG.md"),
     changelog.replace(/^## Unreleased\n[\s\S]*?(?=^## )/m, `## Unreleased\n\n${unreleased}\n`),
+  );
+  // the editor changelog's `## Unreleased` is optional (docs/releasing.md), so
+  // the real file may or may not carry one — pin it either way
+  const editor = readFileSync(join(root, "editors/vscode/CHANGELOG.md"), "utf8").replace(
+    /^## Unreleased\n[\s\S]*?(?=^## )/m,
+    "",
+  );
+  writeFileSync(
+    join(root, "editors/vscode/CHANGELOG.md"),
+    editorUnreleased === undefined
+      ? editor
+      : editor.replace(/^## /m, `## Unreleased\n\n${editorUnreleased}\n## `),
   );
   return root;
 }
@@ -91,6 +103,15 @@ describe("prepare-release", () => {
     expect(read(root, "editors/vscode/CHANGELOG.md")).toContain(
       `## ${next} - 2030-01-02\n\nNo editor-visible changes. Bundles engine ${next}.`,
     );
+  });
+
+  test("dates an editor changelog's own Unreleased section instead of the placeholder", () => {
+    const root = tree(undefined, "- An editor-visible change.\n");
+    run(next, "--date", "2030-01-02", root);
+    const editor = read(root, "editors/vscode/CHANGELOG.md");
+    expect(editor).toContain(`## ${next} - 2030-01-02\n\n- An editor-visible change.\n`);
+    expect(editor).not.toContain("## Unreleased");
+    expect(editor).not.toContain("No editor-visible changes. Bundles engine " + next);
   });
 
   test("refuses a version that is not newer, writing nothing", () => {

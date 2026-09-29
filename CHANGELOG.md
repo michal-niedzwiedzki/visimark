@@ -22,6 +22,17 @@
   seed, or the display rule applied to a value of a type it doesn't accept
   (a date or a string, for `percent`) refuses with `ANCHOR`/`TYPE`. See
   [#297](https://github.com/michal-niedzwiedzki/visimark/issues/297).
+- **`|nbsp`, a display rule for multi-word string anchors.**
+  `**past&nbsp;due**<!--vmark=s.status|nbsp-->` asks `fmt` to write the stored
+  words joined with `&nbsp;`, and `check` now reports `STALE` when that span
+  drifts from the stored string — the first string anchor `check` compares
+  with its prose. Before writing, the rendering is proved by an in-place
+  re-parse; a value that would not read back as itself (Markdown syntax in
+  it, empty, an autolink) is refused as `ANCHOR`, as is `|nbsp` in a code
+  span. The display-rule `TYPE` message now names every rule's accepted type
+  (`percent: numeric only; nbsp: string only`). A plain string anchor is
+  still unchecked. See
+  [#305](https://github.com/michal-niedzwiedzki/visimark/issues/305).
 
 ### Removed
 

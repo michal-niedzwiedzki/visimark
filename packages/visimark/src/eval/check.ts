@@ -17,7 +17,8 @@ import { resolveImports } from "../import/resolve.js";
 import type { ImportStatus } from "../model/types.js";
 import { domainLiterals, formatDomain, isEmptyDomain, testDomain } from "../lang/domain.js";
 import { derivePrecision, type Width } from "./precision.js";
-import { DISPLAY_RULES } from "./display-rules.js";
+import { DISPLAY_RULES, displayRuleTypeMessage, markdownSyntaxIn } from "./display-rules.js";
+import { roundTrips } from "./display-round-trip.js";
 import { applyUnit, cellPrecision, parseDecorated, type Unit } from "./units.js";
 import { parseIsoDate } from "./dates.js";
 import {
@@ -658,6 +659,27 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
         return;
       }
       for (const a of valueAnchorsOf(model, binding.id)) {
+        if (a.value!.kind === "inlineCode") {
+          // a rule whose rendering is illegible in a code span (`&nbsp;` shows
+          // literally there) is refused whatever the value's type — a
+          // wrong-type value also gets its own TYPE, both being true
+          const rule = a.displayRule !== undefined ? DISPLAY_RULES[a.displayRule] : undefined;
+          if (rule && !rule.inlineCode) {
+            refusedAnchors.add(a.commentSpan.start);
+            emit(
+              {
+                code: "ANCHOR",
+                sheetId: binding.sheetId,
+                name: binding.name,
+                sourceOffset: a.commentSpan.start,
+                span: a.commentSpan,
+                message: `display rule \`${a.displayRule}\` cannot render inside a code span — wrap the seed in **…** or *…* instead`,
+              },
+              { sheetId: binding.sheetId },
+            );
+          }
+          continue;
+        }
         if (a.value!.kind !== "text") continue;
         const text = model.source.slice(a.value!.start, a.value!.end);
         if (a.displayRule !== undefined) {
@@ -795,7 +817,7 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
             code: "TYPE",
             sheetId: binding.sheetId,
             name: binding.name,
-            message: "a display rule is only legal on a value it accepts (percent: numeric only)",
+            message: displayRuleTypeMessage(),
             span: wrongTypeMine[0]!.commentSpan,
           },
           { sheetId: binding.sheetId },
@@ -856,6 +878,59 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
                   a.displayRule !== undefined && DISPLAY_RULES[a.displayRule]
                     ? DISPLAY_RULES[a.displayRule]!.render(v, prec)
                     : applyUnit(showValue(v, prec), anchorUnit),
+                formula: formulaText(model, binding),
+                span: { start: a.value!.start, end: a.value!.end },
+              },
+              { sheetId: binding.sheetId },
+            );
+          }
+        }
+      }
+
+      if (!sigilBlocked && v.t === "str") {
+        // a string rule's rendering is compared byte-for-byte, never through
+        // matchesStored — but only after an in-place re-parse proves that
+        // what fmt would write reads back as the stored text (spec §3)
+        // what a reader sees: the words joined by the U+00A0 `&nbsp;` decodes to
+        const expected = v.s.trim().split(/\s+/).join("\u00a0");
+        for (const a of registeredMine) {
+          if (refusedAnchors.has(a.commentSpan.start)) continue;
+          const rendered = DISPLAY_RULES[a.displayRule!]!.render(v, 0);
+          if (!roundTrips(model.source, a, rendered, expected)) {
+            refusedAnchors.add(a.commentSpan.start);
+            const d = a.delimiters!;
+            const inside = `${d.open}…${d.close}`;
+            const chars = markdownSyntaxIn(v.s);
+            emit(
+              {
+                code: "ANCHOR",
+                sheetId: binding.sheetId,
+                name: binding.name,
+                sourceOffset: a.commentSpan.start,
+                span: a.commentSpan,
+                message:
+                  rendered === ""
+                    ? `display rule \`${a.displayRule}\` cannot write an empty value inside ${inside}`
+                    : `display rule \`${a.displayRule}\` cannot write this value inside ${inside} and read it back unchanged` +
+                      (chars.length > 0
+                        ? ` — it contains Markdown syntax: ${chars.join(" ")}`
+                        : ""),
+              },
+              { sheetId: binding.sheetId },
+            );
+            continue;
+          }
+          const text = model.source.slice(a.value!.start, a.value!.end);
+          if (text === rendered) continue;
+          staleScalars.add(binding.id);
+          if (!isCrossSheetAggregate(model, binding)) {
+            emit(
+              {
+                code: "STALE",
+                sheetId: binding.sheetId,
+                name: binding.name,
+                stored: text,
+                computed: rendered,
                 formula: formulaText(model, binding),
                 span: { start: a.value!.start, end: a.value!.end },
               },

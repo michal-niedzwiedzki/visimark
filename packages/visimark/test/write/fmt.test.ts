@@ -271,3 +271,60 @@ test("fmt never writes a span this feature's ANCHOR check refuses", () => {
   const after = check(build(locate(r.output)));
   expect(after.findings.map((f) => f.code)).toEqual(["ANCHOR"]);
 });
+
+// ---- |nbsp (#305) ----
+
+const nbspDoc = (value: string, prose: string) =>
+  `\`\`\`vmark #s\nstatus = ${JSON.stringify(value)}\n\`\`\`\n\n${prose}\n`;
+
+test("fmt rewrites a drifted |nbsp span and is idempotent", () => {
+  const src = nbspDoc("paid in full", "Status **past&nbsp;due**<!--vmark=s.status|nbsp-->.");
+  const once = fmt(src, {});
+  expect(once.changed).toBe(true);
+  expect(once.output).toContain("**paid&nbsp;in&nbsp;full**<!--vmark=s.status|nbsp-->");
+  const twice = fmt(once.output, {});
+  expect(twice.changed).toBe(false);
+  expect(twice.output).toBe(once.output);
+});
+
+test("fmt seeds a **_** placeholder under |nbsp", () => {
+  const r = fmt(nbspDoc("past due", "Status **_**<!--vmark=s.status|nbsp-->."), {});
+  expect(r.output).toContain("**past&nbsp;due**<!--vmark=s.status|nbsp-->");
+});
+
+test("fmt normalises a hand-typed &#160; to &nbsp;", () => {
+  const r = fmt(nbspDoc("past due", "Status **past&#160;due**<!--vmark=s.status|nbsp-->."), {});
+  expect(r.output).toContain("**past&nbsp;due**<!--vmark=s.status|nbsp-->");
+});
+
+test("fmt never writes a |nbsp anchor check refused", () => {
+  for (const prose of [
+    "Star **_**<!--vmark=s.status|nbsp-->.",
+    "Code `past due`<!--vmark=s.status|nbsp-->.",
+  ]) {
+    const value = prose.startsWith("Star") ? "a *b* c" : "past due";
+    const src = nbspDoc(value, prose);
+    const r = fmt(src, {});
+    expect(r.changed).toBe(false);
+    expect(r.output).toBe(src);
+  }
+});
+
+test("fmt never writes a plain string anchor", () => {
+  const src = nbspDoc("paid in full", "Status **past due**<!--vmark=s.status-->.");
+  expect(fmt(src, {}).output).toBe(src);
+});
+
+test("fmt writes every |nbsp anchor of a drifted scalar in one run", () => {
+  const src = nbspDoc(
+    "paid in full",
+    "**Status:** **past&nbsp;due**<!--vmark=s.status|nbsp--> &nbsp;&nbsp; **Also:** *past&nbsp;due*<!--vmark=s.status|nbsp-->\n\nPlain **past due**<!--vmark=s.status-->.",
+  );
+  const r = fmt(src, {});
+  expect(r.output).toContain(
+    "**Status:** **paid&nbsp;in&nbsp;full**<!--vmark=s.status|nbsp--> &nbsp;&nbsp; **Also:** *paid&nbsp;in&nbsp;full*<!--vmark=s.status|nbsp-->",
+  );
+  // the separator and the plain anchor are prose fmt never reads
+  expect(r.output).toContain("Plain **past due**<!--vmark=s.status-->.");
+  expect(check(build(locate(r.output))).exitCode).toBe(0);
+});

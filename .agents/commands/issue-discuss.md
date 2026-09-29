@@ -81,6 +81,10 @@ Form:
 - Then neutral prose or tight bullets — e.g. **The question**, **Against**,
   **For**, **Where it landed**, **Still open**. Attribute positions to no one;
   write it as the thread's shared state.
+- Where the discussion answers the pre-review's numbered Open design
+  questions, record each outcome under that same number (`3. Entity form —
+  settled.`) as a numbered list, not bullets. Points the pre-review did not
+  list continue the numbering after its last item; never renumber.
 - Never begin a line with `Decision: ` — that token from the repo owner is how
   `/issue-review` and `/issue-decide` detect a settled issue.
 - Write only what a reader opening the issue cold needs before the eventual

@@ -3,7 +3,7 @@ import type { AssertionLedger, CheckState, Entry } from "./check-state.js";
 import type { Binding, DocModel } from "../model/types.js";
 import { resolve } from "./graph.js";
 import type { Expr } from "../lang/ast.js";
-import { DISPLAY_RULES } from "./display-rules.js";
+import { DISPLAY_RULES, displayRuleTypeMessage } from "./display-rules.js";
 
 /**
  * The terminal passes: everything that only reports, after every value that
@@ -104,7 +104,7 @@ export function reportAnchors(st: Pick<CheckState, "model" | "staleScalars" | "e
           code: "TYPE",
           sheetId: a.sheetId,
           name: a.name,
-          message: "a display rule is only legal on a value it accepts (percent: numeric only)",
+          message: displayRuleTypeMessage(),
           sourceOffset: a.commentSpan.start,
           span: a.commentSpan,
         });

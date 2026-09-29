@@ -115,6 +115,23 @@ export function planFmt(model: DocModel, result: CheckResult, opts: FmtOptions):
     const v = result.values.get(id);
     if (!v) continue;
     const current = source.slice(a.value.start, a.value.end);
+    // A string has no write precision. Only a registered rule makes its
+    // anchor an output, and check has already proved (or refused) the
+    // rendering's round trip, so what is left is a byte comparison.
+    if (v.t === "str") {
+      const rule = a.displayRule !== undefined ? DISPLAY_RULES[a.displayRule] : undefined;
+      if (!rule || sigilBlocked.has(id)) continue;
+      const wanted = rule.render(v, 0);
+      if (current !== wanted) {
+        edits.push({
+          start: a.value.start,
+          end: a.value.end,
+          text: wanted,
+          finding: findingFor(a.value.start, a.value.end),
+        });
+      }
+      continue;
+    }
     // The anchor is an output: it renders the scalar at the scalar's own
     // precision. Reading the width back out of `current` is what let a `0`
     // placeholder in prose round the stored value.

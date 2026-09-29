@@ -18,7 +18,7 @@ and WSL provide it, plain PowerShell does not).
 | Command | What it does | Reads | Writes | Fails the run when |
 |---|---|---|---|---|
 | `visimark check FILE...` | Recomputes every formula and reports each number that no longer agrees with it | the files you name | nothing, ever | the document has at least one problem |
-| `visimark fmt FILE...` | Repairs stale numbers in place, by splicing the bytes of each value it owns, and writes any stale or missing generated artifact | the files you name | computed cells and anchored values, in place; generated artifacts, whole — the artifact write is declinable with `--no-artifacts` | a problem it cannot repair remains |
+| `visimark fmt FILE...` | Repairs stale values in place, by splicing the bytes of each value it owns, and writes any stale or missing generated artifact | the files you name | computed cells and anchored values, in place; generated artifacts, whole — the artifact write is declinable with `--no-artifacts` | a problem it cannot repair remains |
 | `visimark infer FILE...` | Works out which rules reproduce the numbers a document already has, and proposes them | the files you name | nothing, unless `--write` | never — it is advisory |
 | `visimark eval FILE` | Prints the computed values, so a script can read one out. Adds a `params:` block naming each param's declared domain, when at least one param has one | one file | nothing | never |
 | `visimark explain FILE` | Prints each sheet's inputs, rules, evaluation order, assertions and charts. A param's `params:` row shows its declared domain, when it has one | one file | nothing | never |
@@ -100,7 +100,7 @@ nothing.
 | `CYCLE` | problem | Values depend on each other in a circle. The report prints the whole path round it. | by hand |
 | `TYPE` | problem | An expression produced something that cannot go where it was asked to go — storing a boolean in a cell, calling a function wrongly, or dividing by zero. | by hand |
 | `SHEET` | problem | A `vmark` block's relationship to its table is broken: no table above it, or a table that belongs to something else — or the sheet id itself is not a valid identifier. | by hand |
-| `ANCHOR` | problem | An anchor comment has nothing in front of it that can be rewritten, an image anchor and a chart declaration do not match up, or the comment announces itself as an anchor (`<!--vmark=…-->`) but does not parse. | by hand |
+| `ANCHOR` | problem | An anchor comment has nothing in front of it that can be rewritten, or names a display rule it cannot render there (a code span, or a string that would not read back as itself), an image anchor and a chart declaration do not match up, or the comment announces itself as an anchor (`<!--vmark=…-->`) but does not parse. | by hand |
 | `PRECISION` | problem | A binding writes numbers but has no decimal width: none declared with `precision N`, and none follows from its formula — division, `AVG` and `SQRT` do not bound their result's decimals. Also reported where a value is large enough that its declared width would print digits the engine never computed. | by hand (`visimark infer` proposes the clause where the document's own figures verify one) |
 | `DOMAIN` | problem | A `param`'s default is outside the domain it declares (`in [lo, hi]` / `in { … }`, `integer`, `natural`, `positive`, `positive integer`), or the domain itself has no legal value. | by hand |
 | `ASSERT` | problem | An `assert` statement evaluated false. The report shows the expression and, below it, the same expression with each named value filled in. | by hand |

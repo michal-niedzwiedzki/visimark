@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- A `|nbsp` anchor on a string value (`**past&nbsp;due**<!--vmark=s.status|nbsp-->`) now gets a `STALE` diagnostic when its prose drifts, with a formatting fix, and `ANCHOR` when the value cannot be written there.
+
 ## 0.1.10 - 2026-09-28
 
 No editor-visible changes. Bundles engine 0.1.10.

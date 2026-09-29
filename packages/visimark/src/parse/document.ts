@@ -101,6 +101,11 @@ export interface RawAnchor {
   imageUrl?: string;
   /** the display-rule name, when the comment is `<!--vmark=sheet.name|rule-->` */
   displayRule?: string;
+  /** decoded value of a strong/emphasis target's single text child */
+  valueText?: string;
+  /** the target's own delimiter source, e.g. `{ open: "**", close: "**" }` —
+   *  set with `valueText`, for a refusal to name the seed it could not write */
+  delimiters?: { open: string; close: string };
 }
 
 /**
@@ -395,13 +400,25 @@ function collectAnchors(
         end: off(child, "end"),
       };
       const prev = kids[i - 1];
+      const value = prev ? anchorValueSpan(prev) : null;
+      const delimited =
+        prev && value && (value.kind === "strong" || value.kind === "emphasis")
+          ? {
+              valueText: prev.children![0]!.value ?? "",
+              delimiters: {
+                open: source.slice(off(prev, "start"), value.start),
+                close: source.slice(value.end, off(prev, "end")),
+              },
+            }
+          : {};
       out.push({
         sheetId: m[1]!,
         name: m[2]!,
         commentSpan,
-        value: prev ? anchorValueSpan(prev) : null,
+        value,
         ...(prev?.type === "image" && prev.url !== undefined ? { imageUrl: prev.url } : {}),
         ...(m[3] ? { displayRule: m[3] } : {}),
+        ...delimited,
       });
     }
   });

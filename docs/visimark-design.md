@@ -125,19 +125,34 @@ Invoice total: **28659.00**<!--vmark=lines.gross_total-->
 
 An optional `|name` suffix on the comment names a **display rule**: a named
 transform, drawn from a small closed registry, that asks `fmt` to render the
-scalar differently in prose without changing the stored value. `percent` is
-the one shipped entry — stored × 100 at precision − 2, with a leading minus
-when the ratio is negative:
+scalar differently in prose without changing the stored value. The registry
+holds two entries. `percent` renders a number — stored × 100 at precision − 2,
+with a leading minus when the ratio is negative:
 
 ```markdown
 The engagement clears a margin of **40.26%**<!--vmark=lines.margin|percent-->
 ```
 
-`check`'s verdict stays numeric: `40.26%` and `0.4026` agree when the stored
-value is `0.4026`. Two anchors of one scalar may disagree about their display
+`nbsp` renders a string — its words joined with the `&nbsp;` entity, so a
+multi-word value never wraps and a renderer shows it as the plain words:
+
+```markdown
+Account status: **past&nbsp;due**<!--vmark=s.status|nbsp--> as of today.
+```
+
+For `percent`, `check`'s verdict stays numeric: `40.26%` and `0.4026` agree
+when the stored value is `0.4026`. For `nbsp`, the span is compared
+byte-for-byte with the rendering, and every rendering is first proved by an
+in-place re-parse: the document is re-read with the rendering spliced in, and
+the anchor must still target the same node, wrapping one text child that
+decodes to the stored words. A value that would not read back as itself (one
+holding Markdown syntax, an empty one, one that would autolink) is `ANCHOR`,
+and `fmt` never writes it. `nbsp` is also `ANCHOR` in a code span, where
+`&nbsp;` shows literally. Two anchors of one scalar may disagree about their display
 rule; each comment is its own rendering. A display rule mixed with a unit in
 the same span is `UNIT`. A display rule applied to a value of a type it does
-not accept — a date or a string for `percent`, or a chart/image target — is
+not accept — a date or a string for `percent`, a number or a date for
+`nbsp`, or a chart/image target — is
 `TYPE`. An unrecognised `|name` is `ANCHOR`. `percent` specifically also
 requires precision 2 or more (`PRECISION`); a width floor is not a property
 every future display rule need share. The registry is closed — no
@@ -165,7 +180,8 @@ it the way an undecorated numeric or date anchor's can. Anything else bare in
 front of an anchor is `ANCHOR`, not a silently claimed placeholder. An anchor
 with nothing in front of it is legal authoring syntax — `fmt` seeds it. A
 string-valued scalar can therefore be materialised in prose, via a delimited
-node, which the old numeric requirement prevented. HTML comments are
+node, which the old numeric requirement prevented. A plain string anchor is
+still never compared with its prose; a `|nbsp` string anchor is. HTML comments are
 invisible in every target renderer, so the sentence reads normally.
 
 **An anchor is an output.** Its text states a value and never determines one:
@@ -579,8 +595,10 @@ to be justified by profiling, not assumed.
 
 The tool owns exactly three things: **computed cells**, **anchored values**, and
 **generated artifacts** ([§18](#18-generated-artifacts)). An anchored value
-with a `%` comment is still that second category: `fmt` applies a second
-rendering rule to the span it already owns. Everything else —
+with a display rule is still that second category: `fmt` applies a second
+rendering rule to the span it already owns. `|nbsp` is the one case where
+`fmt` writes an author-supplied string into prose, and only after the round
+trip ([§3](#3-document-model)) proves it reads back unchanged. Everything else —
 input columns, prose, headings, table alignment, the blocks themselves — is
 human territory and is never touched. The sole exception is `fmt --fix-dates`,
 which is opt-in precisely because it writes to input.
@@ -639,9 +657,9 @@ justifies the project.
 | `DUP` | a name is bound twice in one scope, or two header cells sharing text | no |
 | `VECTOR` | foreign column outside an aggregate | no |
 | `CYCLE` | circular dependency | no |
-| `TYPE` | illegal operand types, a malformed call (name, arity, shape), or a display rule on a value of a type it does not accept (a date or a string for `percent`), or a chart/image | no |
+| `TYPE` | illegal operand types, a malformed call (name, arity, shape), or a display rule on a value of a type it does not accept (a date or a string for `percent`; a number or a date for `nbsp`), or a chart/image | no |
 | `SHEET` | column rules with no table, or an `assert` in a document-scope block | no |
-| `ANCHOR` | anchor with no rewritable target, an unrecognised display-rule name, or a display-rule anchor with no delimited seed | no |
+| `ANCHOR` | anchor with no rewritable target, an unrecognised display-rule name, a display-rule anchor with no delimited seed, a display rule that cannot render in a code span, or a string display rule whose rendering would not read back as the stored text | no |
 | `PRECISION` | a numeric binding with no declared width and none derivable, a value too large to carry the width it has ([§7](#7-numeric-semantics)), or a `percent` display rule on a binding whose width is below 2 | no |
 | `DOMAIN` | a `param`'s default is outside its declared domain, or the domain has no legal value ([§20](#20-scenario-parameters)) | no |
 | `ASSERT` | an `assert` statement evaluated false ([§17](#17-assertions)) | no |
@@ -670,7 +688,10 @@ denote a value of the anchor's own resolved type — though a type-aware one,
 not strictly numeric as before, and never satisfiable by bare prose for a
 string anchor. A delimited node keeps its own exemption from this
 requirement, gaining instead the narrower requirement that it wrap exactly
-one plain text child ([§3](#3-document-model)).
+one plain text child ([§3](#3-document-model)). It widens once more for display
+rules: a rule whose rendering is illegible in a code span is refused there, and
+a string rule whose rendering would not re-parse as the stored text is refused
+rather than written ([§3](#3-document-model)).
 
 `DUP` is widened again here, as it was for `STALE` above: two header cells
 sharing byte-identical text are `DUP` before any binding names them at all

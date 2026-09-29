@@ -208,3 +208,30 @@ test("a comment where vmark is not followed by = is not a malformed anchor", () 
   expect(d.anchors).toEqual([]);
   expect(d.malformedAnchors).toEqual([]);
 });
+
+test("a strong target carries its decoded text and its delimiters", () => {
+  const src = "Status **past&nbsp;due**<!--vmark=s.a|nbsp-->.\n";
+  const a = locate(src).anchors[0]!;
+  expect(a.valueText).toBe("past due");
+  expect(a.delimiters).toEqual({ open: "**", close: "**" });
+  expect(a.value!.end - a.value!.start).toBe(13);
+  expect(src.slice(a.value!.start, a.value!.end)).toBe("past&nbsp;due");
+});
+
+test("an underscore emphasis target keeps an intraword underscore in its text", () => {
+  const a = locate("Key _user_id_<!--vmark=s.a-->.\n").anchors[0]!;
+  expect(a.value!.kind).toBe("emphasis");
+  expect(a.valueText).toBe("user_id");
+  expect(a.delimiters).toEqual({ open: "_", close: "_" });
+});
+
+test("a code-span or text target carries no decoded text or delimiters", () => {
+  const code = locate("Code `3.00`<!--vmark=s.a-->.\n").anchors[0]!;
+  expect(code.value!.kind).toBe("inlineCode");
+  expect(code.valueText).toBeUndefined();
+  expect(code.delimiters).toBeUndefined();
+  const text = locate("Total 3.00<!--vmark=s.a-->.\n").anchors[0]!;
+  expect(text.value!.kind).toBe("text");
+  expect(text.valueText).toBeUndefined();
+  expect(text.delimiters).toBeUndefined();
+});

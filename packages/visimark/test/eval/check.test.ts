@@ -688,7 +688,7 @@ d = 2026-03-31
   const r = run(src);
   const t = r.findings.find((f) => f.code === "TYPE")!;
   expect(t.message).toBe(
-    "a display rule is only legal on a value it accepts (percent: numeric only)",
+    "a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only)",
   );
 });
 
@@ -718,7 +718,7 @@ chart cost as pie of Price labelled Item
   const r = run(src);
   const t = r.findings.find((f) => f.code === "TYPE")!;
   expect(t.message).toBe(
-    "a display rule is only legal on a value it accepts (percent: numeric only)",
+    "a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only)",
   );
 });
 
@@ -1342,6 +1342,174 @@ The status is no problem<!--vmark=s.status|percent--> today.
   expect(r.findings.map((f) => f.code).sort()).toEqual(["ANCHOR", "TYPE"]);
   const type = r.findings.find((f) => f.code === "TYPE")!;
   expect(type.message).toBe(
-    "a display rule is only legal on a value it accepts (percent: numeric only)",
+    "a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only)",
   );
+});
+
+// ---- |nbsp (#305) ----
+
+/** a document with one `s` sheet holding `bindings`, and `prose` below it */
+const nbspDoc = (bindings: string, prose: string) =>
+  `\`\`\`vmark #s\n${bindings}\n\`\`\`\n\n${prose}\n`;
+const nbspRun = (value: string, prose: string) =>
+  run(nbspDoc(`status = ${JSON.stringify(value)}`, prose));
+const stale = (r: ReturnType<typeof run>) =>
+  r.findings
+    .filter((f) => f.code === "STALE" && !f.anchorGroup)
+    .map((f) => `${f.stored} ≠ ${f.computed}`);
+const messages = (r: ReturnType<typeof run>, code: string) =>
+  r.findings.filter((f) => f.code === code).map((f) => f.message);
+
+test("|nbsp: a span holding the rendering is clean", () => {
+  const r = nbspRun("past due", "Status **past&nbsp;due**<!--vmark=s.status|nbsp-->.");
+  expect(r.findings).toEqual([]);
+  expect(r.exitCode).toBe(0);
+});
+
+test("|nbsp: a drifted span is STALE in rendered form", () => {
+  const r = nbspRun("paid in full", "Status **past&nbsp;due**<!--vmark=s.status|nbsp-->.");
+  expect(stale(r)).toEqual(["past&nbsp;due ≠ paid&nbsp;in&nbsp;full"]);
+  expect(r.exitCode).toBe(1);
+});
+
+test("|nbsp: a **_** placeholder is STALE", () => {
+  expect(stale(nbspRun("past due", "Status **_**<!--vmark=s.status|nbsp-->."))).toEqual([
+    "_ ≠ past&nbsp;due",
+  ]);
+});
+
+test("|nbsp: hand-typed spaces, U+00A0 and &#160; are each STALE", () => {
+  for (const typed of ["past due", "past due", "past&#160;due"]) {
+    expect(stale(nbspRun("past due", `Status **${typed}**<!--vmark=s.status|nbsp-->.`))).toEqual([
+      `${typed} ≠ past&nbsp;due`,
+    ]);
+  }
+});
+
+test("|nbsp: a single word, extra whitespace and a stored U+00A0 are clean", () => {
+  expect(nbspRun("settled", "One **settled**<!--vmark=s.status|nbsp-->.").findings).toEqual([]);
+  expect(
+    nbspRun("  past   due ", "Status **past&nbsp;due**<!--vmark=s.status|nbsp-->.").findings,
+  ).toEqual([]);
+  expect(
+    nbspRun("past due", "Status **past&nbsp;due**<!--vmark=s.status|nbsp-->.").findings,
+  ).toEqual([]);
+});
+
+test("|nbsp: user_id in **…** and in _…_ is clean", () => {
+  const r = nbspRun(
+    "user_id",
+    "Key **user_id**<!--vmark=s.status|nbsp--> or _user_id_<!--vmark=s.status|nbsp-->.",
+  );
+  expect(r.findings).toEqual([]);
+});
+
+test("|nbsp: *…* delimiters are clean", () => {
+  expect(nbspRun("past due", "Also *past&nbsp;due*<!--vmark=s.status|nbsp-->.").findings).toEqual(
+    [],
+  );
+});
+
+test("|nbsp: a value that would not read back is ANCHOR, naming its syntax characters", () => {
+  const cases: [string, string][] = [
+    [
+      "a *b* c",
+      "display rule `nbsp` cannot write this value inside **…** and read it back unchanged — it contains Markdown syntax: *",
+    ],
+    [
+      "run `ls` now",
+      "display rule `nbsp` cannot write this value inside **…** and read it back unchanged — it contains Markdown syntax: `",
+    ],
+    [
+      "already&nbsp;joined",
+      "display rule `nbsp` cannot write this value inside **…** and read it back unchanged — it contains Markdown syntax: &",
+    ],
+    ["", "display rule `nbsp` cannot write an empty value inside **…**"],
+    ["   ", "display rule `nbsp` cannot write an empty value inside **…**"],
+    [
+      "www.example.com",
+      "display rule `nbsp` cannot write this value inside **…** and read it back unchanged",
+    ],
+  ];
+  for (const [value, message] of cases) {
+    const r = nbspRun(value, "Seed **_**<!--vmark=s.status|nbsp-->.");
+    expect(messages(r, "ANCHOR")).toEqual([message]);
+    expect(stale(r)).toEqual([]);
+    expect(r.refusedAnchors.size).toBe(1);
+  }
+});
+
+test("|nbsp: the refusal names the seed's own delimiters", () => {
+  expect(messages(nbspRun("a *b* c", "Seed __x__<!--vmark=s.status|nbsp-->."), "ANCHOR")).toEqual([
+    "display rule `nbsp` cannot write this value inside __…__ and read it back unchanged — it contains Markdown syntax: *",
+  ]);
+  expect(messages(nbspRun("", "Seed _x_<!--vmark=s.status|nbsp-->."), "ANCHOR")).toEqual([
+    "display rule `nbsp` cannot write an empty value inside _…_",
+  ]);
+});
+
+test("|nbsp: flanking is judged in context", () => {
+  // a vmark string literal cannot hold `"`, so `(a)` stands in for the spec's
+  // `"a"`: `x**(a)**` is not strong, while `**(a)**` alone is
+  const alone = nbspRun("(a)", "Seed **_**<!--vmark=s.status|nbsp-->.");
+  expect(messages(alone, "ANCHOR")).toEqual([]);
+  expect(stale(alone)).toEqual(["_ ≠ (a)"]);
+  const r = nbspRun("(a)", "x**_**<!--vmark=s.status|nbsp-->y");
+  expect(messages(r, "ANCHOR")).toEqual([
+    "display rule `nbsp` cannot write this value inside **…** and read it back unchanged",
+  ]);
+});
+
+test("|nbsp: a code span on a string is one ANCHOR", () => {
+  const r = nbspRun("past due", "Code `past due`<!--vmark=s.status|nbsp-->.");
+  expect(r.findings.map((f) => `${f.code} ${f.message}`)).toEqual([
+    "ANCHOR display rule `nbsp` cannot render inside a code span — wrap the seed in **…** or *…* instead",
+  ]);
+});
+
+test("|nbsp: a code span on a number is TYPE and ANCHOR", () => {
+  const r = run(nbspDoc("n precision 2 = 3", "Number `3.00`<!--vmark=s.n|nbsp-->."));
+  expect(r.findings.map((f) => f.code).sort()).toEqual(["ANCHOR", "TYPE"]);
+  expect(messages(r, "TYPE")).toEqual([
+    "a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only)",
+  ]);
+});
+
+test("|nbsp on a date is TYPE", () => {
+  const r = run(nbspDoc("d = 2026-03-31", "Due **2026-03-31**<!--vmark=s.d|nbsp-->."));
+  expect(r.findings.map((f) => f.code)).toEqual(["TYPE"]);
+});
+
+test("an unknown rule in a code span is only the unknown-rule ANCHOR", () => {
+  const r = nbspRun("past due", "Code `past due`<!--vmark=s.status|nope-->.");
+  expect(r.findings.map((f) => `${f.code} ${f.message}`)).toEqual([
+    "ANCHOR unknown display rule `nope`",
+  ]);
+});
+
+test("a plain string anchor is still never compared with its prose", () => {
+  expect(nbspRun("paid in full", "Status **past due**<!--vmark=s.status-->.").findings).toEqual([]);
+});
+
+test("|nbsp on an unevaluable string binding gets no finding of its own", () => {
+  const r = run(nbspDoc("status = missing", "Status **_**<!--vmark=s.status|nbsp-->."));
+  expect(r.findings.length).toBeGreaterThan(0);
+  expect(r.findings.some((f) => f.code === "STALE" || f.code === "TYPE")).toBe(false);
+  expect(messages(r, "ANCHOR").some((m) => m?.includes("nbsp"))).toBe(false);
+});
+
+test("|nbsp: of two anchors on one scalar, only the stale one is STALE", () => {
+  const r = nbspRun(
+    "past due",
+    "Status **past&nbsp;due**<!--vmark=s.status|nbsp--> and *past due*<!--vmark=s.status|nbsp-->.",
+  );
+  expect(stale(r)).toEqual(["past due ≠ past&nbsp;due"]);
+});
+
+test("|nbsp: a &nbsp;&nbsp; separator beside the anchor is clean", () => {
+  const r = nbspRun(
+    "past due",
+    "**Status:** **past&nbsp;due**<!--vmark=s.status|nbsp--> &nbsp;&nbsp; **Also:** *past&nbsp;due*<!--vmark=s.status|nbsp-->",
+  );
+  expect(r.findings).toEqual([]);
 });
