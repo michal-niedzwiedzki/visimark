@@ -221,10 +221,13 @@ numeric anchor's `STALE` does today.
 - **Imports, `param`, `assert`, `chart`, column aliases.** Unchanged — this
   spec touches only scalar prose-anchor acceptance, not columns, charts, or
   imported values.
-- **`%` display sigil (#140).** Unchanged and orthogonal: the `%` sigil is
-  resolved after a span is already accepted as a target. A `%` comment whose
-  target now refuses under this spec's rule produces `ANCHOR`, exactly as a
-  malformed comment does today, before the sigil is ever consulted.
+- **`%` display sigil (#140).** Unchanged and orthogonal: the percent-legality
+  check (is the sigil on a numeric scalar, `TYPE` if not) runs independently
+  of this spec's acceptance check, over the same anchor list, so the two can
+  both fire on one anchor. A `%` comment on a refused string-anchor span
+  produces **both** `ANCHOR` (the target doesn't qualify) and `TYPE` (a `%`
+  sigil is only legal on a numeric scalar) — two independently true findings
+  about the same span, not one superseding the other.
 - **#297 (future display rules).** Not required by this spec and this spec
   does not depend on it. If #297 introduces its own locator convention for
   finding a display rule's owned span, that convention and this spec's

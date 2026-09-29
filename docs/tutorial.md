@@ -708,10 +708,21 @@ an anchor refuses instead of guessing:
 $ tail -1 seed.md
 Net of tax it comes to <!--vmark=order.net_total--> PLN.
 $ visimark check seed.md
+seed.md
+
   ANCHOR  order.net_total   no number to rewrite in front of this anchor — wrap a placeholder instead, such as **0** or **_**
+
+  1 problem (0 stale, 1 error)
 $ visimark fmt seed.md
 seed.md: unchanged
+seed.md
+
+  ANCHOR  order.net_total   no number to rewrite in front of this anchor — wrap a placeholder instead, such as **0** or **_**
+
+  1 problem (0 stale, 1 error)
 ```
+
+`fmt` still reports the finding it can't fix and exits `1` — "unchanged" means the file, not the outcome.
 
 `fmt` leaves the word `to` alone — it is not a number, so it does not qualify
 as a placeholder, and `fmt` never writes what it doesn't own. Wrap a
