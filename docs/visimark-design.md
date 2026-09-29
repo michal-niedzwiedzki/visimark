@@ -123,19 +123,26 @@ collision, for identifier-shaped headers as much as for any other.
 Invoice total: **28659.00**<!--vmark=lines.gross_total-->
 ```
 
-An optional trailing `%` on the comment asks `fmt` to print that scalar as a
-percent — stored × 100 at precision − 2, with a leading minus when the ratio
-is negative — without changing the stored value:
+An optional `|name` suffix on the comment names a **display rule**: a named
+transform, drawn from a small closed registry, that asks `fmt` to render the
+scalar differently in prose without changing the stored value. `percent` is
+the one shipped entry — stored × 100 at precision − 2, with a leading minus
+when the ratio is negative:
 
 ```markdown
-The engagement clears a margin of **40.26%**<!--vmark=lines.margin%-->
+The engagement clears a margin of **40.26%**<!--vmark=lines.margin|percent-->
 ```
 
 `check`'s verdict stays numeric: `40.26%` and `0.4026` agree when the stored
-value is `0.4026`. Two anchors of one scalar may disagree about the sigil;
-each comment is its own rendering. `%` mixed with a unit in the same span is
-`UNIT`. A date, a string, or a chart/image target with `%` is `TYPE`. A
-binding whose width is below 2 cannot support percent display (`PRECISION`).
+value is `0.4026`. Two anchors of one scalar may disagree about their display
+rule; each comment is its own rendering. A display rule mixed with a unit in
+the same span is `UNIT`. A display rule applied to a value of a type it does
+not accept — a date or a string for `percent`, or a chart/image target — is
+`TYPE`. An unrecognised `|name` is `ANCHOR`. `percent` specifically also
+requires precision 2 or more (`PRECISION`); a width floor is not a property
+every future display rule need share. The registry is closed — no
+document-supplied name — matching the no-plugin-architecture rule
+([§2](#2-constraints-that-shaped-the-design)).
 
 The anchor rewrites the text content of the inline node immediately preceding
 it. That node must be `strong`, `emphasis`, `inlineCode`, or a text node;
@@ -150,12 +157,16 @@ to a narrower rule: its trailing whitespace-delimited token must itself
 unambiguously denote a value of the anchor's own resolved type — numeric or
 strict-ISO-date shaped for a numeric or date anchor, and never accepted at
 all for a string anchor, since bare prose cannot unambiguously denote an
-arbitrary string. Anything else bare in front of an anchor is `ANCHOR`, not a
-silently claimed placeholder. An anchor with nothing in front of it is legal
-authoring syntax — `fmt` seeds it. A string-valued scalar can therefore be
-materialised in prose, via a delimited node, which the old numeric
-requirement prevented. HTML comments are invisible in every target renderer,
-so the sentence reads normally.
+arbitrary string. **An anchor carrying a display-rule name is held to a
+narrower rule still: a bare text node is always `ANCHOR`, regardless of
+type** — a display rule renders the stored value differently from its own
+shape (`0.4026` → `40.26%`), so no bare trailing token can unambiguously seed
+it the way an undecorated numeric or date anchor's can. Anything else bare in
+front of an anchor is `ANCHOR`, not a silently claimed placeholder. An anchor
+with nothing in front of it is legal authoring syntax — `fmt` seeds it. A
+string-valued scalar can therefore be materialised in prose, via a delimited
+node, which the old numeric requirement prevented. HTML comments are
+invisible in every target renderer, so the sentence reads normally.
 
 **An anchor is an output.** Its text states a value and never determines one:
 not the width, and — unlike a unit — nothing the evaluator reads back. Two
@@ -165,11 +176,11 @@ consulted.
 **A comment that announces itself as an anchor but does not parse is also an
 `ANCHOR` error.** Any HTML comment matching the loose prefix `<!--vmark=` is
 checked against the full anchor grammar; a mismatch — a hyphenated sheet id, a
-stray space, an empty name, a space before `%` — is reported rather than
+stray space, an empty name, the old `%` sigil — is reported rather than
 silently treated as an ordinary comment. The expected form is
-`<!--vmark=sheet.name-->` or `<!--vmark=sheet.name%-->`. A comment that does not match the loose prefix at all is
-unaffected, including the distinct `<!--vmark:no-formulas-->` marker, which
-uses `:` rather than `=`.
+`<!--vmark=sheet.name-->` or `<!--vmark=sheet.name|rule-->`. A comment that
+does not match the loose prefix at all is unaffected, including the distinct
+`<!--vmark:no-formulas-->` marker, which uses `:` rather than `=`.
 
 ## 4. Syntax
 
@@ -623,15 +634,15 @@ justifies the project.
 |------|---------|--------------|
 | `STALE` | stored value **or artifact** disagrees with its formula | yes, by `fmt` |
 | `DATE` | not an ISO 8601 calendar date | only if decidable, with `--fix-dates` |
-| `UNIT` | a column mixes unit decorations, a value is decorated on both sides, or a `%` display sigil shares a span with a unit | no |
+| `UNIT` | a column mixes unit decorations, a value is decorated on both sides, or a display rule shares a span with a unit | no |
 | `UNDEF` | unresolvable name | no |
 | `DUP` | a name is bound twice in one scope, or two header cells sharing text | no |
 | `VECTOR` | foreign column outside an aggregate | no |
 | `CYCLE` | circular dependency | no |
-| `TYPE` | illegal operand types, a malformed call (name, arity, shape), or a `%` display sigil on a non-numeric scalar or a chart/image | no |
+| `TYPE` | illegal operand types, a malformed call (name, arity, shape), or a display rule on a value of a type it does not accept (a date or a string for `percent`), or a chart/image | no |
 | `SHEET` | column rules with no table, or an `assert` in a document-scope block | no |
-| `ANCHOR` | anchor with no rewritable target | no |
-| `PRECISION` | a numeric binding with no declared width and none derivable, a value too large to carry the width it has ([§7](#7-numeric-semantics)), or a `%` display sigil on a binding whose width is below 2 | no |
+| `ANCHOR` | anchor with no rewritable target, an unrecognised display-rule name, or a display-rule anchor with no delimited seed | no |
+| `PRECISION` | a numeric binding with no declared width and none derivable, a value too large to carry the width it has ([§7](#7-numeric-semantics)), or a `percent` display rule on a binding whose width is below 2 | no |
 | `DOMAIN` | a `param`'s default is outside its declared domain, or the domain has no legal value ([§20](#20-scenario-parameters)) | no |
 | `ASSERT` | an `assert` statement evaluated false ([§17](#17-assertions)) | no |
 | `ARTIFACT` | a declared artifact cannot be built or written ([§18](#18-generated-artifacts)) | no |

@@ -1,5 +1,10 @@
 # Percent display sigil on prose anchors — implementation plan
 
+**Superseded.** The `%` sigil this plan implemented was removed on
+[#297](https://github.com/michal-niedzwiedzki/visimark/issues/297) in favour
+of `|percent`, a display rule. Kept as the historical record of #140's own
+implementation and not updated further.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: use `superpowers:subagent-driven-development` or `superpowers:executing-plans` to work this plan task-by-task. Steps are checkboxes for tracking.
 
 **Goal:** Per [`presentation-only-percent-display-sigil-spec.md`](presentation-only-percent-display-sigil-spec.md), let `<!--vmark=sheet.scalar%-->` tell `fmt` to print that scalar as a percent (stored × 100 at precision − 2) without changing the stored value.

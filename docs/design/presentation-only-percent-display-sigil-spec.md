@@ -2,6 +2,13 @@
 
 **Status:** approved (#140) · **Date:** 2026-09-22 · **Decision:** https://github.com/michal-niedzwiedzki/visimark/issues/140#issuecomment-5775547789
 
+**Superseded.** The `%` sigil this spec describes was removed on
+[#297](https://github.com/michal-niedzwiedzki/visimark/issues/297) in favour
+of `|percent`, a display rule — see
+[`display-rules-replacing-percent-sigil-spec.md`](display-rules-replacing-percent-sigil-spec.md).
+This document is kept as the historical record of #140's own decision and is
+not updated further.
+
 ## 1. Purpose
 
 A scalar prose anchor can ask `fmt` to print a stored ratio as a percent,

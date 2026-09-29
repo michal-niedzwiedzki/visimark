@@ -25,7 +25,7 @@ payroll   = SUM(Cost)
 
 The team of **11**<!--vmark=team.headcount--> people costs
 **111240.00**<!--vmark=team.payroll--> PLN a month, after a
-**3.0%**<!--vmark=team.raise%--> raise.
+**3.0%**<!--vmark=team.raise|percent--> raise.
 
 ## Runway
 
