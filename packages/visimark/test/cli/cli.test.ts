@@ -277,16 +277,16 @@ test("check passes the prose-notation fixture, and explain echoes the glyphs as 
 });
 
 const percentFixture = fileURLToPath(
-  new URL("../fixtures/percent-display-sigil.md", import.meta.url),
+  new URL("../fixtures/display-rule-percent.md", import.meta.url),
 );
 
-test("check passes the percent-display fixture", async () => {
+test("check passes the display-rule-percent fixture", async () => {
   const c = capture();
   expect(await runCli(["check", percentFixture], c.io)).toBe(0);
   expect(c.out()).toContain("0 problems");
 });
 
-test("eval --json on the percent-display fixture reports stored numbers", async () => {
+test("eval --json on the display-rule-percent fixture reports stored numbers", async () => {
   const c = capture();
   expect(await runCli(["eval", percentFixture, "--json"], c.io)).toBe(0);
   const j = JSON.parse(c.out()) as { values: Record<string, string> };
@@ -305,7 +305,7 @@ test("fmt repairs a sabotaged percent span and is idempotent", async () => {
   expect(check1.out()).toContain("41.55% ≠ 40.26%");
   const fmt1 = capture();
   expect(await runCli(["fmt", path], fmt1.io)).toBe(0);
-  expect(readFileSync(path, "utf8")).toContain("**40.26%**<!--vmark=s.margin%-->");
+  expect(readFileSync(path, "utf8")).toContain("**40.26%**<!--vmark=s.margin|percent-->");
   const fmt2 = capture();
   expect(await runCli(["fmt", path], fmt2.io)).toBe(0);
   expect(fmt2.out()).toContain("unchanged");
@@ -313,10 +313,27 @@ test("fmt repairs a sabotaged percent span and is idempotent", async () => {
   expect(await runCli(["check", path], check2.io)).toBe(0);
 });
 
-test("explain on a percent-display document does not mention the sigil", async () => {
+test("explain on a display-rule-percent document does not mention the rule name", async () => {
   const c = capture();
   expect(await runCli(["explain", percentFixture], c.io)).toBe(0);
-  expect(c.out()).not.toContain("margin%");
+  expect(c.out()).not.toContain("margin|percent");
+});
+
+const displayRuleErrorsFixture = fileURLToPath(
+  new URL("../fixtures/display-rule-errors.md", import.meta.url),
+);
+
+test("check on the display-rule-errors fixture reports all four refusals", async () => {
+  const c = capture();
+  expect(await runCli(["check", displayRuleErrorsFixture], c.io)).toBe(1);
+  const out = c.out();
+  expect(out).toContain("a display rule needs a delimited seed");
+  expect(out).toContain("unknown display rule `nope`");
+  expect(out).toContain("a display rule is only legal on a value it accepts");
+  expect(out).toContain(
+    "malformed anchor comment — expected `<!--vmark=sheet.name-->` or `<!--vmark=sheet.name|rule-->`",
+  );
+  expect(out).toContain("4 problems");
 });
 
 const anchorAcceptanceFixture = fileURLToPath(

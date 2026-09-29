@@ -1,7 +1,7 @@
 import { locate } from "../parse/document.js";
 import { build } from "../model/build.js";
 import { check, type CheckResult, matchesStored, roundValue, showValue } from "../eval/check.js";
-import { isPercentText, percentDisplay } from "../eval/percent-display.js";
+import { DISPLAY_RULES, isPercentText } from "../eval/display-rules.js";
 import type { DocumentFile } from "../fs/reader.js";
 import type { DocModel, Finding } from "../model/types.js";
 import { applyUnit } from "../eval/units.js";
@@ -120,14 +120,13 @@ export function planFmt(model: DocModel, result: CheckResult, opts: FmtOptions):
     // placeholder in prose round the stored value.
     const prec = result.scalarPrecision.get(id);
     if (prec === undefined) continue;
-    if (a.percent && sigilBlocked.has(id)) continue;
+    if (a.displayRule !== undefined && sigilBlocked.has(id)) continue;
     const unit = result.scalarUnits.get(id) ?? null;
     const rounded = roundValue(v, prec);
-    const wanted = a.percent
-      ? percentDisplay(rounded, prec)
-      : applyUnit(showValue(rounded, prec), unit);
+    const rule = a.displayRule !== undefined ? DISPLAY_RULES[a.displayRule] : undefined;
+    const wanted = rule ? rule.render(rounded, prec) : applyUnit(showValue(rounded, prec), unit);
     const rewrite =
-      a.percent || isPercentText(current)
+      a.displayRule === "percent" || isPercentText(current)
         ? current !== wanted
         : !matchesStored(rounded, current, prec);
     if (rewrite) {

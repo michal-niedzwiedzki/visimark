@@ -20,3 +20,22 @@ export function percentDisplay(v: Value, places: number): string {
   const sign = v.d.isNeg() && !v.d.isZero() ? "-" : "";
   return `${sign}${shown}%`;
 }
+
+/** A named, chainless anchor-comment display transform — `<!--vmark=x.y|name-->`.
+ *  Registered under a closed, catalogue-governed name; never user-defined
+ *  (see docs/design/display-rules-replacing-percent-sigil-spec.md). */
+export interface DisplayRule {
+  /** true if this rule accepts a scalar of this value's type */
+  accepts(v: Value): boolean;
+  /** stored value, at the binding's write precision, to rendered text */
+  render(v: Value, places: number): string;
+}
+
+/** The closed registry. Adding an entry means adding a key here, behind its
+ *  own catalogue-approved issue — never a document-supplied name. */
+export const DISPLAY_RULES: Readonly<Record<string, DisplayRule>> = {
+  percent: {
+    accepts: (v) => v.t === "num",
+    render: percentDisplay,
+  },
+};

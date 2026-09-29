@@ -95,12 +95,12 @@ export function reportAnchors(st: Pick<CheckState, "model" | "staleScalars" | "e
     if (a.value.kind !== "image" && isChart) {
       anchorFinding("a chart must be anchored to an image");
     }
-    if (a.percent && (isChart || a.value.kind === "image")) {
+    if (a.displayRule !== undefined && (isChart || a.value.kind === "image")) {
       st.emit({
         code: "TYPE",
         sheetId: a.sheetId,
         name: a.name,
-        message: "a % sigil is only legal on a numeric scalar",
+        message: "a display rule is only legal on a value it accepts (percent: numeric only)",
         sourceOffset: a.commentSpan.start,
         span: a.commentSpan,
       });
