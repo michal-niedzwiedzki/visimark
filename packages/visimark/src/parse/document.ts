@@ -158,6 +158,10 @@ const ANCHOR_RE =
 const ANCHOR_LOOSE_RE = /^<!--\s*vmark\s*=/;
 export const NO_FORMULAS_MARKER = "<!--vmark:no-formulas-->";
 const NO_FORMULAS_RE = /^<!--\s*vmark\s*:\s*no-formulas\s*-->$/;
+/** a trailing ISO-shaped date, tried before TRAILING_NUMBER_RE — otherwise
+ *  the number regex reads a date's last `-DD` as a negative number and
+ *  mis-scopes the span to three characters instead of the whole date */
+const TRAILING_DATE_RE = /(\d{4}-\d{2}-\d{2})\s*$/;
 const TRAILING_NUMBER_RE = /(-?\d+(?:\.\d+)?)\s*$/;
 /** the value an anchor rewrites when it is not a number — the trailing word,
  *  so a string-valued scalar can be materialised in prose at all */
@@ -406,6 +410,11 @@ function anchorValueSpan(prev: MdNode): (Span & { kind: AnchorTargetKind }) | nu
   }
   if (prev.type === "text") {
     const value = prev.value ?? "";
+    const d = TRAILING_DATE_RE.exec(value);
+    if (d) {
+      const start = off(prev, "start") + d.index;
+      return { start, end: start + d[1]!.length, kind: "text" };
+    }
     const m = TRAILING_NUMBER_RE.exec(value);
     if (m) {
       const start = off(prev, "start") + m.index;

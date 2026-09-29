@@ -1014,3 +1014,136 @@ assert rate > 0
   expect(r.findings.some((f) => f.code === "NOTE")).toBe(true);
   expect(r.findings.some((f) => f.code === "ASSERT")).toBe(false);
 });
+
+test("a bare non-numeric token in front of a numeric anchor refuses instead of being silently rewritten", () => {
+  const src = `\`\`\`vmark #s
+b precision 2 = 0.25
+\`\`\`
+
+It comes to <!--vmark=s.b--> PLN.
+`;
+  const r = run(src);
+  expect(r.findings.map((f) => f.code)).toEqual(["ANCHOR"]);
+  expect(r.findings.some((f) => f.code === "STALE")).toBe(false);
+  const anchor = r.findings[0]!;
+  expect(anchor.message).toBe(
+    "no number to rewrite in front of this anchor — wrap a placeholder instead, such as **0** or **_**",
+  );
+  expect(r.exitCode).toBe(1);
+});
+
+test("a bare numeric-shaped token in front of a numeric anchor is still accepted, unchanged", () => {
+  const src = `\`\`\`vmark #s
+order precision 2 = 110.00
+\`\`\`
+
+Order total: 110.00<!--vmark=s.order-->.
+`;
+  const r = run(src);
+  expect(r.findings).toEqual([]);
+  expect(r.exitCode).toBe(0);
+});
+
+test("a bare non-date token in front of a date anchor refuses", () => {
+  const src = `\`\`\`vmark #s
+due = 2026-02-01
+\`\`\`
+
+Due sometime soon<!--vmark=s.due-->.
+`;
+  const r = run(src);
+  expect(r.findings.map((f) => f.code)).toEqual(["ANCHOR"]);
+  expect(r.findings[0]!.message).toBe(
+    "no date to rewrite in front of this anchor — wrap a placeholder instead, such as **2026-01-01** or **_**",
+  );
+  expect(r.exitCode).toBe(1);
+});
+
+test("a bare ISO-shaped token in front of a date anchor is accepted (acceptance only — still never STALE-checked)", () => {
+  const src = `\`\`\`vmark #s
+due = 2026-01-15
+\`\`\`
+
+Due by 2026-01-15<!--vmark=s.due-->.
+`;
+  const r = run(src);
+  expect(r.findings).toEqual([]);
+  expect(r.exitCode).toBe(0);
+});
+
+test("a bare non-ISO date-shaped token does not qualify as a date anchor's target", () => {
+  const src = `\`\`\`vmark #s
+due = 2026-01-15
+\`\`\`
+
+Due by 01/15/2026<!--vmark=s.due-->.
+`;
+  const r = run(src);
+  expect(r.findings.map((f) => f.code)).toEqual(["ANCHOR"]);
+});
+
+test("bare prose in front of a string anchor always refuses", () => {
+  const src = `\`\`\`vmark #s
+status = "all clear"
+\`\`\`
+
+The status is no problem<!--vmark=s.status--> today.
+`;
+  const r = run(src);
+  expect(r.findings.map((f) => f.code)).toEqual(["ANCHOR"]);
+  expect(r.findings[0]!.message).toBe(
+    "a string anchor cannot rewrite bare prose — wrap a placeholder instead, such as **_**",
+  );
+  expect(r.exitCode).toBe(1);
+});
+
+test("a delimited placeholder is accepted for a string anchor regardless of content", () => {
+  const src = `\`\`\`vmark #s
+status = "all clear"
+\`\`\`
+
+Status: **all clear**<!--vmark=s.status-->.
+`;
+  const r = run(src);
+  expect(r.findings).toEqual([]);
+  expect(r.exitCode).toBe(0);
+});
+
+test("a refused anchor is suppressed, not doubly reported, when the scalar is unevaluable upstream", () => {
+  const src = `\`\`\`vmark #s
+b precision 2 = missing_name
+\`\`\`
+
+It comes to <!--vmark=s.b--> PLN.
+`;
+  const r = run(src);
+  expect(r.findings.map((f) => f.code)).toEqual(["UNDEF"]);
+});
+
+test("a well-formed but wrong date anchor is still not verified — non-goal, unchanged from today", () => {
+  const src = `\`\`\`vmark #s
+due = 2026-01-15
+\`\`\`
+
+Due by 2026-02-01<!--vmark=s.due-->.
+`;
+  const r = run(src);
+  // 2026-02-01 is a well-formed ISO date, so it's accepted as a target —
+  // but it disagrees with the stored 2026-01-15, and this feature adds no
+  // date STALE verification, so that disagreement is still invisible.
+  expect(r.findings).toEqual([]);
+  expect(r.exitCode).toBe(0);
+});
+
+test("a percent sigil on a refused string-anchor span reports both ANCHOR and the existing TYPE refusal", () => {
+  const src = `\`\`\`vmark #s
+status = "all clear"
+\`\`\`
+
+The status is no problem<!--vmark=s.status%--> today.
+`;
+  const r = run(src);
+  expect(r.findings.map((f) => f.code).sort()).toEqual(["ANCHOR", "TYPE"]);
+  const type = r.findings.find((f) => f.code === "TYPE")!;
+  expect(type.message).toBe("a % sigil is only legal on a numeric scalar");
+});

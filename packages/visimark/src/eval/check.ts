@@ -19,6 +19,7 @@ import { domainLiterals, formatDomain, isEmptyDomain, testDomain } from "../lang
 import { derivePrecision, type Width } from "./precision.js";
 import { percentDisplay } from "./percent-display.js";
 import { applyUnit, cellPrecision, parseDecorated, type Unit } from "./units.js";
+import { parseIsoDate } from "./dates.js";
 import {
   EvalError,
   exceedsWorkingPrecision,
@@ -114,6 +115,12 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
     buildableCharts,
   } = st;
   const emit = st.emit;
+
+  // anchors this pass refuses as a rewrite target — keyed by the comment's
+  // own source offset, which is unique per anchor. Consulted by the numeric
+  // STALE loop in evalScalar below so a refused span is reported ANCHOR
+  // only, never STALE too.
+  const refusedAnchors = new Set<number>();
 
   // structural findings carried from the model (SHEET, binding parse errors)
   for (const f of model.findings) emit(f);
@@ -645,6 +652,55 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
         unevaluable.add(binding.id);
         return;
       }
+      for (const a of valueAnchorsOf(model, binding.id)) {
+        if (a.value!.kind !== "text") continue;
+        const text = model.source.slice(a.value!.start, a.value!.end);
+        if (v0.t === "num") {
+          if (parseDecorated(text).kind === "number") continue;
+          refusedAnchors.add(a.commentSpan.start);
+          emit(
+            {
+              code: "ANCHOR",
+              sheetId: binding.sheetId,
+              name: binding.name,
+              sourceOffset: a.commentSpan.start,
+              span: a.commentSpan,
+              message:
+                "no number to rewrite in front of this anchor — wrap a placeholder instead, such as **0** or **_**",
+            },
+            { sheetId: binding.sheetId },
+          );
+        } else if (v0.t === "date") {
+          if (parseIsoDate(text).ok) continue;
+          refusedAnchors.add(a.commentSpan.start);
+          emit(
+            {
+              code: "ANCHOR",
+              sheetId: binding.sheetId,
+              name: binding.name,
+              sourceOffset: a.commentSpan.start,
+              span: a.commentSpan,
+              message:
+                "no date to rewrite in front of this anchor — wrap a placeholder instead, such as **2026-01-01** or **_**",
+            },
+            { sheetId: binding.sheetId },
+          );
+        } else {
+          refusedAnchors.add(a.commentSpan.start);
+          emit(
+            {
+              code: "ANCHOR",
+              sheetId: binding.sheetId,
+              name: binding.name,
+              sourceOffset: a.commentSpan.start,
+              span: a.commentSpan,
+              message:
+                "a string anchor cannot rewrite bare prose — wrap a placeholder instead, such as **_**",
+            },
+            { sheetId: binding.sheetId },
+          );
+        }
+      }
       const anchorText = anchorValueText(model, binding.id);
       const anchorUnit =
         anchorText !== undefined
@@ -733,6 +789,7 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
         // (editors/obsidian/src/decorations.ts) would otherwise call that
         // site "computed" — agreeing — because no finding ever named its span.
         for (const a of mine) {
+          if (refusedAnchors.has(a.commentSpan.start)) continue;
           const text = model.source.slice(a.value!.start, a.value!.end);
           if (matchesStored(v, text, prec)) continue;
           staleScalars.add(binding.id);
