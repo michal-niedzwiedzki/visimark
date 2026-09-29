@@ -361,7 +361,10 @@ test("explain on a display-rule-nbsp document does not mention the rule name", a
 });
 
 test("fmt repairs a drifted |nbsp string and leaves the plain anchor alone", async () => {
-  const src = readFileSync(nbspFixture, "utf8").replace('status = "past due"', 'status = "paid in full"');
+  const src = readFileSync(nbspFixture, "utf8").replace(
+    'status = "past due"',
+    'status = "paid in full"',
+  );
   const dir = mkdtempSync(join(tmpdir(), "vm-nbsp-"));
   const path = join(dir, "n.md");
   writeFileSync(path, src);

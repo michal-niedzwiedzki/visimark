@@ -79,7 +79,17 @@ export function displayRuleTypeMessage(): string {
 }
 
 /** The characters a round-trip refusal names as Markdown syntax. */
-export const MARKDOWN_SYNTAX_CHARS: readonly string[] = ["\\", "`", "*", "_", "[", "]", "<", "&", "~"];
+export const MARKDOWN_SYNTAX_CHARS: readonly string[] = [
+  "\\",
+  "`",
+  "*",
+  "_",
+  "[",
+  "]",
+  "<",
+  "&",
+  "~",
+];
 
 /** Distinct Markdown syntax characters in `s`, in order of first appearance. */
 export function markdownSyntaxIn(s: string): string[] {

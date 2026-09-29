@@ -13,15 +13,25 @@ const proves = (source: string, rendered: string, expected: string) => {
 };
 
 test("a strong seed already holding the rendering round-trips", () => {
-  expect(proves(doc("Status **past&nbsp;due**<!--vmark=s.status|nbsp-->."), "past&nbsp;due", `past${NBSP}due`)).toBe(true);
+  expect(
+    proves(
+      doc("Status **past&nbsp;due**<!--vmark=s.status|nbsp-->."),
+      "past&nbsp;due",
+      `past${NBSP}due`,
+    ),
+  ).toBe(true);
 });
 
 test("a **_** placeholder spliced with the rendering round-trips", () => {
-  expect(proves(doc("Status **_**<!--vmark=s.status|nbsp-->."), "past&nbsp;due", `past${NBSP}due`)).toBe(true);
+  expect(
+    proves(doc("Status **_**<!--vmark=s.status|nbsp-->."), "past&nbsp;due", `past${NBSP}due`),
+  ).toBe(true);
 });
 
 test("an *…* seed round-trips", () => {
-  expect(proves(doc("Status *_*<!--vmark=s.status|nbsp-->."), "past&nbsp;due", `past${NBSP}due`)).toBe(true);
+  expect(
+    proves(doc("Status *_*<!--vmark=s.status|nbsp-->."), "past&nbsp;due", `past${NBSP}due`),
+  ).toBe(true);
 });
 
 test("an intraword underscore inside _…_ round-trips", () => {
@@ -29,15 +39,33 @@ test("an intraword underscore inside _…_ round-trips", () => {
 });
 
 test("emphasis inside the value does not round-trip", () => {
-  expect(proves(doc("Star **_**<!--vmark=s.status|nbsp-->."), "a&nbsp;*b*&nbsp;c", `a${NBSP}*b*${NBSP}c`)).toBe(false);
+  expect(
+    proves(
+      doc("Star **_**<!--vmark=s.status|nbsp-->."),
+      "a&nbsp;*b*&nbsp;c",
+      `a${NBSP}*b*${NBSP}c`,
+    ),
+  ).toBe(false);
 });
 
 test("a code span inside the value does not round-trip", () => {
-  expect(proves(doc("Tick **_**<!--vmark=s.status|nbsp-->."), "run&nbsp;`ls`&nbsp;now", `run${NBSP}\`ls\`${NBSP}now`)).toBe(false);
+  expect(
+    proves(
+      doc("Tick **_**<!--vmark=s.status|nbsp-->."),
+      "run&nbsp;`ls`&nbsp;now",
+      `run${NBSP}\`ls\`${NBSP}now`,
+    ),
+  ).toBe(false);
 });
 
 test("entity text in the value decodes to something else and does not round-trip", () => {
-  expect(proves(doc("Joined **_**<!--vmark=s.status|nbsp-->."), "already&nbsp;joined", "already&nbsp;joined")).toBe(false);
+  expect(
+    proves(
+      doc("Joined **_**<!--vmark=s.status|nbsp-->."),
+      "already&nbsp;joined",
+      "already&nbsp;joined",
+    ),
+  ).toBe(false);
 });
 
 test("an empty rendering never round-trips", () => {
@@ -45,7 +73,9 @@ test("an empty rendering never round-trips", () => {
 });
 
 test("a GFM autolink does not round-trip", () => {
-  expect(proves(doc("Site **_**<!--vmark=s.status|nbsp-->."), "www.example.com", "www.example.com")).toBe(false);
+  expect(
+    proves(doc("Site **_**<!--vmark=s.status|nbsp-->."), "www.example.com", "www.example.com"),
+  ).toBe(false);
 });
 
 test("flanking is judged in context: x**…**y breaks where **…** alone does not", () => {

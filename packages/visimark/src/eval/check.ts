@@ -912,7 +912,9 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
                   rendered === ""
                     ? `display rule \`${a.displayRule}\` cannot write an empty value inside ${inside}`
                     : `display rule \`${a.displayRule}\` cannot write this value inside ${inside} and read it back unchanged` +
-                      (chars.length > 0 ? ` — it contains Markdown syntax: ${chars.join(" ")}` : ""),
+                      (chars.length > 0
+                        ? ` — it contains Markdown syntax: ${chars.join(" ")}`
+                        : ""),
               },
               { sheetId: binding.sheetId },
             );

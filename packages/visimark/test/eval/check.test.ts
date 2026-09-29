@@ -1351,9 +1351,12 @@ The status is no problem<!--vmark=s.status|percent--> today.
 /** a document with one `s` sheet holding `bindings`, and `prose` below it */
 const nbspDoc = (bindings: string, prose: string) =>
   `\`\`\`vmark #s\n${bindings}\n\`\`\`\n\n${prose}\n`;
-const nbspRun = (value: string, prose: string) => run(nbspDoc(`status = ${JSON.stringify(value)}`, prose));
+const nbspRun = (value: string, prose: string) =>
+  run(nbspDoc(`status = ${JSON.stringify(value)}`, prose));
 const stale = (r: ReturnType<typeof run>) =>
-  r.findings.filter((f) => f.code === "STALE" && !f.anchorGroup).map((f) => `${f.stored} ≠ ${f.computed}`);
+  r.findings
+    .filter((f) => f.code === "STALE" && !f.anchorGroup)
+    .map((f) => `${f.stored} ≠ ${f.computed}`);
 const messages = (r: ReturnType<typeof run>, code: string) =>
   r.findings.filter((f) => f.code === code).map((f) => f.message);
 
@@ -1385,8 +1388,12 @@ test("|nbsp: hand-typed spaces, U+00A0 and &#160; are each STALE", () => {
 
 test("|nbsp: a single word, extra whitespace and a stored U+00A0 are clean", () => {
   expect(nbspRun("settled", "One **settled**<!--vmark=s.status|nbsp-->.").findings).toEqual([]);
-  expect(nbspRun("  past   due ", "Status **past&nbsp;due**<!--vmark=s.status|nbsp-->.").findings).toEqual([]);
-  expect(nbspRun("past due", "Status **past&nbsp;due**<!--vmark=s.status|nbsp-->.").findings).toEqual([]);
+  expect(
+    nbspRun("  past   due ", "Status **past&nbsp;due**<!--vmark=s.status|nbsp-->.").findings,
+  ).toEqual([]);
+  expect(
+    nbspRun("past due", "Status **past&nbsp;due**<!--vmark=s.status|nbsp-->.").findings,
+  ).toEqual([]);
 });
 
 test("|nbsp: user_id in **…** and in _…_ is clean", () => {
@@ -1398,17 +1405,31 @@ test("|nbsp: user_id in **…** and in _…_ is clean", () => {
 });
 
 test("|nbsp: *…* delimiters are clean", () => {
-  expect(nbspRun("past due", "Also *past&nbsp;due*<!--vmark=s.status|nbsp-->.").findings).toEqual([]);
+  expect(nbspRun("past due", "Also *past&nbsp;due*<!--vmark=s.status|nbsp-->.").findings).toEqual(
+    [],
+  );
 });
 
 test("|nbsp: a value that would not read back is ANCHOR, naming its syntax characters", () => {
   const cases: [string, string][] = [
-    ["a *b* c", "display rule `nbsp` cannot write this value inside **…** and read it back unchanged — it contains Markdown syntax: *"],
-    ["run `ls` now", "display rule `nbsp` cannot write this value inside **…** and read it back unchanged — it contains Markdown syntax: `"],
-    ["already&nbsp;joined", "display rule `nbsp` cannot write this value inside **…** and read it back unchanged — it contains Markdown syntax: &"],
+    [
+      "a *b* c",
+      "display rule `nbsp` cannot write this value inside **…** and read it back unchanged — it contains Markdown syntax: *",
+    ],
+    [
+      "run `ls` now",
+      "display rule `nbsp` cannot write this value inside **…** and read it back unchanged — it contains Markdown syntax: `",
+    ],
+    [
+      "already&nbsp;joined",
+      "display rule `nbsp` cannot write this value inside **…** and read it back unchanged — it contains Markdown syntax: &",
+    ],
     ["", "display rule `nbsp` cannot write an empty value inside **…**"],
     ["   ", "display rule `nbsp` cannot write an empty value inside **…**"],
-    ["www.example.com", "display rule `nbsp` cannot write this value inside **…** and read it back unchanged"],
+    [
+      "www.example.com",
+      "display rule `nbsp` cannot write this value inside **…** and read it back unchanged",
+    ],
   ];
   for (const [value, message] of cases) {
     const r = nbspRun(value, "Seed **_**<!--vmark=s.status|nbsp-->.");
@@ -1461,7 +1482,9 @@ test("|nbsp on a date is TYPE", () => {
 
 test("an unknown rule in a code span is only the unknown-rule ANCHOR", () => {
   const r = nbspRun("past due", "Code `past due`<!--vmark=s.status|nope-->.");
-  expect(r.findings.map((f) => `${f.code} ${f.message}`)).toEqual(["ANCHOR unknown display rule `nope`"]);
+  expect(r.findings.map((f) => `${f.code} ${f.message}`)).toEqual([
+    "ANCHOR unknown display rule `nope`",
+  ]);
 });
 
 test("a plain string anchor is still never compared with its prose", () => {
