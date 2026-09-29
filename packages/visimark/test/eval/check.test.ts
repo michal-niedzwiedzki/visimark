@@ -734,6 +734,24 @@ margin precision 4 = 0.4026
   expect(a.message).toBe("unknown display rule `nope`");
 });
 
+test("an unknown display-rule anchor does not suppress STALE on a sibling anchor of the same scalar", () => {
+  const src = `Sibling **0.4000**<!--vmark=s.x-->.
+Typo **_**<!--vmark=s.x|nope-->.
+
+\`\`\`vmark #s
+x precision 4 = 0.5
+\`\`\`
+`;
+  const r = run(src);
+  expect(r.findings.some((f) => f.code === "ANCHOR")).toBe(true);
+  const stale = r.findings.find((f) => f.code === "STALE" && !f.anchorGroup);
+  expect(stale).toBeDefined();
+  expect(stale!.stored).toBe("0.4000");
+  const formatted = fmt(src, {});
+  const after = run(formatted.output);
+  expect(after.findings.find((f) => f.code === "STALE")).toBeUndefined();
+});
+
 test("a display-rule anchor with an undelimited seed is ANCHOR, not accepted by shape", () => {
   const src = `Margin 40.26%<!--vmark=s.margin|percent-->.
 

@@ -772,6 +772,10 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
       const percentMine = registeredMine.filter((a) => a.displayRule === "percent");
       let sigilBlocked = false;
       for (const a of unknownMine) {
+        // no `sigilBlocked = true` here: the unknown-named anchor is already
+        // in `refusedAnchors` and so already excluded from the STALE loop
+        // below — blocking the whole scalar would silence a genuinely stale
+        // *sibling* anchor's own finding for no reason tied to this anchor.
         refusedAnchors.add(a.commentSpan.start);
         emit(
           {
@@ -784,7 +788,6 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
           },
           { sheetId: binding.sheetId },
         );
-        sigilBlocked = true;
       }
       if (wrongTypeMine.length > 0) {
         emit(
