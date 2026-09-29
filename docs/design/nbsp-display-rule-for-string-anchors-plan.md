@@ -167,7 +167,7 @@ export interface RawAnchor {
       scope.
 - [ ] Tests in `document.test.ts`:
   - [ ] `**past&nbsp;due**<!--vmark=s.a|nbsp-->` gives `valueText` equal to
-        `"past due"`, `delimiters` `{open:"**",close:"**"}`, and a value
+        `"past\u00a0due"`, `delimiters` `{open:"**",close:"**"}`, and a value
         span covering the 13 raw source characters.
   - [ ] `_user_id_<!--vmark=s.a-->` gives `valueText` `"user_id"` and
         delimiters `_`/`_`.
@@ -254,7 +254,7 @@ and `staleScalars` are reused.
     }
   }
   ```
-  - `rendered = rule.render(v, 0)` and `expected = v.s.trim().split(/\s+/).join(" ")`.
+  - `rendered = rule.render(v, 0)` and `expected = v.s.trim().split(/\s+/).join("\u00a0")`.
     When `v.s.trim() === ""`, `expected` is `""`.
   - If `!roundTrips(model.source, a, rendered, expected)`, add the anchor to
     `refusedAnchors` and emit `ANCHOR`. Let `d = a.delimiters` and
@@ -284,7 +284,7 @@ and `staleScalars` are reused.
   - [ ] `user_id` in `**…**` and in `_…_` → clean.
   - [ ] Round-trip refusals, with the exact messages from spec §6:
         `a *b* c`, ``run `ls` now``, `already&nbsp;joined`, `""`, `"   "`,
-        `www.example.com` (no character tail), and `"a"` in `x**_**y`
+        `www.example.com` (no character tail), and `(a)` in `x**_**y` (a vmark literal cannot hold `"`)
         (no tail).
   - [ ] Code span on a string → one `ANCHOR`.
   - [ ] Code span on a number → `TYPE` and `ANCHOR`.

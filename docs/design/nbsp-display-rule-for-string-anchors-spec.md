@@ -88,7 +88,7 @@ repository's own `&nbsp;&nbsp;` separator convention.
 ## 3. Semantics
 
 Let `words` = `v.s.trim().split(/\s+/)`. Let `rendered` = `words.join("&nbsp;")`,
-the text `fmt` writes. Let `expected` = `words.join(" ")`, the text a
+the text `fmt` writes. Let `expected` = `words.join("\u00a0")`, the text a
 reader sees. The span is the raw source slice between the delimiters.
 
 `check` decides in this order, per `|nbsp` anchor that is not already refused:
@@ -133,7 +133,7 @@ writes a refused anchor or an anchor on a scalar that has a `TYPE` finding.
 | Entity text inside the value | `already&nbsp;joined` | `_` | `ANCHOR` round trip (names `&`). It would decode to U+00A0, not to the stored text. This overrides the issue body's "passes through untouched". | nothing |
 | Empty or whitespace-only | `""`, `"   "` | `_` | `ANCHOR` empty (`****` is not a strong node) | nothing |
 | Would autolink (GFM) | `www.example.com` | `_` | `ANCHOR` round trip (names no character) | nothing |
-| Flanking breaks in context | `"a"` in `x**…**y` | `_` | `ANCHOR` round trip (names no character). Verified: `x**"a"**y` is not strong. | nothing |
+| Flanking breaks in context | `(a)` in `x**…**y` | `_` | `ANCHOR` round trip (names no character). Verified: `x**(a)**y` is not strong, while `**(a)**` is. (A vmark string literal cannot hold `"`, so `(a)` stands in for the `"a"` first drafted here.) | nothing |
 | Human `&nbsp;&nbsp;` separator beside the anchor | `past due` | `past&nbsp;due` | clean, and the separator is prose that is never read | nothing |
 | Plain string anchor, no rule | any | any | unchecked, as today | nothing |
 
@@ -359,7 +359,7 @@ first within a rank, then emission order, which follows binding order.
 
 **Unit tests** (`test/eval/`): `nbspDisplay` over every §3 row (trim,
 repeated whitespace, U+00A0, single word, empty); the round trip for the
-autolink (`www.example.com`) and in-context flanking (`x**…**y` with `"a"`)
+autolink (`www.example.com`) and in-context flanking (`x**…**y` with `(a)`)
 rows, which report the message with no character list; `_…_` and `__…__`
 delimiters appearing in the message; a numeric `display-rule-percent.md` run
 that is unchanged.
