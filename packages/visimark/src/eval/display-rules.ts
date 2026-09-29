@@ -32,10 +32,15 @@ export interface DisplayRule {
 }
 
 /** The closed registry. Adding an entry means adding a key here, behind its
- *  own catalogue-approved issue — never a document-supplied name. */
-export const DISPLAY_RULES: Readonly<Record<string, DisplayRule>> = {
-  percent: {
-    accepts: (v) => v.t === "num",
-    render: percentDisplay,
+ *  own catalogue-approved issue — never a document-supplied name.
+ *  Null-prototype: a document-supplied name such as `constructor` must miss
+ *  the lookup, not resolve to an inherited `Object.prototype` member. */
+export const DISPLAY_RULES: Readonly<Record<string, DisplayRule>> = Object.assign(
+  Object.create(null) as Record<string, DisplayRule>,
+  {
+    percent: {
+      accepts: (v: Value) => v.t === "num",
+      render: percentDisplay,
+    },
   },
-};
+);

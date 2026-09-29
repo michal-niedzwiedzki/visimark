@@ -1406,7 +1406,7 @@ A wrong number is `STALE` as usual, and the report shows the percent form:
 | `\|percent` on a chart image | `TYPE`, the same message |
 | `\|percent` with a currency in the same span, such as `**$0.25**` | `UNIT` — `cannot mix a unit with a display rule` |
 | `\|percent` with a bare, undelimited seed, as in `40.26%<!--vmark=s.m\|percent-->` | `ANCHOR` — `a display rule needs a delimited seed` |
-| an unrecognised name, such as `\|nope` | `ANCHOR` — `unknown display rule \`nope\`` |
+| an unrecognised name, such as `\|nope` | `ANCHOR` — `` unknown display rule `nope` `` |
 | the old `%` sigil, as in `lines.margin%` | `ANCHOR` — the comment is malformed |
 
 `fmt` leaves a span alone while any of these is reported.

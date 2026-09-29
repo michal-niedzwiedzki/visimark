@@ -36,3 +36,9 @@ test("percent's accepts is true only for a numeric value", () => {
 test("percent's render is percentDisplay", () => {
   expect(DISPLAY_RULES.percent!.render).toBe(percentDisplay);
 });
+
+test("an inherited Object.prototype name is not a registered rule", () => {
+  expect(DISPLAY_RULES.constructor).toBeUndefined();
+  expect(DISPLAY_RULES.toString).toBeUndefined();
+  expect(DISPLAY_RULES.__proto__).toBeUndefined();
+});

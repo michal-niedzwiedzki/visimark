@@ -722,6 +722,39 @@ chart cost as pie of Price labelled Item
   );
 });
 
+test("an unknown display-rule name on a chart image is ANCHOR, not TYPE", () => {
+  const src = `| Item | Price |
+|------|------:|
+| pen  |  5.00 |
+
+\`\`\`vmark #order
+chart cost as pie of Price labelled Item
+\`\`\`
+
+![c](charts/c.svg)<!--vmark=order.cost|nope-->
+`;
+  const r = run(src);
+  const a = r.findings.find((f) => f.code === "ANCHOR" && f.message?.includes("nope"));
+  expect(a?.message).toBe("unknown display rule `nope`");
+  expect(r.findings.some((f) => f.code === "TYPE")).toBe(false);
+});
+
+test("an inherited Object.prototype name on a chart image is an unknown display rule, not a crash", () => {
+  const src = `| Item | Price |
+|------|------:|
+| pen  |  5.00 |
+
+\`\`\`vmark #order
+chart cost as pie of Price labelled Item
+\`\`\`
+
+![c](charts/c.svg)<!--vmark=order.cost|constructor-->
+`;
+  const r = run(src);
+  const a = r.findings.find((f) => f.code === "ANCHOR" && f.message?.includes("constructor"));
+  expect(a?.message).toBe("unknown display rule `constructor`");
+});
+
 test("an unknown display-rule name is ANCHOR", () => {
   const src = `X **0.4026**<!--vmark=s.margin|nope-->.
 
@@ -732,6 +765,18 @@ margin precision 4 = 0.4026
   const r = run(src);
   const a = r.findings.find((f) => f.code === "ANCHOR")!;
   expect(a.message).toBe("unknown display rule `nope`");
+});
+
+test("an inherited Object.prototype name on a scalar anchor is an unknown display rule, not a crash", () => {
+  const src = `X **0.4026**<!--vmark=s.margin|constructor-->.
+
+\`\`\`vmark #s
+margin precision 4 = 0.4026
+\`\`\`
+`;
+  const r = run(src);
+  const a = r.findings.find((f) => f.code === "ANCHOR")!;
+  expect(a.message).toBe("unknown display rule `constructor`");
 });
 
 test("an unknown display-rule anchor does not suppress STALE on a sibling anchor of the same scalar", () => {

@@ -2362,7 +2362,7 @@ not in the text.</p></div><pre class="src">A wrong number is `STALE` as usual, a
 | `\|percent` on a chart image | `TYPE`, the same message |
 | `\|percent` with a currency in the same span, such as `**$0.25**` | `UNIT` — `cannot mix a unit with a display rule` |
 | `\|percent` with a bare, undelimited seed, as in `40.26%&lt;!--vmark=s.m\|percent--&gt;` | `ANCHOR` — `a display rule needs a delimited seed` |
-| an unrecognised name, such as `\|nope` | `ANCHOR` — `unknown display rule \`nope\`` |
+| an unrecognised name, such as `\|nope` | `ANCHOR` — `` unknown display rule `nope` `` |
 | the old `%` sigil, as in `lines.margin%` | `ANCHOR` — the comment is malformed |</pre><div class="out"><table>
 <thead>
 <tr>
@@ -2393,7 +2393,7 @@ not in the text.</p></div><pre class="src">A wrong number is `STALE` as usual, a
 </tr>
 <tr>
 <td>an unrecognised name, such as <code>|nope</code></td>
-<td><code>ANCHOR</code> — <code>unknown display rule \</code>nope``</td>
+<td><code>ANCHOR</code> — <code>unknown display rule `nope`</code></td>
 </tr>
 <tr>
 <td>the old <code>%</code> sigil, as in <code>lines.margin%</code></td>
