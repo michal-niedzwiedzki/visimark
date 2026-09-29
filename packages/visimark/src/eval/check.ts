@@ -82,6 +82,10 @@ export interface CheckResult {
   charts: ChartResult[];
   /** resolution outcome of every imported (`from`) sheet, keyed by sheet id */
   imports: Map<string, ImportStatus>;
+  /** anchor comments whose preceding span was refused as a rewrite target
+   *  (ANCHOR, type-aware placeholder acceptance), keyed by the comment's own
+   *  source offset — `fmt` must not write a span in this set */
+  refusedAnchors: Set<number>;
   exitCode: 0 | 1;
 }
 
@@ -309,6 +313,7 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
     assertions,
     charts,
     imports: imported.statuses,
+    refusedAnchors,
     exitCode: findings.some(isProblem) ? 1 : 0,
   };
 

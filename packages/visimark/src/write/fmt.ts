@@ -108,6 +108,9 @@ export function planFmt(model: DocModel, result: CheckResult, opts: FmtOptions):
     if (!a.value) continue;
     // an image anchor points at a generated artifact; it is never spliced
     if (a.value.kind === "image") continue;
+    // refused as a rewrite target (ANCHOR, type-aware placeholder
+    // acceptance) — fmt must not write what check refused to claim
+    if (result.refusedAnchors.has(a.commentSpan.start)) continue;
     const id = `${a.sheetId}.${a.name}`;
     const v = result.values.get(id);
     if (!v) continue;

@@ -318,3 +318,47 @@ test("explain on a percent-display document does not mention the sigil", async (
   expect(await runCli(["explain", percentFixture], c.io)).toBe(0);
   expect(c.out()).not.toContain("margin%");
 });
+
+const anchorAcceptanceFixture = fileURLToPath(
+  new URL("../fixtures/anchor-placeholder-acceptance.md", import.meta.url),
+);
+
+test("check reports the four ANCHOR refusals and the one STALE seed on the anchor-acceptance fixture", async () => {
+  const c = capture();
+  expect(await runCli(["check", anchorAcceptanceFixture], c.io)).toBe(1);
+  const out = c.out();
+  expect(out).toContain(
+    "no number to rewrite in front of this anchor — wrap a placeholder instead, such as **0** or **_**",
+  );
+  expect(out).toContain(
+    "no date to rewrite in front of this anchor — wrap a placeholder instead, such as **2026-01-01** or **_**",
+  );
+  expect(out).toContain(
+    "a string anchor cannot rewrite bare prose — wrap a placeholder instead, such as **_**",
+  );
+  expect(out).toContain("no value to rewrite in front of this anchor");
+  expect(out).toContain("_ ≠ 7.00");
+  expect(out).toContain("6 problems (2 stale, 4 errors)");
+});
+
+test("fmt on the anchor-acceptance fixture rewrites only the seeded span and leaves every ANCHOR span untouched", async () => {
+  const src = readFileSync(anchorAcceptanceFixture, "utf8");
+  const dir = mkdtempSync(join(tmpdir(), "vm-anchor-"));
+  const path = join(dir, "a.md");
+  writeFileSync(path, src);
+  const fmt1 = capture();
+  // exit 1: four ANCHOR findings remain unfixable by design after fmt runs —
+  // this is the same "findings remain" exit code check reports, not a
+  // failure of the write itself
+  expect(await runCli(["fmt", path], fmt1.io)).toBe(1);
+  const rewritten = readFileSync(path, "utf8");
+  expect(rewritten).toContain("**7.00**<!--vmark=s.seed-->");
+  expect(rewritten).toContain("It comes to <!--vmark=s.bad--> PLN.");
+  expect(rewritten).toContain("Due sometime soon<!--vmark=s.due_bad-->.");
+  expect(rewritten).toContain("The status is no problem<!--vmark=s.status_bad--> today.");
+  expect(rewritten).toContain("Claim: **a **bold** claim**<!--vmark=s.embed-->.");
+  expect(fmt1.out()).toContain("updated 1 anchor");
+  const fmt2 = capture();
+  expect(await runCli(["fmt", path], fmt2.io)).toBe(1);
+  expect(fmt2.out()).toContain("unchanged");
+});
