@@ -266,6 +266,23 @@ test("a hyphenated sheet id with a wrong anchored value fails loudly instead of 
   expect(r.findings.find((f) => f.code === "WARN")!.name).toBe("total");
 });
 
+test("a delimited anchor placeholder with nested markdown inside it refuses instead of mis-scoping", () => {
+  const src = `Claim: **a **bold** claim**<!--vmark=s.x-->.
+
+\`\`\`vmark #s
+x = "a bold claim"
+\`\`\`
+`;
+  const r = run(src);
+  expect(r.findings.map((f) => f.code)).toEqual(["ANCHOR"]);
+  const anchor = r.findings.find((f) => f.code === "ANCHOR")!;
+  // no explicit message on the raw finding — format.ts supplies the default
+  // "no value to rewrite in front of this anchor" text at render time, the
+  // same as any other a.value === null anchor
+  expect(anchor.message).toBeUndefined();
+  expect(r.exitCode).toBe(1);
+});
+
 // ---- EOMONTH (issue #6) ---------------------------------------------
 
 test("EOMONTH: a clean net-EOM payment term", () => {

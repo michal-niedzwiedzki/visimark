@@ -336,7 +336,7 @@ function readCell(cell: MdNode, source: string): RawCell {
 function innerValueSpan(node: MdNode): (Span & { kind: AnchorTargetKind }) | null {
   if (node.type === "strong" || node.type === "emphasis") {
     const t = node.children?.[0];
-    if (t && t.type === "text") {
+    if (node.children?.length === 1 && t && t.type === "text") {
       return {
         start: off(t, "start"),
         end: off(t, "end"),
