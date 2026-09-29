@@ -3,6 +3,7 @@ import { clean, drift } from "../examples.js";
 import { locate } from "../../src/parse/document.js";
 import { build } from "../../src/model/build.js";
 import { check } from "../../src/eval/check.js";
+import { fmt } from "../../src/write/fmt.js";
 import { evalValues } from "../../src/report/json.js";
 import type { Finding } from "../../src/model/types.js";
 
@@ -264,6 +265,23 @@ test("a hyphenated sheet id with a wrong anchored value fails loudly instead of 
   );
   // the sheet still built and evaluated despite the bad id
   expect(r.findings.find((f) => f.code === "WARN")!.name).toBe("total");
+});
+
+test("a delimited anchor placeholder with nested markdown inside it refuses instead of mis-scoping", () => {
+  const src = `Claim: **a **bold** claim**<!--vmark=s.x-->.
+
+\`\`\`vmark #s
+x = "a bold claim"
+\`\`\`
+`;
+  const r = run(src);
+  expect(r.findings.map((f) => f.code)).toEqual(["ANCHOR"]);
+  const anchor = r.findings.find((f) => f.code === "ANCHOR")!;
+  // no explicit message on the raw finding — format.ts supplies the default
+  // "no value to rewrite in front of this anchor" text at render time, the
+  // same as any other a.value === null anchor
+  expect(anchor.message).toBeUndefined();
+  expect(r.exitCode).toBe(1);
 });
 
 // ---- EOMONTH (issue #6) ---------------------------------------------
@@ -996,4 +1014,223 @@ assert rate > 0
   expect(r.findings.find((f) => f.code === "TYPE")?.message).toBe("IRR expects a number");
   expect(r.findings.some((f) => f.code === "NOTE")).toBe(true);
   expect(r.findings.some((f) => f.code === "ASSERT")).toBe(false);
+});
+
+test("a bare non-numeric token in front of a numeric anchor refuses instead of being silently rewritten", () => {
+  const src = `\`\`\`vmark #s
+b precision 2 = 0.25
+\`\`\`
+
+It comes to <!--vmark=s.b--> PLN.
+`;
+  const r = run(src);
+  expect(r.findings.map((f) => f.code)).toEqual(["ANCHOR"]);
+  expect(r.findings.some((f) => f.code === "STALE")).toBe(false);
+  const anchor = r.findings[0]!;
+  expect(anchor.message).toBe(
+    "no number to rewrite in front of this anchor — wrap a placeholder instead, such as **0** or **_**",
+  );
+  expect(r.exitCode).toBe(1);
+});
+
+test("a bare numeric-shaped token in front of a numeric anchor is still accepted, unchanged", () => {
+  const src = `\`\`\`vmark #s
+order precision 2 = 110.00
+\`\`\`
+
+Order total: 110.00<!--vmark=s.order-->.
+`;
+  const r = run(src);
+  expect(r.findings).toEqual([]);
+  expect(r.exitCode).toBe(0);
+});
+
+test("a bare percent-shaped token in front of a numeric anchor is accepted, matching matchesStored's own percent rule", () => {
+  const src = `\`\`\`vmark #s
+r precision 4 = 0.125
+\`\`\`
+
+Margin 12.50%<!--vmark=s.r%-->.
+`;
+  const r = run(src);
+  expect(r.findings).toEqual([]);
+  expect(r.exitCode).toBe(0);
+});
+
+test("a bare percent-shaped token with no sigil comment is still accepted as a numeric target", () => {
+  const src = `\`\`\`vmark #s
+tax precision 2 = 0.19
+\`\`\`
+
+Tax is 19%<!--vmark=s.tax-->.
+`;
+  const r = run(src);
+  expect(r.findings).toEqual([]);
+  expect(r.exitCode).toBe(0);
+});
+
+test("fmt writes a fresh percent seed and the result still passes check (round-trip)", () => {
+  const src = `\`\`\`vmark #s
+r precision 4 = 0.125
+\`\`\`
+
+Margin 0<!--vmark=s.r%-->.
+`;
+  const formatted = fmt(src, {});
+  expect(formatted.changed).toBe(true);
+  const after = run(formatted.output);
+  expect(after.findings).toEqual([]);
+  expect(after.exitCode).toBe(0);
+});
+
+test("a bare non-date token in front of a date anchor refuses", () => {
+  const src = `\`\`\`vmark #s
+due = 2026-02-01
+\`\`\`
+
+Due sometime soon<!--vmark=s.due-->.
+`;
+  const r = run(src);
+  expect(r.findings.map((f) => f.code)).toEqual(["ANCHOR"]);
+  expect(r.findings[0]!.message).toBe(
+    "no date to rewrite in front of this anchor — wrap a placeholder instead, such as **2026-01-01** or **_**",
+  );
+  expect(r.exitCode).toBe(1);
+});
+
+test("a bare ISO-shaped token in front of a date anchor is accepted (acceptance only — still never STALE-checked)", () => {
+  const src = `\`\`\`vmark #s
+due = 2026-01-15
+\`\`\`
+
+Due by 2026-01-15<!--vmark=s.due-->.
+`;
+  const r = run(src);
+  expect(r.findings).toEqual([]);
+  expect(r.exitCode).toBe(0);
+});
+
+test("a bare non-ISO date-shaped token does not qualify as a date anchor's target", () => {
+  const src = `\`\`\`vmark #s
+due = 2026-01-15
+\`\`\`
+
+Due by 01/15/2026<!--vmark=s.due-->.
+`;
+  const r = run(src);
+  expect(r.findings.map((f) => f.code)).toEqual(["ANCHOR"]);
+});
+
+test("a date-shaped tail glued to an unrelated leading digit does not qualify as a date anchor's target", () => {
+  const src = `\`\`\`vmark #s
+due = 2026-01-15
+\`\`\`
+
+Due 12026-01-15<!--vmark=s.due-->.
+`;
+  const r = run(src);
+  expect(r.findings.map((f) => f.code)).toEqual(["ANCHOR"]);
+});
+
+test("a numeric anchor does not read a glued date's -DD tail as a negative number", () => {
+  const src = `\`\`\`vmark #s
+w precision 2 = 7
+\`\`\`
+
+Ref 12026-01-15<!--vmark=s.w-->.
+`;
+  const r = run(src);
+  expect(r.findings.map((f) => f.code)).toEqual(["ANCHOR"]);
+});
+
+test("a bare decorated number with no space before the unit is still accepted, unchanged", () => {
+  const src = `\`\`\`vmark #s
+p precision 2 = 110.00
+\`\`\`
+
+Price: $110.00<!--vmark=s.p-->.
+`;
+  const r = run(src);
+  expect(r.findings).toEqual([]);
+  expect(r.exitCode).toBe(0);
+});
+
+test("fmt does not corrupt a glued date's tail when the anchor is refused (round-trip)", () => {
+  const src = `\`\`\`vmark #s
+w precision 2 = 7
+\`\`\`
+
+Ref 12026-01-15<!--vmark=s.w-->.
+`;
+  const formatted = fmt(src, {});
+  expect(formatted.changed).toBe(false);
+  expect(formatted.output).toBe(src);
+  const after = run(formatted.output);
+  expect(after.findings.map((f) => f.code)).toEqual(["ANCHOR"]);
+});
+
+test("bare prose in front of a string anchor always refuses", () => {
+  const src = `\`\`\`vmark #s
+status = "all clear"
+\`\`\`
+
+The status is no problem<!--vmark=s.status--> today.
+`;
+  const r = run(src);
+  expect(r.findings.map((f) => f.code)).toEqual(["ANCHOR"]);
+  expect(r.findings[0]!.message).toBe(
+    "a string anchor cannot rewrite bare prose — wrap a placeholder instead, such as **_**",
+  );
+  expect(r.exitCode).toBe(1);
+});
+
+test("a delimited placeholder is accepted for a string anchor regardless of content", () => {
+  const src = `\`\`\`vmark #s
+status = "all clear"
+\`\`\`
+
+Status: **all clear**<!--vmark=s.status-->.
+`;
+  const r = run(src);
+  expect(r.findings).toEqual([]);
+  expect(r.exitCode).toBe(0);
+});
+
+test("a refused anchor is suppressed, not doubly reported, when the scalar is unevaluable upstream", () => {
+  const src = `\`\`\`vmark #s
+b precision 2 = missing_name
+\`\`\`
+
+It comes to <!--vmark=s.b--> PLN.
+`;
+  const r = run(src);
+  expect(r.findings.map((f) => f.code)).toEqual(["UNDEF"]);
+});
+
+test("a well-formed but wrong date anchor is still not verified — non-goal, unchanged from today", () => {
+  const src = `\`\`\`vmark #s
+due = 2026-01-15
+\`\`\`
+
+Due by 2026-02-01<!--vmark=s.due-->.
+`;
+  const r = run(src);
+  // 2026-02-01 is a well-formed ISO date, so it's accepted as a target —
+  // but it disagrees with the stored 2026-01-15, and this feature adds no
+  // date STALE verification, so that disagreement is still invisible.
+  expect(r.findings).toEqual([]);
+  expect(r.exitCode).toBe(0);
+});
+
+test("a percent sigil on a refused string-anchor span reports both ANCHOR and the existing TYPE refusal", () => {
+  const src = `\`\`\`vmark #s
+status = "all clear"
+\`\`\`
+
+The status is no problem<!--vmark=s.status%--> today.
+`;
+  const r = run(src);
+  expect(r.findings.map((f) => f.code).sort()).toEqual(["ANCHOR", "TYPE"]);
+  const type = r.findings.find((f) => f.code === "TYPE")!;
+  expect(type.message).toBe("a % sigil is only legal on a numeric scalar");
 });

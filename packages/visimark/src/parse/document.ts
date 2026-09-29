@@ -158,7 +158,19 @@ const ANCHOR_RE =
 const ANCHOR_LOOSE_RE = /^<!--\s*vmark\s*=/;
 export const NO_FORMULAS_MARKER = "<!--vmark:no-formulas-->";
 const NO_FORMULAS_RE = /^<!--\s*vmark\s*:\s*no-formulas\s*-->$/;
-const TRAILING_NUMBER_RE = /(-?\d+(?:\.\d+)?)\s*$/;
+/** a trailing ISO-shaped date, tried before TRAILING_NUMBER_RE — otherwise
+ *  the number regex reads a date's last `-DD` as a negative number and
+ *  mis-scopes the span to three characters instead of the whole date.
+ *  Anchored on a preceding boundary (start of string or whitespace) so a
+ *  digit glued directly in front — `12026-01-15` — does not read as the
+ *  date `2026-01-15` preceded by a stray `1`. */
+const TRAILING_DATE_RE = /(?:^|\s)(\d{4}-\d{2}-\d{2})\s*$/;
+/** A leading lookbehind refuses a "-" or digit immediately before the match:
+ *  without it, a glued date's own hyphen reads as a negative sign, reducing
+ *  "12026-01-15" to the number -15. A decoration glued with no space (the
+ *  "$" in "$110.00") is unaffected — only a digit or "-" right before the
+ *  match is forbidden, not decoration characters in general. */
+const TRAILING_NUMBER_RE = /(?<![\d-])(-?\d+(?:\.\d+)?)\s*$/;
 /** the value an anchor rewrites when it is not a number — the trailing word,
  *  so a string-valued scalar can be materialised in prose at all */
 const TRAILING_WORD_RE = /(\S+?)\s*$/;
@@ -336,7 +348,7 @@ function readCell(cell: MdNode, source: string): RawCell {
 function innerValueSpan(node: MdNode): (Span & { kind: AnchorTargetKind }) | null {
   if (node.type === "strong" || node.type === "emphasis") {
     const t = node.children?.[0];
-    if (t && t.type === "text") {
+    if (node.children?.length === 1 && t && t.type === "text") {
       return {
         start: off(t, "start"),
         end: off(t, "end"),
@@ -406,6 +418,14 @@ function anchorValueSpan(prev: MdNode): (Span & { kind: AnchorTargetKind }) | nu
   }
   if (prev.type === "text") {
     const value = prev.value ?? "";
+    const d = TRAILING_DATE_RE.exec(value);
+    if (d) {
+      // d.index is the boundary's own start (the leading `^`/`\s` the
+      // non-capturing group consumed), not the date's — locate the date
+      // substring within the full match rather than assuming an offset.
+      const start = off(prev, "start") + d.index + d[0].indexOf(d[1]!);
+      return { start, end: start + d[1]!.length, kind: "text" };
+    }
     const m = TRAILING_NUMBER_RE.exec(value);
     if (m) {
       const start = off(prev, "start") + m.index;

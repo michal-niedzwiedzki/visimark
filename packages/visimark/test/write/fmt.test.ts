@@ -257,3 +257,17 @@ test("fmt leaves a param's domain clause untouched, in every spelling", () => {
   expect(twice.changed).toBe(false);
   expect(twice.output).toBe(doc);
 });
+
+test("fmt never writes a span this feature's ANCHOR check refuses", () => {
+  const doc =
+    "```vmark #s\n" +
+    "b precision 2 = 0.25\n" +
+    "```\n" +
+    "\n" +
+    "It comes to <!--vmark=s.b--> PLN.\n";
+  const r = fmt(doc, {});
+  expect(r.changed).toBe(false);
+  expect(r.output).toBe(doc);
+  const after = check(build(locate(r.output)));
+  expect(after.findings.map((f) => f.code)).toEqual(["ANCHOR"]);
+});

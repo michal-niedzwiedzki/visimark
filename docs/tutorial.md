@@ -696,23 +696,43 @@ type is replaced at the binding's own width.
 
 ### Always give an anchor a placeholder
 
-The anchor rewrites the element directly in front of it. With `**0**` in front,
-that element is the bold text, which is what you want. With plain prose in
-front, it is the last word of that prose:
+The anchor rewrites the element directly in front of it. With `**0**` in
+front, that element is the bold text, which is what you want. A bare,
+unwrapped word only counts as a placeholder when it already looks like a
+value of the anchor's own type — a numeric anchor accepts a bare
+numeric-shaped token, a date anchor accepts a bare ISO-shaped token, and a
+string anchor never accepts bare prose at all. Anything else bare in front of
+an anchor refuses instead of guessing:
 
 ```console
 $ tail -1 seed.md
 Net of tax it comes to <!--vmark=order.net_total--> PLN.
+$ visimark check seed.md
+seed.md
+
+  ANCHOR  order.net_total   no number to rewrite in front of this anchor — wrap a placeholder instead, such as **0** or **_**
+
+  1 problem (0 stale, 1 error)
 $ visimark fmt seed.md
-seed.md: updated 1 anchor
-$ tail -1 seed.md
-Net of tax it comes 158.00 <!--vmark=order.net_total--> PLN.
+seed.md: unchanged
+seed.md
+
+  ANCHOR  order.net_total   no number to rewrite in front of this anchor — wrap a placeholder instead, such as **0** or **_**
+
+  1 problem (0 stale, 1 error)
 ```
 
-The word `to` was replaced by the number. So write a placeholder, and make it
-bold: `**0**<!--vmark=order.net_total-->`. The placeholder's digits do not
-matter. What `fmt` never does is *invent* an anchor — you decide where a value
-appears in your prose.
+`fmt` still reports the finding it can't fix and exits `1` — "unchanged" means the file, not the outcome.
+
+`fmt` leaves the word `to` alone — it is not a number, so it does not qualify
+as a placeholder, and `fmt` never writes what it doesn't own. Wrap a
+placeholder instead, and make it bold: `**0**<!--vmark=order.net_total-->` or
+`**_**<!--vmark=order.net_total-->`. `_` is the recommended seed when the
+value has no natural placeholder of its own — it reads as "fill me in"
+without implying a specific number. The placeholder's content does not
+matter, digits or `_` alike: it is replaced at the binding's own width. What
+`fmt` never does is *invent* an anchor — you decide where a value appears in
+your prose.
 
 ### Print a ratio as a percent
 

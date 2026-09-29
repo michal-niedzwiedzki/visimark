@@ -139,13 +139,23 @@ binding whose width is below 2 cannot support percent display (`PRECISION`).
 
 The anchor rewrites the text content of the inline node immediately preceding
 it. That node must be `strong`, `emphasis`, `inlineCode`, or a text node;
-anything else is an `ANCHOR` error. An anchor with nothing in front of it is
-legal authoring syntax — `fmt` seeds it — and a bare text node need not show a
-number, because a scalar's width comes from its binding rather than from its
-anchor ([§7](#7-numeric-semantics)). A string-valued scalar can therefore be
-materialised in prose at all, which the old numeric requirement prevented.
-HTML comments are invisible in every target renderer, so the sentence reads
-normally.
+anything else is an `ANCHOR` error. A delimited node (`strong`, `emphasis`,
+`inlineCode`) is accepted regardless of its content — `**0**`, `**hello**`,
+and `**_**` are equally valid seeds, because the wrapping itself is the
+explicit "this is the anchor's target" signal — provided a `strong` or
+`emphasis` node wraps exactly one plain text child; one that doesn't (a
+literal `**` inside a `**`-wrapped value, producing nested emphasis) is
+`ANCHOR`, not a silently mis-scoped span. A bare, unwrapped text node is held
+to a narrower rule: its trailing whitespace-delimited token must itself
+unambiguously denote a value of the anchor's own resolved type — numeric or
+strict-ISO-date shaped for a numeric or date anchor, and never accepted at
+all for a string anchor, since bare prose cannot unambiguously denote an
+arbitrary string. Anything else bare in front of an anchor is `ANCHOR`, not a
+silently claimed placeholder. An anchor with nothing in front of it is legal
+authoring syntax — `fmt` seeds it. A string-valued scalar can therefore be
+materialised in prose, via a delimited node, which the old numeric
+requirement prevented. HTML comments are invisible in every target renderer,
+so the sentence reads normally.
 
 **An anchor is an output.** Its text states a value and never determines one:
 not the width, and — unlike a unit — nothing the evaluator reads back. Two
@@ -644,6 +654,12 @@ than a question for a human ([§19](#19-declared-local-data-imports)).
 scalar's width is `STALE` rather than a conflict, which is what makes `686.0000`
 and a bare `0` converge on one rendering under `fmt`. `ANCHOR` narrows to match
 — a bare text node no longer has to end in a number ([§3](#3-document-model)).
+`ANCHOR` widens again here: a bare text node's trailing token must once more
+denote a value of the anchor's own resolved type — though a type-aware one,
+not strictly numeric as before, and never satisfiable by bare prose for a
+string anchor. A delimited node keeps its own exemption from this
+requirement, gaining instead the narrower requirement that it wrap exactly
+one plain text child ([§3](#3-document-model)).
 
 `DUP` is widened again here, as it was for `STALE` above: two header cells
 sharing byte-identical text are `DUP` before any binding names them at all

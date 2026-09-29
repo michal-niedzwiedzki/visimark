@@ -108,6 +108,11 @@ export function decorationsFor(model: DocModel, result: CheckResult): Decoration
     // an image anchor names an artifact's location rather than a value, and
     // there is nothing in it to mark
     if (anchor.value === null || anchor.value.kind === "image") continue;
+    // refused as a rewrite target (ANCHOR, type-aware placeholder
+    // acceptance) — this span is not a value the document computes, so
+    // marking it "computed" would be exactly the false authorship claim the
+    // module doc above forbids
+    if (result.refusedAnchors.has(anchor.commentSpan.start)) continue;
     out.push({
       span: { start: anchor.value.start, end: anchor.value.end },
       mark: markFor(anchor.value),

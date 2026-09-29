@@ -1482,30 +1482,66 @@ so put anything you want to say in prose inside a named sheet.</p></div><pre cla
 <li>Two anchors on the same value cannot disagree, because neither is consulted.</li>
 </ul></div><pre class="src">So writing `**0**` as a placeholder does not mean &quot;zero decimals&quot;. Whatever you
 type is replaced at the binding's own width.</pre><div class="out"><p>So writing <code>**0**</code> as a placeholder does not mean "zero decimals". Whatever you
-type is replaced at the binding's own width.</p></div><pre class="src">### Always give an anchor a placeholder</pre><div class="out"><h3 id="always-give-an-anchor-a-placeholder">Always give an anchor a placeholder</h3></div><pre class="src">The anchor rewrites the element directly in front of it. With `**0**` in front,
-that element is the bold text, which is what you want. With plain prose in
-front, it is the last word of that prose:</pre><div class="out"><p>The anchor rewrites the element directly in front of it. With <code>**0**</code> in front,
-that element is the bold text, which is what you want. With plain prose in
-front, it is the last word of that prose:</p></div><pre class="src">```console
+type is replaced at the binding's own width.</p></div><pre class="src">### Always give an anchor a placeholder</pre><div class="out"><h3 id="always-give-an-anchor-a-placeholder">Always give an anchor a placeholder</h3></div><pre class="src">The anchor rewrites the element directly in front of it. With `**0**` in
+front, that element is the bold text, which is what you want. A bare,
+unwrapped word only counts as a placeholder when it already looks like a
+value of the anchor's own type — a numeric anchor accepts a bare
+numeric-shaped token, a date anchor accepts a bare ISO-shaped token, and a
+string anchor never accepts bare prose at all. Anything else bare in front of
+an anchor refuses instead of guessing:</pre><div class="out"><p>The anchor rewrites the element directly in front of it. With <code>**0**</code> in
+front, that element is the bold text, which is what you want. A bare,
+unwrapped word only counts as a placeholder when it already looks like a
+value of the anchor's own type — a numeric anchor accepts a bare
+numeric-shaped token, a date anchor accepts a bare ISO-shaped token, and a
+string anchor never accepts bare prose at all. Anything else bare in front of
+an anchor refuses instead of guessing:</p></div><pre class="src">```console
 $ tail -1 seed.md
 Net of tax it comes to &lt;!--vmark=order.net_total--&gt; PLN.
+$ visimark check seed.md
+seed.md
+
+  ANCHOR  order.net_total   no number to rewrite in front of this anchor — wrap a placeholder instead, such as **0** or **_**
+
+  1 problem (0 stale, 1 error)
 $ visimark fmt seed.md
-seed.md: updated 1 anchor
-$ tail -1 seed.md
-Net of tax it comes 158.00 &lt;!--vmark=order.net_total--&gt; PLN.
+seed.md: unchanged
+seed.md
+
+  ANCHOR  order.net_total   no number to rewrite in front of this anchor — wrap a placeholder instead, such as **0** or **_**
+
+  1 problem (0 stale, 1 error)
 ```</pre><div class="out"><pre><code class="language-console">$ tail -1 seed.md
 Net of tax it comes to &#x3C;!--vmark=order.net_total--> PLN.
+$ visimark check seed.md
+seed.md
+
+  ANCHOR  order.net_total   no number to rewrite in front of this anchor — wrap a placeholder instead, such as **0** or **_**
+
+  1 problem (0 stale, 1 error)
 $ visimark fmt seed.md
-seed.md: updated 1 anchor
-$ tail -1 seed.md
-Net of tax it comes 158.00 &#x3C;!--vmark=order.net_total--> PLN.
-</code></pre></div><pre class="src">The word `to` was replaced by the number. So write a placeholder, and make it
-bold: `**0**&lt;!--vmark=order.net_total--&gt;`. The placeholder's digits do not
-matter. What `fmt` never does is *invent* an anchor — you decide where a value
-appears in your prose.</pre><div class="out"><p>The word <code>to</code> was replaced by the number. So write a placeholder, and make it
-bold: <code>**0**&#x3C;!--vmark=order.net_total--></code>. The placeholder's digits do not
-matter. What <code>fmt</code> never does is <em>invent</em> an anchor — you decide where a value
-appears in your prose.</p></div><pre class="src">### Print a ratio as a percent</pre><div class="out"><h3 id="print-a-ratio-as-a-percent">Print a ratio as a percent</h3></div><pre class="src">A stored ratio such as `0.3988` reads better in a sentence as `39.88%`. Add `%`
+seed.md: unchanged
+seed.md
+
+  ANCHOR  order.net_total   no number to rewrite in front of this anchor — wrap a placeholder instead, such as **0** or **_**
+
+  1 problem (0 stale, 1 error)
+</code></pre></div><pre class="src">`fmt` still reports the finding it can't fix and exits `1` — &quot;unchanged&quot; means the file, not the outcome.</pre><div class="out"><p><code>fmt</code> still reports the finding it can't fix and exits <code>1</code> — "unchanged" means the file, not the outcome.</p></div><pre class="src">`fmt` leaves the word `to` alone — it is not a number, so it does not qualify
+as a placeholder, and `fmt` never writes what it doesn't own. Wrap a
+placeholder instead, and make it bold: `**0**&lt;!--vmark=order.net_total--&gt;` or
+`**_**&lt;!--vmark=order.net_total--&gt;`. `_` is the recommended seed when the
+value has no natural placeholder of its own — it reads as &quot;fill me in&quot;
+without implying a specific number. The placeholder's content does not
+matter, digits or `_` alike: it is replaced at the binding's own width. What
+`fmt` never does is *invent* an anchor — you decide where a value appears in
+your prose.</pre><div class="out"><p><code>fmt</code> leaves the word <code>to</code> alone — it is not a number, so it does not qualify
+as a placeholder, and <code>fmt</code> never writes what it doesn't own. Wrap a
+placeholder instead, and make it bold: <code>**0**&#x3C;!--vmark=order.net_total--></code> or
+<code>**_**&#x3C;!--vmark=order.net_total--></code>. <code>_</code> is the recommended seed when the
+value has no natural placeholder of its own — it reads as "fill me in"
+without implying a specific number. The placeholder's content does not
+matter, digits or <code>_</code> alike: it is replaced at the binding's own width. What
+<code>fmt</code> never does is <em>invent</em> an anchor — you decide where a value appears in
+your prose.</p></div><pre class="src">### Print a ratio as a percent</pre><div class="out"><h3 id="print-a-ratio-as-a-percent">Print a ratio as a percent</h3></div><pre class="src">A stored ratio such as `0.3988` reads better in a sentence as `39.88%`. Add `%`
 to the end of the anchor name, `&lt;!--vmark=lines.margin%--&gt;`, and `fmt` writes
 the percent. The stored value does not change. Chapter 15 covers it.</pre><div class="out"><p>A stored ratio such as <code>0.3988</code> reads better in a sentence as <code>39.88%</code>. Add <code>%</code>
 to the end of the anchor name, <code>&#x3C;!--vmark=lines.margin%--></code>, and <code>fmt</code> writes
