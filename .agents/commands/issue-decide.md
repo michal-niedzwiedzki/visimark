@@ -130,7 +130,7 @@ Header:
 5. **Interaction with the rest of the language** — dates [§5](../../docs/visimark-design.md#5-dates), numeric semantics and write precision [§7](../../docs/visimark-design.md#7-numeric-semantics), write-back [§9](../../docs/visimark-design.md#9-write-back), name resolution [§6](../../docs/visimark-design.md#6-name-resolution-and-scoping), units [§7](../../docs/visimark-design.md#7-numeric-semantics). State explicitly what does **not** change.
 6. **Acceptance** — in [§13](../../docs/visimark-design.md#13-testing) style: the new fixture or the edit to an existing example document, and the exact `visimark check` / `eval` output it must produce.
 7. **Non-goals** — adjacent things this spec does not cover.
-8. **Open questions** — must be **empty** before handoff.
+8. **Open questions** — a numbered list while drafting; must be **empty** before handoff.
 
 **LANGUAGE sections**, in order:
 1. **Purpose** — what the feature is; the motivating document or scenario (quote it); what a document cannot express or verify without it; why existing features do not reach it.
@@ -140,7 +140,7 @@ Header:
 5. **Interaction with the rest of the language** — the shape system [§4](../../docs/visimark-design.md#4-syntax), evaluation and the dependency graph [§8](../../docs/visimark-design.md#8-evaluation), write-back [§9](../../docs/visimark-design.md#9-write-back) (does the tool now own anything new? does `fmt` touch it?), anchors ([§3](../../docs/visimark-design.md#3-document-model)), name resolution [§6](../../docs/visimark-design.md#6-name-resolution-and-scoping), and every CLI surface — `check`, `fmt`, `infer`, `explain`, `eval`, `--json`. State explicitly what does **not** change.
 6. **Acceptance** — in [§13](../../docs/visimark-design.md#13-testing) style: the new fixture or the edit to an example document (the drift invoice's `#recon` sheet is the obvious home for an invariant check), and the exact tool output it must produce.
 7. **Non-goals** — adjacent things this spec does not cover, especially anything the deciding comment carved out for a later issue.
-8. **Open questions** — must be **empty** before handoff.
+8. **Open questions** — a numbered list while drafting; must be **empty** before handoff.
 
 **TOOLING sections**, in order:
 1. **Purpose** — what changes and for whom; the scenario that motivated it (quote the before session from the issue); why the current surface does not reach it.
@@ -151,7 +151,7 @@ Header:
 6. **Interaction with the rest of the tooling** — the other commands and options, `--json`, the release workflow, the LSP/extension, and the review workflow itself. State explicitly what does **not** change.
 7. **Documentation to update** — every file that states the current behaviour: `docs/cli-reference.md`, `docs/ci.md`, the tutorial, `CONTRIBUTING.md`, `docs/issue-runbook.md`, `docs/releasing.md`, `README.md`, the extension listing. This list becomes the plan's final task; an unnamed file is drift waiting to happen.
 8. **Non-goals** — adjacent things this spec does not cover.
-9. **Open questions** — must be **empty** before handoff.
+9. **Open questions** — a numbered list while drafting; must be **empty** before handoff.
 
 ### 3.2 Gap hunt
 
@@ -186,8 +186,11 @@ Walk this checklist against the draft and turn every gap into a concrete questio
 ### 3.3 Resolve with the maintainer
 
 Put the gaps to the maintainer — `AskUserQuestion` for choices with discrete
-options, plain prose for the open ones. Fold each answer into the draft. Repeat
-3.2–3.3 until the checklist is clean and **Open questions** is empty.
+options, plain prose for the open ones. Present the prose gaps as a numbered
+list; where a gap is one of the pre-review's Open design questions, keep its
+pre-review number (`Pre-review 4:`) rather than re-enumerating, so the
+maintainer can answer by the number already on the issue. Fold each answer
+into the draft. Repeat 3.2–3.3 until the checklist is clean and **Open questions** is empty.
 
 Then show the full spec in a chat message and ask via `AskUserQuestion` —
 "Spec ready to hand off?": **Ready** / **Keep editing** / **Change the verdict**.

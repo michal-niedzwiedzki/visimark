@@ -120,7 +120,7 @@ body:
         Every syntax and edge-semantics decision you did not settle — empty
         input, a zero or negative argument, interaction with `param`, imports,
         `assert`, charts. The review will hunt for these; listing them yourself
-        is faster.
+        is faster. Number them (1., 2., …) — the review keeps your numbers.
     validations:
       required: false
   - type: textarea

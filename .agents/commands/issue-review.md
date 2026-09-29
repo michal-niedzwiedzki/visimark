@@ -172,7 +172,8 @@ One of `APPROVED` / `DEFERRED` / `REJECTED` with a one-paragraph reason in the c
 Then list **Open forks** — every question a spec would have to close that the
 form did not: an unstated boundary, an ambiguous precision answer, a refusal
 with no code, an interaction with `param`, imports, `assert` or charts. Empty is
-a valid and good answer; an omitted list is not. `/issue-decide` resolves these
+a valid and good answer; an omitted list is not. Number the list (see §4,
+*Numbered open questions*). `/issue-decide` resolves these
 with the maintainer before an `APPROVED` lands, so anything found here is a
 question asked one stage earlier than it would otherwise be.
 
@@ -248,7 +249,8 @@ One of `APPROVED` / `DEFERRED` / `REJECTED`, one paragraph, in the catalogue's
 idiom, citing the section that governs.
 
 Then **Open design questions** — every fork a spec would have to close. Start
-from the form's `The forks you left open`, then add what it missed. Work the
+from the form's `The forks you left open`, then add what it missed. Number
+the list (see §4, *Numbered open questions*). Work the
 list systematically rather than by inspiration:
 
 - every boundary the semantics imply — zero, negative, empty, absent, duplicate, out-of-range;
@@ -328,7 +330,8 @@ Draft the **section F row**: `Change`, `What it changes`, `Pros`, `Cons`, `Reque
 
 ### 2T.5 Disposition and open forks
 
-Verdict as above, then **Open design questions**, worked from:
+Verdict as above, then **Open design questions** — a numbered list (see §4,
+*Numbered open questions*) — worked from:
 
 - the exact spelling of any new option, and its short form if any;
 - the exit code for every new outcome;
@@ -441,6 +444,14 @@ The Open design questions are not optional decoration on any row-producing
 track. They are what `/issue-decide` works through with the maintainer before
 an `APPROVED` lands, and every one raised here is a contradiction not
 discovered during implementation.
+
+**Numbered open questions.** Open forks and Open design questions are always a
+numbered list (`1.`, `2.`, …), never bullets, in `--draft` output and in the
+posted comment alike. The maintainer answers them by number ("3. Entity"), and
+`/issue-discuss` and `/issue-decide` refer back to the same numbers; bullets
+force every reply to re-enumerate them. Carry the author's forks over first,
+in their order, then append what the review found — never renumber an item
+once it is posted. Sub-points inside one question may be bullets.
 
 **Special stops — comment only, no branch, no PR:**
 - VOCAB **INCOMPLETE** → the comment names the blank fields and asks the author to complete them.
