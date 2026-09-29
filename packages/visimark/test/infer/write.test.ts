@@ -56,9 +56,9 @@ describe("--write only ever inserts", () => {
     expect(out).not.toContain("<!--vmark=unnamed1");
   });
 
-  test("inserted anchors never carry a percent sigil", () => {
+  test("inserted anchors never carry a display rule", () => {
     const out = written(strippedClean);
-    expect(out).not.toMatch(/<!--vmark=[^>]+%-->/);
+    expect(out).not.toMatch(/<!--vmark=[^>]+\|[^>]+-->/);
     expect(out).toContain("<!--vmark=");
   });
 });

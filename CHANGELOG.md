@@ -14,6 +14,23 @@
   delimited placeholder (`**0**`, `` `0` ``) is unaffected, and `**_**` is now
   the documented convention for an explicit seed. See
   [#298](https://github.com/michal-niedzwiedzki/visimark/issues/298).
+- **Anchor comments can now name a display rule** (`<!--vmark=x.y|name-->`),
+  a small closed registry of named prose transforms that render a stored
+  value differently without changing it. `percent` is the first and only
+  entry, replacing the `%` sigil (see below). A display-rule anchor requires
+  a delimited seed (`**x**`, `` `x` ``); an unrecognised name, an undelimited
+  seed, or the display rule applied to a value of a type it doesn't accept
+  (a date or a string, for `percent`) refuses with `ANCHOR`/`TYPE`. See
+  [#297](https://github.com/michal-niedzwiedzki/visimark/issues/297).
+
+### Removed
+
+- **The `%` anchor-comment sigil.** `<!--vmark=x.y%-->` is now a malformed
+  anchor (`ANCHOR`) — write `<!--vmark=x.y|percent-->` instead. Rendering is
+  unchanged (stored × 100 at precision − 2). Migrated in this repo:
+  `docs/example-executable-documentation.md`, `docs/tutorial/runway.md`,
+  `docs/tutorial/capstone.md`, `docs/tutorial.md`. See
+  [#297](https://github.com/michal-niedzwiedzki/visimark/issues/297).
 
 ### Changed
 

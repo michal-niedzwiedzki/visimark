@@ -3,6 +3,7 @@ import type { AssertionLedger, CheckState, Entry } from "./check-state.js";
 import type { Binding, DocModel } from "../model/types.js";
 import { resolve } from "./graph.js";
 import type { Expr } from "../lang/ast.js";
+import { DISPLAY_RULES } from "./display-rules.js";
 
 /**
  * The terminal passes: everything that only reports, after every value that
@@ -95,15 +96,19 @@ export function reportAnchors(st: Pick<CheckState, "model" | "staleScalars" | "e
     if (a.value.kind !== "image" && isChart) {
       anchorFinding("a chart must be anchored to an image");
     }
-    if (a.percent && (isChart || a.value.kind === "image")) {
-      st.emit({
-        code: "TYPE",
-        sheetId: a.sheetId,
-        name: a.name,
-        message: "a % sigil is only legal on a numeric scalar",
-        sourceOffset: a.commentSpan.start,
-        span: a.commentSpan,
-      });
+    if (a.displayRule !== undefined && (isChart || a.value.kind === "image")) {
+      if (!DISPLAY_RULES[a.displayRule]) {
+        anchorFinding(`unknown display rule \`${a.displayRule}\``);
+      } else {
+        st.emit({
+          code: "TYPE",
+          sheetId: a.sheetId,
+          name: a.name,
+          message: "a display rule is only legal on a value it accepts (percent: numeric only)",
+          sourceOffset: a.commentSpan.start,
+          span: a.commentSpan,
+        });
+      }
     }
   }
   if (staleAnchorCount > 0) {

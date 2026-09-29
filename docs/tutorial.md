@@ -736,9 +736,9 @@ your prose.
 
 ### Print a ratio as a percent
 
-A stored ratio such as `0.3988` reads better in a sentence as `39.88%`. Add `%`
-to the end of the anchor name, `<!--vmark=lines.margin%-->`, and `fmt` writes
-the percent. The stored value does not change. Chapter 15 covers it.
+A stored ratio such as `0.3988` reads better in a sentence as `39.88%`. Add
+`|percent` to the anchor name, `<!--vmark=lines.margin|percent-->`, and `fmt`
+writes the percent. The stored value does not change. Chapter 15 covers it.
 
 ### Put the currency outside the anchor
 
@@ -1327,14 +1327,16 @@ margin precision 4 = (net_total - cost_total) / net_total
 `fmt` writes `0.3121` and `0.6879` into `Share`. A computed cell is always a
 plain decimal. Percent display exists only in prose.
 
-### In a sentence: add `%` to the anchor
+### In a sentence: add `|percent` to the anchor
 
 *New after 0.1.6: this ships in the next release.*
 
-Put `%` directly after the name inside the anchor comment:
+Put `|percent` directly after the name inside the anchor comment — a
+**display rule**, one of a small closed set of named prose transforms
+(chapter 15 covers only `percent`; nothing else ships yet):
 
 ```markdown
-The engagement clears a margin of **0**<!--vmark=lines.margin%-->, or
+The engagement clears a margin of **0**<!--vmark=lines.margin|percent-->, or
 **0**<!--vmark=lines.margin--> as a ratio.
 ```
 
@@ -1344,18 +1346,18 @@ margin.md: updated 2 cells, 2 anchors
 ```
 
 ```markdown
-The engagement clears a margin of **39.88%**<!--vmark=lines.margin%-->, or
+The engagement clears a margin of **39.88%**<!--vmark=lines.margin|percent-->, or
 **0.3988**<!--vmark=lines.margin--> as a ratio.
 ```
 
-Both anchors show the same stored value, `0.3988`. The `%` is a request for
+Both anchors show the same stored value, `0.3988`. `|percent` is a request for
 one span only: *print this one as a percent*. Nothing else changes — not the
 stored value, not any formula, not what `eval` reports.
 
 The rule is simple. `fmt` multiplies the stored value by 100, writes it with
 **two fewer decimals than the binding's width**, and adds `%`:
 
-| Binding | Stored | Written with `%` |
+| Binding | Stored | Written with `\|percent` |
 |---|---|---|
 | `margin precision 4 = …` | `0.3988` | `39.88%` |
 | `rate precision 3 = 12.5%` | `0.125` | `12.5%` |
@@ -1370,7 +1372,7 @@ anchor.
 ### How `check` reads it
 
 `check` compares numbers, not spellings. `39.88%` and `0.3988` are the same
-number, so either text is clean, with or without `%` on the anchor.
+number, so either text is clean, with or without `|percent` on the anchor.
 
 `fmt` is stricter: it always writes the anchor's own form. Here both spans
 agree with the stored `0.3988`, and `check` reports nothing, but `fmt` still
@@ -1378,16 +1380,16 @@ rewrites them:
 
 ```console
 $ tail -1 c.md
-A **0.3988**<!--vmark=s.m%-->. B **39.88%**<!--vmark=s.m-->.
+A **0.3988**<!--vmark=s.m|percent-->. B **39.88%**<!--vmark=s.m-->.
 $ visimark fmt c.md
 c.md: updated 2 anchors
 $ tail -1 c.md
-A **39.88%**<!--vmark=s.m%-->. B **0.3988**<!--vmark=s.m-->.
+A **39.88%**<!--vmark=s.m|percent-->. B **0.3988**<!--vmark=s.m-->.
 ```
 
-So if you type a percent by hand in front of an anchor without `%`, the next
-`fmt` turns it back into a decimal. The `%` belongs on the anchor, not in the
-text.
+So if you type a percent by hand in front of an anchor without `|percent`, the
+next `fmt` turns it back into a decimal. `|percent` belongs on the anchor,
+not in the text.
 
 A wrong number is `STALE` as usual, and the report shows the percent form:
 
@@ -1395,33 +1397,36 @@ A wrong number is `STALE` as usual, and the report shows the percent form:
   STALE   s.rate                                      13.5% ≠ 12.5%
 ```
 
-### What the `%` refuses
+### What `|percent` refuses
 
 | You wrote | Finding |
 |---|---|
-| `%` on a binding narrower than 2 decimals | `PRECISION` — `percent display needs precision 2 or more; a has 1` |
-| `%` on a date or a string | `TYPE` — `a % sigil is only legal on a numeric scalar` |
-| `%` on a chart image | `TYPE`, the same message |
-| `%` with a currency in the same span, such as `**$0.25**` | `UNIT` — `cannot mix a unit with percent display` |
-| a space before the `%`, as in `lines.margin %` | `ANCHOR` — the comment is malformed |
+| `\|percent` on a binding narrower than 2 decimals | `PRECISION` — `percent display needs precision 2 or more; a has 1` |
+| `\|percent` on a date or a string | `TYPE` — `a display rule is only legal on a value it accepts (percent: numeric only)` |
+| `\|percent` on a chart image | `TYPE`, the same message |
+| `\|percent` with a currency in the same span, such as `**$0.25**` | `UNIT` — `cannot mix a unit with a display rule` |
+| `\|percent` with a bare, undelimited seed, as in `40.26%<!--vmark=s.m\|percent-->` | `ANCHOR` — `a display rule needs a delimited seed` |
+| an unrecognised name, such as `\|nope` | `ANCHOR` — `` unknown display rule `nope` `` |
+| the old `%` sigil, as in `lines.margin%` | `ANCHOR` — the comment is malformed |
 
 `fmt` leaves a span alone while any of these is reported.
 
-Two things the tools never do: `fmt` never adds `%` to an anchor you wrote
-without one, and `infer --write` never proposes one. Whether a ratio reads
-better as a percent is your call.
+Two things the tools never do: `fmt` never adds `|percent` to an anchor you
+wrote without one, and `infer --write` never proposes one. Whether a ratio
+reads better as a percent is your call.
 
 ### A percent in a what-if
 
 A percent value also matters in Part 8. A `param` whose default is written as a
 percent, such as `param vat_rate precision 2 = default 23%`, only accepts a
 percent from a scenario. The capstone (chapter 31) uses such a `param` and
-prints it with a `%` anchor.
+prints it with a `|percent` anchor.
 
 ## 16. Currency and units
 
 A currency or unit is decoration around a number. It is not part of the value,
-and `%` is not one of them (chapter 15). In prose, keep it outside the anchor
+and a display rule like `|percent` is not one of them (chapter 15). In prose,
+keep it outside the anchor
 (chapter 9).
 
 ### Decoration in a cell
@@ -2497,7 +2502,7 @@ payroll   = SUM(Cost)
 
 The team of **11**<!--vmark=team.headcount--> people costs
 **111240.00**<!--vmark=team.payroll--> PLN a month, after a
-**3.0%**<!--vmark=team.raise%--> raise.
+**3.0%**<!--vmark=team.raise|percent--> raise.
 
 ```vmark #runway
 param cash      precision 2 = default 2000000.00
@@ -2548,7 +2553,7 @@ document. A scenario is only a view of it.**
 
 A `param` behaves like any other scalar. Formulas read it, locally or as
 `team.raise`. An assertion can read it. An anchor can show it, and the anchor
-always shows the default. Above, `**3.0%**<!--vmark=team.raise%-->` prints the
+always shows the default. Above, `**3.0%**<!--vmark=team.raise|percent-->` prints the
 default raise as a percent (chapter 15). It shows one decimal because `raise`
 is three decimals wide.
 
@@ -3059,7 +3064,7 @@ Five decisions are visible here, and each one is a chapter you have read:
 The engagement is **0**<!--vmark=lines.effort_total--> man-days at an
 average of **0.00**<!--vmark=lines.day_rate_avg--> PLN per day. Net of tax it
 comes to **0.00**<!--vmark=lines.net_total--> PLN. VAT at
-**0**<!--vmark=lines.vat_rate%--> adds **0.00**<!--vmark=lines.vat_total-->
+**0**<!--vmark=lines.vat_rate|percent--> adds **0.00**<!--vmark=lines.vat_total-->
 PLN, giving a total of **0.00**<!--vmark=lines.gross_total--> PLN gross.
 ```
 

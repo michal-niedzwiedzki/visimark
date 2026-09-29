@@ -17,7 +17,7 @@ import { resolveImports } from "../import/resolve.js";
 import type { ImportStatus } from "../model/types.js";
 import { domainLiterals, formatDomain, isEmptyDomain, testDomain } from "../lang/domain.js";
 import { derivePrecision, type Width } from "./precision.js";
-import { percentDisplay } from "./percent-display.js";
+import { DISPLAY_RULES } from "./display-rules.js";
 import { applyUnit, cellPrecision, parseDecorated, type Unit } from "./units.js";
 import { parseIsoDate } from "./dates.js";
 import {
@@ -660,6 +660,26 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
       for (const a of valueAnchorsOf(model, binding.id)) {
         if (a.value!.kind !== "text") continue;
         const text = model.source.slice(a.value!.start, a.value!.end);
+        if (a.displayRule !== undefined) {
+          // a display rule renders the stored value differently from its
+          // own shape (`0.4026` → `40.26%`), so a bare trailing token can
+          // never unambiguously seed it — unlike a plain numeric/date
+          // anchor, no shape check applies here at all.
+          refusedAnchors.add(a.commentSpan.start);
+          emit(
+            {
+              code: "ANCHOR",
+              sheetId: binding.sheetId,
+              name: binding.name,
+              sourceOffset: a.commentSpan.start,
+              span: a.commentSpan,
+              message:
+                "a display rule needs a delimited seed — wrap a placeholder instead, such as **_**",
+            },
+            { sheetId: binding.sheetId },
+          );
+          continue;
+        }
         if (v0.t === "num") {
           // numeric-shaped includes a percent form (`12.50%`, `-5%`) — the
           // same "is this numeric" test matchesStored already applies, so a
@@ -743,16 +763,40 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
       values.set(binding.id, v);
 
       const mine = valueAnchorsOf(model, binding.id);
-      const percentMine = mine.filter((a) => a.percent);
+      const displayRuleMine = mine.filter((a) => a.displayRule !== undefined);
+      const unknownMine = displayRuleMine.filter((a) => !DISPLAY_RULES[a.displayRule!]);
+      const registeredMine = displayRuleMine.filter((a) => DISPLAY_RULES[a.displayRule!]);
+      const wrongTypeMine = registeredMine.filter(
+        (a) => !DISPLAY_RULES[a.displayRule!]!.accepts(v),
+      );
+      const percentMine = registeredMine.filter((a) => a.displayRule === "percent");
       let sigilBlocked = false;
-      if (percentMine.length > 0 && v.t !== "num") {
+      for (const a of unknownMine) {
+        // no `sigilBlocked = true` here: the unknown-named anchor is already
+        // in `refusedAnchors` and so already excluded from the STALE loop
+        // below — blocking the whole scalar would silence a genuinely stale
+        // *sibling* anchor's own finding for no reason tied to this anchor.
+        refusedAnchors.add(a.commentSpan.start);
+        emit(
+          {
+            code: "ANCHOR",
+            sheetId: binding.sheetId,
+            name: binding.name,
+            sourceOffset: a.commentSpan.start,
+            span: a.commentSpan,
+            message: `unknown display rule \`${a.displayRule}\``,
+          },
+          { sheetId: binding.sheetId },
+        );
+      }
+      if (wrongTypeMine.length > 0) {
         emit(
           {
             code: "TYPE",
             sheetId: binding.sheetId,
             name: binding.name,
-            message: "a % sigil is only legal on a numeric scalar",
-            span: percentMine[0]!.commentSpan,
+            message: "a display rule is only legal on a value it accepts (percent: numeric only)",
+            span: wrongTypeMine[0]!.commentSpan,
           },
           { sheetId: binding.sheetId },
         );
@@ -780,7 +824,7 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
               code: "UNIT",
               sheetId: binding.sheetId,
               name: binding.name,
-              message: "cannot mix a unit with percent display",
+              message: "cannot mix a unit with a display rule",
               span: a.value ?? a.commentSpan,
             },
             { sheetId: binding.sheetId },
@@ -808,9 +852,10 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
                 sheetId: binding.sheetId,
                 name: binding.name,
                 stored: text,
-                computed: a.percent
-                  ? percentDisplay(v, prec)
-                  : applyUnit(showValue(v, prec), anchorUnit),
+                computed:
+                  a.displayRule !== undefined && DISPLAY_RULES[a.displayRule]
+                    ? DISPLAY_RULES[a.displayRule]!.render(v, prec)
+                    : applyUnit(showValue(v, prec), anchorUnit),
                 formula: formulaText(model, binding),
                 span: { start: a.value!.start, end: a.value!.end },
               },

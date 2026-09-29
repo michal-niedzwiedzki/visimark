@@ -1,7 +1,7 @@
 # Brake press, financed
 
 The quote is for one press at **48000.00**<!--vmark=press.price--> PLN.
-The financing rate is **6%**<!--vmark=press.annual%--> a year, paid monthly
+The financing rate is **6%**<!--vmark=press.annual|percent--> a year, paid monthly
 over **36**<!--vmark=press.term--> months. The instalment is
 **1460.25**<!--vmark=press.instalment--> PLN.
 

@@ -551,9 +551,9 @@
 <a href="#15-percent-a-value-and-a-way-to-print-one" data-level="2">15. Percent: a value, and a way to print one</a>
 <a href="#in-a-formula-or-a-cell-a-percent-is-a-number" data-level="3">In a formula or a cell, a percent is a number</a>
 <a href="#a-computed-cell-is-always-written-as-a-decimal" data-level="3">A computed cell is always written as a decimal</a>
-<a href="#in-a-sentence-add-to-the-anchor" data-level="3">In a sentence: add `%` to the anchor</a>
+<a href="#in-a-sentence-add-percent-to-the-anchor" data-level="3">In a sentence: add `|percent` to the anchor</a>
 <a href="#how-check-reads-it" data-level="3">How `check` reads it</a>
-<a href="#what-the-refuses" data-level="3">What the `%` refuses</a>
+<a href="#what-percent-refuses" data-level="3">What `|percent` refuses</a>
 <a href="#a-percent-in-a-what-if" data-level="3">A percent in a what-if</a>
 <a href="#16-currency-and-units" data-level="2">16. Currency and units</a>
 <a href="#decoration-in-a-cell" data-level="3">Decoration in a cell</a>
@@ -1541,11 +1541,11 @@ value has no natural placeholder of its own — it reads as "fill me in"
 without implying a specific number. The placeholder's content does not
 matter, digits or <code>_</code> alike: it is replaced at the binding's own width. What
 <code>fmt</code> never does is <em>invent</em> an anchor — you decide where a value appears in
-your prose.</p></div><pre class="src">### Print a ratio as a percent</pre><div class="out"><h3 id="print-a-ratio-as-a-percent">Print a ratio as a percent</h3></div><pre class="src">A stored ratio such as `0.3988` reads better in a sentence as `39.88%`. Add `%`
-to the end of the anchor name, `&lt;!--vmark=lines.margin%--&gt;`, and `fmt` writes
-the percent. The stored value does not change. Chapter 15 covers it.</pre><div class="out"><p>A stored ratio such as <code>0.3988</code> reads better in a sentence as <code>39.88%</code>. Add <code>%</code>
-to the end of the anchor name, <code>&#x3C;!--vmark=lines.margin%--></code>, and <code>fmt</code> writes
-the percent. The stored value does not change. Chapter 15 covers it.</p></div><pre class="src">### Put the currency outside the anchor</pre><div class="out"><h3 id="put-the-currency-outside-the-anchor">Put the currency outside the anchor</h3></div><pre class="src">```markdown
+your prose.</p></div><pre class="src">### Print a ratio as a percent</pre><div class="out"><h3 id="print-a-ratio-as-a-percent">Print a ratio as a percent</h3></div><pre class="src">A stored ratio such as `0.3988` reads better in a sentence as `39.88%`. Add
+`|percent` to the anchor name, `&lt;!--vmark=lines.margin|percent--&gt;`, and `fmt`
+writes the percent. The stored value does not change. Chapter 15 covers it.</pre><div class="out"><p>A stored ratio such as <code>0.3988</code> reads better in a sentence as <code>39.88%</code>. Add
+<code>|percent</code> to the anchor name, <code>&#x3C;!--vmark=lines.margin|percent--></code>, and <code>fmt</code>
+writes the percent. The stored value does not change. Chapter 15 covers it.</p></div><pre class="src">### Put the currency outside the anchor</pre><div class="out"><h3 id="put-the-currency-outside-the-anchor">Put the currency outside the anchor</h3></div><pre class="src">```markdown
 **158.00**&lt;!--vmark=order.net_total--&gt; PLN     ← right
 **158.00 PLN**&lt;!--vmark=order.net_total--&gt;     ← wrong
 ```</pre><div class="out"><pre><code class="language-markdown">**158.00**&#x3C;!--vmark=order.net_total--> PLN     ← right
@@ -2259,10 +2259,14 @@ margin precision 4 = (net_total - cost_total) / net_total
 ```
 </code></pre></div><pre class="src">`fmt` writes `0.3121` and `0.6879` into `Share`. A computed cell is always a
 plain decimal. Percent display exists only in prose.</pre><div class="out"><p><code>fmt</code> writes <code>0.3121</code> and <code>0.6879</code> into <code>Share</code>. A computed cell is always a
-plain decimal. Percent display exists only in prose.</p></div><pre class="src">### In a sentence: add `%` to the anchor</pre><div class="out"><h3 id="in-a-sentence-add-to-the-anchor">In a sentence: add <code>%</code> to the anchor</h3></div><pre class="src">*New after 0.1.6: this ships in the next release.*</pre><div class="out"><p><em>New after 0.1.6: this ships in the next release.</em></p></div><pre class="src">Put `%` directly after the name inside the anchor comment:</pre><div class="out"><p>Put <code>%</code> directly after the name inside the anchor comment:</p></div><pre class="src">```markdown
-The engagement clears a margin of **0**&lt;!--vmark=lines.margin%--&gt;, or
+plain decimal. Percent display exists only in prose.</p></div><pre class="src">### In a sentence: add `|percent` to the anchor</pre><div class="out"><h3 id="in-a-sentence-add-percent-to-the-anchor">In a sentence: add <code>|percent</code> to the anchor</h3></div><pre class="src">*New after 0.1.6: this ships in the next release.*</pre><div class="out"><p><em>New after 0.1.6: this ships in the next release.</em></p></div><pre class="src">Put `|percent` directly after the name inside the anchor comment — a
+**display rule**, one of a small closed set of named prose transforms
+(chapter 15 covers only `percent`; nothing else ships yet):</pre><div class="out"><p>Put <code>|percent</code> directly after the name inside the anchor comment — a
+<strong>display rule</strong>, one of a small closed set of named prose transforms
+(chapter 15 covers only <code>percent</code>; nothing else ships yet):</p></div><pre class="src">```markdown
+The engagement clears a margin of **0**&lt;!--vmark=lines.margin|percent--&gt;, or
 **0**&lt;!--vmark=lines.margin--&gt; as a ratio.
-```</pre><div class="out"><pre><code class="language-markdown">The engagement clears a margin of **0**&#x3C;!--vmark=lines.margin%-->, or
+```</pre><div class="out"><pre><code class="language-markdown">The engagement clears a margin of **0**&#x3C;!--vmark=lines.margin|percent-->, or
 **0**&#x3C;!--vmark=lines.margin--> as a ratio.
 </code></pre></div><pre class="src">```console
 $ visimark fmt margin.md
@@ -2270,17 +2274,17 @@ margin.md: updated 2 cells, 2 anchors
 ```</pre><div class="out"><pre><code class="language-console">$ visimark fmt margin.md
 margin.md: updated 2 cells, 2 anchors
 </code></pre></div><pre class="src">```markdown
-The engagement clears a margin of **39.88%**&lt;!--vmark=lines.margin%--&gt;, or
+The engagement clears a margin of **39.88%**&lt;!--vmark=lines.margin|percent--&gt;, or
 **0.3988**&lt;!--vmark=lines.margin--&gt; as a ratio.
-```</pre><div class="out"><pre><code class="language-markdown">The engagement clears a margin of **39.88%**&#x3C;!--vmark=lines.margin%-->, or
+```</pre><div class="out"><pre><code class="language-markdown">The engagement clears a margin of **39.88%**&#x3C;!--vmark=lines.margin|percent-->, or
 **0.3988**&#x3C;!--vmark=lines.margin--> as a ratio.
-</code></pre></div><pre class="src">Both anchors show the same stored value, `0.3988`. The `%` is a request for
+</code></pre></div><pre class="src">Both anchors show the same stored value, `0.3988`. `|percent` is a request for
 one span only: *print this one as a percent*. Nothing else changes — not the
-stored value, not any formula, not what `eval` reports.</pre><div class="out"><p>Both anchors show the same stored value, <code>0.3988</code>. The <code>%</code> is a request for
+stored value, not any formula, not what `eval` reports.</pre><div class="out"><p>Both anchors show the same stored value, <code>0.3988</code>. <code>|percent</code> is a request for
 one span only: <em>print this one as a percent</em>. Nothing else changes — not the
 stored value, not any formula, not what <code>eval</code> reports.</p></div><pre class="src">The rule is simple. `fmt` multiplies the stored value by 100, writes it with
 **two fewer decimals than the binding's width**, and adds `%`:</pre><div class="out"><p>The rule is simple. <code>fmt</code> multiplies the stored value by 100, writes it with
-<strong>two fewer decimals than the binding's width</strong>, and adds <code>%</code>:</p></div><pre class="src">| Binding | Stored | Written with `%` |
+<strong>two fewer decimals than the binding's width</strong>, and adds <code>%</code>:</p></div><pre class="src">| Binding | Stored | Written with `\|percent` |
 |---|---|---|
 | `margin precision 4 = …` | `0.3988` | `39.88%` |
 | `rate precision 3 = 12.5%` | `0.125` | `12.5%` |
@@ -2291,7 +2295,7 @@ stored value, not any formula, not what <code>eval</code> reports.</p></div><pre
 <tr>
 <th>Binding</th>
 <th>Stored</th>
-<th>Written with <code>%</code></th>
+<th>Written with <code>|percent</code></th>
 </tr>
 </thead>
 <tbody>
@@ -2326,38 +2330,40 @@ want `39.9%`, declare `precision 3`. Do not edit the text in front of the
 anchor.</pre><div class="out"><p>So the width of the binding decides how many decimals the percent shows. If you
 want <code>39.9%</code>, declare <code>precision 3</code>. Do not edit the text in front of the
 anchor.</p></div><pre class="src">### How `check` reads it</pre><div class="out"><h3 id="how-check-reads-it">How <code>check</code> reads it</h3></div><pre class="src">`check` compares numbers, not spellings. `39.88%` and `0.3988` are the same
-number, so either text is clean, with or without `%` on the anchor.</pre><div class="out"><p><code>check</code> compares numbers, not spellings. <code>39.88%</code> and <code>0.3988</code> are the same
-number, so either text is clean, with or without <code>%</code> on the anchor.</p></div><pre class="src">`fmt` is stricter: it always writes the anchor's own form. Here both spans
+number, so either text is clean, with or without `|percent` on the anchor.</pre><div class="out"><p><code>check</code> compares numbers, not spellings. <code>39.88%</code> and <code>0.3988</code> are the same
+number, so either text is clean, with or without <code>|percent</code> on the anchor.</p></div><pre class="src">`fmt` is stricter: it always writes the anchor's own form. Here both spans
 agree with the stored `0.3988`, and `check` reports nothing, but `fmt` still
 rewrites them:</pre><div class="out"><p><code>fmt</code> is stricter: it always writes the anchor's own form. Here both spans
 agree with the stored <code>0.3988</code>, and <code>check</code> reports nothing, but <code>fmt</code> still
 rewrites them:</p></div><pre class="src">```console
 $ tail -1 c.md
-A **0.3988**&lt;!--vmark=s.m%--&gt;. B **39.88%**&lt;!--vmark=s.m--&gt;.
+A **0.3988**&lt;!--vmark=s.m|percent--&gt;. B **39.88%**&lt;!--vmark=s.m--&gt;.
 $ visimark fmt c.md
 c.md: updated 2 anchors
 $ tail -1 c.md
-A **39.88%**&lt;!--vmark=s.m%--&gt;. B **0.3988**&lt;!--vmark=s.m--&gt;.
+A **39.88%**&lt;!--vmark=s.m|percent--&gt;. B **0.3988**&lt;!--vmark=s.m--&gt;.
 ```</pre><div class="out"><pre><code class="language-console">$ tail -1 c.md
-A **0.3988**&#x3C;!--vmark=s.m%-->. B **39.88%**&#x3C;!--vmark=s.m-->.
+A **0.3988**&#x3C;!--vmark=s.m|percent-->. B **39.88%**&#x3C;!--vmark=s.m-->.
 $ visimark fmt c.md
 c.md: updated 2 anchors
 $ tail -1 c.md
-A **39.88%**&#x3C;!--vmark=s.m%-->. B **0.3988**&#x3C;!--vmark=s.m-->.
-</code></pre></div><pre class="src">So if you type a percent by hand in front of an anchor without `%`, the next
-`fmt` turns it back into a decimal. The `%` belongs on the anchor, not in the
-text.</pre><div class="out"><p>So if you type a percent by hand in front of an anchor without <code>%</code>, the next
-<code>fmt</code> turns it back into a decimal. The <code>%</code> belongs on the anchor, not in the
-text.</p></div><pre class="src">A wrong number is `STALE` as usual, and the report shows the percent form:</pre><div class="out"><p>A wrong number is <code>STALE</code> as usual, and the report shows the percent form:</p></div><pre class="src">```console
+A **39.88%**&#x3C;!--vmark=s.m|percent-->. B **0.3988**&#x3C;!--vmark=s.m-->.
+</code></pre></div><pre class="src">So if you type a percent by hand in front of an anchor without `|percent`, the
+next `fmt` turns it back into a decimal. `|percent` belongs on the anchor,
+not in the text.</pre><div class="out"><p>So if you type a percent by hand in front of an anchor without <code>|percent</code>, the
+next <code>fmt</code> turns it back into a decimal. <code>|percent</code> belongs on the anchor,
+not in the text.</p></div><pre class="src">A wrong number is `STALE` as usual, and the report shows the percent form:</pre><div class="out"><p>A wrong number is <code>STALE</code> as usual, and the report shows the percent form:</p></div><pre class="src">```console
   STALE   s.rate                                      13.5% ≠ 12.5%
 ```</pre><div class="out"><pre><code class="language-console">  STALE   s.rate                                      13.5% ≠ 12.5%
-</code></pre></div><pre class="src">### What the `%` refuses</pre><div class="out"><h3 id="what-the-refuses">What the <code>%</code> refuses</h3></div><pre class="src">| You wrote | Finding |
+</code></pre></div><pre class="src">### What `|percent` refuses</pre><div class="out"><h3 id="what-percent-refuses">What <code>|percent</code> refuses</h3></div><pre class="src">| You wrote | Finding |
 |---|---|
-| `%` on a binding narrower than 2 decimals | `PRECISION` — `percent display needs precision 2 or more; a has 1` |
-| `%` on a date or a string | `TYPE` — `a % sigil is only legal on a numeric scalar` |
-| `%` on a chart image | `TYPE`, the same message |
-| `%` with a currency in the same span, such as `**$0.25**` | `UNIT` — `cannot mix a unit with percent display` |
-| a space before the `%`, as in `lines.margin %` | `ANCHOR` — the comment is malformed |</pre><div class="out"><table>
+| `\|percent` on a binding narrower than 2 decimals | `PRECISION` — `percent display needs precision 2 or more; a has 1` |
+| `\|percent` on a date or a string | `TYPE` — `a display rule is only legal on a value it accepts (percent: numeric only)` |
+| `\|percent` on a chart image | `TYPE`, the same message |
+| `\|percent` with a currency in the same span, such as `**$0.25**` | `UNIT` — `cannot mix a unit with a display rule` |
+| `\|percent` with a bare, undelimited seed, as in `40.26%&lt;!--vmark=s.m\|percent--&gt;` | `ANCHOR` — `a display rule needs a delimited seed` |
+| an unrecognised name, such as `\|nope` | `ANCHOR` — `` unknown display rule `nope` `` |
+| the old `%` sigil, as in `lines.margin%` | `ANCHOR` — the comment is malformed |</pre><div class="out"><table>
 <thead>
 <tr>
 <th>You wrote</th>
@@ -2366,40 +2372,50 @@ text.</p></div><pre class="src">A wrong number is `STALE` as usual, and the repo
 </thead>
 <tbody>
 <tr>
-<td><code>%</code> on a binding narrower than 2 decimals</td>
+<td><code>|percent</code> on a binding narrower than 2 decimals</td>
 <td><code>PRECISION</code> — <code>percent display needs precision 2 or more; a has 1</code></td>
 </tr>
 <tr>
-<td><code>%</code> on a date or a string</td>
-<td><code>TYPE</code> — <code>a % sigil is only legal on a numeric scalar</code></td>
+<td><code>|percent</code> on a date or a string</td>
+<td><code>TYPE</code> — <code>a display rule is only legal on a value it accepts (percent: numeric only)</code></td>
 </tr>
 <tr>
-<td><code>%</code> on a chart image</td>
+<td><code>|percent</code> on a chart image</td>
 <td><code>TYPE</code>, the same message</td>
 </tr>
 <tr>
-<td><code>%</code> with a currency in the same span, such as <code>**$0.25**</code></td>
-<td><code>UNIT</code> — <code>cannot mix a unit with percent display</code></td>
+<td><code>|percent</code> with a currency in the same span, such as <code>**$0.25**</code></td>
+<td><code>UNIT</code> — <code>cannot mix a unit with a display rule</code></td>
 </tr>
 <tr>
-<td>a space before the <code>%</code>, as in <code>lines.margin %</code></td>
+<td><code>|percent</code> with a bare, undelimited seed, as in <code>40.26%&#x3C;!--vmark=s.m|percent--></code></td>
+<td><code>ANCHOR</code> — <code>a display rule needs a delimited seed</code></td>
+</tr>
+<tr>
+<td>an unrecognised name, such as <code>|nope</code></td>
+<td><code>ANCHOR</code> — <code>unknown display rule `nope`</code></td>
+</tr>
+<tr>
+<td>the old <code>%</code> sigil, as in <code>lines.margin%</code></td>
 <td><code>ANCHOR</code> — the comment is malformed</td>
 </tr>
 </tbody>
-</table></div><pre class="src">`fmt` leaves a span alone while any of these is reported.</pre><div class="out"><p><code>fmt</code> leaves a span alone while any of these is reported.</p></div><pre class="src">Two things the tools never do: `fmt` never adds `%` to an anchor you wrote
-without one, and `infer --write` never proposes one. Whether a ratio reads
-better as a percent is your call.</pre><div class="out"><p>Two things the tools never do: <code>fmt</code> never adds <code>%</code> to an anchor you wrote
-without one, and <code>infer --write</code> never proposes one. Whether a ratio reads
-better as a percent is your call.</p></div><pre class="src">### A percent in a what-if</pre><div class="out"><h3 id="a-percent-in-a-what-if">A percent in a what-if</h3></div><pre class="src">A percent value also matters in Part 8. A `param` whose default is written as a
+</table></div><pre class="src">`fmt` leaves a span alone while any of these is reported.</pre><div class="out"><p><code>fmt</code> leaves a span alone while any of these is reported.</p></div><pre class="src">Two things the tools never do: `fmt` never adds `|percent` to an anchor you
+wrote without one, and `infer --write` never proposes one. Whether a ratio
+reads better as a percent is your call.</pre><div class="out"><p>Two things the tools never do: <code>fmt</code> never adds <code>|percent</code> to an anchor you
+wrote without one, and <code>infer --write</code> never proposes one. Whether a ratio
+reads better as a percent is your call.</p></div><pre class="src">### A percent in a what-if</pre><div class="out"><h3 id="a-percent-in-a-what-if">A percent in a what-if</h3></div><pre class="src">A percent value also matters in Part 8. A `param` whose default is written as a
 percent, such as `param vat_rate precision 2 = default 23%`, only accepts a
 percent from a scenario. The capstone (chapter 31) uses such a `param` and
-prints it with a `%` anchor.</pre><div class="out"><p>A percent value also matters in Part 8. A <code>param</code> whose default is written as a
+prints it with a `|percent` anchor.</pre><div class="out"><p>A percent value also matters in Part 8. A <code>param</code> whose default is written as a
 percent, such as <code>param vat_rate precision 2 = default 23%</code>, only accepts a
 percent from a scenario. The capstone (chapter 31) uses such a <code>param</code> and
-prints it with a <code>%</code> anchor.</p></div><pre class="src">## 16. Currency and units</pre><div class="out"><h2 id="16-currency-and-units">16. Currency and units</h2></div><pre class="src">A currency or unit is decoration around a number. It is not part of the value,
-and `%` is not one of them (chapter 15). In prose, keep it outside the anchor
+prints it with a <code>|percent</code> anchor.</p></div><pre class="src">## 16. Currency and units</pre><div class="out"><h2 id="16-currency-and-units">16. Currency and units</h2></div><pre class="src">A currency or unit is decoration around a number. It is not part of the value,
+and a display rule like `|percent` is not one of them (chapter 15). In prose,
+keep it outside the anchor
 (chapter 9).</pre><div class="out"><p>A currency or unit is decoration around a number. It is not part of the value,
-and <code>%</code> is not one of them (chapter 15). In prose, keep it outside the anchor
+and a display rule like <code>|percent</code> is not one of them (chapter 15). In prose,
+keep it outside the anchor
 (chapter 9).</p></div><pre class="src">### Decoration in a cell</pre><div class="out"><h3 id="decoration-in-a-cell">Decoration in a cell</h3></div><pre class="src">A column may carry a currency symbol or a unit:</pre><div class="out"><p>A column may carry a currency symbol or a unit:</p></div><pre class="src">```markdown
 | Item    | Price  | Qty |    Net |
 |---------|-------:|----:|-------:|
@@ -3466,7 +3482,7 @@ payroll   = SUM(Cost)
 
 The team of **11**&lt;!--vmark=team.headcount--&gt; people costs
 **111240.00**&lt;!--vmark=team.payroll--&gt; PLN a month, after a
-**3.0%**&lt;!--vmark=team.raise%--&gt; raise.
+**3.0%**&lt;!--vmark=team.raise|percent--&gt; raise.
 
 ```vmark #runway
 param cash      precision 2 = default 2000000.00
@@ -3500,7 +3516,7 @@ payroll   = SUM(Cost)
 
 The team of **11**&#x3C;!--vmark=team.headcount--> people costs
 **111240.00**&#x3C;!--vmark=team.payroll--> PLN a month, after a
-**3.0%**&#x3C;!--vmark=team.raise%--> raise.
+**3.0%**&#x3C;!--vmark=team.raise|percent--> raise.
 
 ```vmark #runway
 param cash      precision 2 = default 2000000.00
@@ -3552,11 +3568,11 @@ verifies and what a reviewer reads.</p></div><pre class="src">This is the one ru
 document. A scenario is only a view of it.**</pre><div class="out"><p>This is the one rule the whole part follows from: <strong>the defaults are the
 document. A scenario is only a view of it.</strong></p></div><pre class="src">A `param` behaves like any other scalar. Formulas read it, locally or as
 `team.raise`. An assertion can read it. An anchor can show it, and the anchor
-always shows the default. Above, `**3.0%**&lt;!--vmark=team.raise%--&gt;` prints the
+always shows the default. Above, `**3.0%**&lt;!--vmark=team.raise|percent--&gt;` prints the
 default raise as a percent (chapter 15). It shows one decimal because `raise`
 is three decimals wide.</pre><div class="out"><p>A <code>param</code> behaves like any other scalar. Formulas read it, locally or as
 <code>team.raise</code>. An assertion can read it. An anchor can show it, and the anchor
-always shows the default. Above, <code>**3.0%**&#x3C;!--vmark=team.raise%--></code> prints the
+always shows the default. Above, <code>**3.0%**&#x3C;!--vmark=team.raise|percent--></code> prints the
 default raise as a percent (chapter 15). It shows one decimal because <code>raise</code>
 is three decimals wide.</p></div><pre class="src">### Choosing the width</pre><div class="out"><h3 id="choosing-the-width">Choosing the width</h3></div><pre class="src">The width is a promise about what a scenario may bring. `raise` is declared
 three decimals wide, so a scenario may ask about `5.5%` (`0.055`) but not
@@ -4199,12 +4215,12 @@ decision rather than an accident of widths.</li>
 The engagement is **0**&lt;!--vmark=lines.effort_total--&gt; man-days at an
 average of **0.00**&lt;!--vmark=lines.day_rate_avg--&gt; PLN per day. Net of tax it
 comes to **0.00**&lt;!--vmark=lines.net_total--&gt; PLN. VAT at
-**0**&lt;!--vmark=lines.vat_rate%--&gt; adds **0.00**&lt;!--vmark=lines.vat_total--&gt;
+**0**&lt;!--vmark=lines.vat_rate|percent--&gt; adds **0.00**&lt;!--vmark=lines.vat_total--&gt;
 PLN, giving a total of **0.00**&lt;!--vmark=lines.gross_total--&gt; PLN gross.
 ```</pre><div class="out"><pre><code class="language-markdown">The engagement is **0**&#x3C;!--vmark=lines.effort_total--> man-days at an
 average of **0.00**&#x3C;!--vmark=lines.day_rate_avg--> PLN per day. Net of tax it
 comes to **0.00**&#x3C;!--vmark=lines.net_total--> PLN. VAT at
-**0**&#x3C;!--vmark=lines.vat_rate%--> adds **0.00**&#x3C;!--vmark=lines.vat_total-->
+**0**&#x3C;!--vmark=lines.vat_rate|percent--> adds **0.00**&#x3C;!--vmark=lines.vat_total-->
 PLN, giving a total of **0.00**&#x3C;!--vmark=lines.gross_total--> PLN gross.
 </code></pre></div><pre class="src">Currency stays outside the anchors (chapter 9). The rate is not typed into the
 sentence: the `%` anchor prints the `param` as a percent (chapter 15), so the

@@ -261,7 +261,7 @@ test("a hyphenated sheet id with a wrong anchored value fails loudly instead of 
   );
   const anchor = r.findings.find((f) => f.code === "ANCHOR")!;
   expect(anchor.message).toBe(
-    "malformed anchor comment — expected `<!--vmark=sheet.name-->` or `<!--vmark=sheet.name%-->`",
+    "malformed anchor comment — expected `<!--vmark=sheet.name-->` or `<!--vmark=sheet.name|rule-->`",
   );
   // the sheet still built and evaluated despite the bad id
   expect(r.findings.find((f) => f.code === "WARN")!.name).toBe("total");
@@ -636,7 +636,7 @@ test("assert: a sheet with only an assert + a table does not trip COVERAGE", () 
   expect(r.findings).toEqual([]);
 });
 
-const percentDoc = (span: string, extra = "") => `Margin **${span}**<!--vmark=s.margin%-->.
+const percentDoc = (span: string, extra = "") => `Margin **${span}**<!--vmark=s.margin|percent-->.
 Bare **0.4026**<!--vmark=s.margin-->.
 
 \`\`\`vmark #s
@@ -645,13 +645,13 @@ ${extra}
 \`\`\`
 `;
 
-test("a matching % span is not STALE", () => {
+test("a matching |percent span is not STALE", () => {
   const r = run(percentDoc("40.26%"));
   expect(r.findings.filter((f) => f.code === "STALE")).toEqual([]);
   expect(r.exitCode).toBe(0);
 });
 
-test("a wrong % span is STALE with both sides in percent form", () => {
+test("a wrong |percent span is STALE with both sides in percent form", () => {
   const r = run(percentDoc("41.55%"));
   const stale = r.findings.find((f) => f.code === "STALE" && !f.anchorGroup)!;
   expect(stale.stored).toBe("41.55%");
@@ -659,14 +659,14 @@ test("a wrong % span is STALE with both sides in percent form", () => {
   expect(r.exitCode).toBe(1);
 });
 
-test("a decimal span on a % comment is not STALE when the number agrees", () => {
+test("a decimal span on a |percent comment is not STALE when the number agrees", () => {
   const r = run(percentDoc("0.4026"));
   expect(r.findings.filter((f) => f.code === "STALE")).toEqual([]);
   expect(r.exitCode).toBe(0);
 });
 
-test("precision below 2 on a % comment is PRECISION", () => {
-  const src = `X **1**<!--vmark=s.n%-->.
+test("precision below 2 on a |percent comment is PRECISION", () => {
+  const src = `X **1**<!--vmark=s.n|percent-->.
 
 \`\`\`vmark #s
 n precision 1 = 1
@@ -678,8 +678,8 @@ n precision 1 = 1
   expect(r.exitCode).toBe(1);
 });
 
-test("a % sigil on a date scalar is TYPE", () => {
-  const src = `Due **2026-03-31**<!--vmark=s.d%-->.
+test("|percent on a date scalar is TYPE", () => {
+  const src = `Due **2026-03-31**<!--vmark=s.d|percent-->.
 
 \`\`\`vmark #s
 d = 2026-03-31
@@ -687,11 +687,13 @@ d = 2026-03-31
 `;
   const r = run(src);
   const t = r.findings.find((f) => f.code === "TYPE")!;
-  expect(t.message).toBe("a % sigil is only legal on a numeric scalar");
+  expect(t.message).toBe(
+    "a display rule is only legal on a value it accepts (percent: numeric only)",
+  );
 });
 
-test("a unit in the same span as a % sigil is UNIT", () => {
-  const src = `X **$0.4026**<!--vmark=s.margin%-->.
+test("a unit in the same span as |percent is UNIT", () => {
+  const src = `X **$0.4026**<!--vmark=s.margin|percent-->.
 
 \`\`\`vmark #s
 margin precision 4 = 0.4026
@@ -699,10 +701,10 @@ margin precision 4 = 0.4026
 `;
   const r = run(src);
   const u = r.findings.find((f) => f.code === "UNIT")!;
-  expect(u.message).toBe("cannot mix a unit with percent display");
+  expect(u.message).toBe("cannot mix a unit with a display rule");
 });
 
-test("a % sigil on a chart image is TYPE", () => {
+test("|percent on a chart image is TYPE", () => {
   const src = `| Item | Price |
 |------|------:|
 | pen  |  5.00 |
@@ -711,11 +713,103 @@ test("a % sigil on a chart image is TYPE", () => {
 chart cost as pie of Price labelled Item
 \`\`\`
 
-![c](charts/c.svg)<!--vmark=order.cost%-->
+![c](charts/c.svg)<!--vmark=order.cost|percent-->
 `;
   const r = run(src);
   const t = r.findings.find((f) => f.code === "TYPE")!;
-  expect(t.message).toBe("a % sigil is only legal on a numeric scalar");
+  expect(t.message).toBe(
+    "a display rule is only legal on a value it accepts (percent: numeric only)",
+  );
+});
+
+test("an unknown display-rule name on a chart image is ANCHOR, not TYPE", () => {
+  const src = `| Item | Price |
+|------|------:|
+| pen  |  5.00 |
+
+\`\`\`vmark #order
+chart cost as pie of Price labelled Item
+\`\`\`
+
+![c](charts/c.svg)<!--vmark=order.cost|nope-->
+`;
+  const r = run(src);
+  const a = r.findings.find((f) => f.code === "ANCHOR" && f.message?.includes("nope"));
+  expect(a?.message).toBe("unknown display rule `nope`");
+  expect(r.findings.some((f) => f.code === "TYPE")).toBe(false);
+});
+
+test("an inherited Object.prototype name on a chart image is an unknown display rule, not a crash", () => {
+  const src = `| Item | Price |
+|------|------:|
+| pen  |  5.00 |
+
+\`\`\`vmark #order
+chart cost as pie of Price labelled Item
+\`\`\`
+
+![c](charts/c.svg)<!--vmark=order.cost|constructor-->
+`;
+  const r = run(src);
+  const a = r.findings.find((f) => f.code === "ANCHOR" && f.message?.includes("constructor"));
+  expect(a?.message).toBe("unknown display rule `constructor`");
+});
+
+test("an unknown display-rule name is ANCHOR", () => {
+  const src = `X **0.4026**<!--vmark=s.margin|nope-->.
+
+\`\`\`vmark #s
+margin precision 4 = 0.4026
+\`\`\`
+`;
+  const r = run(src);
+  const a = r.findings.find((f) => f.code === "ANCHOR")!;
+  expect(a.message).toBe("unknown display rule `nope`");
+});
+
+test("an inherited Object.prototype name on a scalar anchor is an unknown display rule, not a crash", () => {
+  const src = `X **0.4026**<!--vmark=s.margin|constructor-->.
+
+\`\`\`vmark #s
+margin precision 4 = 0.4026
+\`\`\`
+`;
+  const r = run(src);
+  const a = r.findings.find((f) => f.code === "ANCHOR")!;
+  expect(a.message).toBe("unknown display rule `constructor`");
+});
+
+test("an unknown display-rule anchor does not suppress STALE on a sibling anchor of the same scalar", () => {
+  const src = `Sibling **0.4000**<!--vmark=s.x-->.
+Typo **_**<!--vmark=s.x|nope-->.
+
+\`\`\`vmark #s
+x precision 4 = 0.5
+\`\`\`
+`;
+  const r = run(src);
+  expect(r.findings.some((f) => f.code === "ANCHOR")).toBe(true);
+  const stale = r.findings.find((f) => f.code === "STALE" && !f.anchorGroup);
+  expect(stale).toBeDefined();
+  expect(stale!.stored).toBe("0.4000");
+  const formatted = fmt(src, {});
+  const after = run(formatted.output);
+  expect(after.findings.find((f) => f.code === "STALE")).toBeUndefined();
+});
+
+test("a display-rule anchor with an undelimited seed is ANCHOR, not accepted by shape", () => {
+  const src = `Margin 40.26%<!--vmark=s.margin|percent-->.
+
+\`\`\`vmark #s
+margin precision 4 = 0.4026
+\`\`\`
+`;
+  const r = run(src);
+  const a = r.findings.find((f) => f.code === "ANCHOR")!;
+  expect(a.message).toBe(
+    "a display rule needs a delimited seed — wrap a placeholder instead, such as **_**",
+  );
+  expect(r.exitCode).toBe(1);
 });
 
 test("an anchored PMT at precision 2 matches 888.49", () => {
@@ -1045,19 +1139,21 @@ Order total: 110.00<!--vmark=s.order-->.
   expect(r.exitCode).toBe(0);
 });
 
-test("a bare percent-shaped token in front of a numeric anchor is accepted, matching matchesStored's own percent rule", () => {
+test("a bare percent-shaped token in front of a |percent anchor is refused, not accepted by shape", () => {
   const src = `\`\`\`vmark #s
 r precision 4 = 0.125
 \`\`\`
 
-Margin 12.50%<!--vmark=s.r%-->.
+Margin 12.50%<!--vmark=s.r|percent-->.
 `;
   const r = run(src);
-  expect(r.findings).toEqual([]);
-  expect(r.exitCode).toBe(0);
+  const a = r.findings.find((f) => f.code === "ANCHOR")!;
+  expect(a.message).toBe(
+    "a display rule needs a delimited seed — wrap a placeholder instead, such as **_**",
+  );
 });
 
-test("a bare percent-shaped token with no sigil comment is still accepted as a numeric target", () => {
+test("a bare percent-shaped token with no display rule is still accepted as a numeric target", () => {
   const src = `\`\`\`vmark #s
 tax precision 2 = 0.19
 \`\`\`
@@ -1069,12 +1165,25 @@ Tax is 19%<!--vmark=s.tax-->.
   expect(r.exitCode).toBe(0);
 });
 
-test("fmt writes a fresh percent seed and the result still passes check (round-trip)", () => {
+test("fmt does not seed an undelimited |percent anchor, and check still refuses it", () => {
   const src = `\`\`\`vmark #s
 r precision 4 = 0.125
 \`\`\`
 
-Margin 0<!--vmark=s.r%-->.
+Margin 0<!--vmark=s.r|percent-->.
+`;
+  const formatted = fmt(src, {});
+  expect(formatted.changed).toBe(false);
+  const after = run(formatted.output);
+  expect(after.findings.find((f) => f.code === "ANCHOR")).toBeDefined();
+});
+
+test("fmt writes a fresh percent seed at a delimited placeholder, and the result still passes check (round-trip)", () => {
+  const src = `\`\`\`vmark #s
+r precision 4 = 0.125
+\`\`\`
+
+Margin **_**<!--vmark=s.r|percent-->.
 `;
   const formatted = fmt(src, {});
   expect(formatted.changed).toBe(true);
@@ -1222,15 +1331,17 @@ Due by 2026-02-01<!--vmark=s.due-->.
   expect(r.exitCode).toBe(0);
 });
 
-test("a percent sigil on a refused string-anchor span reports both ANCHOR and the existing TYPE refusal", () => {
+test("|percent on a refused string-anchor span reports both ANCHOR and the existing TYPE refusal", () => {
   const src = `\`\`\`vmark #s
 status = "all clear"
 \`\`\`
 
-The status is no problem<!--vmark=s.status%--> today.
+The status is no problem<!--vmark=s.status|percent--> today.
 `;
   const r = run(src);
   expect(r.findings.map((f) => f.code).sort()).toEqual(["ANCHOR", "TYPE"]);
   const type = r.findings.find((f) => f.code === "TYPE")!;
-  expect(type.message).toBe("a % sigil is only legal on a numeric scalar");
+  expect(type.message).toBe(
+    "a display rule is only legal on a value it accepts (percent: numeric only)",
+  );
 });

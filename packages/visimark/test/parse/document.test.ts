@@ -128,20 +128,27 @@ test("a marker shown inside a fenced example is documentation, not a marker", ()
   expect(d.noFormulas).toBeNull();
 });
 
-test("a trailing % on an anchor comment is a percent display request", () => {
-  const src = "**0.4026**<!--vmark=lines.margin%-->\n";
+test("a trailing |name on an anchor comment is a display-rule request", () => {
+  const src = "**0.4026**<!--vmark=lines.margin|percent-->\n";
   const d = locate(src);
   const a = d.anchors[0]!;
   expect(a.sheetId).toBe("lines");
   expect(a.name).toBe("margin");
-  expect(a.percent).toBe(true);
+  expect(a.displayRule).toBe("percent");
   expect(d.malformedAnchors).toEqual([]);
   expect(src.slice(a.value!.start, a.value!.end)).toBe("0.4026");
 });
 
-test("a well-formed anchor without % has no percent flag", () => {
+test("a well-formed anchor without |name has no display rule", () => {
   const src = "**0.4026**<!--vmark=lines.margin-->\n";
-  expect(locate(src).anchors[0]!.percent).toBeUndefined();
+  expect(locate(src).anchors[0]!.displayRule).toBeUndefined();
+});
+
+test("the old trailing % syntax is now a malformed anchor", () => {
+  const src = "**0.4026**<!--vmark=lines.margin%-->\n";
+  const d = locate(src);
+  expect(d.anchors).toEqual([]);
+  expect(d.malformedAnchors).toHaveLength(1);
 });
 
 test("a space before % is a malformed anchor", () => {

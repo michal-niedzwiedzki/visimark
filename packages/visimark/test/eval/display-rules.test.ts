@@ -1,8 +1,8 @@
 import { expect, test } from "bun:test";
 import { Decimal } from "decimal.js";
 import { matchesStored } from "../../src/eval/check.js";
-import { percentDisplay } from "../../src/eval/percent-display.js";
-import { num } from "../../src/eval/value.js";
+import { DISPLAY_RULES, percentDisplay } from "../../src/eval/display-rules.js";
+import { date, num, str } from "../../src/eval/value.js";
 
 test("percentDisplay writes stored × 100 at N − 2", () => {
   expect(percentDisplay(num(new Decimal("0.4026")), 4)).toBe("40.26%");
@@ -20,4 +20,25 @@ test("matchesStored accepts a signed percent as the stored ratio", () => {
   expect(matchesStored(num(new Decimal("0.4026")), "40.26%", 4)).toBe(true);
   expect(matchesStored(num(new Decimal("0.4026")), "0.4026", 4)).toBe(true);
   expect(matchesStored(num(new Decimal("0.4026")), "41.55%", 4)).toBe(false);
+});
+
+test("the registry holds exactly one entry, percent", () => {
+  expect(Object.keys(DISPLAY_RULES)).toEqual(["percent"]);
+});
+
+test("percent's accepts is true only for a numeric value", () => {
+  const percent = DISPLAY_RULES.percent!;
+  expect(percent.accepts(num(new Decimal("0.5")))).toBe(true);
+  expect(percent.accepts(date("2026-01-01"))).toBe(false);
+  expect(percent.accepts(str("hello"))).toBe(false);
+});
+
+test("percent's render is percentDisplay", () => {
+  expect(DISPLAY_RULES.percent!.render).toBe(percentDisplay);
+});
+
+test("an inherited Object.prototype name is not a registered rule", () => {
+  expect(DISPLAY_RULES.constructor).toBeUndefined();
+  expect(DISPLAY_RULES.toString).toBeUndefined();
+  expect(DISPLAY_RULES.__proto__).toBeUndefined();
 });
