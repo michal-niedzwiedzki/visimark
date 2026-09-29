@@ -9,6 +9,11 @@ version number permanently the first time it sees it; `visimark@0.1.0` is the
 standing proof, a hand-publish from a work-in-progress tree that cost the number
 and left an untraceable tarball on the registry for good.
 
+For where every artifact is actually listed today — registries fed
+automatically by this tag, one-time manual submissions already sent, and
+directories still prepared but not sent — see
+[`docs/distribution.md`](distribution.md).
+
 ## What one tag publishes
 
 | Leg | Reads version from | Guard before it publishes |
