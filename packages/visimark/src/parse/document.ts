@@ -160,8 +160,11 @@ export const NO_FORMULAS_MARKER = "<!--vmark:no-formulas-->";
 const NO_FORMULAS_RE = /^<!--\s*vmark\s*:\s*no-formulas\s*-->$/;
 /** a trailing ISO-shaped date, tried before TRAILING_NUMBER_RE — otherwise
  *  the number regex reads a date's last `-DD` as a negative number and
- *  mis-scopes the span to three characters instead of the whole date */
-const TRAILING_DATE_RE = /(\d{4}-\d{2}-\d{2})\s*$/;
+ *  mis-scopes the span to three characters instead of the whole date.
+ *  Anchored on a preceding boundary (start of string or whitespace) so a
+ *  digit glued directly in front — `12026-01-15` — does not read as the
+ *  date `2026-01-15` preceded by a stray `1`. */
+const TRAILING_DATE_RE = /(?:^|\s)(\d{4}-\d{2}-\d{2})\s*$/;
 const TRAILING_NUMBER_RE = /(-?\d+(?:\.\d+)?)\s*$/;
 /** the value an anchor rewrites when it is not a number — the trailing word,
  *  so a string-valued scalar can be materialised in prose at all */
@@ -412,7 +415,10 @@ function anchorValueSpan(prev: MdNode): (Span & { kind: AnchorTargetKind }) | nu
     const value = prev.value ?? "";
     const d = TRAILING_DATE_RE.exec(value);
     if (d) {
-      const start = off(prev, "start") + d.index;
+      // d.index is the boundary's own start (the leading `^`/`\s` the
+      // non-capturing group consumed), not the date's — locate the date
+      // substring within the full match rather than assuming an offset.
+      const start = off(prev, "start") + d.index + d[0].indexOf(d[1]!);
       return { start, end: start + d[1]!.length, kind: "text" };
     }
     const m = TRAILING_NUMBER_RE.exec(value);

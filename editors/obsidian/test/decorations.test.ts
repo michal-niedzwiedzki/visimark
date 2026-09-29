@@ -194,3 +194,16 @@ test("decorationsFor calls a value disagrees once check has actually read the im
   const readerBackedMark = readerBacked.find((d) => d.name === "benchmark.Mean");
   expect(readerBackedMark?.mark).toBe("disagrees"); // the right answer, once check has read the CSV
 });
+
+test("a refused anchor placeholder is not marked at all — no false claim of authorship", () => {
+  const source =
+    "```vmark #s\n" +
+    "b precision 2 = 0.25\n" +
+    "```\n\n" +
+    "It comes to <!--vmark=s.b--> PLN.\n";
+  const model = build(locate(source));
+  const result = check(model);
+  expect(result.findings.map((f) => f.code)).toEqual(["ANCHOR"]);
+  const decorations = decorationsFor(model, result);
+  expect(decorations.find((d) => d.name === "s.b")).toBeUndefined();
+});

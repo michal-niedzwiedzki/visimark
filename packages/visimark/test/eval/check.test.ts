@@ -3,6 +3,7 @@ import { clean, drift } from "../examples.js";
 import { locate } from "../../src/parse/document.js";
 import { build } from "../../src/model/build.js";
 import { check } from "../../src/eval/check.js";
+import { fmt } from "../../src/write/fmt.js";
 import { evalValues } from "../../src/report/json.js";
 import type { Finding } from "../../src/model/types.js";
 
@@ -1044,6 +1045,44 @@ Order total: 110.00<!--vmark=s.order-->.
   expect(r.exitCode).toBe(0);
 });
 
+test("a bare percent-shaped token in front of a numeric anchor is accepted, matching matchesStored's own percent rule", () => {
+  const src = `\`\`\`vmark #s
+r precision 4 = 0.125
+\`\`\`
+
+Margin 12.50%<!--vmark=s.r%-->.
+`;
+  const r = run(src);
+  expect(r.findings).toEqual([]);
+  expect(r.exitCode).toBe(0);
+});
+
+test("a bare percent-shaped token with no sigil comment is still accepted as a numeric target", () => {
+  const src = `\`\`\`vmark #s
+tax precision 2 = 0.19
+\`\`\`
+
+Tax is 19%<!--vmark=s.tax-->.
+`;
+  const r = run(src);
+  expect(r.findings).toEqual([]);
+  expect(r.exitCode).toBe(0);
+});
+
+test("fmt writes a fresh percent seed and the result still passes check (round-trip)", () => {
+  const src = `\`\`\`vmark #s
+r precision 4 = 0.125
+\`\`\`
+
+Margin 0<!--vmark=s.r%-->.
+`;
+  const formatted = fmt(src, {});
+  expect(formatted.changed).toBe(true);
+  const after = run(formatted.output);
+  expect(after.findings).toEqual([]);
+  expect(after.exitCode).toBe(0);
+});
+
 test("a bare non-date token in front of a date anchor refuses", () => {
   const src = `\`\`\`vmark #s
 due = 2026-02-01
@@ -1077,6 +1116,17 @@ due = 2026-01-15
 \`\`\`
 
 Due by 01/15/2026<!--vmark=s.due-->.
+`;
+  const r = run(src);
+  expect(r.findings.map((f) => f.code)).toEqual(["ANCHOR"]);
+});
+
+test("a date-shaped tail glued to an unrelated leading digit does not qualify as a date anchor's target", () => {
+  const src = `\`\`\`vmark #s
+due = 2026-01-15
+\`\`\`
+
+Due 12026-01-15<!--vmark=s.due-->.
 `;
   const r = run(src);
   expect(r.findings.map((f) => f.code)).toEqual(["ANCHOR"]);

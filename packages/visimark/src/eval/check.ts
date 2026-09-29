@@ -661,7 +661,10 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
         if (a.value!.kind !== "text") continue;
         const text = model.source.slice(a.value!.start, a.value!.end);
         if (v0.t === "num") {
-          if (parseDecorated(text).kind === "number") continue;
+          // numeric-shaped includes a percent form (`12.50%`, `-5%`) — the
+          // same "is this numeric" test matchesStored already applies, so a
+          // bare percent-shaped placeholder isn't refused as non-numeric.
+          if (parseDecorated(text).kind === "number" || PERCENT_RE.test(text)) continue;
           refusedAnchors.add(a.commentSpan.start);
           emit(
             {
