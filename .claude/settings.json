@@ -17,6 +17,11 @@
             "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR/.agents/hooks/format-and-lint.sh\"",
             "statusMessage": "oxfmt + oxlint"
+          },
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.agents/hooks/visimark-check.sh\"",
+            "statusMessage": "visimark check"
           }
         ]
       }
