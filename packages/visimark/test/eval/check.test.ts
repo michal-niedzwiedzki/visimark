@@ -1132,6 +1132,43 @@ Due 12026-01-15<!--vmark=s.due-->.
   expect(r.findings.map((f) => f.code)).toEqual(["ANCHOR"]);
 });
 
+test("a numeric anchor does not read a glued date's -DD tail as a negative number", () => {
+  const src = `\`\`\`vmark #s
+w precision 2 = 7
+\`\`\`
+
+Ref 12026-01-15<!--vmark=s.w-->.
+`;
+  const r = run(src);
+  expect(r.findings.map((f) => f.code)).toEqual(["ANCHOR"]);
+});
+
+test("a bare decorated number with no space before the unit is still accepted, unchanged", () => {
+  const src = `\`\`\`vmark #s
+p precision 2 = 110.00
+\`\`\`
+
+Price: $110.00<!--vmark=s.p-->.
+`;
+  const r = run(src);
+  expect(r.findings).toEqual([]);
+  expect(r.exitCode).toBe(0);
+});
+
+test("fmt does not corrupt a glued date's tail when the anchor is refused (round-trip)", () => {
+  const src = `\`\`\`vmark #s
+w precision 2 = 7
+\`\`\`
+
+Ref 12026-01-15<!--vmark=s.w-->.
+`;
+  const formatted = fmt(src, {});
+  expect(formatted.changed).toBe(false);
+  expect(formatted.output).toBe(src);
+  const after = run(formatted.output);
+  expect(after.findings.map((f) => f.code)).toEqual(["ANCHOR"]);
+});
+
 test("bare prose in front of a string anchor always refuses", () => {
   const src = `\`\`\`vmark #s
 status = "all clear"

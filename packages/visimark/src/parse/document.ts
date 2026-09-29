@@ -165,7 +165,12 @@ const NO_FORMULAS_RE = /^<!--\s*vmark\s*:\s*no-formulas\s*-->$/;
  *  digit glued directly in front — `12026-01-15` — does not read as the
  *  date `2026-01-15` preceded by a stray `1`. */
 const TRAILING_DATE_RE = /(?:^|\s)(\d{4}-\d{2}-\d{2})\s*$/;
-const TRAILING_NUMBER_RE = /(-?\d+(?:\.\d+)?)\s*$/;
+/** A leading lookbehind refuses a "-" or digit immediately before the match:
+ *  without it, a glued date's own hyphen reads as a negative sign, reducing
+ *  "12026-01-15" to the number -15. A decoration glued with no space (the
+ *  "$" in "$110.00") is unaffected — only a digit or "-" right before the
+ *  match is forbidden, not decoration characters in general. */
+const TRAILING_NUMBER_RE = /(?<![\d-])(-?\d+(?:\.\d+)?)\s*$/;
 /** the value an anchor rewrites when it is not a number — the trailing word,
  *  so a string-valued scalar can be materialised in prose at all */
 const TRAILING_WORD_RE = /(\S+?)\s*$/;
