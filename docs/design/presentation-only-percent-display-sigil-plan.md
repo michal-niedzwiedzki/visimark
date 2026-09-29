@@ -159,14 +159,14 @@ test("matchesStored accepts a signed percent as the stored ratio", () => {
 
 - [ ] **Step 1: tests (RED).** A helper document:
 
-```markdown
+````markdown
 Margin **40.26%**<!--vmark=s.margin%-->.
 Bare **0.4026**<!--vmark=s.margin-->.
 
 ```vmark #s
 margin precision 4 = 0.4026
 ```
-```
+````
 
 `check` exit 0. Change the percent span to `41.55%`: one `STALE` with `stored: "41.55%"`, `computed: "40.26%"`. `precision 1` + `%` → `PRECISION`. A date scalar with `%` → `TYPE`. `**$0.40**<!--vmark=s.margin%-->` → `UNIT`. `![c](x.svg)<!--vmark=s.ch%-->` plus `chart ch as bar of …` → `TYPE`. Two anchors, one `%` and one bare, both matching → exit 0.
 

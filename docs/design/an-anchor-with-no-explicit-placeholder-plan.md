@@ -396,7 +396,7 @@ git commit -m "feat: refuse a bare anchor placeholder that doesn't denote a valu
 
 Write `packages/visimark/test/fixtures/anchor-placeholder-acceptance.md`:
 
-```markdown
+````markdown
 Order total: **110.00**<!--vmark=s.order-->.
 It comes to <!--vmark=s.bad--> PLN.
 Due by 2026-01-15<!--vmark=s.due-->.
@@ -416,7 +416,7 @@ status_bad = "all clear"
 seed precision 2 = 7
 embed = "a bold claim"
 ```
-```
+````
 
 - [ ] **Step 2: Write the acceptance tests**
 

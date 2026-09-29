@@ -287,7 +287,7 @@ git commit -m "$(printf 'test: FLOOR check-level reporting — per-row TYPE, sta
 - [ ] **Step 1: Create the fixture**
 
 `packages/visimark/test/fixtures/floor-nodes.md` — the kubernetes capacity arithmetic as a standalone check-clean document. Integer write precision on the node/CPU/memory scalars (anchors have no decimal point). Cross-sheet refs are qualified. Both sheets are scalar-only (no table), which is legal.
-```markdown
+````markdown
 # Kubernetes worker-node capacity
 
 Worker-node budget **12000**<!--vmark=budget.WorkerBudget--> USD/month.
@@ -307,7 +307,7 @@ TotalCPU = MaxNodes * budget.CPUPerWorker
 UsableCPU = FLOOR(TotalCPU * (1 - budget.ReservedCapacity), 1)
 TotalMemory = MaxNodes * budget.MemoryPerWorker
 UsableMemory = FLOOR(TotalMemory * (1 - budget.ReservedCapacity), 1)
-```
+````
 
 Maximum worker nodes: **48**<!--vmark=kubernetes.MaxNodes-->
 

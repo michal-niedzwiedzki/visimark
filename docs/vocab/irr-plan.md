@@ -705,7 +705,7 @@ git commit -m "$(printf 'docs: reference entry for IRR\n\n%s' '<trailer>')"
 
 `packages/visimark/test/fixtures/irr-press.md`, byte for byte the note in spec §1 (the markdown inside the fence, not the fence):
 
-```markdown
+````markdown
 # Brake press, rate of return
 
 The same series — 48000.00 PLN out today, 20000.00 PLN back at the end of each
@@ -727,7 +727,7 @@ rate precision 4 = IRR(Cash)
 
 assert rate > hurdle
 ```
-```
+````
 
 `packages/visimark/test/cli/irr.test.ts`, copied from `npv.test.ts` with the names changed:
 
