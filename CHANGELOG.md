@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Added
+
+- **A bare, unwrapped word in front of an anchor comment is no longer
+  silently claimed as its rewrite target.** `fmt` used to overwrite whatever
+  word happened to sit in front of an anchor, deleting it — and `check` never
+  verified a string- or date-anchored value against its surrounding prose at
+  all. Both now require the bare token to already denote a value of the
+  anchor's own type (numeric, ISO date, or — never, since bare prose is
+  always ambiguous — string); anything else refuses with `ANCHOR` instead. A
+  delimited placeholder (`**0**`, `` `0` ``) is unaffected, and `**_**` is now
+  the documented convention for an explicit seed. See
+  [#298](https://github.com/michal-niedzwiedzki/visimark/issues/298).
+
 ### Changed
 
 - **VisiMark is now described as a document integrity layer for Markdown, not
