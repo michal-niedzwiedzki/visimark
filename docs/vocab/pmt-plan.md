@@ -358,7 +358,7 @@ git commit -m "$(printf 'test: PMT write precision and a bad row\n\n%s' '<traile
 
 `packages/visimark/test/fixtures/pmt-press.md`:
 
-```markdown
+````markdown
 # Brake press, financed
 
 The quote is for one press at **48000.00**<!--vmark=press.price--> PLN.
@@ -378,7 +378,7 @@ param term   precision 0 = default 36
 monthly_rate precision 3 = annual / 12
 instalment   precision 2 = PMT(monthly_rate, term, price)
 ```
-```
+````
 
 - [ ] **Step 2: Write the CLI test**
 

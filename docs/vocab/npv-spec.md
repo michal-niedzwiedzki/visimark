@@ -8,7 +8,7 @@
 
 **The document that motivated it** (issue #157) is a one-asset project note. The outlay and the three savings are already in the table. The hurdle is already in the prose. The present value has to move when any of those figures moves.
 
-```markdown
+````markdown
 # Brake press, as a project
 
 Buying the press costs 48000.00 PLN today and is expected to save 20000.00 PLN
@@ -30,7 +30,7 @@ present precision 2 = NPV(hurdle, Cash)
 
 assert present > 0
 ```
-```
+````
 
 `8%` is the stored number `0.08`. `NPV(0.08, Cash)` for this column, rounded half-up to 2 decimals, is `3541.94`.
 

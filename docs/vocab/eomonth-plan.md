@@ -148,7 +148,7 @@ Import `eomonth` from `./dates.js`. Order of checks: date first, then number, th
 - Produces: proof that `visimark check` is clean and `visimark eval --get terms.due` prints `2026-03-31` for the motivating document.
 
 - [ ] **Step 1: fixture** — the issue's document, made otherwise-clean by supplying `vat` in a document-scope block:
-```markdown
+````markdown
 ## Lines
 
 | Item                | Unit | Qty |    Rate |     Net |
@@ -166,7 +166,7 @@ Net = Qty * Rate
 subtotal    = SUM(Net)
 vat_total   = SUM(Net) * vat
 gross_total = SUM(Net) + vat_total
-```
+````
 
 Net of tax the work comes to **16320.00**<!--vmark=lines.subtotal--> PLN,
 **20073.60**<!--vmark=lines.gross_total--> PLN gross.

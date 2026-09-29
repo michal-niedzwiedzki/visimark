@@ -8,7 +8,7 @@
 
 **The document that motivated it** (issue #158) is the same brake-press series as #157. The outlay and the three returns are already in the table. The hurdle is already in the prose. The rate the series earns has to move when any of those figures moves.
 
-```markdown
+````markdown
 # Brake press, rate of return
 
 The same series — 48000.00 PLN out today, 20000.00 PLN back at the end of each
@@ -30,7 +30,7 @@ rate precision 4 = IRR(Cash)
 
 assert rate > hurdle
 ```
-```
+````
 
 `8%` is the stored number `0.08`. `IRR(Cash)` on this column, rounded half-up to 4 decimals, is `0.1204`. The `%` anchor prints that stored rate at precision − 2, which is `12.04%`.
 

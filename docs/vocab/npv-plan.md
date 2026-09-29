@@ -728,7 +728,7 @@ git commit -m "$(printf 'test: NPV declares its width and refuses a blank cell\n
 
 `packages/visimark/test/fixtures/npv-press.md`, byte for byte the note from spec §1:
 
-```markdown
+````markdown
 # Brake press, as a project
 
 Buying the press costs 48000.00 PLN today and is expected to save 20000.00 PLN
@@ -750,7 +750,7 @@ present precision 2 = NPV(hurdle, Cash)
 
 assert present > 0
 ```
-```
+````
 
 - [ ] **Step 2: Write the CLI test**
 

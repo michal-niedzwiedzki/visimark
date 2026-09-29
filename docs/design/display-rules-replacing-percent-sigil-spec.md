@@ -164,7 +164,7 @@ reference rather than restating it.
 New fixture, `packages/visimark/test/fixtures/display-rule-percent.md` (replaces
 `percent-display-sigil.md`, migrated to the new syntax):
 
-```markdown
+````markdown
 ```vmark #s
 margin precision 4 = 0.4026
 loss precision 4 = -0.05
@@ -174,7 +174,7 @@ over precision 4 = 1.50
 Margin **40.26%**<!--vmark=s.margin|percent-->.
 Negative **-5%**<!--vmark=s.loss|percent-->.
 Over **150%**<!--vmark=s.over|percent-->.
-```
+````
 
 ```
 $ visimark check display-rule-percent.md
@@ -196,7 +196,7 @@ Margin **41.55%**<!--vmark=s.margin|percent-->.
 
 Refusal cases, new fixture `packages/visimark/test/fixtures/display-rule-errors.md`:
 
-```markdown
+````markdown
 ```vmark #s
 margin precision 4 = 0.4026
 status = "ok"
@@ -206,7 +206,7 @@ Bare 40.26%<!--vmark=s.margin|percent-->.
 Unknown **40.26%**<!--vmark=s.margin|nope-->.
 Wrong type **ok**<!--vmark=s.status|percent-->.
 Old syntax **40.26%**<!--vmark=s.margin%-->.
-```
+````
 
 ```
 $ visimark check display-rule-errors.md

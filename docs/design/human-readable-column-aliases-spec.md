@@ -98,7 +98,7 @@ Without this, `infer` would keep silently treating every non-identifier header a
 
 **`docs/example-bandwidth.md` — a new normative example**, joining `example-invoice.md`, `example-invoice-drift.md` and `example-charts.md` in the acceptance suite:
 
-```markdown
+````markdown
 | GPUs | Bandwidth per Unit (TB/s, full-duplex) | GPU-to-GPU Bandwidth (GB/s, full-duplex) |
 |---:|---:|---:|
 |    8 |                                     3.2 |                                       400 |
@@ -111,7 +111,7 @@ Without this, `infer` would keep silently treating every non-identifier header a
 gpu_bw = ROUND(bpu / GPUs * 1000, 0)
 peak = MAX(gpu_bw)
 ```
-```
+````
 
 Anchored into prose: `Peak GPU-to-GPU bandwidth: **400**<!--vmark=network.peak-->`.
 
