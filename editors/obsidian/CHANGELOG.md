@@ -7,7 +7,7 @@ stall the engine or ship plugin versions nobody changed
 ([`obsidian-plugin-spec.md`](../../docs/design/obsidian-plugin-spec.md) §2.2).
 Each entry says which engine version the bundle carries.
 
-## Unreleased
+## 0.2.3 - 2026-09-30
 
 The plugin description now leads with the new pitch: it checks that every
 number in a note still matches the formula that produced it. That is a
@@ -16,6 +16,18 @@ wording change only.
 A `|nbsp` anchor on a string value (`**past&nbsp;due**<!--vmark=s.status|nbsp-->`)
 now gets a `STALE` diagnostic when its prose drifts, with a formatting fix, and
 `ANCHOR` when the value cannot be written there.
+
+A bare, unwrapped word in front of an anchor comment that does not already
+denote a value of the anchor's own type is no longer silently claimed as a
+computed value — it now refuses with `ANCHOR` instead. A delimited
+placeholder (`**0**`, `` `0` ``) is unaffected.
+
+Anchor comments can now name a display rule (`<!--vmark=x.y|name-->`);
+`percent` replaces the old `%` sigil, which is now reported as `ANCHOR`. An
+unrecognised name, an undelimited seed, or a display rule applied to a value
+of a type it doesn't accept gets `ANCHOR`/`TYPE`.
+
+Bundles engine 0.1.11.
 
 ## 0.2.2 - 2026-09-28
 
