@@ -69,12 +69,13 @@
 <h2>Priya keeps her lab notebook where she keeps everything else</h2>
 <p>Priya is finishing a PhD in behavioral economics and runs her work from one vault: literature notes, meetings, and A/B test results from a part-time consulting job.</p>
 <p>Her experiment log is just a normal note with a results table:</p>
-<pre><code class="language-vmark">Rate precision 4 = Conversions / Visitors
+<pre><code class="language-markdown">```vmark
+Rate precision 4 = Conversions / Visitors
 
 visitors    = SUM(Visitors)
 conversions = SUM(Conversions)
 pooled_rate precision 4 = conversions / visitors
-
+```
 </code></pre>
 <p>She pastes a correction from an analytics export. VisiMark notices that a value no longer matches its formula.</p>
 <p>The status bar changes from <code>VisiMark ✓</code> to <code>VisiMark · 1 to look at</code>.</p>
@@ -82,11 +83,12 @@ pooled_rate precision 4 = conversions / visitors
 <h2>Kasia's invoices live next to her project notes</h2>
 <p>Kasia is a freelance UX designer. Her invoices live in the same vault as the projects they belong to. That's one of the reasons she uses Obsidian in the first place.</p>
 <p>Her invoice might contain:</p>
-<pre><code class="language-vmark">Net             = Qty * Rate
+<pre><code class="language-markdown">```vmark
+Net             = Qty * Rate
 VAT precision 2 = Net * vat
 Gross           = Net + VAT
 gross_total     = SUM(Gross)
-
+```
 </code></pre>
 <p>A client asks for two more hours. Kasia changes the quantity on her phone while riding the train.</p>
 <p>The totals update, and Reading mode shows a small provenance mark. Tap it and she can see the formula behind the number. The same works on desktop and mobile.</p>
@@ -101,8 +103,9 @@ gross_total     = SUM(Gross)
 <h2>Grace runs a sprint from a vault</h2>
 <p>Grace leads a five-person engineering team. Their shared vault holds sprint plans alongside the notes explaining why decisions were made.</p>
 <p>Capacity planning can be as small as:</p>
-<pre><code class="language-vmark">headroom precision 2 = people.available_total - work.committed
-
+<pre><code class="language-markdown">```vmark
+headroom precision 2 = people.available_total - work.committed
+```
 </code></pre>
 <p>Someone adds a work item. The headroom recalculates when the note is opened.</p>
 <p>It's not revolutionary. That's rather the point.</p>
