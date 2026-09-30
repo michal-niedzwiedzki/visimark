@@ -19,6 +19,33 @@ computed number in it carries the formula that produced it, that a machine can
 prove the two still agree, and that a change to either shows up as a small,
 readable diff.
 
+## Who it's for
+
+Six audiences so far, each with a specific entry point. Kept short on
+purpose — it grows when one of these gets a real user, not before.
+
+- **Agents and reviewers** verifying a document a model just wrote — the
+  [MCP server](docs/mcp.md) and the [agent skill](skills/visimark/SKILL.md).
+- **Analysts, founders, capacity planners** who want a what-if without a
+  second tab or a copy of the file — `eval --scenario`, worked through on a
+  headcount model in [`docs/tutorial/runway.md`](docs/tutorial/runway.md).
+- **Anyone who already lints Markdown** — the
+  [pre-commit hook](docs/ci.md#23-git-hooks-and-pre-commit),
+  [`remark-lint-visimark`](docs/ci.md#24-the-remarkunified-plugin),
+  [`markdownlint-rule-visimark`](docs/ci.md#25-the-markdownlint-custom-rule),
+  and the composite [GitHub Action](action.yml).
+- **Engineers, scientists, anyone with a unit** — a column already carries a
+  currency symbol or a physical unit (see
+  [What it refuses to do](#what-it-refuses-to-do)); an algebraic unit type
+  system is being scoped, not shipped —
+  [issue #41](https://github.com/michal-niedzwiedzki/visimark/issues/41).
+- **Obsidian users with a vault of numbers** — the
+  [Obsidian plugin](editors/obsidian/README.md), which marks every computed
+  value in reading mode and Live Preview.
+- **Finance** — `NPV`, `IRR`, `PMT`, and the decimal precision the three of
+  them force you to declare, worked through in
+  [a loan and an investment appraisal](docs/articles/howto-finance-npv-irr-pmt/howto-finance-npv-irr-pmt.md).
+
 ## A wrong invoice that renders clean
 
 [`docs/example-invoice-drift.md`](docs/example-invoice-drift.md) is a real B2B

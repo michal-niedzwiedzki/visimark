@@ -67,7 +67,9 @@
       "icon": "../assets/excel.webp",
       "path": "10-things-excel-cannot-do-but-visimark-can/10-things-excel-cannot-do.md",
       "posted": "https://visimark.dev/articles/10-things-excel-cannot-do-but-visimark-can/",
-      "reposted": [],
+      "reposted": [
+        "https://dev.to/holdmybear/10-things-excel-cannot-do-but-visimark-can-1j2e-temp-slug-3340275"
+      ],
       "featured": true
     },
     {
