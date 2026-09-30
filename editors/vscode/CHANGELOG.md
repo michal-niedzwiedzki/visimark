@@ -1,8 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.1.11 - 2026-09-30
 
 - A `|nbsp` anchor on a string value (`**past&nbsp;due**<!--vmark=s.status|nbsp-->`) now gets a `STALE` diagnostic when its prose drifts, with a formatting fix, and `ANCHOR` when the value cannot be written there.
+- A bare, unwrapped word in front of an anchor comment that does not already denote a value of the anchor's own type now gets an `ANCHOR` diagnostic instead of being silently rewritten. A delimited placeholder (`**0**`, `` `0` ``) is unaffected.
+- Anchor comments can now name a display rule (`<!--vmark=x.y|name-->`); `percent` replaces the old `%` sigil, which is now reported as `ANCHOR`. An unrecognised name, an undelimited seed, or a display rule applied to a value of a type it doesn't accept gets `ANCHOR`/`TYPE`.
 
 ## 0.1.10 - 2026-09-28
 
