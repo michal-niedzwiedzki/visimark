@@ -103,8 +103,13 @@ describe.each(pages)("%s", (page) => {
         .filter((s) => s.startsWith("https://")),
     );
     const referenced = new Set(
-      [...markup(page).matchAll(/<(?:script|link)\b[^>]*?(?:src|href)="(https:\/\/[^/"]+)/g)]
-        .map((m) => m[1]!)
+      [...markup(page).matchAll(/<(?:script|link)\b[^>]*>/g)]
+        // rel="canonical" is metadata for search engines, not a fetch: the
+        // browser never requests it, so like preconnect below it needs no
+        // grant.
+        .filter((m) => !/\brel="canonical"/.test(m[0]))
+        .map((m) => /(?:src|href)="(https:\/\/[^/"]+)/.exec(m[0])?.[1])
+        .filter((origin): origin is string => origin !== undefined)
         // preconnect is a hint, not a fetch, and the host it names is always
         // reached through one of the tags below it.
         .filter((origin) => origin !== "https://fonts.gstatic.com"),

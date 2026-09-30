@@ -1,11 +1,5 @@
 # Markdown wins: Better in spreadsheeting than spreadsheet
 
-Tags: Markdown, Spreadsheets, CI, AI
-Author: Michał Niedźwiedzki
-
-Posted:
-Reposted:
-
 ## He needed one number. Calc wanted a relationship.
 
 Michał was building a product after hours, the kind you open after the day job has been put in a drawer. He needed the GMV where a flat monthly plan and a commission plan cost the same. Simple maths: two prices and a percentage. He threw some inputs at it, squinted, adjusted, squinted again.

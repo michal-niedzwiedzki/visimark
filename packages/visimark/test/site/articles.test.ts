@@ -6,8 +6,10 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   articleBody,
+  articleCanonicalUrl,
   articleHref,
   articlePublishedUrl,
+  articleRepostUrls,
   stripFrontMatter,
   type Article,
 } from "../../src/site/articles.js";
@@ -41,18 +43,20 @@ describe("articles.json", () => {
     }
   });
 
-  test("every entry has an author, and its Markdown names the same one", () => {
+  test("every entry has a title, an author, a teaser and tags", () => {
     for (const a of articles) {
+      expect(a.title.trim(), a.slug).not.toBe("");
       expect(a.author.trim(), a.slug).not.toBe("");
-      expect(readFileSync(join(dir, a.path), "utf8"), a.slug).toContain(`\nAuthor: ${a.author}\n`);
+      expect(a.teaser.trim(), a.slug).not.toBe("");
+      expect(a.tags.length, a.slug).toBeGreaterThan(0);
     }
   });
 
-  test("every entry has a title, a teaser and tags", () => {
+  test("no Markdown file repeats the tags or author articles.json already carries", () => {
     for (const a of articles) {
-      expect(a.title.trim()).not.toBe("");
-      expect(a.teaser.trim()).not.toBe("");
-      expect(a.tags.length).toBeGreaterThan(0);
+      const md = readFileSync(join(dir, a.path), "utf8");
+      expect(md, a.slug).not.toMatch(/^Tags:/m);
+      expect(md, a.slug).not.toMatch(/^Author:/m);
     }
   });
 });
@@ -82,20 +86,38 @@ describe("article links", () => {
     expect(html).toContain('href="../../articles/a%20b/"');
   });
 
-  test("the published url is offered only when it is https", () => {
-    expect(articlePublishedUrl({ ...base, url: "https://dev.to/a" })).toBe("https://dev.to/a");
-    expect(articlePublishedUrl({ ...base, url: "javascript:alert(1)" })).toBeUndefined();
+  test("with no `posted`, the canonical url is this site's own reader page", () => {
+    expect(articleCanonicalUrl(base)).toBe("https://visimark.dev/articles/a%20b/");
     expect(articlePublishedUrl(base)).toBeUndefined();
+  });
+
+  test("`posted` elsewhere becomes both the canonical url and the published link", () => {
+    const a = { ...base, posted: "https://dev.to/a" };
+    expect(articleCanonicalUrl(a)).toBe("https://dev.to/a");
+    expect(articlePublishedUrl(a)).toBe("https://dev.to/a");
+  });
+
+  test("a non-https `posted` is ignored, falling back to this site", () => {
+    const a = { ...base, posted: "javascript:alert(1)" };
+    expect(articleCanonicalUrl(a)).toBe("https://visimark.dev/articles/a%20b/");
+    expect(articlePublishedUrl(a)).toBeUndefined();
+  });
+
+  test("`reposted` is filtered to https urls", () => {
+    expect(
+      articleRepostUrls({ ...base, reposted: ["https://x.example/a", "javascript:alert(1)"] }),
+    ).toEqual(["https://x.example/a"]);
+    expect(articleRepostUrls(base)).toEqual([]);
   });
 });
 
 describe("stripFrontMatter", () => {
-  test("drops the title and the metadata block, keeps the body", () => {
-    const md = "# T\n\nTags: A, B\nAuthor: Me\n\nPosted:\nReposted:\n\n## First\n\nText\n";
+  test("drops the title line and the blank lines around it, keeps the body", () => {
+    const md = "# T\n\n\n## First\n\nText\n";
     expect(stripFrontMatter(md)).toBe("## First\n\nText\n");
   });
 
-  test("leaves a body that has no metadata alone", () => {
+  test("leaves a body that has no title alone", () => {
     expect(stripFrontMatter("# T\n\nHello\n")).toBe("Hello\n");
   });
 });

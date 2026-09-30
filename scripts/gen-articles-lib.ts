@@ -13,7 +13,9 @@ import remarkRehype from "remark-rehype";
 import { unified } from "unified";
 import {
   articleBody,
+  articleCanonicalUrl,
   articlePublishedUrl,
+  articleRepostUrls,
   articleSourceUrl,
   type Article,
 } from "../packages/visimark/src/site/articles.js";
@@ -140,6 +142,7 @@ export function pageShell(opts: PageShellOptions): string {
     <meta property="og:image" content="${ogImage}" />${ogImageDimensionTags}
     <meta name="twitter:card" content="summary_large_image" />
     <title>${escapeHtml(title)}</title>
+    <link rel="canonical" href="${escapeHtml(ogUrl)}" />
     <link rel="icon" type="image/webp" href="${base}assets/visimark.webp" />
     <link rel="stylesheet" href="${base}styles.css" />
   </head>
@@ -202,14 +205,20 @@ function bannerHtml(a: Article): string {
 
 function readerHeader(a: Article): string {
   const published = articlePublishedUrl(a);
+  const reposts = articleRepostUrls(a);
+  const publishedLink = published
+    ? `<a href="${escapeHtml(published)}">Also published here</a> &middot; `
+    : "";
+  const repostLinks = reposts
+    .map(
+      (u, i) =>
+        `<a href="${escapeHtml(u)}">Reposted${reposts.length > 1 ? ` (${i + 1})` : ""}</a> &middot; `,
+    )
+    .join("");
   return `<header class="reader-head">
             <h1>${escapeHtml(a.title)}</h1>
             <p class="reader-meta">By ${escapeHtml(a.author)} &middot; ${a.tags.map(escapeHtml).join(", ")}</p>
-            <p class="reader-links">${
-              published
-                ? `<a href="${escapeHtml(published)}">Also published here</a> &middot; `
-                : ""
-            }<a href="${escapeHtml(articleSourceUrl(a))}">Markdown source</a> &middot; <a href="../../articles.html">All articles</a></p>
+            <p class="reader-links">${publishedLink}${repostLinks}<a href="${escapeHtml(articleSourceUrl(a))}">Markdown source</a> &middot; <a href="../../articles.html">All articles</a></p>
           </header>`;
 }
 
@@ -241,7 +250,7 @@ export function renderArticlePage(
     generatedBy: GENERATED_BY,
     title: `${article.title} — VisiMark`,
     ogTitle: article.title,
-    ogUrl: `${SITE_URL}articles/${article.slug}/`,
+    ogUrl: articleCanonicalUrl(article),
     description: article.teaser,
     ogType: "article",
     ogImage: article.banner

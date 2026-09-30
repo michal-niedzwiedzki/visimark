@@ -1,11 +1,5 @@
 # 10 things Excel cannot do but VisiMark can
 
-Tags: Excel, Markdown, Git, CI
-Author: Michał Niedźwiedzki
-
-Posted:
-Reposted:
-
 An `.xlsx` is a zip of XML. A VisiMark document is a Markdown file. What follows is what that difference does.
 
 ## 1. Show the formulas in the pull request
