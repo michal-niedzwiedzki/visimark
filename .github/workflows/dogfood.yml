@@ -59,6 +59,7 @@ jobs:
           exclude=(
             "docs/example-invoice-drift.md"
             "docs/example-quote-plain.md"
+            "docs/example-lunch-split-drift.md"
             "docs/design/presentation-only-percent-display-sigil-plan.md"
             "docs/design/presentation-only-percent-display-sigil-spec.md"
           )
@@ -113,6 +114,23 @@ jobs:
         if: steps.plain.outcome != 'failure'
         run: |
           echo "::error::docs/example-quote-plain.md is supposed to fail visimark check with COVERAGE — it passed instead. Either rules were written into it, or the coverage rule regressed."
+          exit 1
+
+      # A small, deliberately-wrong total — the demo fixture for the
+      # homepage's "Scan your repo" widget (docs/index.html#repo-scan): one
+      # glance at the table shows the stored total is wrong, unlike the much
+      # longer invoice-drift example above.
+      - name: the lunch split is supposed to fail
+        id: lunch
+        continue-on-error: true
+        uses: ./
+        with:
+          files: "docs/example-lunch-split-drift.md"
+
+      - name: fail the job if the lunch split stopped failing
+        if: steps.lunch.outcome != 'failure'
+        run: |
+          echo "::error::docs/example-lunch-split-drift.md is supposed to fail visimark check — it passed instead. Either the example was fixed by accident, or check regressed."
           exit 1
 
   precommit-hook-self-check:
