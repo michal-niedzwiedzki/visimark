@@ -81,10 +81,7 @@
       "icon": "../assets/pie.webp",
       "banner": "howto-finance-npv-irr-pmt/howto-finance-npr-ip-pmt.webp",
       "path": "howto-finance-npv-irr-pmt/howto-finance-npv-irr-pmt.md",
-      "reposted": [
-        "https://dev.to/holdmybear/how-to-finance-with-visimark-npv-irr-pmt-f1a",
-        "https://hashnode.com/edit/cmunvihvs00000agmaevz2eyv"
-      ],
+      "reposted": ["https://dev.to/holdmybear/how-to-finance-with-visimark-npv-irr-pmt-f1a"],
       "featured": true
     },
     {

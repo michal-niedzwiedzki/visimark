@@ -96,13 +96,26 @@ async function main() {
   }
 
   const created = (await res.json()) as { url: string };
+
+  if (!publish) {
+    console.log(
+      `Drafted: ${created.url}\n` +
+        "Not recorded in docs/articles/articles.json — dev.to draft URLs are not the final " +
+        "published URL. Re-run with --publish once it's live, or record the published URL by hand.",
+    );
+    return;
+  }
+
   article.reposted = [...(article.reposted ?? []), created.url];
   writeFileSync(ARTICLES_JSON, `${JSON.stringify(catalogue, null, 2)}\n`);
 
   console.log(
-    `${publish ? "Published" : "Drafted"}: ${created.url}\n` +
+    `Published: ${created.url}\n` +
       "Recorded in docs/articles/articles.json — run `bun run gen:articles` to regenerate the site pages.",
   );
 }
 
-main();
+main().catch((error: unknown) => {
+  console.error(`dev.to publishing failed for "${slug}":`, error);
+  process.exitCode = 1;
+});
