@@ -1,11 +1,5 @@
 # Markdown woes: Looks right, is wrong
 
-Tags: Markdown, CI, AI, GitHub
-Author: Michał Niedźwiedzki
-
-Posted: https://dev.to/holdmybear/markdown-woes-looks-right-is-wrong-4ep0
-Reposted: https://visimark.hashnode.dev/markdown-woes-looks-right-is-wrong
-
 ## Your Markdown can be perfectly rendered and completely wrong
 
 Markdown has an unfair advantage: it looks trustworthy.

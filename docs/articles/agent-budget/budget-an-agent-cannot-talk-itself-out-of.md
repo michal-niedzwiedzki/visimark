@@ -1,12 +1,5 @@
 # The budget an agent cannot talk itself out of
 
-Tags: AI, Agents, Markdown, CI
-Author: Michał Niedźwiedzki
-
-Posted: https://visimark.dev/articles/agent-budget/
-Reposted: https://dev.to/holdmybear/the-budget-an-agent-cannot-talk-itself-out-of-3fpi
-Reposted: https://visimark.hashnode.dev/the-budget-an-agent-cannot-talk-itself-out-of
-
 ## The prompt said two dollars. Breakfast said forty-six.
 
 Dana keeps the platform standing at a company that landed its second customer before it wrote a runbook. She gets paged when a test flakes, which is most nights, so last month she did the obvious thing: pointed a coding agent at the backlog, put `Keep the whole session under $2` in the system prompt, and went to bed. She put it in the user prompt as well, the way you tap a pocket twice for keys.

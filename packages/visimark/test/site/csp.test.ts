@@ -103,8 +103,17 @@ describe.each(pages)("%s", (page) => {
         .filter((s) => s.startsWith("https://")),
     );
     const referenced = new Set(
-      [...markup(page).matchAll(/<(?:script|link)\b[^>]*?(?:src|href)="(https:\/\/[^/"]+)/g)]
-        .map((m) => m[1]!)
+      // Case-insensitive for the same reason as the inline-<script> sweep
+      // above: HTML tag names are not case-sensitive, and a filter that only
+      // catches the lower-case spelling is a filter with a documented way
+      // round it.
+      [...markup(page).matchAll(/<(?:script|link)\b[^>]*>/gi)]
+        // rel="canonical" is metadata for search engines, not a fetch: the
+        // browser never requests it, so like preconnect below it needs no
+        // grant.
+        .filter((m) => !/\brel="canonical"/i.test(m[0]))
+        .map((m) => /(?:src|href)="(https:\/\/[^/"]+)/i.exec(m[0])?.[1])
+        .filter((origin): origin is string => origin !== undefined)
         // preconnect is a hint, not a fetch, and the host it names is always
         // reached through one of the tags below it.
         .filter((origin) => origin !== "https://fonts.gstatic.com"),

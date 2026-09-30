@@ -4,8 +4,8 @@
  * full list on articles.html.
  *
  * An entry links to the reader page, articles/<slug>/, which finds it by slug —
- * so adding an article is one entry in the JSON, and filling in `url` once it
- * goes out elsewhere.
+ * so adding an article is one entry in the JSON, and filling in `posted` only
+ * if the article was published somewhere else first.
  */
 
 import { escapeHtml } from "./dom.js";
@@ -24,13 +24,23 @@ export interface Article {
   banner?: string;
   /** The Markdown file, relative to docs/articles/. */
   path: string;
-  /** Where the article was published, once it has been. */
-  url?: string;
+  /** The article's canonical URL. Empty (the usual case) means the article's
+   *  own reader page on this site is canonical — {@link articleCanonicalUrl}
+   *  assembles that from `slug`. Set this only when the article was posted
+   *  somewhere else *first*, so that syndicated copies point back at the
+   *  original instead of competing with it for search ranking. Once set, it
+   *  is never overwritten by tooling — a person decided where the original
+   *  lives. */
+  posted?: string;
+  /** Other places this article was reposted, in addition to wherever
+   *  `posted` points. Shown on the reader page as further "also at" links. */
+  reposted?: string[];
   /** Shown in the landing page's carousel. Defaults to true. */
   featured?: boolean;
 }
 
 const SOURCE_BASE = "https://github.com/michal-niedzwiedzki/visimark/blob/master/docs/articles/";
+const SITE_URL = "https://visimark.dev/";
 
 /** Where an article's title and "Read" link go: its own reader page,
  *  `articles/<slug>/`. `base` is the relative path from the current page back
@@ -47,23 +57,41 @@ export function articleSourceUrl(a: Article): string {
   return SOURCE_BASE + a.path;
 }
 
-/** The place the article was first published, when it has been. A `url` that
- *  is not https is ignored rather than trusted into an `href`. */
+/** The article's canonical URL: `posted` when set, otherwise this site's own
+ *  reader page for `slug`. This is what a reader page's `og:url` and
+ *  `rel="canonical"` should carry, so a syndicated copy never competes with
+ *  the original it was posted from. */
+export function articleCanonicalUrl(a: Article): string {
+  const posted = a.posted?.trim();
+  return posted && posted.startsWith("https://") ? posted : `${SITE_URL}${articleHref(a)}`;
+}
+
+/** The place the article was first published, when that is somewhere other
+ *  than this site itself — the case the reader page's "Also published here"
+ *  link is for. `undefined` both when `posted` is unset (this site is
+ *  canonical) and when it names this site explicitly. */
 export function articlePublishedUrl(a: Article): string | undefined {
-  return a.url?.startsWith("https://") ? a.url : undefined;
+  const canonical = articleCanonicalUrl(a);
+  return canonical.startsWith(SITE_URL) ? undefined : canonical;
+}
+
+/** Other places the article was reposted, https-only. */
+export function articleRepostUrls(a: Article): string[] {
+  return (a.reposted ?? []).filter((u) => u.startsWith("https://"));
 }
 
 /**
  * The article body without what the reader page shows itself: the leading
- * `# title` and the metadata block under it (`Tags:`, `Author:`, `Posted:`,
- * `Reposted:`).
+ * `# title` line, which `pageShell` already renders as the page's own `<h1>`.
+ * Title, tags and author all live in `articles.json` now; the Markdown file
+ * is body copy only.
  */
 export function stripFrontMatter(md: string): string {
   const lines = md.replace(/\r\n/g, "\n").split("\n");
   let i = 0;
   while (i < lines.length && lines[i]!.trim() === "") i++;
   if (lines[i]?.startsWith("# ")) i++;
-  while (i < lines.length && /^(\s*|(Tags|Author|Posted|Reposted):.*)$/.test(lines[i]!)) i++;
+  while (i < lines.length && lines[i]!.trim() === "") i++;
   return lines.slice(i).join("\n");
 }
 

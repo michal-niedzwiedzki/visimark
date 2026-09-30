@@ -26,30 +26,44 @@ docs/articles/<slug>/<article-file>.md
 docs/articles/<slug>/<article-file>.webp   # cover image, if there is one
 ```
 
-The article opens with a title, then a short metadata block. Fill the posting
-lines in as the article goes out:
+The Markdown file opens with a title heading and goes straight into the body,
+nothing else:
 
 ```
 # Markdown woes: Looks right, is wrong
 
-Tags: Markdown, CI, AI, GitHub
-Author: Michał Niedźwiedzki
-
-Posted: https://dev.to/...
-Reposted: https://visimark.hashnode.dev/...
+Markdown has an unfair advantage: it looks trustworthy.
 ```
 
-Every article also gets an entry in `articles.json` in this folder (slug,
+Title, author and tags live only in `articles.json` in this folder (slug,
 title, author, tags, teaser, icon, path). That file is the table of contents:
 `scripts/gen-articles.ts` reads it to generate `articles.html` and one reader
 page per article, `articles/<slug>/index.html`, which shows the Markdown file
-below the title, without the metadata block. An entry's optional `banner`
-field is a cover image shown at the top of that reader page, above the
-title. Run `bun run gen:articles` after adding or editing an entry, and
-commit the regenerated pages — CI fails if they are stale.
+below the title, minus that first `# heading` line — `stripFrontMatter` drops
+it because the reader page already rendered the title itself, from the JSON.
+An entry's optional `banner` field is a cover image shown at the top of that
+reader page, above the title. Run `bun run gen:articles` after adding or
+editing an entry, and commit the regenerated pages — CI fails if they are
+stale.
 
-Syndicated copies point their canonical URL back at the original posting, so
-the copies do not compete with it.
+Where the article was posted lives in `articles.json`, not in the Markdown
+body, filled in as the article goes out:
+
+```json
+"posted": "https://dev.to/...",
+"reposted": ["https://visimark.hashnode.dev/..."]
+```
+
+`posted` is the article's canonical URL. Leave it out and the generator treats
+this site's own reader page, `https://visimark.dev/articles/<slug>/`, as
+canonical, which is the usual case for an article that starts life in this
+repository. Set it only when the article was posted somewhere else *first* —
+a `dev.to` piece syndicated back into this repository, say — because a
+syndicated copy points its canonical URL back at the original so the two do
+not compete with each other for search ranking. Once set, nothing in the
+generator overwrites it. `reposted` is every other place the article also
+appeared, shown on the reader page as further "also at" links; omit it, or
+leave it empty, when there are none yet.
 
 ## Length and pacing
 

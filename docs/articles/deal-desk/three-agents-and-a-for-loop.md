@@ -1,11 +1,5 @@
 # Three agents and a 5-dimensional for-loop
 
-Tags: AI, Agents, Markdown, CI
-Author: Michał Niedźwiedzki
-
-Posted:
-Reposted:
-
 ## Five knobs and a Friday
 
 Ines had five knobs, one Friday afternoon, and a client who wanted to sign before the weekend.

@@ -2,12 +2,6 @@
 
 A plugin that makes numbers in your notes explicit, checkable, and still portable.
 
-Tags: Obsidian, Plugins, Markdown, PKM
-Author: Michał Niedźwiedzki
-
-Posted:
-Reposted:
-
 ## Your vault already checks a lot of things
 
 Obsidian can tell you which notes point nowhere. Dataview can find missing fields. The linter can complain about a heading that has gone rogue.
