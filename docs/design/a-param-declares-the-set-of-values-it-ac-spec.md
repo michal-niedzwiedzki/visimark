@@ -21,6 +21,7 @@ printed, and only then rejected by an assertion three lines later.
 
 **The motivating case**, from the issue: a set of levers with real limits.
 
+````markdown
 ```vmark
 param extra_hours    precision 0 = default 0
 param volume_disc    precision 3 = default 0%
@@ -33,12 +34,14 @@ assert levers.volume_disc <= max_discount
 assert levers.prepay_share <= max_prepay
 assert levers.crosssell_days <= security_capacity
 ```
+````
 
 `extra_hours` of `1000`, `prepay_share` of `150%`, and `extra_hours` of `-3`
 are all well-typed scenario values today; only an `assert`, after a full
 evaluation, tells you any of them was never a sane question. With a domain on
 each param:
 
+````markdown
 ```vmark
 param extra_hours    precision 0 integer in [0, 80] = default 0
 param volume_disc    precision 3 in [0%, 15%] = default 0%
@@ -46,6 +49,7 @@ param prepay_share   precision 2 in { 30%, 40%, 45%, 50%, 60% } = default 30%
 param crosssell_days precision 0 integer in [0, 8] = default 0
 param premium_hours  precision 0 integer in [0, 12] = default 0
 ```
+````
 
 `prepay_share` of `60%` is in the set, evaluates, and fails
 `prepay_share <= max_prepay` — the assertion still does its job, since the
@@ -75,6 +79,7 @@ At least one of `PRESET` or `in DOMAIN-EXPR` must be present for the param to
 be treated as declaring a domain; a `param` with neither is exactly today's
 `param` and is unaffected by anything in this spec.
 
+````markdown
 ```vmark
 param extra_hours    precision 0 integer in [0, 80] = default 0
 param volume_disc    precision 3 in [0%, 15%] = default 0%
@@ -82,6 +87,7 @@ param prepay_share   precision 2 in { 30%, 40%, 45%, 50% } = default 30%
 param crosssell_days precision 0 natural in [0, 8] = default 0
 param staff_added    precision 0 positive integer = default 1
 ```
+````
 
 **`PRESET`** is one of a closed list — this is a closed list in the language,
 not an extension point, per constraint 4:
@@ -424,3 +430,5 @@ example document.
 ## 9. Open questions
 
 None.
+
+<!--vmark:no-formulas-->

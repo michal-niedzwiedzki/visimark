@@ -18,9 +18,11 @@ without changing the stored value, the binding, or any arithmetic.
 The engagement clears a margin of **40.26%**<!--vmark=lines.margin%-->.
 ```
 
+````markdown
 ```vmark #lines
 margin precision 4 = (net_total - cost_total) / net_total
 ```
+````
 
 `margin` stays `0.4026`. The `%` on the comment is a display request for that
 one span: write stored × 100 at precision − 2, with a trailing `%`.

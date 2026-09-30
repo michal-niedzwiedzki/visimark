@@ -355,3 +355,5 @@ markup and should be planned together.
 [§2.7](#27-persist-the-visitors-buffers-row-7) and
 [§2.8](#28-put-file-and-tab-in-the-url-row-8) all rewrite how a file becomes
 "current" and are one piece of work, not three.
+
+<!--vmark:no-formulas-->

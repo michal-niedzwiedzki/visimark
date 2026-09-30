@@ -13,7 +13,7 @@ like a value of the anchor's own type before `fmt` claims it.
 
 Two live, reproduced consequences, against `master`:
 
-```
+````
 $ cat s.md
 ```vmark #s
 b precision 2 = 0.25
@@ -26,11 +26,11 @@ $ visimark check s.md
 $ visimark fmt s.md
 $ tail -1 s.md
 It comes 0.25 <!--vmark=s.b--> PLN.
-```
+````
 `fmt` deletes the word `to`. `check` flags the mismatch first, but nothing in
 the `STALE` line reads as "this will delete a word," and `fmt` does it anyway.
 
-```
+````
 $ cat s2.md
 ```vmark #s
 status = "all clear"
@@ -40,7 +40,7 @@ The status is no problem<!--vmark=s.status--> today.
 
 $ visimark check s2.md
   0 problems (0 stale, 0 errors)
-```
+````
 `check` never flags this at all — the same gap `docs/tutorial.md` ch. 9
 already documents as "one current limit," for a stale value hiding under
 prose that no longer describes it.
@@ -148,14 +148,14 @@ into this change because it shares the same code path
 (`innerValueSpan`, `packages/visimark/src/parse/document.ts`). Verified against
 `master`:
 
-```
+````
 $ cat embed.md
 Claim: **a **bold** claim**<!--vmark=s.x-->.
 
 ```vmark #s
 x = "a bold claim"
 ```
-```
+````
 
 Today, `innerValueSpan` takes only `node.children?.[0]` with no check that it
 is the node's only child. The nested `**bold**` produces a `strong` node with
@@ -337,3 +337,5 @@ instead of describing the word-deletion as accepted behaviour.
 ## 8. Open questions
 
 None.
+
+<!--vmark:no-formulas-->

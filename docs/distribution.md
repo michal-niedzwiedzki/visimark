@@ -79,3 +79,5 @@ When a new artifact ships, or a new directory is found for an existing one:
    maintainer sign-off before firing a PR, form, or comment to a third party.
 3. Once sent, add or update the row here immediately, with the date and a
    link to the PR/listing.
+
+<!--vmark:no-formulas-->

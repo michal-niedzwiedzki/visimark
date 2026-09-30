@@ -261,3 +261,5 @@ grammar direction, breaking-change handling, `ANCHOR` hardening scope,
 `assert`/`chart` extension) are resolved above (§2, §7); test placement is
 resolved in §6 against the repo's existing `test/model/` and `test/parse/`
 layout.
+
+<!--vmark:no-formulas-->

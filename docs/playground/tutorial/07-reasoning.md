@@ -17,7 +17,7 @@ priciest = MAX(Price)
 
 Order total: 145.50<!--vmark=order.orderTotal-->
 
-Discounts applied: 0<!--vmark=order.hasDiscounts-->
+Discounts applied: **no**<!--vmark=order.hasDiscounts-->
 
 Items count: 3<!--vmark=order.itemsCount-->
 

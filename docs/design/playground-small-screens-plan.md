@@ -90,3 +90,5 @@ is awaited *before* the first fetch, and that no `height: 100vh` has come back.
 
 §2.3's tab and motion semantics touch the same markup and land next, which is
 the pairing §3 of the review asks for.
+
+<!--vmark:no-formulas-->

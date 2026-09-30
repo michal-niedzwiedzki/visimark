@@ -65,3 +65,5 @@ characters against base64's 3,720. No CSP violation and no console output.
 `%`, a newline and non-ASCII are escaped, that `<`, `>`, `"` and spaces are
 not, that `unescape` and `btoa` are gone from the module, and that the result
 is shorter than the base64 form on a real committed chart.
+
+<!--vmark:no-formulas-->

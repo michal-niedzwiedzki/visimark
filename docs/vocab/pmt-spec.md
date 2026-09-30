@@ -17,7 +17,7 @@ monthly_rate precision 3 = annual / 12
 instalment   precision 2 = PMT(monthly_rate, term, price)
 ```
 
-The quote is for one press at **48000.00**<!--vmark=press.price--> PLN. The financing rate is **6%**<!--vmark=press.annual%--> a year, paid monthly over **36**<!--vmark=press.term--> months. The instalment is **1460.25**<!--vmark=press.instalment--> PLN.
+The quote is for one press at **48000.00**<!--vmark=press.price--> PLN. The financing rate is **6%**<!--vmark=press.annual|percent--> a year, paid monthly over **36**<!--vmark=press.term--> months. The instalment is **1460.25**<!--vmark=press.instalment--> PLN.
 
 `0.06 / 12` is `0.005`. `PMT(0.005, 36, 48000)` rounded half-up to 2 decimals is `1460.25`.
 

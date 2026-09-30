@@ -809,3 +809,5 @@ git commit -m "docs: --json on every document command"
 | `explain` sheets, `Σ`, unknown sheet | 5 |
 | §11, cli-reference, example, changelog, shipped row | 6 |
 | No `--format`, no LSP changelog, no issue-review change | 6 (explicit non-touch) |
+
+<!--vmark:no-formulas-->

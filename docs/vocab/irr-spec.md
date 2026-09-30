@@ -259,3 +259,5 @@ Covered by unit tests plus a test-only fixture. The invoice and charts examples 
 ## 8. Open questions
 
 None.
+
+<!--vmark:no-formulas-->

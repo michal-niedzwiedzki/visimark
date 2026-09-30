@@ -241,3 +241,5 @@ untouched and is now a one-place change.
   before any work.
 - §2.6 (lint ignore patterns) — the 1,785 vendor-bundle warnings stay until then.
 - Any change to the overwrite/marker rule in `check-charts.ts` or `artifact/stale.ts`.
+
+<!--vmark:no-formulas-->

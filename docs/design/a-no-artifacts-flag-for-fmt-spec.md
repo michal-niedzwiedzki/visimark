@@ -271,3 +271,5 @@ Not affected, checked: `README.md`, `CONTRIBUTING.md`, `docs/issue-runbook.md`,
 ## 9. Open questions
 
 None.
+
+<!--vmark:no-formulas-->

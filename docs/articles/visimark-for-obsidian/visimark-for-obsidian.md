@@ -20,14 +20,15 @@ Priya is finishing a PhD in behavioral economics and runs her work from one vaul
 
 Her experiment log is just a normal note with a results table:
 
+````markdown
 ```vmark
 Rate precision 4 = Conversions / Visitors
 
 visitors    = SUM(Visitors)
 conversions = SUM(Conversions)
 pooled_rate precision 4 = conversions / visitors
-
 ```
+````
 
 She pastes a correction from an analytics export. VisiMark notices that a value no longer matches its formula.
 
@@ -41,13 +42,14 @@ Kasia is a freelance UX designer. Her invoices live in the same vault as the pro
 
 Her invoice might contain:
 
+````markdown
 ```vmark
 Net             = Qty * Rate
 VAT precision 2 = Net * vat
 Gross           = Net + VAT
 gross_total     = SUM(Gross)
-
 ```
+````
 
 A client asks for two more hours. Kasia changes the quantity on her phone while riding the train.
 
@@ -75,10 +77,11 @@ Grace leads a five-person engineering team. Their shared vault holds sprint plan
 
 Capacity planning can be as small as:
 
+````markdown
 ```vmark
 headroom precision 2 = people.available_total - work.committed
-
 ```
+````
 
 Someone adds a work item. The headroom recalculates when the note is opened.
 

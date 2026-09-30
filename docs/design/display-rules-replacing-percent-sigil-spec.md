@@ -238,3 +238,5 @@ matching how other superseded design docs in this repo are handled.
 ## 8. Open questions
 
 None.
+
+<!--vmark:no-formulas-->
