@@ -18,7 +18,7 @@ repos:
         # proving that. A doc that has no arithmetic still passes by carrying
         # `<!--vmark:no-formulas-->`; there is no other kind of exemption.
         files: ^(docs/.*\.md|README\.md|CHANGELOG\.md|CONTRIBUTING\.md|skills/visimark/SKILL\.md)$
-        exclude: ^(docs/WIP/.*|docs/example-invoice-drift\.md|docs/example-quote-plain\.md|docs/design/presentation-only-percent-display-sigil-(plan|spec)\.md)$
+        exclude: ^(docs/WIP/.*|docs/example-invoice-drift\.md|docs/example-quote-plain\.md|docs/example-lunch-split-drift\.md|docs/design/presentation-only-percent-display-sigil-(plan|spec)\.md)$
       - id: gen-articles
         name: regenerate article pages
         language: system

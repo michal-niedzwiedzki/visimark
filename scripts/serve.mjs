@@ -38,7 +38,11 @@ const server = Bun.serve({
 
     const file = Bun.file(target);
     if (!(await file.exists())) return new Response("Not found", { status: 404 });
-    return new Response(file);
+    // No cache-control was sent at all, so the browser fell back to its own
+    // heuristics for vendor/*.js — meaning a rebuilt bundle could silently
+    // keep serving from cache across edits during local testing. This is
+    // dev-only: GitHub Pages ignores this file and serves docs/ as committed.
+    return new Response(file, { headers: { "Cache-Control": "no-store" } });
   },
 });
 

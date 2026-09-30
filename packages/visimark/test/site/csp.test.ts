@@ -23,6 +23,20 @@ const pages = readdirSync(docs)
 
 const source = (page: string): string => readFileSync(join(docs, page), "utf8");
 
+/**
+ * Origins a page's own script reaches via `fetch()` rather than declaring as
+ * a markup subresource — invisible to the `<script src>`/`<link href>` sweep
+ * below the same way `fonts.gstatic.com`'s preconnect is, and for the same
+ * reason it needs a documented, explicit list instead of grepping the
+ * compiled bundle for any `https://` literal: that would also catch
+ * `https://github.com`, which index.html's "Scan your repo" widget uses only
+ * for a plain `<a href>` (navigation, not a fetch) and must not be granted.
+ * See packages/visimark/src/site/repo-scan.ts.
+ */
+const RUNTIME_FETCH_ORIGINS: Record<string, string[]> = {
+  "index.html": ["https://api.github.com", "https://raw.githubusercontent.com"],
+};
+
 /** The page with its comments removed. Several of them quote the markup they
  *  are discussing, including the `<script>` this work took out. */
 const markup = (page: string): string => withoutComments(source(page));
@@ -118,6 +132,7 @@ describe.each(pages)("%s", (page) => {
         // reached through one of the tags below it.
         .filter((origin) => origin !== "https://fonts.gstatic.com"),
     );
+    for (const origin of RUNTIME_FETCH_ORIGINS[page] ?? []) referenced.add(origin);
     for (const origin of referenced) {
       expect([...granted], `${page} loads from ${origin} without granting it`).toContain(origin);
     }

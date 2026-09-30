@@ -1267,6 +1267,161 @@ body {
 .tryout-btn:hover {
   background: #6cd977;
 }
+.tryout-btn:disabled {
+  background: #d0d0d0;
+  color: #7a7a7a;
+  cursor: not-allowed;
+}
+
+/* "Scan your repo" widget: same white-card-on-dark-page treatment as
+   .features/.tryout-grid, so it reads as one more panel in the sequence
+   rather than a bolted-on tool. */
+.repo-scan {
+  margin-top: 20px;
+  background: #ffffff;
+  color: #1b1b1b;
+  border-radius: 16px;
+  padding: 30px 32px;
+  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.45);
+}
+.repo-scan-form {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.repo-scan-input {
+  flex: 1 1 320px;
+  min-width: 0;
+  padding: 11px 18px;
+  border: 1px solid #d5d5d5;
+  border-radius: 999px;
+  font-size: 0.98rem;
+  font-family: "SF Mono", "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  background: #f7f7f7;
+  color: #1b1b1b;
+}
+.repo-scan-input:focus {
+  outline: 2px solid #1a7f37;
+  outline-offset: 1px;
+  background: #ffffff;
+}
+.repo-scan-submit {
+  margin-top: 0;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+.repo-scan-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 20px 0 0;
+  font-size: 0.92rem;
+  color: #4a4a4a;
+}
+.repo-scan-status.is-error {
+  color: #b42318;
+  font-weight: 600;
+}
+.repo-scan-spinner {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid #d5d5d5;
+  border-top-color: #1a7f37;
+  animation: repo-scan-spin 0.8s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .repo-scan-spinner {
+    animation: none;
+  }
+}
+@keyframes repo-scan-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.repo-scan-bar {
+  flex: 1 1 160px;
+  max-width: 240px;
+  height: 6px;
+  border-radius: 999px;
+  background: #e6e6e6;
+  overflow: hidden;
+}
+.repo-scan-bar-fill {
+  /* Both elements are `<span>`s in the markup; without this, the fill stays
+     `display: inline`, and `width`/`height` do nothing on an inline element —
+     it rendered as whatever a near-empty inline span happens to take up,
+     never actually growing with progress. `.repo-scan-bar` itself doesn't
+     need this: it's a flex item, and flex items are blockified regardless of
+     their own `display`, which is why the *track* sized correctly while the
+     *fill* inside it did not. */
+  display: block;
+  height: 100%;
+  background: #1a7f37;
+  border-radius: inherit;
+  transition: width 0.2s ease;
+}
+.repo-scan-report {
+  margin-top: 22px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(27, 27, 27, 0.12);
+}
+.repo-scan-report h3 {
+  margin: 0 0 6px;
+  font-size: 1.1rem;
+  font-weight: 750;
+}
+.repo-scan-summary {
+  margin: 0 0 14px;
+  color: #363636;
+}
+.repo-scan-files {
+  list-style: none;
+  margin: 0 0 18px;
+  padding: 0;
+}
+.repo-scan-files li {
+  padding: 8px 0;
+  border-top: 1px solid rgba(27, 27, 27, 0.08);
+  font-size: 0.94rem;
+}
+.repo-scan-files li:first-child {
+  border-top: none;
+}
+.repo-scan-files code {
+  background: #f0f0f0;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 0.9em;
+}
+/* Links to the file on GitHub, styled as the same code pill above rather
+   than as an ordinary link — color and font stay `code`'s, and the only
+   link affordance is an underline that appears on hover. */
+.repo-scan-file-link {
+  color: inherit;
+  text-decoration: none;
+}
+.repo-scan-file-link:hover {
+  text-decoration: underline;
+}
+.repo-scan-files summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.repo-scan-files pre {
+  margin: 10px 0 0;
+  padding: 12px 14px;
+  background: #1b1b1b;
+  color: #eaeaea;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
 
 /* Featured: a two-column showcase, reusing the .feature-head bar look
    without the vertical stacking (border-top/margin-top) .feature carries */
