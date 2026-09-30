@@ -31,7 +31,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cmdCheck, cmdInfer } from "../packages/visimark/src/cli/commands.js";
-import { run } from "./proc-run.js";
+import { listTrackedFiles, run } from "./proc-run.js";
 import { collectJson, ensureClone } from "./repo-pr-clone.js";
 import {
   excludeDotPaths,
@@ -147,16 +147,20 @@ if ("error" in resolved) {
 const { cloneUrl, label } = resolved;
 
 const workdir = mkdtempSync(join(tmpdir(), "visimark-repo-scan-"));
-let exitCode = 0;
 
-try {
+// A bare `return` in place of every `process.exit()` this body used to call —
+// `process.exit()` ends the process immediately, so a `finally` guarding
+// cleanup (below) never runs, leaking this temp clone (and, on a batch sweep
+// over many repos, piling up many of them) on the clone-failure and
+// already-scanned-skip paths.
+function scan(): number {
   const cloneArgs = ["git", "clone", "--depth", "1", "--quiet"];
   if (branch) cloneArgs.push("--branch", branch);
   cloneArgs.push(cloneUrl, workdir);
   const clone = run(cloneArgs, ROOT);
   if (!clone.ok) {
     console.error(`repo-scan: clone failed: ${clone.stderr || clone.stdout}`);
-    process.exit(2);
+    return 2;
   }
 
   const revParse = run(["git", "rev-parse", "HEAD"], workdir);
@@ -183,11 +187,10 @@ try {
       markdownFiles: 0,
     };
     printReport(report);
-    process.exit(0);
+    return 0;
   }
 
-  const lsFiles = run(["git", "ls-files", "*.md", "*.markdown"], workdir);
-  const relFiles = excludeDotPaths(lsFiles.stdout.length > 0 ? lsFiles.stdout.split("\n") : []);
+  const relFiles = excludeDotPaths(listTrackedFiles(workdir, ["*.md", "*.markdown"]));
   const absFiles = relFiles.map((f) => join(workdir, f));
 
   const report: ScanReport = {
@@ -199,6 +202,7 @@ try {
     markdownFiles: absFiles.length,
   };
 
+  let exitCode = 0;
   if (absFiles.length > 0) {
     report.infer = collectJson(cmdInfer, absFiles) as ScanReport["infer"];
     report.check = collectJson(cmdCheck, absFiles) as ScanReport["check"];
@@ -211,6 +215,12 @@ try {
   }
 
   printReport(report);
+  return exitCode;
+}
+
+let exitCode: number;
+try {
+  exitCode = scan();
 } finally {
   rmSync(workdir, { recursive: true, force: true });
 }

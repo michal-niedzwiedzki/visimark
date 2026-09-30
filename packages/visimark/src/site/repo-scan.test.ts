@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import {
+  encodePath,
   fetchRawText,
   githubNewFileUrl,
   isDotPath,
@@ -8,6 +9,25 @@ import {
   VISIMARK_ACTION_USE,
   workflowYaml,
 } from "./repo-scan.js";
+
+describe("encodePath", () => {
+  test("leaves an ordinary path untouched", () => {
+    expect(encodePath("docs/readme.md")).toBe("docs/readme.md");
+  });
+
+  test("encodes a hash in a filename without eating the rest of the path", () => {
+    expect(encodePath("docs/C#-notes.md")).toBe("docs/C%23-notes.md");
+  });
+
+  test("encodes a question mark and percent sign", () => {
+    expect(encodePath("notes?.md")).toBe("notes%3F.md");
+    expect(encodePath("100%.md")).toBe("100%25.md");
+  });
+
+  test("preserves the slash between segments", () => {
+    expect(encodePath("a/b/c.md").split("/")).toHaveLength(3);
+  });
+});
 
 describe("fetchRawText", () => {
   const originalFetch = globalThis.fetch;

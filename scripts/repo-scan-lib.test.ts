@@ -8,11 +8,32 @@ import {
   formatSummary,
   hasUsefulFindings,
   hasVisimarkAction,
+  hostOf,
   parseRepoArg,
   relativizePaths,
   type Palette,
   type ScanReport,
 } from "./repo-scan-lib.js";
+
+describe("hostOf", () => {
+  test("defaults the owner/repo shorthand to github.com", () => {
+    expect(hostOf("https://github.com/octocat/hello-world.git")).toBe("github.com");
+  });
+
+  test("reads an explicit https host", () => {
+    expect(hostOf("https://gitlab.com/octocat/hello-world.git")).toBe("gitlab.com");
+  });
+
+  test("reads an explicit ssh host", () => {
+    expect(hostOf("git@gitlab.com:octocat/hello-world.git")).toBe("gitlab.com");
+  });
+
+  test("distinguishes two hosts mirroring the same owner/repo", () => {
+    expect(hostOf("https://github.com/octocat/hello-world.git")).not.toBe(
+      hostOf("https://gitlab.com/octocat/hello-world.git"),
+    );
+  });
+});
 
 describe("excludeDotPaths", () => {
   test("drops a file directly under a dot-directory", () => {

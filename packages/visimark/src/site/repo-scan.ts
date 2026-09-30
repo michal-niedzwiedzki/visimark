@@ -53,6 +53,14 @@ export function isDotPath(path: string): boolean {
   return path.split("/").some((segment) => segment.startsWith("."));
 }
 
+/** Percent-encodes each path segment, keeping `/` as a separator — a branch
+ *  name or a Markdown path can contain `#`, `?`, or `%`, any of which
+ *  truncates or misroutes a URL built by plain concatenation (a raw path
+ *  like `docs/C#-notes.md` would cut the request off at the `#`). */
+export function encodePath(path: string): string {
+  return path.split("/").map(encodeURIComponent).join("/");
+}
+
 export interface RepoRef {
   owner: string;
   repo: string;
@@ -270,7 +278,9 @@ async function runScan(
   )) as { tree: GitTreeEntry[] };
 
   const raw = (path: string) =>
-    fetchRawText(`${RAW}/${ref.owner}/${ref.repo}/${defaultBranch}/${path}`);
+    fetchRawText(
+      `${RAW}/${ref.owner}/${ref.repo}/${encodePath(defaultBranch)}/${encodePath(path)}`,
+    );
 
   const workflowEntries = tree.tree.filter(
     (e) => e.type === "blob" && /^\.github\/workflows\/.*\.ya?ml$/.test(e.path),
@@ -391,7 +401,7 @@ function renderReport(
     if (files.length > 0) {
       const items = files
         .map((f) => {
-          const fileUrl = `https://github.com/${ref.owner}/${ref.repo}/blob/${outcome.defaultBranch}/${f.path}`;
+          const fileUrl = `https://github.com/${ref.owner}/${ref.repo}/blob/${encodePath(outcome.defaultBranch)}/${encodePath(f.path)}`;
           return (
             `<li><a class="repo-scan-file-link" href="${escapeHtml(fileUrl)}" target="_blank" rel="noopener"><code>${escapeHtml(f.path)}</code></a>` +
             `<details><summary>${f.problemCount} problem(s)</summary><pre>${escapeHtml(f.findingsText)}</pre></details></li>`

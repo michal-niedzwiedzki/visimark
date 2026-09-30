@@ -42,6 +42,23 @@ export function parseRepoArg(input: string): RepoRef | { error: string } {
 }
 
 /**
+ * The Git host a `cloneUrl` points at — `github.com` for the `owner/repo`
+ * shorthand, whatever host an explicit `https://`/`git@` URL named. Needed
+ * because `RepoRef.label` alone ("owner/repo") collides across two different
+ * hosts that happen to mirror the same path — without this, `repo:pr`'s
+ * manifest/cache-directory identity (keyed by `label`) would let scanning a
+ * second host's copy reuse, and later delete, the first host's retained
+ * clone. `parseRepoArg`'s own regexes already validated the shape, so these
+ * are the same patterns, just capturing the host instead of discarding it. */
+export function hostOf(cloneUrl: string): string {
+  const https = /^https:\/\/([^/]+)\//.exec(cloneUrl);
+  if (https) return https[1]!;
+  const ssh = /^git@([^:]+):/.exec(cloneUrl);
+  if (ssh) return ssh[1]!;
+  return cloneUrl;
+}
+
+/**
  * Drops any path with a dot-directory or dot-file component — `.github/`,
  * `.agents/`, `.changeset/`, a bare `.env.md`, and so on. `git ls-files
  * '*.md'` matches those too (this very repo's own tracked Markdown under

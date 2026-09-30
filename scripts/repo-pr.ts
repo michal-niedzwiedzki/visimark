@@ -15,12 +15,12 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cmdCheck, cmdFmt, cmdInfer, type Writer } from "../packages/visimark/src/cli/commands.js";
-import { run } from "./proc-run.js";
-import { defaultCacheRoot, ensureClone } from "./repo-pr-clone.js";
+import { isConfined } from "./fs-guard.js";
+import { listTrackedFiles, run } from "./proc-run.js";
+import { defaultCacheRoot, ensureClone, WORK_BRANCH } from "./repo-pr-clone.js";
 import { excludeDotPaths, type JsonSummaryLike } from "./repo-scan-lib.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const WORK_BRANCH = "visimark-check";
 
 function usage(): never {
   console.error("Usage: bun run repo:pr <owner/repo|git-url> [--branch NAME] [--force]");
@@ -101,6 +101,12 @@ if (clone.status === "error") {
 
 let repoLabel: string;
 let workdir: string;
+// From the manifest (reuse) or from this clone's own fresh checkout (first
+// run) — never re-derived from `git rev-parse --abbrev-ref HEAD` here, which
+// on a reused clone would read back WORK_BRANCH instead of the repo's real
+// default branch: `ensureClone` captures it once, right after cloning and
+// before anything checks a work branch out. See its comment.
+let defaultBranch: string;
 if (clone.status === "already-scanned") {
   if (!clone.entry.hasFindings || !clone.entry.workdir) {
     console.log(
@@ -110,6 +116,7 @@ if (clone.status === "already-scanned") {
   }
   repoLabel = clone.repo;
   workdir = clone.entry.workdir;
+  defaultBranch = clone.entry.defaultBranch;
 } else {
   if (!clone.kept) {
     console.log(
@@ -119,14 +126,12 @@ if (clone.status === "already-scanned") {
   }
   repoLabel = clone.report.repo;
   workdir = clone.workdir;
+  defaultBranch = clone.defaultBranch;
 }
 
 console.log(`repo-pr: working in ${workdir}`);
 
 // --- 2. install the workflow ------------------------------------------------
-
-const defaultBranchResult = run(["git", "rev-parse", "--abbrev-ref", "HEAD"], workdir);
-const defaultBranch = defaultBranchResult.ok ? defaultBranchResult.stdout : "main";
 
 const checkout = run(["git", "checkout", "-B", WORK_BRANCH], workdir);
 if (!checkout.ok) {
@@ -136,14 +141,33 @@ if (!checkout.ok) {
 
 const actionTag = latestVisimarkTag();
 const workflowsDir = join(workdir, ".github", "workflows");
+const workflowPath = join(workflowsDir, "visimark.yml");
+// The clone is of a repo this tool doesn't control — a malicious one can
+// track `.github` or `.github/workflows` as a symlink to somewhere outside
+// the clone, which git materializes on checkout, and mkdirSync/writeFileSync
+// would follow without complaint. See fs-guard.ts.
+if (!isConfined(workdir, workflowPath)) {
+  console.error(
+    "repo-pr: refusing to write .github/workflows/visimark.yml — a path component is a symlink",
+  );
+  process.exit(2);
+}
 mkdirSync(workflowsDir, { recursive: true });
-writeFileSync(join(workflowsDir, "visimark.yml"), workflowYaml(defaultBranch, actionTag));
+writeFileSync(workflowPath, workflowYaml(defaultBranch, actionTag));
 
 // --- 3-5. infer --write, check, fmt ----------------------------------------
 
-const lsFiles = run(["git", "ls-files", "*.md", "*.markdown"], workdir);
-const relFiles = excludeDotPaths(lsFiles.stdout.length > 0 ? lsFiles.stdout.split("\n") : []);
-const absFiles = relFiles.map((f) => join(workdir, f));
+const relFiles = excludeDotPaths(listTrackedFiles(workdir, ["*.md", "*.markdown"]));
+const allAbsFiles = relFiles.map((f) => join(workdir, f));
+// Same reasoning as the workflow write above: a tracked Markdown path this
+// repo doesn't control could itself be a symlink out of the clone, and
+// infer --write/fmt write through whatever path they're given.
+const absFiles = allAbsFiles.filter((f) => isConfined(workdir, f));
+if (absFiles.length < allAbsFiles.length) {
+  console.error(
+    `repo-pr: skipping ${allAbsFiles.length - absFiles.length} file(s) that resolve through a symlink`,
+  );
+}
 
 // The repo's own state, before any of this tool's changes — the baseline
 // the commit note and PR draft compare against. `ensureClone`'s report
@@ -201,9 +225,16 @@ if (status.stdout.trim().length === 0) {
 
 // --- 7. PR draft --------------------------------------------------------------
 
-const draftDir = join(defaultCacheRoot(), "pr-drafts");
+// Nested by owner, not flattened with `/` -> `-`: that mapped both `a-b/c`
+// and `a/b-c` to the same filename, so drafting for one repo could overwrite
+// another's. See cacheDirName's comment in repo-pr-manifest.ts for the same
+// fix on the clone directory.
+const labelSlash = repoLabel.indexOf("/");
+const draftOwner = labelSlash === -1 ? repoLabel : repoLabel.slice(0, labelSlash);
+const draftRepo = labelSlash === -1 ? repoLabel : repoLabel.slice(labelSlash + 1);
+const draftDir = join(defaultCacheRoot(), "pr-drafts", draftOwner);
 mkdirSync(draftDir, { recursive: true });
-const draftPath = join(draftDir, `${repoLabel.replace(/\//g, "-")}.md`);
+const draftPath = join(draftDir, `${draftRepo}.md`);
 
 const prBody = [
   "## Summary",
