@@ -14,6 +14,7 @@ import { wireArticlesCarousel } from "./articles-carousel.js";
 import { byId } from "./dom.js";
 import { renderDemo } from "./demo-panes.js";
 import { fillPreviewCards, wireSwipers } from "./preview-cards.js";
+import { wireRepoScan } from "./repo-scan.js";
 
 /**
  * Explore's small structural diagrams (dependency flow, CI pass/fail, the
@@ -173,6 +174,7 @@ wireInferToggle();
 wireDriftToggle();
 wireDepToggle();
 wireStickyToc();
+wireRepoScan();
 void wireArticlesCarousel();
 fillPreviewCards();
 wireSwipers();
