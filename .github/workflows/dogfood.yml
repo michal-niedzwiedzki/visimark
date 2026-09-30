@@ -46,13 +46,39 @@ jobs:
             exit 1
           fi
 
+      # Every tracked Markdown doc, minus the fixtures below that are known to
+      # fail on purpose (each has its own step proving it still fails) and
+      # docs/WIP/, which holds unfinished scratch notes never meant to satisfy
+      # `check`. A doc lands here by default the moment it's committed — no
+      # enumeration to remember to update, unlike the allowlist this replaced,
+      # which is how docs/example-deal-desk.md went unchecked from #284 to #312.
+      - name: compute the doc set the wildcard step below checks
+        id: docfiles
+        shell: bash
+        run: |
+          exclude=(
+            "docs/example-invoice-drift.md"
+            "docs/example-quote-plain.md"
+            "docs/design/presentation-only-percent-display-sigil-plan.md"
+            "docs/design/presentation-only-percent-display-sigil-spec.md"
+          )
+          files=$(git ls-files 'docs/**/*.md' README.md CHANGELOG.md CONTRIBUTING.md skills/visimark/SKILL.md | grep -v '^docs/WIP/')
+          for f in "${exclude[@]}"; do
+            files=$(echo "$files" | grep -vxF "$f")
+          done
+          {
+            echo "files<<EOF"
+            echo "$files"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
       # Every markdown file this repo asks anyone else to trust, checked by the
       # rule the repo now ships: a table with no rules fails, and a document
       # with no arithmetic says so with `<!--vmark:no-formulas-->`.
-      - name: the clean invoice and this repo's own prose must pass
+      - name: every doc in that set must pass
         uses: ./
         with:
-          files: "docs/example-invoice.md docs/tutorial.md docs/ci.md docs/tutorial/order.md docs/tutorial/capstone.md docs/tutorial/runway.md docs/visimark-design.md docs/visimark-editor-plugins-design.md docs/cli-reference.md docs/releasing.md docs/vocabulary-catalogue.md README.md CHANGELOG.md CONTRIBUTING.md skills/visimark/SKILL.md"
+          files: ${{ steps.docfiles.outputs.files }}
 
       - name: the drift invoice is supposed to fail
         id: drift

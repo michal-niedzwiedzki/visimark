@@ -150,3 +150,5 @@ the whole thing silently inert.
 
 Sanitizing the preview — see (b): the condition is recorded, and the condition
 does not hold yet.
+
+<!--vmark:no-formulas-->

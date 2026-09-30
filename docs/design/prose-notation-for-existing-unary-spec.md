@@ -23,9 +23,11 @@ vocabulary computes everything the new spellings compute.
 The one real document that uses any of the four functions is the tutorial
 capstone, whose reconciliation sheet asserts a tolerance:
 
+````markdown
 ```vmark
 assert ABS(variance) <= 0.05
 ```
+````
 
 That line becomes `assert |variance| <= 0.05`, and it is the acceptance case
 (§6). No other example document uses `ABS`, `FLOOR`, `CEILING` or `SQRT`.
@@ -246,9 +248,11 @@ No document in `docs/` uses them.
 **The capstone.** In `docs/tutorial/capstone.md`, and every copy of that block
 in `docs/tutorial.md`, the reconciliation assertion becomes:
 
+````markdown
 ```vmark
 assert |variance| <= 0.05
 ```
+````
 
 The tutorial prose that quotes the assertion (the "deleted or loosened" note) and
 the sabotaged-run `check` transcript that echoes it are edited to match, the
@@ -387,3 +391,5 @@ Not edited: §1 (the audience sentence stays as written), §9, the `#43` spec, a
 ## 9. Open questions
 
 None.
+
+<!--vmark:no-formulas-->

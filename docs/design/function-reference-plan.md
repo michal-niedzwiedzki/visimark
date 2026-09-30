@@ -1474,3 +1474,5 @@ Message: `docs: point the CLI reference and the skill at visimark ref`
   behaviour, then add the example.
 - A `--verbose` link from a `TYPE` finding into the reference.
 - Reference entries for operators.
+
+<!--vmark:no-formulas-->

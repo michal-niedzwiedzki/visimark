@@ -240,3 +240,5 @@ unless a consumer can observe it; none can):
 ## 9. Open questions
 
 None.
+
+<!--vmark:no-formulas-->

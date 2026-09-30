@@ -10,12 +10,15 @@ repos:
         name: visimark check
         language: system
         entry: sh scripts/precommit-visimark-check.sh
-        # Scoped to the same file set dogfood.yml's "the clean invoice and
-        # this repo's own prose must pass" step already trusts — most other
-        # tracked Markdown in this repo is deliberately unchecked: specs and
-        # plans with no `vmark` rules (COVERAGE by design), and test fixtures
-        # under packages/*/test/fixtures that exist to fail on purpose.
-        files: ^(docs/example-invoice\.md|docs/tutorial\.md|docs/ci\.md|docs/tutorial/order\.md|docs/tutorial/capstone\.md|docs/tutorial/runway\.md|docs/visimark-design\.md|docs/visimark-editor-plugins-design\.md|docs/cli-reference\.md|docs/releasing\.md|docs/vocabulary-catalogue\.md|README\.md|CHANGELOG\.md|CONTRIBUTING\.md|skills/visimark/SKILL\.md)$
+        # Scoped to the same file set dogfood.yml's "every doc in that set
+        # must pass" step already trusts: every tracked doc under docs/, plus
+        # the top-level ones below, minus docs/WIP/ (unfinished scratch notes
+        # never meant to satisfy `check`) and the fixtures excluded below,
+        # which exist to fail on purpose — each has its own dogfood.yml step
+        # proving that. A doc that has no arithmetic still passes by carrying
+        # `<!--vmark:no-formulas-->`; there is no other kind of exemption.
+        files: ^(docs/.*\.md|README\.md|CHANGELOG\.md|CONTRIBUTING\.md|skills/visimark/SKILL\.md)$
+        exclude: ^(docs/WIP/.*|docs/example-invoice-drift\.md|docs/example-quote-plain\.md|docs/design/presentation-only-percent-display-sigil-(plan|spec)\.md)$
       - id: gen-articles
         name: regenerate article pages
         language: system

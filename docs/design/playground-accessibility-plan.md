@@ -94,3 +94,5 @@ An automated axe-class audit needs a DOM in the test runner, which this
 repository does not have and which is a larger decision than this section. The
 checks above are structural and source-level; they hold the specific findings
 §2.3 names rather than standing in for a full audit.
+
+<!--vmark:no-formulas-->

@@ -217,3 +217,5 @@ packages/visimark/test/fixtures/ceiling-nodes.md
 ## 8. Open questions
 
 None.
+
+<!--vmark:no-formulas-->

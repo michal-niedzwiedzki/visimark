@@ -162,3 +162,5 @@ review sequence, that is no longer one clean instance — it is what this
 project's review discipline is supposed to produce as a matter of course:
 not the absence of defects in new code, but the absence of a defect
 surviving past the PR that introduced it.
+
+<!--vmark:no-formulas-->

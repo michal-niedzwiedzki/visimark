@@ -28,9 +28,11 @@ number, to an anchor or to an artifact.
 [`example-agent-budget.md`](../example-agent-budget.md). Its `#rates` sheet
 holds the session cap a human sets:
 
+````markdown
 ```vmark #rates
 budget = 2.00
 ```
+````
 
 and `#calls` asserts `spent <= rates.budget`. A harness planning the next steps
 wants to ask *would this session still fit under a $0.40 cap?* before it
@@ -414,9 +416,11 @@ a `param` arrive as diagnostics through the existing path.
 [`example-agent-budget.md`](../example-agent-budget.md), the `#rates` block
 becomes
 
+````markdown
 ```vmark #rates
 param budget precision 2 = default 2.00
 ```
+````
 
 and the document gains a short "What-if runs" section, after "The gate",
 showing the tight-budget scenario below. On the edited document:
@@ -506,3 +510,5 @@ The scenario files and the expected outputs live as `test/cli` fixtures.
 ## 8. Open questions
 
 None.
+
+<!--vmark:no-formulas-->
