@@ -62,7 +62,13 @@ jobs:
             "docs/design/presentation-only-percent-display-sigil-plan.md"
             "docs/design/presentation-only-percent-display-sigil-spec.md"
           )
-          files=$(git ls-files 'docs/**/*.md' README.md CHANGELOG.md CONTRIBUTING.md skills/visimark/SKILL.md | grep -v '^docs/WIP/')
+          # A default (non-glob-magic) git pathspec doesn't set FNM_PATHNAME,
+          # so a bare `*` already crosses `/` — `docs/*.md` is already
+          # recursive. `docs/**/*.md` looked more correct but demands a
+          # literal `/` after the `**`, so it silently skipped every file
+          # directly under docs/ (docs/ci.md, docs/distribution.md, and
+          # docs/example-deal-desk.md itself — the file that started this).
+          files=$(git ls-files 'docs/*.md' README.md CHANGELOG.md CONTRIBUTING.md skills/visimark/SKILL.md | grep -v '^docs/WIP/')
           for f in "${exclude[@]}"; do
             files=$(echo "$files" | grep -vxF "$f")
           done

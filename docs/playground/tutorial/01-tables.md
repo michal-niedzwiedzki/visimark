@@ -4,6 +4,6 @@
 | Gadgets   |   2 | 30.00 | 60.00 |
 | Sprockets |   6 |  8.00 | 48.00 |
 
-Order total: 110.00
+Order total: 158.00
 
 <!--vmark:no-formulas-->
