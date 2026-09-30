@@ -38,6 +38,7 @@
     "gen:mcp": "bun scripts/gen-mcp-skill.ts",
     "gen:obsidian-templates": "bun scripts/gen-obsidian-templates.ts",
     "gen:articles": "bun scripts/gen-articles.ts",
+    "publish:devto": "bun scripts/publish-devto.ts",
     "gen:examples": "bun scripts/gen-examples.ts",
     "images:webp": "bun scripts/convert-images-to-webp.ts",
     "serve": "bun scripts/serve.mjs",

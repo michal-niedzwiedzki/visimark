@@ -67,7 +67,9 @@
       "icon": "../assets/excel.webp",
       "path": "10-things-excel-cannot-do-but-visimark-can/10-things-excel-cannot-do.md",
       "posted": "https://visimark.dev/articles/10-things-excel-cannot-do-but-visimark-can/",
-      "reposted": [],
+      "reposted": [
+        "https://dev.to/holdmybear/10-things-excel-cannot-do-but-visimark-can-1j2e-temp-slug-3340275"
+      ],
       "featured": true
     },
     {
@@ -79,7 +81,10 @@
       "icon": "../assets/pie.webp",
       "banner": "howto-finance-npv-irr-pmt/howto-finance-npr-ip-pmt.webp",
       "path": "howto-finance-npv-irr-pmt/howto-finance-npv-irr-pmt.md",
-      "reposted": ["https://dev.to/holdmybear/how-to-finance-with-visimark-npv-irr-pmt-f1a"],
+      "reposted": [
+        "https://dev.to/holdmybear/how-to-finance-with-visimark-npv-irr-pmt-f1a",
+        "https://hashnode.com/edit/cmunvihvs00000agmaevz2eyv"
+      ],
       "featured": true
     },
     {
