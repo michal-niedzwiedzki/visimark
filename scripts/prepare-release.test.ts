@@ -14,6 +14,7 @@ const FILES = [
   "packages/visimark-mcp/package.json",
   "action.yml",
   "scripts/precommit-visimark-check.sh",
+  "bun.lock",
   "CHANGELOG.md",
   "editors/vscode/CHANGELOG.md",
 ];
@@ -103,6 +104,51 @@ describe("prepare-release", () => {
     expect(JSON.parse(read(root, "packages/visimark-lsp/package.json")).dependencies.visimark).toBe(
       "workspace:*",
     );
+  });
+
+  test("bumps bun.lock's mirrored version and visimark pins, scoped to the right workspace", () => {
+    const root = tree();
+    expect(runAt(root, next).code).toBe(0);
+    const lock = read(root, "bun.lock");
+    for (const workspace of [
+      "packages/visimark",
+      "packages/visimark-lsp",
+      "editors/vscode",
+      "packages/remark-visimark",
+      "packages/markdownlint-visimark",
+      "packages/visimark-mcp",
+    ]) {
+      const block =
+        new RegExp(`"${workspace}": \\{[\\s\\S]*?\\n    \\},?\\n`).exec(lock)?.[0] ?? "";
+      expect(block).toContain(`"version": "${next}"`);
+    }
+    // packages/visimark-lsp and packages/visimark-mcp share "visimark" as a
+    // prefix; each block's own pin (or workspace:* for the lsp) must move,
+    // and no block may pick up a different workspace's version by accident.
+    const lspBlock = /"packages\/visimark-lsp": \{[\s\S]*?\n    \},?\n/.exec(lock)![0]!;
+    expect(lspBlock).toContain('"visimark": "workspace:*"');
+    const mcpBlock = /"packages\/visimark-mcp": \{[\s\S]*?\n    \},?\n/.exec(lock)![0]!;
+    expect(mcpBlock).toContain(`"visimark": "${next}"`);
+    expect(lock.match(new RegExp(`"visimark": "${next}"`, "g"))).toHaveLength(3);
+  });
+
+  test("refuses, writing nothing, when a bun.lock block is missing its version — rather than editing the next workspace's", () => {
+    const root = tree();
+    const lock = read(root, "bun.lock");
+    // Strip just packages/visimark-lsp's "version" line; editors/vscode (the
+    // very next block) keeps its own "version" field right after it, which is
+    // exactly what an unbounded lazy match could wander into instead.
+    const stripped = lock.replace(
+      /("packages\/visimark-lsp": \{\n {6}"name": "visimark-lsp",\n) {6}"version": "[^"]+",\n/,
+      "$1",
+    );
+    expect(stripped).not.toBe(lock);
+    writeFileSync(join(root, "bun.lock"), stripped);
+    const before = snapshot(root);
+    const r = runAt(root, next);
+    expect(r.code).toBe(1);
+    expect(r.out).toContain("packages/visimark-lsp");
+    expect(snapshot(root)).toEqual(before);
   });
 
   test("turns the changelogs over", () => {

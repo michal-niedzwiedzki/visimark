@@ -23,7 +23,7 @@ jobs:
           bun-version: latest
       - run: bun install --frozen-lockfile
 
-      # Eleven files/fields carry the version and all eleven must agree. The six
+      # Twenty files/fields carry the version and all twenty must agree. The six
       # package manifests have to match because one tag publishes all of them, and a
       # mismatch ships a release under the wrong number or fails a leg midway
       # with the others already out. action.yml joins them because its `version`
@@ -44,6 +44,11 @@ jobs:
       # would let a published server pair with an engine it was never tested
       # against — and its envelope reports the engine version it loaded, which
       # would then be a number no CI run ever saw.
+      # bun.lock mirrors all six manifests' "version" and the three exact
+      # "visimark" pins in its own "workspaces" block, for bookkeeping. Bun
+      # links a workspace-named dependency locally no matter what the pin
+      # text says, so --frozen-lockfile never refuses over this drifting —
+      # it sat at 0.1.8 through v0.1.9 and v0.1.10 before anyone noticed.
       #
       # docs/releasing.md used to ask the releaser to eyeball this with grep.
       # A release checklist step that nothing enforces is a step that gets
@@ -68,12 +73,55 @@ jobs:
           markdownlint_dep=$(bun -e 'console.log(require("./packages/markdownlint-visimark/package.json").dependencies.visimark)')
           mcp_version=$(bun -e 'console.log(require("./packages/visimark-mcp/package.json").version)')
           mcp_dep=$(bun -e 'console.log(require("./packages/visimark-mcp/package.json").dependencies.visimark)')
-          echo "engine=$engine lsp=$lsp vscode=$ext action.yml=$pinned precommit-hook=$precommit_versions remark-plugin=$remark_version remark-plugin-dep=$remark_dep markdownlint-rule=$markdownlint_version markdownlint-rule-dep=$markdownlint_dep mcp-server=$mcp_version mcp-server-dep=$mcp_dep"
+          # bun.lock is not JSON (it allows trailing commas), so it is read with
+          # plain string search rather than `bun -e require(...)`. Each lookup
+          # is scoped to the one workspace block, found by substring match on
+          # its `"<workspace>":` key line, so "packages/visimark" cannot pick up
+          # "packages/visimark-lsp"'s field — index() needs the exact `":`
+          # right after the key text, which the longer name never produces.
+          # It stops at the block's own closing brace (four spaces then "},")
+          # rather than scanning past it: without that bound, a field missing
+          # from its own block would silently match the next workspace's.
+          lock_field() {
+            awk -v key="\"$1\":" -v marker="\"$2\": \"" '
+              index($0, key) { f=1; next }
+              f && /^    \},?[ \t]*$/ { exit }
+              f && index($0, marker) {
+                i = index($0, marker) + length(marker)
+                rest = substr($0, i)
+                print substr(rest, 1, index(rest, "\"") - 1)
+                exit
+              }
+            ' bun.lock
+          }
+          lock_engine=$(lock_field "packages/visimark" version)
+          lock_lsp=$(lock_field "packages/visimark-lsp" version)
+          lock_ext=$(lock_field "editors/vscode" version)
+          lock_remark_version=$(lock_field "packages/remark-visimark" version)
+          lock_remark_dep=$(lock_field "packages/remark-visimark" visimark)
+          lock_markdownlint_version=$(lock_field "packages/markdownlint-visimark" version)
+          lock_markdownlint_dep=$(lock_field "packages/markdownlint-visimark" visimark)
+          lock_mcp_version=$(lock_field "packages/visimark-mcp" version)
+          lock_mcp_dep=$(lock_field "packages/visimark-mcp" visimark)
+          echo "engine=$engine lsp=$lsp vscode=$ext action.yml=$pinned precommit-hook=$precommit_versions remark-plugin=$remark_version remark-plugin-dep=$remark_dep markdownlint-rule=$markdownlint_version markdownlint-rule-dep=$markdownlint_dep mcp-server=$mcp_version mcp-server-dep=$mcp_dep bun.lock=$lock_engine,$lock_lsp,$lock_ext,$lock_remark_version,$lock_remark_dep,$lock_markdownlint_version,$lock_markdownlint_dep,$lock_mcp_version,$lock_mcp_dep"
           if [ -z "$pinned" ]; then
             echo "::error::could not read the version default out of action.yml. The version input or its default line moved; fix this check rather than deleting it."
             exit 1
           fi
           fail=0
+          # Every bun.lock field above is mandatory — unlike $precommit, which
+          # can legitimately end up empty after an already-reported mismatch
+          # — so an empty result here means the workspace block or the field
+          # itself is missing, and that has to fail loudly rather than be
+          # skipped by the "$got" is empty" guard the comparison loop below
+          # uses for $precommit.
+          for lock_check in "packages/visimark version:$lock_engine" "packages/visimark-lsp version:$lock_lsp" "editors/vscode version:$lock_ext" "packages/remark-visimark version:$lock_remark_version" "packages/remark-visimark visimark dep:$lock_remark_dep" "packages/markdownlint-visimark version:$lock_markdownlint_version" "packages/markdownlint-visimark visimark dep:$lock_markdownlint_dep" "packages/visimark-mcp version:$lock_mcp_version" "packages/visimark-mcp visimark dep:$lock_mcp_dep"; do
+            name=${lock_check%%:*}; val=${lock_check#*:}
+            if [ -z "$val" ]; then
+              echo "::error file=bun.lock::could not find $name in bun.lock — the workspace block or the field moved. Fix this check or bun.lock — see docs/releasing.md."
+              fail=1
+            fi
+          done
           if [ "$precommit_count" != "1" ]; then
             echo "::error file=scripts/precommit-visimark-check.sh::expected exactly one visimark@<version> pin (the bunx and npx branches must agree), found: $(echo "$precommit_versions" | tr '\n' ' ')"
             fail=1
@@ -81,10 +129,10 @@ jobs:
           else
             precommit=$precommit_versions
           fi
-          for pair in "packages/visimark-lsp/package.json:$lsp" "editors/vscode/package.json:$ext" "action.yml:$pinned" "scripts/precommit-visimark-check.sh:$precommit" "packages/remark-visimark/package.json (version):$remark_version" "packages/remark-visimark/package.json (visimark dep):$remark_dep" "packages/markdownlint-visimark/package.json (version):$markdownlint_version" "packages/markdownlint-visimark/package.json (visimark dep):$markdownlint_dep" "packages/visimark-mcp/package.json (version):$mcp_version" "packages/visimark-mcp/package.json (visimark dep):$mcp_dep"; do
+          for pair in "packages/visimark-lsp/package.json:$lsp" "editors/vscode/package.json:$ext" "action.yml:$pinned" "scripts/precommit-visimark-check.sh:$precommit" "packages/remark-visimark/package.json (version):$remark_version" "packages/remark-visimark/package.json (visimark dep):$remark_dep" "packages/markdownlint-visimark/package.json (version):$markdownlint_version" "packages/markdownlint-visimark/package.json (visimark dep):$markdownlint_dep" "packages/visimark-mcp/package.json (version):$mcp_version" "packages/visimark-mcp/package.json (visimark dep):$mcp_dep" "bun.lock (packages/visimark version):$lock_engine" "bun.lock (packages/visimark-lsp version):$lock_lsp" "bun.lock (editors/vscode version):$lock_ext" "bun.lock (packages/remark-visimark version):$lock_remark_version" "bun.lock (packages/remark-visimark visimark dep):$lock_remark_dep" "bun.lock (packages/markdownlint-visimark version):$lock_markdownlint_version" "bun.lock (packages/markdownlint-visimark visimark dep):$lock_markdownlint_dep" "bun.lock (packages/visimark-mcp version):$lock_mcp_version" "bun.lock (packages/visimark-mcp visimark dep):$lock_mcp_dep"; do
             file=${pair%%:*}; got=${pair#*:}
             if [ -n "$got" ] && [ "$got" != "$engine" ]; then
-              echo "::error file=$file::$file says $got but packages/visimark/package.json says $engine. Bump every version-carrying file in the release commit — see docs/releasing.md."
+              echo "::error file=$file::$file says $got but packages/visimark/package.json says $engine. Bump every version-carrying file in the release commit — see docs/releasing.md (bun scripts/prepare-release.ts does bun.lock too)."
               fail=1
             fi
           done

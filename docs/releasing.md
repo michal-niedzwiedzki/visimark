@@ -216,7 +216,7 @@ What the scanner looks at, learned from 0.2.0 to 0.2.2:
    run on every push to `master`. Wait for both before tagging — `release.yml`
    checks out the tag, not your working tree, so an unpushed or red commit
    cannot be in the release.
-3. **Bump the version** to the same `X.Y.Z` in all eight version-carrying files.
+3. **Bump the version** to the same `X.Y.Z` in all nine version-carrying files.
    `bun scripts/prepare-release.ts [FIX|MINOR|MAJOR|X.Y.Z]` does this and step 4's
    changelog turnover in one go; omitting the argument defaults to `FIX`. A bump
    word computes the next version from the one in `packages/visimark/package.json`
@@ -238,15 +238,21 @@ What the scanner looks at, learned from 0.2.0 to 0.2.2:
    packages/remark-visimark/package.json       # its own version AND its visimark dependency pin
    packages/markdownlint-visimark/package.json # its own version AND its visimark dependency pin
    packages/visimark-mcp/package.json          # its own version AND its visimark dependency pin
+   bun.lock                                    # the same six "version"s and three visimark pins, mirrored
    ```
    They must match each other and the tag exactly. `action.yml` is in the list
    because its default is what a consumer's `npx` installs: leave it behind and
    everyone who pinned the new Action ref quietly keeps running the old engine.
    `scripts/precommit-visimark-check.sh` joins them for the same reason — it is
-   what a consumer's pinned `pre-commit` `rev:` actually runs. No hand-run
-   `grep` needed any more — `ci.yml`'s "every version-carrying file must agree"
-   step fails the build if you miss one of them, so step 6's green CI is the
-   confirmation.
+   what a consumer's pinned `pre-commit` `rev:` actually runs. `bun.lock` joins
+   them because it sat at `0.1.8` through v0.1.9 and v0.1.10 without anyone
+   noticing: `--frozen-lockfile` never refuses over it, since Bun links a
+   workspace-named dependency to the local package regardless of what its pin
+   says, so the drift was invisible to every build in this repo — it would only
+   have bitten a consumer reading `bun.lock` for provenance, or a future change
+   to that linking behavior. No hand-run `grep` needed any more — `ci.yml`'s
+   "every version-carrying file must agree" step fails the build if you miss
+   one of them, so step 6's green CI is the confirmation.
 
    `server.json` is **not** in this list, and does not need to be: the
    MCP-registry leg rewrites its two version fields from the tag before it
@@ -455,6 +461,7 @@ proves it *starts*.
 |------|------------------------|
 | The tag is the only publisher. No hand-run `npm publish` / `vsce publish` / `ovsx publish`. | npm keeps the version number forever on the first publish it sees. `visimark@0.1.0` is a mis-publish that can never be reissued. |
 | All six `package.json` versions equal the tag, exactly — and the three `dependencies.visimark` pins with them. | One tag then publishes mismatched version numbers, or a leg fails mid-release with the others already out. |
+| `bun.lock`'s mirrored versions and pins equal the tag too. | `--frozen-lockfile` does not catch this — Bun links a workspace-named dependency locally regardless of the pin text — so it drifted silently for two releases (`0.1.8` through v0.1.9 and v0.1.10) before `ci.yml` learned to check it. |
 | The changelog entry is written, dated and merged **before** the tag. | The GitHub Release body is that version's section of `CHANGELOG.md` at the tagged commit — a tag ahead of the changelog has no section to extract, and the release step fails. |
 | Each changelog has a dated `## X.Y.Z - YYYY-MM-DD` heading for the release's version, in the release commit. | `ci.yml`'s "every release must have a changelog entry" step fails the release commit. Without the entry the GitHub Release body ships the previous version's notes, or the Marketplace page silently skips the version. The check proves the heading exists, not that the entry is accurate. |
 | The Shipped-register **Released** cells are filled **before** the tag (step 5). | The released `vocabulary-catalogue.md` shows shipped primitives as still pending, while `release.yml` closes their issues — the catalogue and the tracker disagree. |
