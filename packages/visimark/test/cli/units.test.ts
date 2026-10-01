@@ -67,3 +67,55 @@ test("a compound unit prints normalised in text and as a map in JSON", async () 
   };
   expect(json.units["work"]).toEqual({ kg: 1, m: 2, s: -2 });
 });
+
+const INVOICE_LIKE = `\`\`\`vmark
+[J] = [N⋅m]
+fx_eur [PLN/EUR] = 4.2650
+work [J] = 1
+\`\`\`
+
+| Qty | Rate [PLN] | Net |
+|---:|---:|---:|
+| 2 | 10.00 | 20.00 |
+
+\`\`\`vmark #lines
+Net = Qty * Rate
+total [PLN] = SUM(Net)
+eur precision 2 = total / fx_eur
+\`\`\`
+`;
+
+test("explain shows inputs, rules, scalars and definitions with their units", async () => {
+  const { code, out } = await run(["explain", withFile(INVOICE_LIKE)]);
+  expect(code).toBe(0);
+  expect(out).toContain("  fx_eur = 4.2650   [PLN/EUR] (declared)");
+  expect(out).toContain("  units:\n    [J] = [N⋅m]");
+  expect(out).toContain("  inputs:  Qty, Rate [PLN]");
+  expect(out).toContain("    Net = Qty * Rate   precision 2 (derived)   [PLN] (derived)");
+  expect(out).toContain("    total = SUM(Net)       precision 2 (derived)    [PLN] (declared)");
+  expect(out).toContain("    eur = total / fx_eur   precision 2 (declared)   [EUR] (derived)");
+});
+
+test("explain --json carries each binding's unit", async () => {
+  const { out } = await run(["explain", withFile(INVOICE_LIKE), "--json"]);
+  const body = JSON.parse(out) as {
+    documentScope: { name: string; unit?: object }[];
+    unitDefinitions: object[];
+    sheets: {
+      inputUnits: object;
+      rules: { unit?: object }[];
+      scalars: { name: string; unit?: object }[];
+    }[];
+  };
+  expect(body.documentScope.find((b) => b.name === "fx_eur")!.unit).toEqual({
+    map: { EUR: -1, PLN: 1 },
+    source: "declared",
+  });
+  expect(body.unitDefinitions).toEqual([{ atom: "J", unit: "N⋅m" }]);
+  expect(body.sheets[0]!.inputUnits).toEqual({ Rate: { PLN: 1 } });
+  expect(body.sheets[0]!.rules[0]!.unit).toEqual({ map: { PLN: 1 }, source: "derived" });
+  expect(body.sheets[0]!.scalars.find((b) => b.name === "eur")!.unit).toEqual({
+    map: { EUR: 1 },
+    source: "derived",
+  });
+});
