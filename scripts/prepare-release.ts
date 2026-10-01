@@ -10,33 +10,57 @@
  * It rewrites text in place, so file formatting survives. Every replacement
  * must match exactly as expected; if any does not, nothing is written.
  *
- * Usage: `bun scripts/prepare-release.ts X.Y.Z [--date YYYY-MM-DD] [root]` —
+ * Usage: `bun scripts/prepare-release.ts [FIX|MINOR|MAJOR|X.Y.Z] [--date YYYY-MM-DD] [--root path]`
+ * — a bump word (case-insensitive) computes the next version from the current
+ * one; omitting it defaults to FIX. An explicit X.Y.Z sets the version
+ * outright (the escape hatch for the odd case, e.g. the first 1.0.0), but
+ * whichever component it moves is still checked against the rule below.
  * `date` defaults to today, `root` to the repository root (it exists so this
  * can run against a temp tree). Exit 0 done, 1 refused, 2 usage.
+ *
+ * A MINOR bump needs a "### Added" entry in CHANGELOG.md's Unreleased
+ * section; MAJOR needs "### Removed" (a breaking change). "### Fixed" /
+ * "### Changed" alone — a bug fix, a wording tweak, content filed under the
+ * wrong heading — never justifies more than FIX; the tool refuses rather
+ * than let a cosmetic change move a number nobody meant to move.
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const usage = (): never => {
-  console.error("usage: prepare-release X.Y.Z [--date YYYY-MM-DD] [root]");
+  console.error("usage: prepare-release [FIX|MINOR|MAJOR|X.Y.Z] [--date YYYY-MM-DD] [--root path]");
   process.exit(2);
 };
 
 const args = process.argv.slice(2);
 let date = new Date().toLocaleDateString("sv"); // ISO 8601 in local time
+let rootArg: string | undefined;
 const positional: string[] = [];
 for (let i = 0; i < args.length; i++) {
   if (args[i] === "--date") {
     const value = args[++i];
     if (value === undefined) usage();
     date = value;
+  } else if (args[i] === "--root") {
+    const value = args[++i];
+    if (value === undefined) usage();
+    rootArg = value;
   } else positional.push(args[i]!);
 }
-if (positional.length < 1 || positional.length > 2) usage();
-const version = positional[0]!;
+if (positional.length > 1) usage();
+const spec = positional[0] ?? "FIX";
+
+const BUMPS = ["FIX", "MINOR", "MAJOR"] as const;
+type Bump = (typeof BUMPS)[number];
+const asBump = (s: string): Bump | null =>
+  (BUMPS as readonly string[]).includes(s.toUpperCase()) ? (s.toUpperCase() as Bump) : null;
 // Strict semver: no leading zeros, which npm refuses to publish.
-if (!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(version)) usage();
+const isSemver = (v: string): boolean => /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(v);
+
+const bump = asBump(spec);
+if (bump === null && !isSemver(spec)) usage();
+
 // The shape is not enough: 2030-02-30 has the shape. It has to round-trip.
 const realDate = (d: string): boolean => {
   const t = new Date(`${d}T00:00:00Z`).getTime();
@@ -47,7 +71,7 @@ const realDate = (d: string): boolean => {
   );
 };
 if (!realDate(date)) usage();
-const root = resolve(positional[1] ?? join(dirname(fileURLToPath(import.meta.url)), ".."));
+const root = resolve(rootArg ?? join(dirname(fileURLToPath(import.meta.url)), ".."));
 
 const refuse = (file: string, message: string): never => {
   console.log(`::error file=${file}::${message}`);
@@ -77,8 +101,49 @@ function edit(file: string, pattern: RegExp, replacement: string, what: string):
 
 const engineFile = "packages/visimark/package.json";
 const current: string = JSON.parse(read(engineFile)).version;
+const [curMajor, curMinor, curPatch] = current.split(".").map(Number) as [number, number, number];
+
+// The Unreleased section decides both the release content and, below, what
+// bump it can justify — read it once, before any file is touched.
+const rootChangelog = read("CHANGELOG.md");
+const unreleasedMatch = /^## Unreleased[ \t]*\n([\s\S]*?)(?=^## )/m.exec(rootChangelog);
+if (unreleasedMatch === null)
+  refuse("CHANGELOG.md", 'CHANGELOG.md has no "## Unreleased" section to release.');
+const unreleasedBody = unreleasedMatch[1]!;
+if (unreleasedBody.trim() === "") {
+  refuse(
+    "CHANGELOG.md",
+    'the "## Unreleased" section of CHANGELOG.md is empty, so there is nothing to release. Write what changed first — see docs/releasing.md.',
+  );
+}
+
+const nextFor: Record<Bump, string> = {
+  FIX: `${curMajor}.${curMinor}.${curPatch + 1}`,
+  MINOR: `${curMajor}.${curMinor + 1}.0`,
+  MAJOR: `${curMajor + 1}.0.0`,
+};
+const version = bump !== null ? nextFor[bump] : spec;
 if (cmp(version, current) <= 0) {
   refuse(engineFile, `${version} is not newer than the current version ${current}.`);
+}
+
+// Whatever moved — a bump word or an explicit X.Y.Z — it has to earn it: a
+// MAJOR needs a breaking "### Removed" entry, a MINOR needs a "### Added"
+// one. "### Fixed" / "### Changed" alone never justifies more than FIX.
+const [verMajor, verMinor] = version.split(".").map(Number) as [number, number, number];
+const level: Bump = verMajor !== curMajor ? "MAJOR" : verMinor !== curMinor ? "MINOR" : "FIX";
+const hasAdded = /^### Added[ \t]*$/m.test(unreleasedBody);
+const hasRemoved = /^### Removed[ \t]*$/m.test(unreleasedBody);
+const ceiling: Bump = hasRemoved ? "MAJOR" : hasAdded ? "MINOR" : "FIX";
+const rank: Record<Bump, number> = { FIX: 0, MINOR: 1, MAJOR: 2 };
+if (rank[level] > rank[ceiling]) {
+  const need =
+    level === "MAJOR" ? '"### Removed" (a breaking change)' : '"### Added" (new functionality)';
+  refuse(
+    "CHANGELOG.md",
+    `${version} is a ${level} bump, but the "## Unreleased" section has no ${need} entry — ` +
+      `it only justifies ${ceiling}. Use ${ceiling}, or add an entry that genuinely warrants ${level}.`,
+  );
 }
 
 // The six package manifests: own version, and the exact `visimark` pin where
@@ -126,16 +191,6 @@ edit(hook, /visimark@\d+\.\d+\.\d+/g, `visimark@${version}`, "a visimark@<versio
 
 // Root changelog: Unreleased becomes the release, a fresh Unreleased opens
 // above it, and the link reference goes at the head of the reference block.
-const rootChangelog = read("CHANGELOG.md");
-const unreleased = /^## Unreleased[ \t]*\n([\s\S]*?)(?=^## )/m.exec(rootChangelog);
-if (unreleased === null)
-  refuse("CHANGELOG.md", 'CHANGELOG.md has no "## Unreleased" section to release.');
-if (unreleased![1]!.trim() === "") {
-  refuse(
-    "CHANGELOG.md",
-    'the "## Unreleased" section of CHANGELOG.md is empty, so there is nothing to release. Write what changed first — see docs/releasing.md.',
-  );
-}
 edit(
   "CHANGELOG.md",
   /^## Unreleased[ \t]*$/m,
@@ -165,7 +220,7 @@ if (/^## Unreleased[ \t]*$/m.test(read(vscodeChangelog))) {
 
 for (const [file, text] of pending) writeFileSync(join(root, file), text);
 
-console.log(`Prepared ${current} -> ${version} (${date}) in ${pending.size} files.`);
+console.log(`Prepared ${current} -> ${version} (${date}, ${level}) in ${pending.size} files.`);
 console.log(`Now: read the diff, and rewrite the placeholder line in ${vscodeChangelog} if the`);
 console.log('extension has editor-visible changes (docs/releasing.md, "Preparing the changelog").');
 console.log("Fill the Shipped-register Released cells (step 5), run the pre-push checks, then");
