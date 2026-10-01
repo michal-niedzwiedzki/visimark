@@ -18,7 +18,7 @@ usage:
                                         finding: run \`visimark infer\`, or mark
                                         the document \`<!--vmark:no-formulas-->\`
                                         if it has nothing to derive.
-  visimark fmt   FILE... [--fix-dates] [--json]
+  visimark fmt   FILE... [--fix-dates] [--fix-units] [--json]
   visimark infer FILE... [--write] [--json]
   visimark eval  FILE [--get NAME] [--json]
   visimark explain FILE [#sheet] [--json]

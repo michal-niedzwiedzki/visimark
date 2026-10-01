@@ -6,9 +6,17 @@ import type { DocumentFile } from "../fs/reader.js";
 import type { DocModel, Finding } from "../model/types.js";
 import { applyUnit } from "../eval/units.js";
 import { applyEdits, type Edit } from "./splice.js";
+import type { Expr } from "../lang/ast.js";
+import { formatUnit, parseUnit } from "../lang/unit-expr.js";
+import { headerNames } from "../model/header-name.js";
 
 export interface FmtOptions {
   fixDates?: boolean;
+  /** rewrite the spelling of every unit bracket to its normalised form —
+   *  `[kg*m^2/s^2]` → `[kg⋅m²/s²]`. Spelling only: no map changes, no
+   *  declaration is added or removed. See
+   *  docs/design/algebraic-unit-maps-on-names-spec.md §5.3. */
+  fixUnits?: boolean;
   /** decline the write of generated artifacts: `fmt` still splices the
    *  document, but returns no artifact for the caller to write. The finding is
    *  unaffected — `check` still reports a missing or stale artifact as STALE.
@@ -45,6 +53,8 @@ export interface FmtResult {
   datesFixed: number;
   /** import stamps added or corrected — never the CSV file itself */
   stampsUpdated: number;
+  /** unit brackets respelled by `fixUnits`; `0` without it */
+  unitsFixed: number;
   unfixable: Finding[];
   /** artifacts that are stale or missing — the caller writes them. Always
    *  empty under `FmtOptions.noArtifacts`. */
@@ -251,8 +261,9 @@ export function artifactsFor(result: CheckResult): ArtifactWrite[] {
 export function fmt(source: string, opts: FmtOptions = {}): FmtResult {
   const model = build(locate(source));
   const result = check(model, { doc: opts.doc });
+  const unitEdits = opts.fixUnits ? planUnitSpelling(model, source) : [];
   const edits = planFmt(model, result, opts);
-  const output = applyEdits(source, edits);
+  const output = applyEdits(source, [...edits, ...unitEdits]);
 
   const cellsUpdated = countCellEdits(model, result, edits);
   const datesFixed = opts.fixDates
@@ -283,6 +294,7 @@ export function fmt(source: string, opts: FmtOptions = {}): FmtResult {
     anchorsUpdated,
     datesFixed,
     stampsUpdated,
+    unitsFixed: unitEdits.length,
     unfixable,
     artifacts: opts.noArtifacts ? [] : artifacts,
     artifactsSkipped: opts.noArtifacts ? artifacts.length : 0,
@@ -311,4 +323,73 @@ function countCellEdits(model: DocModel, _result: CheckResult, edits: Edit[]): n
     }
   }
   return edits.filter((e) => cellSpans.has(`${e.start}:${e.end}`)).length;
+}
+
+/**
+ * `--fix-units`: every unit bracket the document writes — header clauses, head
+ * clauses, literal units, definitions, import lists — respelled as its own
+ * map's normalised form. Never a definition expanded or contracted, never a
+ * bracket that does not parse, never a cell decoration or prose. Kept apart
+ * from `planFmt` because no finding asks for it.
+ */
+export function planUnitSpelling(model: DocModel, source: string): Edit[] {
+  const sites: { start: number; end: number }[] = [];
+  const seen = new Set<number>();
+  const add = (u: { start: number; end: number } | undefined): void => {
+    if (!u || seen.has(u.start)) return;
+    seen.add(u.start);
+    sites.push(u);
+  };
+  const walk = (e: Expr): void => {
+    switch (e.type) {
+      case "num":
+        add(e.unit);
+        break;
+      case "unary":
+        walk(e.operand);
+        break;
+      case "binary":
+        walk(e.left);
+        walk(e.right);
+        break;
+      case "call":
+        for (const a of e.args) walk(a);
+        break;
+      default:
+        break;
+    }
+  };
+  const bindings = [...model.docScope.values()];
+  for (const sheet of model.sheets.values()) {
+    bindings.push(...sheet.columns.values(), ...sheet.scalars.values());
+    for (const a of sheet.assertions) walk(a.expr);
+    if (sheet.table && !sheet.imported) {
+      for (const h of headerNames(sheet.table, source)) add(h.unit ?? undefined);
+    }
+    const labels = sheet.imported?.labelsSpan;
+    if (labels) {
+      const text = source.slice(labels.start, labels.end);
+      for (const m of text.matchAll(/\[[^\]]*\]/g)) {
+        add({ start: labels.start + m.index, end: labels.start + m.index + m[0].length });
+      }
+    }
+  }
+  for (const b of bindings) {
+    add(b.unitText);
+    walk(b.expr);
+  }
+  for (const d of model.unitDefinitions) {
+    add(d.atom);
+    add(d.unit);
+  }
+
+  const edits: Edit[] = [];
+  for (const site of sites) {
+    const written = source.slice(site.start, site.end);
+    const parsed = parseUnit(written.slice(1, -1));
+    if (!parsed.ok) continue;
+    const normal = `[${formatUnit(parsed.map)}]`;
+    if (normal !== written) edits.push({ start: site.start, end: site.end, text: normal });
+  }
+  return edits;
 }

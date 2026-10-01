@@ -138,6 +138,7 @@ export function cmdFmt(args: string[], out: Writer, err: Writer): number {
     return 2;
   }
   const fixDates = flags.has("fix-dates");
+  const fixUnits = flags.has("fix-units");
   const noArtifacts = flags.has("no-artifacts");
   const fileEntries: object[] = [];
   let exit: 0 | 1 | 2 = 0;
@@ -161,7 +162,7 @@ export function cmdFmt(args: string[], out: Writer, err: Writer): number {
       exit = 2;
       continue;
     }
-    const r = fmt(source, { fixDates, noArtifacts, doc: onDisk(path) });
+    const r = fmt(source, { fixDates, fixUnits, noArtifacts, doc: onDisk(path) });
     // a generated artifact is written whole; the document itself is spliced.
     // `mkdirSync` still resolves a path - it has to, since the artifact's
     // directory may not exist yet - but nothing is decided by it: the open
@@ -198,6 +199,7 @@ export function cmdFmt(args: string[], out: Writer, err: Writer): number {
           r.cellsUpdated ? `${r.cellsUpdated} cell${r.cellsUpdated === 1 ? "" : "s"}` : "",
           r.anchorsUpdated ? `${r.anchorsUpdated} anchor${r.anchorsUpdated === 1 ? "" : "s"}` : "",
           r.datesFixed ? `${r.datesFixed} date${r.datesFixed === 1 ? "" : "s"}` : "",
+          r.unitsFixed ? `${r.unitsFixed} unit${r.unitsFixed === 1 ? "" : "s"}` : "",
           r.artifacts.length
             ? `${r.artifacts.length} artifact${r.artifacts.length === 1 ? "" : "s"}`
             : "",
@@ -221,6 +223,7 @@ export function cmdFmt(args: string[], out: Writer, err: Writer): number {
         cellsUpdated: r.cellsUpdated,
         anchorsUpdated: r.anchorsUpdated,
         datesFixed: r.datesFixed,
+        ...(fixUnits ? { unitsFixed: r.unitsFixed } : {}),
         artifacts: r.artifacts.map((a) => ({ path: a.path })),
         artifactsSkipped: r.artifactsSkipped,
         findings: r.unfixable.map((f) => publicFinding(path, f)),
