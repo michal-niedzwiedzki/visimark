@@ -177,6 +177,32 @@ for (const [file, pinsEngine] of manifests) {
   }
 }
 
+// bun.lock mirrors every manifest's own "version" (and, for the three
+// exact-pinned packages, the visimark dependency) in its "workspaces" block
+// for bookkeeping — bun never refuses --frozen-lockfile over this drifting,
+// since it links a workspace-named dependency locally regardless of what the
+// pin says, so it sat two releases stale (0.1.8, through v0.1.9 and v0.1.10)
+// before anyone noticed. Each pattern is anchored at its own `"<workspace>":
+// {` line so it cannot touch a same-named field in a different workspace.
+const lockFile = "bun.lock";
+for (const [file, pinsEngine] of manifests) {
+  const workspace = file.replace(/\/package\.json$/, "").replace(/[/.]/g, "\\$&");
+  edit(
+    lockFile,
+    new RegExp(`("${workspace}": \\{[\\s\\S]*?"version": ")[^"]+(")`),
+    `$1${version}$2`,
+    `"${file.replace(/\/package\.json$/, "")}"'s "version" in bun.lock`,
+  );
+  if (pinsEngine) {
+    edit(
+      lockFile,
+      new RegExp(`("${workspace}": \\{[\\s\\S]*?"visimark": ")\\d+\\.\\d+\\.\\d+(")`),
+      `$1${version}$2`,
+      `"${file.replace(/\/package\.json$/, "")}"'s "visimark" dependency pin in bun.lock`,
+    );
+  }
+}
+
 // The block is `version:` and the lines indented under it, so the match cannot
 // run on into a later input's `default` if this one loses its own.
 edit(
