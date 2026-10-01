@@ -129,11 +129,20 @@ if (cmp(version, current) <= 0) {
 
 // Whatever moved — a bump word or an explicit X.Y.Z — it has to earn it: a
 // MAJOR needs a breaking "### Removed" entry, a MINOR needs a "### Added"
-// one. "### Fixed" / "### Changed" alone never justifies more than FIX.
+// one. "### Fixed" / "### Changed" alone never justifies more than FIX. The
+// heading alone is not an entry: "### Added\n" with nothing under it (the
+// next "### " or the end of the section) must not count.
+const sectionEntry = (heading: string): string => {
+  const start = unreleasedBody.search(new RegExp(`^### ${heading}[ \\t]*$`, "m"));
+  if (start === -1) return "";
+  const rest = unreleasedBody.slice(unreleasedBody.indexOf("\n", start) + 1);
+  const next = rest.search(/^### /m);
+  return (next === -1 ? rest : rest.slice(0, next)).trim();
+};
 const [verMajor, verMinor] = version.split(".").map(Number) as [number, number, number];
 const level: Bump = verMajor !== curMajor ? "MAJOR" : verMinor !== curMinor ? "MINOR" : "FIX";
-const hasAdded = /^### Added[ \t]*$/m.test(unreleasedBody);
-const hasRemoved = /^### Removed[ \t]*$/m.test(unreleasedBody);
+const hasAdded = sectionEntry("Added") !== "";
+const hasRemoved = sectionEntry("Removed") !== "";
 const ceiling: Bump = hasRemoved ? "MAJOR" : hasAdded ? "MINOR" : "FIX";
 const rank: Record<Bump, number> = { FIX: 0, MINOR: 1, MAJOR: 2 };
 if (rank[level] > rank[ceiling]) {

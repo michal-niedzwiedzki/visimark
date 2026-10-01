@@ -256,6 +256,24 @@ describe("prepare-release", () => {
       expect(runAt(root, "MINOR").code).toBe(0);
     });
 
+    test("refuses MINOR when the Added heading has no entry under it, writing nothing", () => {
+      const root = tree("### Fixed\n\n- Bug fix.\n\n### Added\n");
+      const before = snapshot(root);
+      const r = runAt(root, "MINOR");
+      expect(r.code).toBe(1);
+      expect(r.out).toContain("MINOR bump");
+      expect(snapshot(root)).toEqual(before);
+    });
+
+    test("refuses MAJOR when the Removed heading has no entry under it, writing nothing", () => {
+      const root = tree("### Added\n\n- Something new.\n\n### Removed\n");
+      const before = snapshot(root);
+      const r = runAt(root, "MAJOR");
+      expect(r.code).toBe(1);
+      expect(r.out).toContain("MAJOR bump");
+      expect(snapshot(root)).toEqual(before);
+    });
+
     test("an explicit X.Y.Z is held to the same rule as the matching bump word", () => {
       const root = tree("### Fixed\n\n- Bug fix.\n");
       const before = snapshot(root);
