@@ -14,7 +14,12 @@ import { formatCheck } from "../report/format.js";
 import { explainText, explainView } from "../report/explain.js";
 import { errorEnvelope, explainJson } from "../report/envelope.js";
 import { formatInfer } from "../report/infer.js";
-import { describeFunction, functionNames, precisionPhrase, unitSigText } from "../lang/reference.js";
+import {
+  describeFunction,
+  functionNames,
+  precisionPhrase,
+  unitSigText,
+} from "../lang/reference.js";
 import { domainJson, formatDomain } from "../lang/domain.js";
 import { closest } from "../report/levenshtein.js";
 import {

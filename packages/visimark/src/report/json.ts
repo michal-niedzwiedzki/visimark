@@ -193,7 +193,9 @@ export function publicFnEntry(e: FnEntry): object {
     returns: e.returns,
     precision: { ...e.precision, text: precisionPhrase(e.precision) },
     units: {
-      params: Object.fromEntries(e.params.map((p) => [p.name, unitSigSlot(e.units.params[p.name]!)])),
+      params: Object.fromEntries(
+        e.params.map((p) => [p.name, unitSigSlot(e.units.params[p.name]!)]),
+      ),
       returns: unitSigSlot(e.units.returns),
       text: unitSigText(e.name, e),
     },

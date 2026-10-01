@@ -310,7 +310,10 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
     ],
     returns: "number",
     precision: { from: "declared" },
-    units: { params: { rate: { kind: "dimensionless" }, flows: { kind: "var", name: "U" } }, returns: { kind: "var", name: "U" } },
+    units: {
+      params: { rate: { kind: "dimensionless" }, flows: { kind: "var", name: "U" } },
+      returns: { kind: "var", name: "U" },
+    },
     errors: [
       { when: "a non-numeric `rate`", code: "TYPE" },
       { when: "a `rate` of -1 or below", code: "TYPE" },
@@ -361,7 +364,10 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
     ],
     returns: "number",
     precision: { from: "argument-value", param: "places" },
-    units: { params: { x: { kind: "var", name: "U" }, places: { kind: "dimensionless" } }, returns: { kind: "var", name: "U" } },
+    units: {
+      params: { x: { kind: "var", name: "U" }, places: { kind: "dimensionless" } },
+      returns: { kind: "var", name: "U" },
+    },
     rounding: "Ties round away from zero (half-up), not to even.",
     errors: [],
     examples: [
@@ -392,7 +398,10 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
     ],
     returns: "number",
     precision: { from: "operands", params: ["x", "y"] },
-    units: { params: { x: { kind: "var", name: "U" }, y: { kind: "var", name: "U" } }, returns: { kind: "var", name: "U" } },
+    units: {
+      params: { x: { kind: "var", name: "U" }, y: { kind: "var", name: "U" } },
+      returns: { kind: "var", name: "U" },
+    },
     errors: [{ when: "a zero divisor", code: "TYPE" }],
     examples: [
       { expr: "MOD(7, 3)", is: "1" },
@@ -405,7 +414,10 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
     params: [{ name: "x", type: "number", note: "a non-negative number" }],
     returns: "number",
     precision: { from: "declared" },
-    units: { params: { x: { kind: "var", name: "U", pow: 2 } }, returns: { kind: "var", name: "U" } },
+    units: {
+      params: { x: { kind: "var", name: "U", pow: 2 } },
+      returns: { kind: "var", name: "U" },
+    },
     errors: [{ when: "a negative operand", code: "TYPE" }],
     examples: [
       { expr: "SQRT(9)", is: "3" },
@@ -421,7 +433,10 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
     ],
     returns: "number",
     precision: { from: "argument-scale", param: "s" },
-    units: { params: { x: { kind: "var", name: "U" }, s: { kind: "var", name: "U" } }, returns: { kind: "var", name: "U" } },
+    units: {
+      params: { x: { kind: "var", name: "U" }, s: { kind: "var", name: "U" } },
+      returns: { kind: "var", name: "U" },
+    },
     errors: [{ when: "a non-positive `s`", code: "TYPE" }],
     examples: [
       { expr: "FLOOR(7, 3)", is: "6" },
@@ -438,7 +453,10 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
     ],
     returns: "number",
     precision: { from: "argument-scale", param: "s" },
-    units: { params: { x: { kind: "var", name: "U" }, s: { kind: "var", name: "U" } }, returns: { kind: "var", name: "U" } },
+    units: {
+      params: { x: { kind: "var", name: "U" }, s: { kind: "var", name: "U" } },
+      returns: { kind: "var", name: "U" },
+    },
     errors: [{ when: "a non-positive `s`", code: "TYPE" }],
     examples: [
       { expr: "CEILING(7, 3)", is: "9" },
@@ -456,7 +474,14 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
     ],
     returns: "whichever of `a` or `b` was selected",
     precision: { from: "operands", params: ["a", "b"] },
-    units: { params: { cond: { kind: "type", type: "bool" }, a: { kind: "var", name: "U" }, b: { kind: "var", name: "U" } }, returns: { kind: "var", name: "U" } },
+    units: {
+      params: {
+        cond: { kind: "type", type: "bool" },
+        a: { kind: "var", name: "U" },
+        b: { kind: "var", name: "U" },
+      },
+      returns: { kind: "var", name: "U" },
+    },
     errors: [{ when: "a non-boolean `cond`", code: "TYPE" }],
     examples: [
       { expr: "IF(1 < 2, 10, 20)", is: "10" },
@@ -471,7 +496,10 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
     ],
     returns: "date",
     precision: { from: "date" },
-    units: { params: { d: { kind: "type", type: "date" }, months: { kind: "any" } }, returns: { kind: "type", type: "date" } },
+    units: {
+      params: { d: { kind: "type", type: "date" }, months: { kind: "any" } },
+      returns: { kind: "type", type: "date" },
+    },
     errors: [
       { when: "a non-whole `months`", code: "TYPE" },
       { when: "a result outside years 1–9999", code: "DATE" },
@@ -493,7 +521,14 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
     ],
     returns: "number",
     precision: { from: "declared" },
-    units: { params: { rate: { kind: "dimensionless" }, nper: { kind: "dimensionless" }, pv: { kind: "var", name: "U" } }, returns: { kind: "var", name: "U" } },
+    units: {
+      params: {
+        rate: { kind: "dimensionless" },
+        nper: { kind: "dimensionless" },
+        pv: { kind: "var", name: "U" },
+      },
+      returns: { kind: "var", name: "U" },
+    },
     errors: [
       { when: "a non-numeric `rate`, `nper`, or `pv`", code: "TYPE" },
       { when: "a non-positive or non-whole `nper`", code: "TYPE" },

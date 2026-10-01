@@ -125,10 +125,12 @@ export function parseUnit(text: string): UnitParse {
   const t = text.trim();
   const shown = `[${t}]`;
   if (t === "") return fail(`${shown} declares no unit`);
-  if (t === "%") return fail(`[%] is not a unit — % is number syntax (23% is 0.23); drop the bracket`);
+  if (t === "%")
+    return fail(`[%] is not a unit — % is number syntax (23% is 0.23); drop the bracket`);
 
   const toks = tokenize(t);
-  if (toks.some((x) => x.k === "bad")) return fail(`${shown} is not a unit — an atom is letters only`);
+  if (toks.some((x) => x.k === "bad"))
+    return fail(`${shown} is not a unit — an atom is letters only`);
 
   // a space between two factors, with no product mark, is not a product
   const sig = toks.filter((x) => x.k !== "space");
@@ -190,7 +192,8 @@ export function parseUnit(text: string): UnitParse {
       const num = oneNumerator ? ["1"] : numerator.map((x) => x.text);
       const den = divisors.map((x) => x.text);
       const ext = extra.map((x) => x.text);
-      const optA = [...(oneNumerator ? [] : num), ...ext].join("⋅") + den.map((d) => `/${d}`).join("");
+      const optA =
+        [...(oneNumerator ? [] : num), ...ext].join("⋅") + den.map((d) => `/${d}`).join("");
       const optB = num.join("⋅") + [...den, ...ext].map((d) => `/${d}`).join("");
       return fail(`${shown} is ambiguous — write ${optA} or ${optB}`);
     }
