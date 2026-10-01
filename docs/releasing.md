@@ -217,11 +217,18 @@ What the scanner looks at, learned from 0.2.0 to 0.2.2:
    checks out the tag, not your working tree, so an unpushed or red commit
    cannot be in the release.
 3. **Bump the version** to the same `X.Y.Z` in all eight version-carrying files.
-   `bun scripts/prepare-release.ts X.Y.Z` does this and step 4's changelog
-   turnover in one go (it refuses if nothing is under `## Unreleased`, or if
-   `X.Y.Z` is not newer, and writes nothing on any refusal); read the diff and
-   rewrite the extension changelog's placeholder line afterwards. By hand, the
-   files are:
+   `bun scripts/prepare-release.ts [FIX|MINOR|MAJOR|X.Y.Z]` does this and step 4's
+   changelog turnover in one go; omitting the argument defaults to `FIX`. A bump
+   word computes the next version from the one in `packages/visimark/package.json`
+   (`MINOR` resets the patch to `0`, `MAJOR` resets minor and patch); an explicit
+   `X.Y.Z` is the escape hatch for the odd case, such as the first `1.0.0`. Either
+   way the tool refuses if `## Unreleased` is empty, if the resulting version is
+   not newer, or if the bump is not earned: a `MINOR` needs a `### Added` entry
+   under `## Unreleased`, a `MAJOR` needs `### Removed` (a breaking change) —
+   `### Fixed` / `### Changed` alone never justifies more than `FIX`, so "bug
+   fix" or "article added" content can't accidentally move the minor or major
+   number. It writes nothing on any refusal; read the diff and rewrite the
+   extension changelog's placeholder line afterwards. By hand, the files are:
    ```
    packages/visimark/package.json
    packages/visimark-lsp/package.json
