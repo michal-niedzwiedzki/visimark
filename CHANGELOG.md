@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+### Fixed
+
+- **`server.json`'s MCP-registry `description` is back under the registry's
+  100-character cap.** [`fd76a00`](https://github.com/michal-niedzwiedzki/visimark/commit/fd76a00d5b8634fca33dd8709b1feff00c36f36c)
+  fixed this once already for v0.1.8 (152 characters then); the pitch
+  rewording that landed with v0.1.11 overwrote it with the full new
+  one-liner (191 characters), silently regressing it. `v0.1.11`'s tagged
+  release run failed the MCP-registry leg with a 422 as a result — every
+  other leg (all four npm packages, the GitHub Release, both editor
+  marketplaces) had already published, so only the registry entry was
+  missing. Fixed by shortening the description to 98 characters, then
+  backfilling the leg with `gh workflow run release.yml` run **without** a
+  `tag` input — `-f tag=v0.1.11` would have rebuilt from the already-pushed,
+  immutable tag, which still carried the over-length description. See
+  [#316](https://github.com/michal-niedzwiedzki/visimark/pull/316).
+
 ## 0.1.11 - 2026-09-30
 
 ### Added
