@@ -201,15 +201,15 @@ test("every file in src/ is a walk root, so none can hide until a row wires it i
  * Bump this only when the growth is real and reviewed, and record the date,
  * the new value and why directly above.
  */
-const BASELINE_BYTES = 341_559;
+const BASELINE_BYTES = 344_985;
 
 /*
- * 2026-10-01, 307,881 → 341,559 (+33,678). #317, algebraic unit maps: the unit
- * grammar and map algebra (`lang/unit-expr.ts`), header-name splitting and the
- * static unit pass (`eval/dimensions.ts`) enter through `check`. Measured on
- * the implementation branch; master itself stood at 312,709 that day, so
- * +28,850 is this feature and the rest is master's own growth since 09-27.
- * The branch re-measures here when it finishes.
+ * 2026-10-01, 307,881 → 344,985 (+37,104). #317, algebraic unit maps: the unit
+ * grammar and map algebra (`lang/unit-expr.ts`), header-name splitting, the
+ * static unit pass (`eval/dimensions.ts`), `fmt --fix-units` and infer's unit
+ * proposals enter through `check`, `planFmt` and `infer`. Master itself stood
+ * at 312,709 that day, so +32,276 is this feature and the rest is master's own
+ * growth since 09-27. Measured when the implementation branch finished.
  */
 
 /*

@@ -34,11 +34,10 @@ purpose — it grows when one of these gets a real user, not before.
   [`remark-lint-visimark`](docs/ci.md#24-the-remarkunified-plugin),
   [`markdownlint-rule-visimark`](docs/ci.md#25-the-markdownlint-custom-rule),
   and the composite [GitHub Action](action.yml).
-- **Engineers, scientists, anyone with a unit** — a column already carries a
-  currency symbol or a physical unit (see
-  [What it refuses to do](#what-it-refuses-to-do)); an algebraic unit type
-  system is being scoped, not shipped —
-  [issue #41](https://github.com/michal-niedzwiedzki/visimark/issues/41).
+- **Engineers, scientists, anyone with a unit** — declare it in a bracket after
+  a name, `Rate [PLN]` or `speed [m/s] = Distance / Duration`, and `check`
+  refuses `kg + m` and derives `km/h` (see
+  [What it refuses to do](#what-it-refuses-to-do)).
 - **Obsidian users with a vault of numbers** — the
   [Obsidian plugin](editors/obsidian/README.md), which marks every computed
   value in reading mode and Live Preview.
@@ -412,8 +411,11 @@ separators are rejected for the same reason.
 A column may carry a currency symbol or a physical unit — `$5.50`, `12 N` —
 and VisiMark strips it to compute and puts it back when it writes. What it will
 not do is let one column mean two things: a column holding both `$5.00` and
-`€5.00` is an error, not a sum. The decoration is inert, never converted and
-never propagated through a formula.
+`€5.00` is an error, not a sum. A unit declared in a bracket — `Weight [kg]` on
+a header, `fx_eur [PLN/EUR]` on a binding — goes further: it propagates through
+every formula, so adding kilograms to metres, or multiplying by an exchange rate
+instead of dividing, fails `check`. Nothing is ever converted by a factor, and
+`$` is never read as `USD`.
 
 A name bound twice in one scope is an error rather than a silent overwrite.
 

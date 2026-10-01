@@ -63,7 +63,9 @@ eur_total [EUR] precision 2 = lines.gross_total / fx_eur
 `Rate [PLN]` is PLN per item: `Qty` mixes days, hours and months by row, so it
 stays dimensionless. `Net = Qty * Rate` derives `PLN`; `VAT`, `Gross`,
 `gross_total`, `schedule.Amount` and `recon.variance` all follow without a
-declaration of their own. `gross_total / fx_eur` derives `PLN ÷ PLN/EUR =
+declaration of their own. `infer --write` then pins each of those derived units
+as a declaration (`Net [PLN]`, `net_total [PLN]`, …), so the next edit that
+changes one is caught; the committed invoice carries them. `gross_total / fx_eur` derives `PLN ÷ PLN/EUR =
 EUR`, which the `[EUR]` on `eur_total` checks. A document that adds `PLN` to
 `EUR`, or multiplies by the rate instead of dividing, fails `check`.
 
@@ -144,7 +146,8 @@ rule reads the header cell's **source text**, trimmed:
    - a footnote reference, `[^…]`;
    - a `[` immediately preceded by `]` — a reference link, `[text][ref]`;
    - an escaped `\[…\]`. This is the opt-out: `Revenue \[1\]` renders as
-     `Revenue [1]` and keeps the bracket in its name.
+     `Revenue [1]`, has no unit, and keeps the name a header with no clause has
+     always had — its cell text as written, escapes included.
 
    A header that does not end in `]` — `[x](url)`, `Bandwidth per Unit (TB/s,
    full-duplex)` — has no unit and its whole text is its name, as today. A
@@ -318,7 +321,7 @@ today. When the column has a header unit:
 | `5 m²` under `[m^2]` | OK — the comparison is parsed, not textual |
 | `40 lbs` under `[kg]` | `UNIT` |
 | `5 kilogram` under `[kg]` | `UNIT` — atoms are opaque |
-| `5 pcs.` (suffix is not a unit) | `UNIT` |
+| `5 €` (suffix is not a unit) | `UNIT` |
 | `$40.00` (any prefix decoration) | `UNIT` |
 | `5%` | `UNIT` |
 | mixed bare and decorated, or two different decorations | `UNIT`, as today |
@@ -356,7 +359,9 @@ anchors, and any `assert` or chart that reads it are suppressed into `NOTE`
 | A bracket on a `param` default or domain bound | `UNIT` | `a param's unit is declared on its head` |
 | A unit on a date or string binding or column | `UNIT` | `a date cannot carry a unit` / `a string cannot carry a unit` |
 | Header with an empty stem, or two unit clauses | `UNIT` | `a header needs a name before its unit` / `a header has one unit clause` |
-| Cell decoration disagrees | `UNIT` | `cell "40 lbs" carries lbs, but the column declares kg` · `cell "$40.00" has a prefix, which a column with a unit forbids` · `cell "5 pcs." carries "pcs.", which is not a unit` |
+| Cell decoration disagrees | `UNIT` | `cell "40 lbs" carries lbs, but the column declares kg` · `cell "$40.00" has a prefix, which a column with a unit forbids` · `cell "5 €" carries "€", which is not a unit` · `5% is a ratio and cannot carry a unit` |
+| An anchored span of a declared scalar disagrees | `UNIT` | `anchor "40 lbs" carries lbs, but weight declares kg` |
+| `^` with an exponent that carries a unit | `UNIT` | `^ needs a dimensionless exponent, not kg` |
 | Chart value columns differ | `UNIT` | `chart cost needs one unit across its columns: Net is PLN, Hours is h` |
 | Import's `labelled` unit ≠ CSV header unit | `UNIT` | `Price is declared USD in labelled but EUR in the CSV header` |
 | A display rule on a unit-bearing value | `TYPE` | `\|percent cannot render a value with a unit (PLN)` |
@@ -480,24 +485,32 @@ definitions. `infer --write` never writes into a CSV.
   rule and scalar gains a unit annotation after its precision —
   `[PLN] (declared)` or `[PLN] (derived)`, omitted when dimensionless;
   definitions are listed under document scope. `explain --json` gains a `unit`
-  member on each binding: `{ "map": {…}, "source": "declared" | "derived" }`.
+  member on each binding, `{ "map": {…}, "source": "declared" | "derived" }`, an
+  `inputUnits` map on a sheet whose inputs declare units, and a top-level
+  `unitDefinitions` list when the document has any.
 - **`infer`** — a new `units` section lists each proposal with its target:
-  `Speed  [m/s]  header` or `speed  [m/s]  head`. `infer --json` gains a
-  `units` array of `{ "name", "unit", "target": "header" | "head" }`. `infer`
+  `Speed  [m/s]  header` or `speed  [m/s]  head`. Units are read off the
+  document as it will be after this run's own rules are written, so a scalar
+  `infer` adds carries its unit in its rule, a column rule it adds gets its
+  header suffix in the same pass, and one `--write` is idempotent. `infer --json`
+  lists each as a proposal of kind `unit` with `unit` and `target` (`"header"` or
+  `"head"`), and `written` gains a `units` count; the text summary says
+  `wrote 2 units`. `infer`
   offers no acronym for a header with a unit clause whose stem is an
   identifier; for a non-identifier stem it offers an alias for the stem
   (`"Worker cost" is wc`), never for the full text.
 - **`ref NAME`** — prints the function's unit signature on a `units` line.
   `ref --json` gains `"units": { "params": { "<param>": "<sig>" }, "returns":
-  "<sig>" }`. The signature is stored in the `FnDoc` in
+  "<sig>", "text": "<the whole signature>" }`. The signature is stored in the `FnDoc` in
   `packages/visimark/src/lang/reference.ts`, next to `precision`, so the
   generated function table and `function-reference.md` show it too.
 - **`fmt`** — `--fix-units` as §5.3. Refused on every other command with exit
   `2`, through the existing unrecognised-option path.
 - **LSP / VS Code** — hover on a binding or column shows its unit and source;
   hover on a builtin shows its unit signature. Diagnostics follow the findings.
-- **MCP server and playground** — consume the engine's output; they inherit
-  every change above with no surface of their own.
+- **MCP server and playground** — consume the engine's output. The MCP `eval`
+  tool emits the same `units` object as `eval --json`; nothing else of their
+  own changes.
 
 ### 5.10 What does not change
 
@@ -514,7 +527,8 @@ the `eval --json` key of one.
 
 1. **The invoice.** `docs/example-invoice.md` gains `Rate [PLN]` on its header
    (column re-padded by hand), `fx_eur [PLN/EUR] = 4.2650`, and
-   `eur_total [EUR] precision 2 = …`. Then:
+   `eur_total [EUR] precision 2 = …`, then the twelve units `infer --write`
+   pins (tables and heads re-aligned by hand). Then:
 
    ```text
    $ visimark check docs/example-invoice.md
@@ -578,7 +592,7 @@ the `eval --json` key of one.
 3. **The header rule.** A fixture with `| Weight [kg] | Count |` and
    `total [kg] = SUM(Weight)` passes; `units` holds `"s.Weight": {"kg": 1}` and
    `"s.total": {"kg": 1}`; `Count` is absent; `"Weight [kg]" is w` is `UNDEF`
-   with the hint. `Revenue \[1\]` is the name `Revenue [1]` with no unit;
+   with the hint. `Revenue \[1\]` has no unit and no finding;
    `Revenue [1]` is `UNIT`; `[x](url)` and a `[^1]` footnote header are plain
    names.
 

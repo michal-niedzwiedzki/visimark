@@ -122,15 +122,15 @@ request: comment asking the author to refile on the template, then stop.
 ### 2V.1 Parse the request
 
 The body is the rendered issue form. Extract each field by its bold label:
-`Name`, `Kind`, `Signature and shape`, `Precision behaviour`, `What it does`,
+`Name`, `Kind`, `Signature and shape`, `Precision behaviour`, `Unit behaviour`, `What it does`,
 `Worked values`, `What it refuses`, `Rounding rule, if it has one`,
 `The real document that needs it`, `Why not existing vocabulary or an input column`,
 `Constraint check`, `Anything else`.
 
 If any field except `Rounding rule, if it has one` and `Anything else` is blank
-or missing, set **INCOMPLETE**. An older issue filed before `Worked values` and
-`What it refuses` existed is not INCOMPLETE for missing them — derive them from
-`What it does` and flag both as open forks instead.
+or missing, set **INCOMPLETE**. An older issue filed before `Worked values`,
+`What it refuses` or `Unit behaviour` existed is not INCOMPLETE for missing
+them — derive them from `What it does` and flag each as an open fork instead.
 
 These fields are the `FnDoc` in `packages/visimark/src/lang/reference.ts`. Map
 them as you parse, so the pre-review hands `/issue-decide` a near-complete
@@ -140,6 +140,7 @@ entry rather than prose to re-read:
 |---|---|---|
 | `Signature and shape` | `params`, `returns` | Arity matches the parameter count |
 | `Precision behaviour` | `precision` | The answer is one of the six `FnPrecision` variants; `Not sure` is an open fork, not a rejection |
+| `Unit behaviour` | `units` | A `FnUnits` signature: every parameter has a slot (`1`, `any`, `bool`/`date`/`string`, `U`, `U²`) and the result has one; a `U` the result names is tied by at least one argument |
 | `Worked values` | `examples` | Each output's decimal width is what the stated precision rule produces — a mismatch here is the single most common latent contradiction |
 | `What it refuses` | `errors` | Every case names a [§10](../../docs/visimark-design.md#10-error-taxonomy) code; no sentinel value, no `NaN`, no empty result (constraint 3, and the reason #122 was a bug) |
 | `Rounding rule…` | `rounding` | Present only where ties are possible |
