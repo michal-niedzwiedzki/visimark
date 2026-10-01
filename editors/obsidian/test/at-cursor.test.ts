@@ -33,7 +33,7 @@ test("a caret inside the anchor comment names the same thing", () => {
 });
 
 test("a caret in the line that declares a name names it", () => {
-  expect(nameAt(model, result, at("net_total   = SUM(Net)", 3))).toEqual({
+  expect(nameAt(model, result, at("net_total   [PLN] = SUM(Net)", 3))).toEqual({
     name: "lines.net_total",
   });
   expect(nameAt(model, result, at("Net               = Qty * Rate", 1))).toEqual({
@@ -42,7 +42,7 @@ test("a caret in the line that declares a name names it", () => {
 });
 
 test("a document-scope constant is named without a sheet", () => {
-  expect(nameAt(model, result, at("fx_eur         = 4.2650", 2))).toEqual({ name: "fx_eur" });
+  expect(nameAt(model, result, at("fx_eur [PLN/EUR] = 4.2650", 2))).toEqual({ name: "fx_eur" });
 });
 
 test("a caret in a computed table cell names the column and that row", () => {

@@ -41,9 +41,10 @@ describe("--write only ever inserts", () => {
         "VAT   = Net * 0.23",
         "Gross = Net + VAT",
         "",
-        "net_total   = SUM(Net)",
-        "vat_total   = SUM(VAT)",
-        "gross_total = SUM(Gross)",
+        // the scalars carry the unit their formula derives (#317)
+        "net_total [PLN]   = SUM(Net)",
+        "vat_total [PLN]   = SUM(VAT)",
+        "gross_total [PLN] = SUM(Gross)",
         "",
       ].join("\n"),
     );

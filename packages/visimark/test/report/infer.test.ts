@@ -27,7 +27,7 @@ describe("the report keeps check's visual idiom with its own field layout", () =
         "    28659.00  line 19  = SUM(Gross)                gross_total",
         "",
         "  no rule found — treating as inputs",
-        "    Item, Unit, Qty, Rate",
+        "    Item, Unit, Qty, Rate [PLN]",
         "",
         "  also fits, not proposed",
         "    Gross = Net * 1.23        prefers a rule over materialised columns",

@@ -6,7 +6,13 @@ import { cellPrecision, numericValue } from "../eval/units.js";
 import type { AnchorTargetKind, ProseFigure, Span } from "../parse/document.js";
 import { aliasCandidates } from "./aliases.js";
 import { type ColumnCandidate, columnCandidates, crossSheetCandidates } from "./candidates.js";
-import { buildContext, type InferContext, type InferSheet } from "./context.js";
+import {
+  buildContext,
+  type InferContext,
+  type InferSheet,
+  makeBinding,
+  provisional,
+} from "./context.js";
 import { type Ambiguity, select, type Selection } from "./select.js";
 import { type Accepted, verifyScalar, withPrecision } from "./verify.js";
 
@@ -139,7 +145,7 @@ export function infer(source: string): Proposal[] {
   const selection = select(candidates, edges);
   const out = assemble(ctx, selection, picks, ambiguousFigures);
   out.push(...aliasProposals(ctx, out));
-  out.push(...unitProposals(source, ctx));
+  out.push(...unitProposals(source, ctx, out));
   return out;
 }
 
@@ -147,29 +153,55 @@ export function infer(source: string): Proposal[] {
 // units
 
 /**
- * A missing derived unit for every existing computed binding that has none:
- * a column rule gets a ` [unit]` suffix on its header, a scalar one after its
- * name. Never an input column, never a declaration already there, never a
- * binding whose units disagree. Only bindings the document already has — a
- * rule proposed in this same run gets its unit on the next. See
+ * A missing derived unit for every computed binding that has none: a column
+ * rule gets a ` [unit]` suffix on its header, a scalar one after its name.
+ * Never an input column, never a declaration already there, never a binding
+ * whose units disagree. Units are read off the document as it will be after
+ * this run's own rules are written, so one `--write` is idempotent: a scalar
+ * this run adds carries its unit in its rule, and a column rule it adds gets
+ * its header suffix in the same pass. See
  * docs/design/algebraic-unit-maps-on-names-spec.md §5.3.
  */
-function unitProposals(source: string, ctx: InferContext): Proposal[] {
-  const result = check(ctx.base);
-  const out: Proposal[] = [];
+function unitProposals(source: string, ctx: InferContext, sofar: Proposal[]): Proposal[] {
+  const sheetById = new Map(ctx.sheets.map((s) => [s.id, s]));
+  const adding = sofar.filter(
+    (p) =>
+      !p.weak &&
+      sheetById.has(p.sheetId) &&
+      (p.kind === "column" || (p.kind === "scalar" && p.anchorSite !== undefined)),
+  );
+  const extra: Binding[] = [];
+  for (const p of adding) {
+    try {
+      extra.push(makeBinding(sheetById.get(p.sheetId)!, p.rule));
+    } catch {
+      // a rule that does not parse on its own is not one this pass can read
+    }
+  }
+  const model = provisional(ctx, extra);
+  const result = check(model);
   const derived = (id: string): string | null => {
     const u = result.unitMaps.get(id);
     return u && u.source === "derived" ? formatUnit(u.map) : null;
   };
+
+  // a scalar this run adds carries its unit in its own head
+  for (const p of adding) {
+    if (p.kind !== "scalar") continue;
+    const unit = derived(`${p.sheetId}.${p.name}`);
+    if (unit !== null) p.rule = p.rule.replace(/^(\S+)/, `$1 [${unit}]`);
+  }
+
+  const out: Proposal[] = [];
   const headOffset = (b: Binding): number => {
     const line = source.slice(b.span.start, b.span.end);
     const lead = line.length - line.trimStart().length;
     return b.span.start + lead + b.name.length;
   };
-  const scalarProposal = (b: Binding, tableSpan: Span): Proposal | null => {
+  const existingScalar = (b: Binding, tableSpan: Span): void => {
     const unit = derived(b.id);
-    if (unit === null || b.unitText || b.param) return null;
-    return {
+    if (unit === null || b.unitText || b.param) return;
+    out.push({
       kind: "unit",
       stage: 1,
       sheetId: b.sheetId,
@@ -179,21 +211,22 @@ function unitProposals(source: string, ctx: InferContext): Proposal[] {
       rows: 0,
       tableSpan,
       unit: { text: unit, target: "head", at: headOffset(b) },
-    };
+    });
   };
 
-  for (const b of ctx.base.docScope.values()) {
-    const p = scalarProposal(b, b.span);
-    if (p) out.push(p);
-  }
-  for (const sheet of ctx.base.sheets.values()) {
-    if (sheet.imported) continue;
-    const table = sheet.table;
-    for (const b of sheet.columns.values()) {
-      if (!table || sheet.headerUnits.has(b.name)) continue;
-      const unit = derived(b.id);
-      const idx = sheet.columnIndex.get(b.name);
-      const cell = idx === undefined ? undefined : table.headers[idx];
+  for (const b of ctx.base.docScope.values()) existingScalar(b, b.span);
+  for (const sheet of ctx.sheets) {
+    const base = ctx.base.sheets.get(sheet.id);
+    if (base?.imported) continue;
+    const ruled = new Set([
+      ...(base?.columns.keys() ?? []),
+      ...adding.filter((p) => p.kind === "column" && p.sheetId === sheet.id).map((p) => p.name),
+    ]);
+    for (const name of ruled) {
+      if (base?.headerUnits.has(name)) continue;
+      const unit = derived(`${sheet.id}.${name}`);
+      const idx = sheet.index.get(name);
+      const cell = idx === undefined ? undefined : sheet.table.headers[idx];
       if (unit === null || !cell) continue;
       const end = (cell.cellSpan ?? cell).end;
       // a header that already ends in a bracket would read as a second clause
@@ -202,18 +235,21 @@ function unitProposals(source: string, ctx: InferContext): Proposal[] {
         kind: "unit",
         stage: 1,
         sheetId: sheet.id,
-        name: b.name,
-        rule: `${b.name} [${unit}]`,
+        mintedSheetId: sheet.minted || undefined,
+        name,
+        rule: `${name} [${unit}]`,
         fits: 0,
-        rows: table.rows.length,
-        tableSpan: table.span,
+        rows: sheet.table.rows.length,
+        tableSpan: sheet.table.span,
         unit: { text: unit, target: "header", at: end },
       });
     }
-    for (const b of sheet.scalars.values()) {
-      const p = scalarProposal(b, table?.span ?? b.span);
-      if (p) out.push(p);
-    }
+    for (const b of base?.scalars.values() ?? []) existingScalar(b, sheet.table.span);
+  }
+  // a sheet with a block but no table still has scalars
+  for (const sheet of ctx.base.sheets.values()) {
+    if (sheet.table || sheetById.has(sheet.id)) continue;
+    for (const b of sheet.scalars.values()) existingScalar(b, b.span);
   }
   return out;
 }

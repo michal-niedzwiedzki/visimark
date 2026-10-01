@@ -1,9 +1,10 @@
 import { parseBinding } from "../lang/parser.js";
 import { build } from "../model/build.js";
-import { type Binding, type DocModel, type Sheet } from "../model/types.js";
+import { type Binding, type DeclaredUnit, type DocModel, type Sheet } from "../model/types.js";
 import { locate, type LocatedDoc, type RawBlock, type RawTable } from "../parse/document.js";
 import { numericValue } from "../eval/units.js";
-import { headerNameList } from "../model/header-name.js";
+import { headerNameList, headerNames } from "../model/header-name.js";
+import { parseUnit } from "../lang/unit-expr.js";
 
 /**
  * A table as inference sees it. Inference runs on documents whose tables are
@@ -120,7 +121,7 @@ export function provisional(ctx: InferContext, extra: Binding[]): DocModel {
         scalars: new Map(),
         columnIndex: new Map(s.index),
         inputColumns: new Set(s.index.keys()),
-        headerUnits: new Map(),
+        headerUnits: headerUnitsOf(s.table, ctx.source),
         aliases: new Map(),
         assertions: [],
         charts: [],
@@ -187,4 +188,15 @@ export function makeBinding(sheet: InferSheet, text: string): Binding {
     ...(parsed.precision === undefined ? {} : { precision: parsed.precision }),
     span: { start: 0, end: text.length },
   };
+}
+
+/** a table's header units, for a sheet the document has not built yet */
+function headerUnitsOf(table: RawTable, source: string): Map<string, DeclaredUnit> {
+  const out = new Map<string, DeclaredUnit>();
+  for (const h of headerNames(table, source)) {
+    if (h.name === null || !h.unit) continue;
+    const parsed = parseUnit(h.unit.text);
+    if (parsed.ok) out.set(h.name, { map: parsed.map, text: h.unit });
+  }
+  return out;
 }

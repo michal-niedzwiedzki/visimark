@@ -484,7 +484,9 @@ function parseBindingInner(line: string): Binding {
   const unitAt = headToks.findIndex((t) => t.kind === "unit");
   if (precAt !== -1 && unitAt > precAt) {
     const u = headToks[unitAt]!;
-    throw new LangError(UNIT_AFTER_PRECISION_MESSAGE, u.start, u.end);
+    const e = new LangError(UNIT_AFTER_PRECISION_MESSAGE, u.start, u.end);
+    if (headToks[0]?.kind === "ident") e.bindingName = headToks[0].value;
+    throw e;
   }
   const split = takePrecisionClause(headToks);
   const { precision } = split;

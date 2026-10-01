@@ -99,7 +99,7 @@ test("explain names the formula, its inputs and the result", async () => {
   const e = (await api.explain("example-invoice.md", "lines.net_total"))!;
   expect(e.name).toBe("lines.net_total");
   expect(e.kind).toBe("scalar");
-  expect(e.source).toBe("net_total   = SUM(Net)");
+  expect(e.source).toBe("net_total   [PLN] = SUM(Net)");
   expect(e.value).toBe("23300");
   expect(e.inputs).toContain("lines.Net");
 });

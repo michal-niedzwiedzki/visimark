@@ -2,6 +2,7 @@ import { Decimal } from "decimal.js";
 import type { Proposal } from "../infer/propose.js";
 import { locate, type RawTable } from "../parse/document.js";
 import { lineOf } from "./lines.js";
+import { build } from "../model/build.js";
 import { headerNameList } from "../model/header-name.js";
 
 /** the narrowest column `4/4 rows` sits at; a longer rule pushes it right */
@@ -30,12 +31,16 @@ export function formatInfer(path: string, source: string, proposals: Proposal[])
     bySheet.set(p.sheetId, arr);
   }
 
-  for (const [, group] of bySheet) {
+  const model = build(locate(source));
+  for (const [sheetId, group] of bySheet) {
     const table = tables.get(group[0]!.tableSpan.start);
     if (lines.length > 0) lines.push("");
     lines.push(
-      `${path}  table at line ${lineOf(source, group[0]!.tableSpan.start)}` +
-        ` — ${table?.rows.length ?? 0} rows, ${table?.headers.length ?? 0} columns`,
+      table
+        ? `${path}  table at line ${lineOf(source, group[0]!.tableSpan.start)}` +
+            ` — ${table.rows.length} rows, ${table.headers.length} columns`
+        : // a unit proposal on a table-less sheet's scalar has no table to name
+          `${path}  #${sheetId}  (no table)`,
     );
 
     section(lines, "column rules", rules(group));
@@ -43,7 +48,8 @@ export function formatInfer(path: string, source: string, proposals: Proposal[])
     section(lines, "units", units(group));
     section(lines, "constants worth naming", constants(group, source));
     section(lines, "scalars matching figures in prose", scalars(group, source));
-    section(lines, "no rule found — treating as inputs", inputs(group, table, source));
+    const ruled = [...(model.sheets.get(sheetId)?.columns.keys() ?? [])];
+    section(lines, "no rule found — treating as inputs", inputs(group, table, source, ruled));
     section(lines, "ambiguous — proposed neither", ambiguous(group));
     section(lines, "near-miss — not proposed", nearMisses(group));
     section(lines, "also fits, not proposed", alsoFits(group));
@@ -129,13 +135,20 @@ function headerSource(h: RawTable["headers"][number], source: string): string {
   return source.slice(span.start, span.end);
 }
 
-function inputs(group: Proposal[], table: RawTable | undefined, source: string): string[] {
+function inputs(
+  group: Proposal[],
+  table: RawTable | undefined,
+  source: string,
+  alreadyRuled: string[],
+): string[] {
   if (!table) return [];
   // A column with a near-miss is not an input either: the tool has an opinion
-  // about it, and listing it here would bury the finding.
-  const ruled = new Set(
-    group.filter((p) => p.kind === "column" || p.kind === "near-miss").map((p) => p.name),
-  );
+  // about it, and listing it here would bury the finding. Nor is one the
+  // document already gives a rule.
+  const ruled = new Set([
+    ...alreadyRuled,
+    ...group.filter((p) => p.kind === "column" || p.kind === "near-miss").map((p) => p.name),
+  ]);
   // filtered by name, shown as written, so a unit clause stays visible
   const names = headerNameList(table, source);
   const left = table.headers

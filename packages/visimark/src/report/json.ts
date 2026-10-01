@@ -73,6 +73,7 @@ export function publicFinding(file: string, f: Finding): object {
   } else {
     if (f.message) details.message = f.message;
     if (f.suggestion) details.suggestion = f.suggestion;
+    if (f.hint) details.hint = f.hint;
     if (f.code === "NOTE" && f.suppressedCount !== undefined) {
       details.suppressedCount = f.suppressedCount;
     }
