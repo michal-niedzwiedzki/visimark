@@ -300,7 +300,7 @@ export function cmdInfer(args: string[], out: Writer, err: Writer): number {
     scalars += counts.scalars;
     anchors += counts.anchors;
     if (!json) out(formatInfer(path, source, proposals));
-    let written: { blocks: number; anchors: number; marker: boolean } | undefined;
+    let written: { blocks: number; anchors: number; marker: boolean; units?: number } | undefined;
     if (write) {
       const edits = planInfer(source, proposals);
       if (edits.length === 0) {
@@ -318,7 +318,8 @@ export function cmdInfer(args: string[], out: Writer, err: Writer): number {
         const marker = edits.some((e) => e.kind === "marker");
         const blocks = edits.filter((e) => e.kind === "block").length;
         const nAnchors = edits.filter((e) => e.kind === "anchor").length;
-        written = { blocks, anchors: nAnchors, marker };
+        const nUnits = edits.filter((e) => e.kind === "unit").length;
+        written = { blocks, anchors: nAnchors, marker, ...(nUnits ? { units: nUnits } : {}) };
         if (!json) {
           if (marker) {
             out(`${path}: nothing to derive — marked \`${NO_FORMULAS_MARKER}\``);
@@ -326,6 +327,7 @@ export function cmdInfer(args: string[], out: Writer, err: Writer): number {
             const bits = [
               blocks ? `${blocks} block${blocks === 1 ? "" : "s"}` : "",
               nAnchors ? `${nAnchors} anchor${nAnchors === 1 ? "" : "s"}` : "",
+              nUnits ? `${nUnits} unit${nUnits === 1 ? "" : "s"}` : "",
             ].filter(Boolean);
             out(`${path}: wrote ${bits.join(", ")}`);
           }

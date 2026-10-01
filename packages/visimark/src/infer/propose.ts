@@ -1,4 +1,7 @@
+import { check } from "../eval/check.js";
 import { FUNCTIONS } from "../eval/functions.js";
+import { formatUnit } from "../lang/unit-expr.js";
+import type { Binding } from "../model/types.js";
 import { cellPrecision, numericValue } from "../eval/units.js";
 import type { AnchorTargetKind, ProseFigure, Span } from "../parse/document.js";
 import { aliasCandidates } from "./aliases.js";
@@ -16,7 +19,9 @@ export type ProposalKind =
   /** a rule that fits but lost to a better one for the same column */
   | "alternative"
   /** `"Header" is symbol` — a name for a header no identifier can reach */
-  | "alias";
+  | "alias"
+  /** a missing derived unit, added to a computed column's header or a scalar's head */
+  | "unit";
 
 export interface Proposal {
   kind: ProposalKind;
@@ -51,6 +56,8 @@ export interface Proposal {
   reason?: string;
   /** alias: the header text `name` stands for */
   header?: string;
+  /** unit: the normalised unit, where it goes, and the offset it is inserted at */
+  unit?: { text: string; target: "header" | "head"; at: number };
 }
 
 /**
@@ -132,6 +139,82 @@ export function infer(source: string): Proposal[] {
   const selection = select(candidates, edges);
   const out = assemble(ctx, selection, picks, ambiguousFigures);
   out.push(...aliasProposals(ctx, out));
+  out.push(...unitProposals(source, ctx));
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// units
+
+/**
+ * A missing derived unit for every existing computed binding that has none:
+ * a column rule gets a ` [unit]` suffix on its header, a scalar one after its
+ * name. Never an input column, never a declaration already there, never a
+ * binding whose units disagree. Only bindings the document already has — a
+ * rule proposed in this same run gets its unit on the next. See
+ * docs/design/algebraic-unit-maps-on-names-spec.md §5.3.
+ */
+function unitProposals(source: string, ctx: InferContext): Proposal[] {
+  const result = check(ctx.base);
+  const out: Proposal[] = [];
+  const derived = (id: string): string | null => {
+    const u = result.unitMaps.get(id);
+    return u && u.source === "derived" ? formatUnit(u.map) : null;
+  };
+  const headOffset = (b: Binding): number => {
+    const line = source.slice(b.span.start, b.span.end);
+    const lead = line.length - line.trimStart().length;
+    return b.span.start + lead + b.name.length;
+  };
+  const scalarProposal = (b: Binding, tableSpan: Span): Proposal | null => {
+    const unit = derived(b.id);
+    if (unit === null || b.unitText || b.param) return null;
+    return {
+      kind: "unit",
+      stage: 1,
+      sheetId: b.sheetId,
+      name: b.name,
+      rule: `${b.name} [${unit}]`,
+      fits: 0,
+      rows: 0,
+      tableSpan,
+      unit: { text: unit, target: "head", at: headOffset(b) },
+    };
+  };
+
+  for (const b of ctx.base.docScope.values()) {
+    const p = scalarProposal(b, b.span);
+    if (p) out.push(p);
+  }
+  for (const sheet of ctx.base.sheets.values()) {
+    if (sheet.imported) continue;
+    const table = sheet.table;
+    for (const b of sheet.columns.values()) {
+      if (!table || sheet.headerUnits.has(b.name)) continue;
+      const unit = derived(b.id);
+      const idx = sheet.columnIndex.get(b.name);
+      const cell = idx === undefined ? undefined : table.headers[idx];
+      if (unit === null || !cell) continue;
+      const end = (cell.cellSpan ?? cell).end;
+      // a header that already ends in a bracket would read as a second clause
+      if (source[end - 1] === "]") continue;
+      out.push({
+        kind: "unit",
+        stage: 1,
+        sheetId: sheet.id,
+        name: b.name,
+        rule: `${b.name} [${unit}]`,
+        fits: 0,
+        rows: table.rows.length,
+        tableSpan: table.span,
+        unit: { text: unit, target: "header", at: end },
+      });
+    }
+    for (const b of sheet.scalars.values()) {
+      const p = scalarProposal(b, table?.span ?? b.span);
+      if (p) out.push(p);
+    }
+  }
   return out;
 }
 

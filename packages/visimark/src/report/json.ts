@@ -175,6 +175,10 @@ export function publicProposal(p: Proposal): object {
   };
   if (p.reason) out.reason = p.reason;
   if (p.alternatives) out.alternatives = p.alternatives;
+  if (p.unit) {
+    out.unit = p.unit.text;
+    out.target = p.unit.target;
+  }
   if (p.disagreement) {
     out.disagreement = {
       rowLabel: p.disagreement.rowLabel,

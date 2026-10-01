@@ -119,3 +119,67 @@ test("explain --json carries each binding's unit", async () => {
     source: "derived",
   });
 });
+
+const SPEED = `| Distance [m] | Duration [s] | Speed |
+|---:|---:|---:|
+| 30 | 10 | 3.0 |
+
+\`\`\`vmark #r
+Speed precision 1 = Distance / Duration
+fastest = MAX(Speed)
+\`\`\`
+`;
+
+test("infer proposes a missing derived unit for a computed column and a scalar", async () => {
+  const { out } = await run(["infer", withFile(SPEED)]);
+  expect(out).toContain("  units\n    Speed    [m/s]  header\n    fastest  [m/s]  head");
+});
+
+test("infer --write adds the suffix and nothing else; a second run writes nothing", async () => {
+  const path = withFile(SPEED);
+  const first = await run(["infer", "--write", path]);
+  expect(first.out).toContain("wrote 2 units");
+  const written = await Bun.file(path).text();
+  expect(written).toBe(
+    SPEED.replace("| Speed |", "| Speed [m/s] |").replace("fastest = ", "fastest [m/s] = "),
+  );
+  const second = await run(["infer", "--write", path]);
+  expect(second.out).toContain("nothing to write");
+  expect((await run(["check", path])).code).toBe(0);
+});
+
+test("infer --json lists a unit proposal with its unit and target", async () => {
+  const { out } = await run(["infer", withFile(SPEED), "--json"]);
+  const body = JSON.parse(out) as { files: { proposals: Record<string, unknown>[] }[] };
+  const units = body.files[0]!.proposals.filter((p) => p["kind"] === "unit");
+  expect(units.map((p) => [p["name"], p["unit"], p["target"]])).toEqual([
+    ["Speed", "m/s", "header"],
+    ["fastest", "m/s", "head"],
+  ]);
+});
+
+test("infer proposes nothing for inputs, declared, dimensionless or failing bindings", async () => {
+  const doc = `| Weight [kg] | Count |
+|---:|---:|
+| 2 | 4 |
+
+\`\`\`vmark #s
+total [kg] = SUM(Weight)
+n = COUNT(Weight)
+bad = Weight + Count
+\`\`\`
+`;
+  const { out } = await run(["infer", withFile(doc)]);
+  expect(out).not.toContain("  units");
+});
+
+test("infer offers no acronym for an identifier stem, and an alias for any other stem", async () => {
+  const doc = `| Weight [kg] | Worker cost [USD/node/month] |
+|---:|---:|
+| 2 | 250 |
+`;
+  const { out } = await run(["infer", withFile(doc)]);
+  expect(out).not.toContain('for "Weight');
+  expect(out).toContain('wc     for "Worker cost"');
+  expect(out).not.toContain('for "Worker cost [');
+});

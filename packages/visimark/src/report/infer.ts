@@ -40,6 +40,7 @@ export function formatInfer(path: string, source: string, proposals: Proposal[])
 
     section(lines, "column rules", rules(group));
     section(lines, "column aliases", aliases(group));
+    section(lines, "units", units(group));
     section(lines, "constants worth naming", constants(group, source));
     section(lines, "scalars matching figures in prose", scalars(group, source));
     section(lines, "no rule found — treating as inputs", inputs(group, table, source));
@@ -53,6 +54,7 @@ export function formatInfer(path: string, source: string, proposals: Proposal[])
     "figures matching more than one value — not anchored",
     looseFigures(loose, source),
   );
+  section(lines, "units", units(loose));
 
   const ruleCount = proposals.filter((p) => p.kind === "column" && !p.weak).length;
   const aliasCount = proposals.filter((p) => p.kind === "alias").length;
@@ -82,6 +84,13 @@ function rules(group: Proposal[]): string[] {
     const note = p.weak ? "2 rows — weak, not written" : `${p.fits}/${p.rows} rows`;
     return heads[i]!.padEnd(col) + note;
   });
+}
+
+function units(group: Proposal[]): string[] {
+  const ps = group.filter((p) => p.kind === "unit" && p.unit);
+  const w = field(ps.map((p) => p.name));
+  const uw = field(ps.map((p) => `[${p.unit!.text}]`));
+  return ps.map((p) => `    ${p.name.padEnd(w)}${`[${p.unit!.text}]`.padEnd(uw)}${p.unit!.target}`);
 }
 
 function aliases(group: Proposal[]): string[] {
