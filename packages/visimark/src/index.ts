@@ -56,6 +56,7 @@ export { describeFinding, formatCheck } from "./report/format.js";
 // consumer that re-derives it is a second serialisation that can drift from
 // this one. Additive; no existing consumer changes.
 export {
+  evalUnits,
   evalValues,
   findingSummary,
   inferSummary,

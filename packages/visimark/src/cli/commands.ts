@@ -1,3 +1,4 @@
+import { formatUnit } from "../lang/unit-expr.js";
 import { mkdirSync, readFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { writeArtifact } from "../artifact/write.js";
@@ -24,6 +25,7 @@ import { domainJson, formatDomain } from "../lang/domain.js";
 import { closest } from "../report/levenshtein.js";
 import {
   emitJson,
+  evalUnits,
   evalValues,
   findingSummary,
   inferSummary,
@@ -475,7 +477,7 @@ export function cmdEval(args: string[], out: Writer, err: Writer): number {
     ];
   };
 
-  const emitEval = (selected: typeof values): void => {
+  const emitEval = (selected: typeof values, only?: string[]): void => {
     emitJson(out, {
       command: "eval",
       visimark: readVersion(),
@@ -484,6 +486,7 @@ export function cmdEval(args: string[], out: Writer, err: Writer): number {
       ...(scenario ? { scenario: scenarioJson() } : {}),
       ...(domainParams.length > 0 ? { params: domainParamsJson() } : {}),
       values: selected,
+      units: evalUnits(result, selected, only),
       assertions: publicAssertions(result.assertions, onDefaults),
       charts: publicCharts(result.charts, scenario === null),
     });
@@ -500,7 +503,7 @@ export function cmdEval(args: string[], out: Writer, err: Writer): number {
       if (json) emitJson(out, errorEnvelope("eval", "USAGE", msg));
       return 2;
     }
-    if (json) emitEval({ [get]: jsonVal! });
+    if (json) emitEval({ [get]: jsonVal! }, [values[get] !== undefined ? get : qualified]);
     else out(text!);
     if (!json) reportFailures();
     return assertExit;
@@ -508,8 +511,13 @@ export function cmdEval(args: string[], out: Writer, err: Writer): number {
 
   if (json) emitEval(values);
   else {
-    const width = Math.max(...[...all.keys()].map((k) => k.length), 0);
-    for (const [k, v] of all) out(`${k.padEnd(width)}  ${v}`);
+    // a unit-bearing name prints its unit in brackets, as it is declared
+    const label = (k: string): string => {
+      const u = result.unitMaps.get(k);
+      return u ? `${k} [${formatUnit(u.map)}]` : k;
+    };
+    const width = Math.max(...[...all.keys()].map((k) => label(k).length), 0);
+    for (const [k, v] of all) out(`${label(k).padEnd(width)}  ${v}`);
     if (scenario) for (const line of scenarioText(scenario, all)) out(line);
     for (const line of domainParamsText()) out(line);
     reportFailures();
