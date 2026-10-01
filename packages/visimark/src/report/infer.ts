@@ -2,6 +2,7 @@ import { Decimal } from "decimal.js";
 import type { Proposal } from "../infer/propose.js";
 import { locate, type RawTable } from "../parse/document.js";
 import { lineOf } from "./lines.js";
+import { headerNameList } from "../model/header-name.js";
 
 /** the narrowest column `4/4 rows` sits at; a longer rule pushes it right */
 const MIN_FITS_COL = 46;
@@ -41,7 +42,7 @@ export function formatInfer(path: string, source: string, proposals: Proposal[])
     section(lines, "column aliases", aliases(group));
     section(lines, "constants worth naming", constants(group, source));
     section(lines, "scalars matching figures in prose", scalars(group, source));
-    section(lines, "no rule found — treating as inputs", inputs(group, table));
+    section(lines, "no rule found — treating as inputs", inputs(group, table, source));
     section(lines, "ambiguous — proposed neither", ambiguous(group));
     section(lines, "near-miss — not proposed", nearMisses(group));
     section(lines, "also fits, not proposed", alsoFits(group));
@@ -114,14 +115,24 @@ function scalars(group: Proposal[], source: string): string[] {
   });
 }
 
-function inputs(group: Proposal[], table: RawTable | undefined): string[] {
+function headerSource(h: RawTable["headers"][number], source: string): string {
+  const span = h.cellSpan ?? h;
+  return source.slice(span.start, span.end);
+}
+
+function inputs(group: Proposal[], table: RawTable | undefined, source: string): string[] {
   if (!table) return [];
   // A column with a near-miss is not an input either: the tool has an opinion
   // about it, and listing it here would bury the finding.
   const ruled = new Set(
     group.filter((p) => p.kind === "column" || p.kind === "near-miss").map((p) => p.name),
   );
-  const left = table.headers.map((h) => h.text).filter((h) => !ruled.has(h));
+  // filtered by name, shown as written, so a unit clause stays visible
+  const names = headerNameList(table, source);
+  const left = table.headers
+    .map((h, i) => ({ name: names[i]!, shown: headerSource(h, source) }))
+    .filter((h) => !ruled.has(h.name))
+    .map((h) => h.shown);
   return left.length === 0 ? [] : [`    ${left.join(", ")}`];
 }
 

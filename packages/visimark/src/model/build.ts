@@ -1,4 +1,6 @@
 import type { Expr, UnitText } from "../lang/ast.js";
+import { parseUnit, type UnitDefs, type UnitMap } from "../lang/unit-expr.js";
+import { headerNameList, headerNames } from "./header-name.js";
 import { parseStatement } from "../lang/parser.js";
 import { LangError } from "../lang/token.js";
 import type { LocatedDoc, RawBlock, Span } from "../parse/document.js";
@@ -98,6 +100,7 @@ function buildDocScope(
       continue;
     }
     const parsed = stmt.binding;
+    declareUnit(parsed, findings);
     const first = docScope.get(parsed.name);
     if (first) {
       findings.push({
@@ -179,24 +182,67 @@ export function build(doc: LocatedDoc): DocModel {
     // as a name at all. This was a silent last-write-wins collision before
     // this feature (see docs/design/human-readable-column-aliases-spec.md
     // §3); closing it is not scoped to quoted references.
+    // A header's name is its text with any trailing unit clause removed, so
+    // `Weight` and `Weight [kg]` collide here exactly as two `Weight`s would
+    // (algebraic-unit-maps-on-names-spec.md §2.3).
     const headerIndex = new Map<string, number>();
     const firstHeaderSeen = new Map<string, Span>();
+    /** full header text → its name, for headers whose text a unit clause changes */
+    const bracketedHeaders = new Map<string, string>();
+    const split = table ? headerNames(table, doc.source) : [];
     (table?.headers ?? []).forEach((h, i) => {
-      const first = firstHeaderSeen.get(h.text);
+      const hn = split[i]!;
+      const cellSpan = h.cellSpan ?? { start: h.start, end: h.end };
+      if (hn.error) {
+        findings.push({
+          code: "UNIT",
+          sheetId,
+          ...(hn.name === null ? {} : { name: hn.name }),
+          message: hn.error.message,
+          sourceOffset: hn.error.span.start,
+          span: hn.error.span,
+        });
+      }
+      if (hn.name === null) return;
+      const name = hn.name;
+      if (hn.unit) bracketedHeaders.set(doc.source.slice(cellSpan.start, cellSpan.end), name);
+      const first = firstHeaderSeen.get(name);
       if (first) {
         findings.push({
           code: "DUP",
           sheetId,
-          name: h.text,
+          name,
           span: { start: h.start, end: h.end },
           relatedSpan: first,
         });
-        headerIndex.delete(h.text);
+        headerIndex.delete(name);
+        sheet.headerUnits.delete(name);
         return;
       }
-      firstHeaderSeen.set(h.text, { start: h.start, end: h.end });
-      headerIndex.set(h.text, i);
+      firstHeaderSeen.set(name, { start: h.start, end: h.end });
+      headerIndex.set(name, i);
+      if (hn.unit) {
+        const parsed = parseUnit(hn.unit.text);
+        if (parsed.ok) {
+          sheet.headerUnits.set(name, { map: parsed.map, text: hn.unit });
+        } else {
+          findings.push({
+            code: "UNIT",
+            sheetId,
+            name,
+            message: parsed.message,
+            sourceOffset: hn.unit.start,
+            span: { start: hn.unit.start, end: hn.unit.end },
+          });
+        }
+      }
     });
+    const bracketHint = (text: string): string | undefined => {
+      const name = bracketedHeaders.get(text);
+      if (name === undefined) return undefined;
+      const unit = text.slice(text.lastIndexOf("["));
+      return `the header's name is ${name}; ${unit} is its unit`;
+    };
 
     // --- parse every statement in the block once ------------------------
     const stmts: Stmt[] = [];
@@ -216,12 +262,13 @@ export function build(doc: LocatedDoc): DocModel {
       if (stmt.kind !== "alias") continue;
       const { header, symbol, span } = stmt.alias;
       if (!headerIndex.has(header)) {
+        const hint = bracketHint(header);
         findings.push({
           code: "UNDEF",
           sheetId,
           name: symbol,
           raw: header,
-          suggestion: closest(header, headerIndex.keys()) ?? undefined,
+          ...(hint ? { hint } : { suggestion: closest(header, headerIndex.keys()) ?? undefined }),
           span,
         });
         continue;
@@ -310,6 +357,7 @@ export function build(doc: LocatedDoc): DocModel {
           });
           continue;
         }
+        refuseRuleUnit(parsed, sheetId, findings);
         parsed.name = alias.header;
         parsed.id = `${sheetId}.${alias.header}`;
         parsed.kind = "column";
@@ -351,6 +399,7 @@ export function build(doc: LocatedDoc): DocModel {
       if (stmt.quoted && !headerIndex.has(parsed.name)) {
         // A quoted binding never falls back to becoming a scalar — an
         // unresolved quoted header is unambiguously a mistake (spec §3).
+        const hint = bracketHint(parsed.name);
         findings.push({
           code: "UNDEF",
           sheetId,
@@ -358,13 +407,20 @@ export function build(doc: LocatedDoc): DocModel {
           // it the report renders a bare `sheetId.`
           name: parsed.name,
           raw: parsed.name,
-          suggestion: closest(parsed.name, headerIndex.keys()) ?? undefined,
+          ...(hint
+            ? { hint }
+            : { suggestion: closest(parsed.name, headerIndex.keys()) ?? undefined }),
           span: parsed.span,
         });
         continue;
       }
       const isColumn = table !== null && headerIndex.has(parsed.name);
       parsed.kind = isColumn ? "column" : "scalar";
+      if (isColumn) {
+        refuseRuleUnit(parsed, sheetId, findings);
+      } else {
+        declareUnit(parsed, findings);
+      }
       if (isColumn) {
         sheet.columns.set(parsed.name, parsed);
         sheet.columnIndex.set(parsed.name, headerIndex.get(parsed.name)!);
@@ -387,7 +443,8 @@ export function build(doc: LocatedDoc): DocModel {
   for (const sheet of sheets.values()) {
     for (const [name, b] of sheet.scalars) {
       if (b.param === undefined || !sheet.columnIndex.has(name)) continue;
-      const header = sheet.table?.headers.find((h) => h.text === name);
+      const at = sheet.table ? headerNameList(sheet.table, doc.source).indexOf(name) : -1;
+      const header = at === -1 ? undefined : sheet.table!.headers[at];
       sheet.scalars.delete(name);
       findings.push({
         code: "DUP",
@@ -418,6 +475,7 @@ export function build(doc: LocatedDoc): DocModel {
     located: doc,
     blockOfSheet,
     unitDefinitions,
+    unitDefs: resolveUnitDefinitions(unitDefinitions, doc.source, findings),
   };
 }
 
@@ -436,6 +494,7 @@ function ensureSheet(
       scalars: new Map(),
       columnIndex: new Map(),
       inputColumns: new Set(),
+      headerUnits: new Map(),
       aliases: new Map(),
       assertions: [],
       charts: [],
@@ -569,4 +628,125 @@ function rebase(expr: Expr, delta: number): void {
       for (const a of expr.args) rebase(a, delta);
       break;
   }
+}
+
+/** a column's unit lives on its header; a bracket on its rule's head is refused */
+function refuseRuleUnit(b: Binding, sheetId: string, findings: Finding[]): void {
+  if (!b.unitText) return;
+  findings.push({
+    code: "UNIT",
+    sheetId,
+    name: b.name,
+    message: `${b.name}'s unit is declared on its header, not on its rule`,
+    sourceOffset: b.unitText.start,
+    span: { start: b.unitText.start, end: b.unitText.end },
+  });
+}
+
+/** parse a scalar's or a param's head bracket into `unit`, or report why not */
+function declareUnit(b: Binding, findings: Finding[]): void {
+  if (!b.unitText) return;
+  const parsed = parseUnit(b.unitText.text);
+  if (parsed.ok) {
+    b.unit = { map: parsed.map, text: b.unitText };
+    return;
+  }
+  findings.push({
+    code: "UNIT",
+    ...(b.sheetId ? { sheetId: b.sheetId } : {}),
+    name: b.name,
+    message: parsed.message,
+    sourceOffset: b.unitText.start,
+    span: { start: b.unitText.start, end: b.unitText.end },
+  });
+}
+
+export const DIMENSIONLESS_DEFINITION_MESSAGE = "a unit cannot be defined as dimensionless";
+
+/**
+ * Turn the document's `[atom] = [unit]` lines into the map the unit pass
+ * expands through. A definition that does not parse, redefines an atom, or
+ * sits on a cycle is reported and left out, so nothing expands through it.
+ * See docs/design/algebraic-unit-maps-on-names-spec.md §2.5, §4.
+ */
+function resolveUnitDefinitions(
+  defs: UnitDefinition[],
+  source: string,
+  findings: Finding[],
+): UnitDefs {
+  const parsedDefs = new Map<string, { map: UnitMap; span: Span }>();
+  for (const d of defs) {
+    const atomParse = parseUnit(d.atom.text);
+    const atom = atomParse.ok ? [...atomParse.map.keys()][0]! : d.atom.text.trim();
+    const first = parsedDefs.get(atom);
+    if (first) {
+      findings.push({
+        code: "DUP",
+        name: `[${atom}]`,
+        message: `[${atom}] is already defined at line ${lineOf(source, first.span.start)}`,
+        span: d.span,
+        relatedSpan: first.span,
+      });
+      continue;
+    }
+    const rhs = parseUnit(d.unit.text);
+    if (!rhs.ok) {
+      const dimensionless = rhs.message.endsWith("declares no unit");
+      findings.push({
+        code: "UNIT",
+        name: `[${atom}]`,
+        message: dimensionless ? DIMENSIONLESS_DEFINITION_MESSAGE : rhs.message,
+        sourceOffset: d.unit.start,
+        span: { start: d.unit.start, end: d.unit.end },
+      });
+      continue;
+    }
+    parsedDefs.set(atom, { map: rhs.map, span: d.span });
+  }
+
+  // an atom whose expansion reaches itself is on a cycle
+  const onCycle = new Set<string>();
+  const reported = new Set<string>();
+  for (const start of parsedDefs.keys()) {
+    const path: string[] = [];
+    const walk = (atom: string): string[] | null => {
+      const at = path.indexOf(atom);
+      if (at !== -1) return [...path.slice(at), atom];
+      const def = parsedDefs.get(atom);
+      if (!def) return null;
+      path.push(atom);
+      for (const next of def.map.keys()) {
+        const found = walk(next);
+        if (found) return found;
+      }
+      path.pop();
+      return null;
+    };
+    const cycle = walk(start);
+    if (!cycle) continue;
+    for (const a of cycle) onCycle.add(a);
+    const key = [...new Set(cycle)].sort().join(" ");
+    if (reported.has(key)) continue;
+    reported.add(key);
+    const def = parsedDefs.get(cycle[0]!)!;
+    findings.push({
+      code: "CYCLE",
+      cyclePath: cycle.map((a) => `[${a}]`),
+      span: def.span,
+    });
+  }
+
+  const out = new Map<string, UnitMap>();
+  for (const [atom, d] of parsedDefs) {
+    if (onCycle.has(atom)) continue;
+    if ([...d.map.keys()].some((a) => onCycle.has(a))) continue;
+    out.set(atom, d.map);
+  }
+  return out;
+}
+
+function lineOf(source: string, offset: number): number {
+  let line = 1;
+  for (let i = 0; i < offset && i < source.length; i++) if (source[i] === "\n") line++;
+  return line;
 }

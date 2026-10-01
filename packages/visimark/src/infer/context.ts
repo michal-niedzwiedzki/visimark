@@ -3,6 +3,7 @@ import { build } from "../model/build.js";
 import { type Binding, type DocModel, type Sheet } from "../model/types.js";
 import { locate, type LocatedDoc, type RawBlock, type RawTable } from "../parse/document.js";
 import { numericValue } from "../eval/units.js";
+import { headerNameList } from "../model/header-name.js";
 
 /**
  * A table as inference sees it. Inference runs on documents whose tables are
@@ -67,7 +68,9 @@ export function buildContext(source: string): InferContext {
     const existing = base.sheets.get(id);
 
     const index = new Map<string, number>();
-    table.headers.forEach((h, i) => index.set(h.text, i));
+    headerNameList(table, doc.source).forEach((name, i) => {
+      if (name !== "") index.set(name, i);
+    });
 
     const numeric: string[] = [];
     const filled = new Map<string, number>();
@@ -117,6 +120,7 @@ export function provisional(ctx: InferContext, extra: Binding[]): DocModel {
         scalars: new Map(),
         columnIndex: new Map(s.index),
         inputColumns: new Set(s.index.keys()),
+        headerUnits: new Map(),
         aliases: new Map(),
         assertions: [],
         charts: [],
@@ -147,6 +151,7 @@ export function provisional(ctx: InferContext, extra: Binding[]): DocModel {
     located: ctx.doc,
     blockOfSheet: ctx.base.blockOfSheet,
     unitDefinitions: ctx.base.unitDefinitions,
+    unitDefs: ctx.base.unitDefs,
   };
 }
 
@@ -158,6 +163,7 @@ function cloneSheet(s: Sheet): Sheet {
     scalars: new Map(s.scalars),
     columnIndex: new Map(s.columnIndex),
     inputColumns: new Set(s.inputColumns),
+    headerUnits: new Map(s.headerUnits),
     aliases: new Map(s.aliases),
     assertions: [...s.assertions],
     charts: [...s.charts],

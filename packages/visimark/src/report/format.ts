@@ -101,6 +101,10 @@ function renderGroup(f: Finding): string[] {
       return [head, ...body];
     }
     case "UNIT": {
+      // a unit-map finding is about a binding or a bracket, not a cell: one line
+      if (f.raw === undefined) {
+        return [prefix("UNIT") + id(f).padEnd(ID_FIELD) + "  " + (f.message ?? "")];
+      }
       const head =
         prefix("UNIT") +
         id(f).padEnd(ID_FIELD) +
@@ -122,10 +126,12 @@ function renderGroup(f: Finding): string[] {
       const label = isAssertionScoped(f) ? sheetId(f) : id(f);
       return [
         prefix("UNDEF") + label.padEnd(ID_FIELD) + "  " + "unknown name `" + f.raw + "`",
+        ...(f.hint ? [CONT + f.hint] : []),
         ...(f.suggestion ? [CONT + "did you mean `" + f.suggestion + "`?"] : []),
       ];
     }
     case "DUP":
+      if (f.message) return [prefix("DUP") + id(f).padEnd(ID_FIELD) + "  " + f.message];
       return [
         prefix("DUP") +
           id(f).padEnd(ID_FIELD) +
@@ -214,6 +220,7 @@ function renderGroup(f: Finding): string[] {
       ];
     }
     case "WARN":
+      if (f.message) return [prefix("WARN") + id(f).padEnd(ID_FIELD) + "  " + f.message];
       return [
         prefix("WARN") +
           id(f).padEnd(ID_FIELD) +
@@ -254,15 +261,18 @@ export function describeFinding(f: Finding): string {
     }
     case "UNDEF":
       return (
-        `unknown name \`${f.raw}\`` + (f.suggestion ? `; did you mean \`${f.suggestion}\`?` : "")
+        `unknown name \`${f.raw}\`` +
+        (f.hint ? `; ${f.hint}` : "") +
+        (f.suggestion ? `; did you mean \`${f.suggestion}\`?` : "")
       );
     case "DUP":
-      return `\`${f.name}\` is already defined in this scope`;
+      return f.message ?? `\`${f.name}\` is already defined in this scope`;
     case "VECTOR":
       return `\`${f.raw}\` is a column, not a value — wrap it in an aggregate`;
     case "CYCLE":
       return (f.cyclePath ?? []).join(" → ");
     case "WARN":
+      if (f.message) return f.message;
       return (
         `${f.sheetId ?? ""}.${f.name ?? ""} is defined and never read` +
         (f.suggestion ? ` — did you mean \`${f.suggestion}\`?` : "")

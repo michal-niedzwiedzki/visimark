@@ -72,6 +72,10 @@ export interface RawBlock {
 
 export interface RawCell extends Span {
   text: string;
+  /** the whole cell's trimmed content, where `start`/`end` span only its first
+   *  inline node — `**Weight** [kg]` has a first node `Weight`. Absent on a
+   *  synthetic (imported CSV) cell, which has no source of its own. */
+  cellSpan?: Span;
 }
 
 export interface RawRow {
@@ -330,23 +334,20 @@ function readTable(node: MdNode, source: string): RawTable {
 }
 
 function readCell(cell: MdNode, source: string): RawCell {
-  const child = cell.children?.[0];
-  if (child) {
-    const span = innerValueSpan(child);
-    if (span) return { ...span, text: source.slice(span.start, span.end) };
-  }
-  // empty cell: point span just inside the trimmed cell body
   const rawStart = off(cell, "start");
   const rawEnd = off(cell, "end");
   const raw = source.slice(rawStart, rawEnd);
   const inner = raw.replace(/^\|?\s*/, "");
   const lead = raw.length - inner.length;
   const trimmed = inner.replace(/\s*\|?\s*$/, "");
-  return {
-    start: rawStart + lead,
-    end: rawStart + lead + trimmed.length,
-    text: trimmed,
-  };
+  const cellSpan = { start: rawStart + lead, end: rawStart + lead + trimmed.length };
+  const child = cell.children?.[0];
+  if (child) {
+    const span = innerValueSpan(child);
+    if (span) return { ...span, text: source.slice(span.start, span.end), cellSpan };
+  }
+  // empty cell: point span just inside the trimmed cell body
+  return { ...cellSpan, text: trimmed, cellSpan };
 }
 
 /** value span for a strong/emphasis/inlineCode/text inline node */
