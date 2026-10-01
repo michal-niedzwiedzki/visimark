@@ -1,4 +1,4 @@
-import type { Expr } from "../lang/ast.js";
+import type { Expr, UnitText } from "../lang/ast.js";
 import type { Domain } from "../lang/domain.js";
 import type { LangError } from "../lang/token.js";
 import type {
@@ -116,6 +116,9 @@ export interface Binding {
   /** a `param`'s optional domain clause. See
    *  docs/design/a-param-declares-the-set-of-values-it-ac-spec.md §2. */
   domain?: Domain;
+  /** the `[unit]` bracket on the head, as written, with an absolute span. See
+   *  docs/design/algebraic-unit-maps-on-names-spec.md §2.2. */
+  unitText?: UnitText;
   /** absolute source span of the binding line */
   span: { start: number; end: number };
   parseError?: LangError;
@@ -191,6 +194,13 @@ export interface Chart {
   source: string;
 }
 
+/** a `[atom] = [unit]` line from a document-scope block, as written */
+export interface UnitDefinition {
+  atom: UnitText;
+  unit: UnitText;
+  span: Span;
+}
+
 export interface DocModel {
   sheets: Map<string, Sheet>;
   docScope: Map<string, Binding>;
@@ -199,4 +209,7 @@ export interface DocModel {
   source: string;
   located: LocatedDoc;
   blockOfSheet: Map<string, RawBlock>;
+  /** document-scope unit definitions, in source order. See
+   *  docs/design/algebraic-unit-maps-on-names-spec.md §2.5. */
+  unitDefinitions: UnitDefinition[];
 }

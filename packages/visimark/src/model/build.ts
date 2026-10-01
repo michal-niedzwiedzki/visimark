@@ -1,4 +1,4 @@
-import type { Expr } from "../lang/ast.js";
+import type { Expr, UnitText } from "../lang/ast.js";
 import { parseStatement } from "../lang/parser.js";
 import { LangError } from "../lang/token.js";
 import type { LocatedDoc, RawBlock, Span } from "../parse/document.js";
@@ -11,6 +11,7 @@ import {
   DOC_SCOPE,
   type Finding,
   type Sheet,
+  type UnitDefinition,
 } from "./types.js";
 
 /** the identifier grammar `ANCHOR_RE` and the expression lexer already use —
@@ -48,10 +49,15 @@ function buildDocScope(
   source: string,
   docScope: Map<string, Binding>,
   findings: Finding[],
+  unitDefinitions: UnitDefinition[],
 ): void {
   for (const rb of block.bindings) {
     const stmt = parseOne(rb, source, findings, DOC_SCOPE);
     if (!stmt) continue;
+    if (stmt.kind === "unitdef") {
+      unitDefinitions.push(stmt.def);
+      continue;
+    }
     if (stmt.kind === "assert") {
       findings.push({
         code: "SHEET",
@@ -111,10 +117,11 @@ export function build(doc: LocatedDoc): DocModel {
   const docScope = new Map<string, Binding>();
   const findings: Finding[] = [];
   const blockOfSheet = new Map<string, RawBlock>();
+  const unitDefinitions: UnitDefinition[] = [];
 
   for (const block of doc.blocks) {
     if (block.sheetId === null) {
-      buildDocScope(block, doc.source, docScope, findings);
+      buildDocScope(block, doc.source, docScope, findings, unitDefinitions);
       continue;
     }
 
@@ -240,6 +247,17 @@ export function build(doc: LocatedDoc): DocModel {
     // --- pass 2: bindings and charts, in declaration order ----------------
     for (const stmt of stmts) {
       if (stmt.kind === "alias") continue; // handled in pass 1
+      if (stmt.kind === "unitdef") {
+        // a unit is global, so its definition lives where global names do
+        findings.push({
+          code: "SHEET",
+          sheetId,
+          message: "a unit definition belongs in a document-scope block",
+          sourceOffset: stmt.def.span.start,
+          span: stmt.def.span,
+        });
+        continue;
+      }
       if (stmt.kind === "assert") {
         sheet.assertions.push(stmt.assertion);
         continue;
@@ -399,6 +417,7 @@ export function build(doc: LocatedDoc): DocModel {
     source: doc.source,
     located: doc,
     blockOfSheet,
+    unitDefinitions,
   };
 }
 
@@ -434,7 +453,8 @@ type Stmt =
   | { kind: "binding"; binding: Binding; quoted: boolean }
   | { kind: "assert"; assertion: Assertion }
   | { kind: "chart"; chart: Chart }
-  | { kind: "alias"; alias: { header: string; symbol: string; span: Span } };
+  | { kind: "alias"; alias: { header: string; symbol: string; span: Span } }
+  | { kind: "unitdef"; def: { atom: UnitText; unit: UnitText; span: Span } };
 
 function parseOne(
   rb: { raw: string; start: number; end: number },
@@ -470,6 +490,16 @@ function parseOne(
         },
       };
     }
+    if ("type" in s && s.type === "unitdef") {
+      return {
+        kind: "unitdef",
+        def: {
+          atom: shiftUnit(s.atom, rb.start),
+          unit: shiftUnit(s.unit, rb.start),
+          span: { start: rb.start, end: rb.end },
+        },
+      };
+    }
     if ("type" in s) {
       rebase(s.expr, rb.start);
       return {
@@ -496,13 +526,14 @@ function parseOne(
         ...(s.precision === undefined ? {} : { precision: s.precision }),
         ...(s.param === undefined ? {} : { param: s.param }),
         ...(s.domain === undefined ? {} : { domain: s.domain }),
+        ...(s.unit === undefined ? {} : { unitText: shiftUnit(s.unit, rb.start) }),
         span: { start: rb.start, end: rb.end },
       },
     };
   } catch (e) {
     if (e instanceof LangError) {
       findings.push({
-        code: "TYPE",
+        code: e.code ?? "TYPE",
         sheetId: sheetId || undefined,
         name: e.bindingName,
         message: e.message,
@@ -516,10 +547,17 @@ function parseOne(
   }
 }
 
+function shiftUnit(u: UnitText, delta: number): UnitText {
+  return { text: u.text, start: u.start + delta, end: u.end + delta };
+}
+
 function rebase(expr: Expr, delta: number): void {
   expr.start += delta;
   expr.end += delta;
   switch (expr.type) {
+    case "num":
+      if (expr.unit) expr.unit = shiftUnit(expr.unit, delta);
+      break;
     case "unary":
       rebase(expr.operand, delta);
       break;

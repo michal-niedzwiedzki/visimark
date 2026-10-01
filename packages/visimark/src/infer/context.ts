@@ -146,6 +146,7 @@ export function provisional(ctx: InferContext, extra: Binding[]): DocModel {
     source: ctx.source,
     located: ctx.doc,
     blockOfSheet: ctx.base.blockOfSheet,
+    unitDefinitions: ctx.base.unitDefinitions,
   };
 }
 
