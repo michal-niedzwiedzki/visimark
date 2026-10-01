@@ -31,6 +31,7 @@ import { readVersion } from "../packages/visimark/src/cli/version.js";
 import { explainView } from "../packages/visimark/src/report/explain.js";
 import { explainJson } from "../packages/visimark/src/report/envelope.js";
 import {
+  evalUnits,
   evalValues,
   findingSummary,
   publicAssertions,
@@ -193,6 +194,7 @@ function browserEnvelope(vm: VM, command: Command, file: string, source: string)
       status: statusFromExit(assertExit),
       file: relPath,
       values: evalValues(result as never),
+      units: evalUnits(result as never, evalValues(result as never)),
       assertions: publicAssertions(result.assertions as never),
       charts: publicCharts(result.charts as never),
     };
