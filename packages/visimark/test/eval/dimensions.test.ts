@@ -281,3 +281,43 @@ Margin **40.26%**<!--vmark=s.margin|percent-->.
 `);
   expect(r.problems).toContain("TYPE |percent cannot render a value with a unit (PLN)");
 });
+
+describe("cell decorations under a header unit", () => {
+  const col = (cells: string[]) =>
+    `| Item | Weight [kg] |\n|---|---:|\n${cells.map((c, i) => `| r${i} | ${c} |`).join("\n")}\n\n\`\`\`vmark #t\ntotal = SUM(Weight)\n\`\`\`\n`;
+
+  test.each([[["40", "2"]], [["40 kg", "2 kg"]], [["40kg", "2kg"]]])("%p passes", (cells) => {
+    expect(run(col(cells)).problems).toEqual([]);
+  });
+
+  test("5 m² passes under [m^2] — the comparison is parsed", () => {
+    const src = `| Item | Area [m^2] |\n|---|---:|\n| a | 5 m² |\n\n\`\`\`vmark #t\nt = SUM(Area)\n\`\`\`\n`;
+    expect(run(src).problems).toEqual([]);
+  });
+
+  test.each([
+    [["40 lbs"], 'cell "40 lbs" carries lbs, but the column declares kg'],
+    [["5 kilogram"], 'cell "5 kilogram" carries kilogram, but the column declares kg'],
+    [["5 €"], 'cell "5 €" carries "€", which is not a unit'],
+    [["$40.00"], 'cell "$40.00" has a prefix, which a column with a unit forbids'],
+    [["5%"], "5% is a ratio and cannot carry a unit"],
+  ])("%p is UNIT", (cells, message) => {
+    expect(run(col(cells)).problems).toContain(`UNIT ${message}`);
+  });
+
+  test("mixed decorations stay the existing UNIT", () => {
+    expect(
+      run(col(["40 kg", "2"])).problems.some((p) => p.startsWith("UNIT column mixes units")),
+    ).toBe(true);
+  });
+
+  test("a column with no header unit keeps inert decorations", () => {
+    const src = `| Item | Price |\n|---|---:|\n| a | $5.50 |\n\n\`\`\`vmark #t\nt = SUM(Price)\n\`\`\`\n`;
+    expect(run(src).problems).toEqual([]);
+  });
+
+  test("an anchored span of a declared scalar answers to its unit", () => {
+    const src = `\`\`\`vmark #s\nweight [kg] = 40\n\`\`\`\n\nIt weighs **40 lbs**<!--vmark=s.weight-->.\n`;
+    expect(run(src).problems).toContain('UNIT anchor "40 lbs" carries lbs, but weight declares kg');
+  });
+});

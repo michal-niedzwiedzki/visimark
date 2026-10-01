@@ -19,7 +19,7 @@ import { domainLiterals, formatDomain, isEmptyDomain, testDomain } from "../lang
 import { derivePrecision, type Width } from "./precision.js";
 import { DISPLAY_RULES, displayRuleTypeMessage, markdownSyntaxIn } from "./display-rules.js";
 import { roundTrips } from "./display-round-trip.js";
-import { applyUnit, cellPrecision, parseDecorated, type Unit } from "./units.js";
+import { applyUnit, cellPrecision, decorationProblem, parseDecorated, type Unit } from "./units.js";
 import { parseIsoDate } from "./dates.js";
 import {
   EvalError,
@@ -778,6 +778,28 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
             })()
           : null;
       scalarUnits.set(binding.id, anchorUnit);
+      if (anchorText !== undefined && binding.unit) {
+        const problem = decorationProblem(
+          anchorText,
+          binding.unit.map,
+          model.unitDefs,
+          "anchor",
+          binding.name,
+        );
+        if (problem) {
+          emit(
+            {
+              code: "UNIT",
+              sheetId: binding.sheetId,
+              name: binding.name,
+              raw: anchorText,
+              message: problem,
+            },
+            { sheetId: binding.sheetId },
+          );
+          unitConflicts.add(binding.id);
+        }
+      }
       // The anchor supplies the *unit* and nothing else. Its text used to supply
       // the precision too, which made a `0` placeholder in prose round the
       // stored value and move every figure downstream of it.
