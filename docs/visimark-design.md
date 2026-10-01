@@ -358,26 +358,26 @@ derivation the engine actually performs.
 
 <!-- generated: function-table — `bun run gen:docs` -->
 
-| Function | Kind | Arity | Precision | Meaning |
-|----------|------|------:|-----------|---------|
-| `SUM(col)` | reduce | 1 | the width of `col` | total of a column; `0` over an empty column |
-| `MIN(col)` | reduce | 1 | the width of `col` | least value; a column mixing numbers and dates is a `TYPE` error |
-| `MAX(col)` | reduce | 1 | the width of `col` | greatest value; a column mixing numbers and dates is a `TYPE` error |
-| `AVG(col)` | reduce | 1 | **must be declared** | arithmetic mean; an empty column is a `TYPE` error |
-| `COUNT(col)` | reduce | 1 | always 0 | number of rows |
-| `NPV(rate, flows)` | reduce | 2 | **must be declared** | present value of a cash-flow column; row 0 is undiscounted; an empty column is a TYPE error; a non-numeric `rate` is a `TYPE` error; a `rate` of -1 or below is a `TYPE` error; an empty column is a `TYPE` error; a non-numeric cell is a `TYPE` error; a non-column `flows` argument is a `TYPE` error |
-| `IRR(flows)` | reduce | 1 | **must be declared** | rate at which a cash-flow column has present value zero; row 0 is undiscounted; an empty column is a `TYPE` error; a non-numeric cell is a `TYPE` error; an all-zero column is a `TYPE` error; a column with no sign change is a `TYPE` error; a column with more than one sign change is a `TYPE` error; a rate not determined at the declared width is a `PRECISION` error; a non-column `flows` argument is a `TYPE` error |
-| `ROUND(x, places)` | map | 2 | the value of `places` | half-up to `places` decimals |
-| `ABS(x)` · `\|x\|` | map | 1 | the width of `x` | absolute value |
-| `MOD(x, y)` | map | 2 | the wider of `x` and `y` | remainder; a zero divisor is a `TYPE` error |
-| `SQRT(x)` · `√(x)` | map | 1 | **must be declared** | non-negative square root; a negative operand is a `TYPE` error |
-| `FLOOR(x, s)` · `⌊x⌋` | map | 2 | the width of `s` | greatest multiple of `s` that does not exceed `x`, toward −∞; a non-positive `s` is a `TYPE` error |
-| `CEILING(x, s)` · `⌈x⌉` | map | 2 | the width of `s` | least multiple of `s` that is not less than `x`, toward +∞; a non-positive `s` is a `TYPE` error |
-| `IF(cond, a, b)` | map | 3 | the wider of `a` and `b` | returns `a` or `b`; a non-boolean `cond` is a `TYPE` error |
-| `EOMONTH(d, months)` | map | 2 | not applicable — the result is a date | last day of the month `months` calendar months from `d`; `d`'s day is discarded; a non-whole `months` is a `TYPE` error; a result outside years 1–9999 is a `DATE` error |
-| `PMT(rate, nper, pv)` | map | 3 | **must be declared** | instalment that repays `pv` to zero over `nper` periods at per-period rate `rate`; a non-numeric `rate`, `nper`, or `pv` is a `TYPE` error; a non-positive or non-whole `nper` is a `TYPE` error; a `rate` of -1 or below is a `TYPE` error |
+| Function | Kind | Arity | Precision | Units | Meaning |
+|----------|------|------:|-----------|-------|---------|
+| `SUM(col)` | reduce | 1 | the width of `col` | `SUM(col: U) → U` | total of a column; `0` over an empty column |
+| `MIN(col)` | reduce | 1 | the width of `col` | `MIN(col: U) → U` | least value; a column mixing numbers and dates is a `TYPE` error |
+| `MAX(col)` | reduce | 1 | the width of `col` | `MAX(col: U) → U` | greatest value; a column mixing numbers and dates is a `TYPE` error |
+| `AVG(col)` | reduce | 1 | **must be declared** | `AVG(col: U) → U` | arithmetic mean; an empty column is a `TYPE` error |
+| `COUNT(col)` | reduce | 1 | always 0 | `COUNT(col: any) → 1` | number of rows |
+| `NPV(rate, flows)` | reduce | 2 | **must be declared** | `NPV(rate: 1, flows: U) → U` | present value of a cash-flow column; row 0 is undiscounted; an empty column is a TYPE error; a non-numeric `rate` is a `TYPE` error; a `rate` of -1 or below is a `TYPE` error; an empty column is a `TYPE` error; a non-numeric cell is a `TYPE` error; a non-column `flows` argument is a `TYPE` error |
+| `IRR(flows)` | reduce | 1 | **must be declared** | `IRR(flows: U) → 1` | rate at which a cash-flow column has present value zero; row 0 is undiscounted; an empty column is a `TYPE` error; a non-numeric cell is a `TYPE` error; an all-zero column is a `TYPE` error; a column with no sign change is a `TYPE` error; a column with more than one sign change is a `TYPE` error; a rate not determined at the declared width is a `PRECISION` error; a non-column `flows` argument is a `TYPE` error |
+| `ROUND(x, places)` | map | 2 | the value of `places` | `ROUND(x: U, places: 1) → U` | half-up to `places` decimals |
+| `ABS(x)` · `\|x\|` | map | 1 | the width of `x` | `ABS(x: U) → U` | absolute value |
+| `MOD(x, y)` | map | 2 | the wider of `x` and `y` | `MOD(x: U, y: U) → U` | remainder; a zero divisor is a `TYPE` error |
+| `SQRT(x)` · `√(x)` | map | 1 | **must be declared** | `SQRT(x: U²) → U` | non-negative square root; a negative operand is a `TYPE` error |
+| `FLOOR(x, s)` · `⌊x⌋` | map | 2 | the width of `s` | `FLOOR(x: U, s: U) → U` | greatest multiple of `s` that does not exceed `x`, toward −∞; a non-positive `s` is a `TYPE` error |
+| `CEILING(x, s)` · `⌈x⌉` | map | 2 | the width of `s` | `CEILING(x: U, s: U) → U` | least multiple of `s` that is not less than `x`, toward +∞; a non-positive `s` is a `TYPE` error |
+| `IF(cond, a, b)` | map | 3 | the wider of `a` and `b` | `IF(cond: bool, a: U, b: U) → U` | returns `a` or `b`; a non-boolean `cond` is a `TYPE` error |
+| `EOMONTH(d, months)` | map | 2 | not applicable — the result is a date | `EOMONTH(d: date, months: any) → date` | last day of the month `months` calendar months from `d`; `d`'s day is discarded; a non-whole `months` is a `TYPE` error; a result outside years 1–9999 is a `DATE` error |
+| `PMT(rate, nper, pv)` | map | 3 | **must be declared** | `PMT(rate: 1, nper: 1, pv: U) → U` | instalment that repays `pv` to zero over `nper` periods at per-period rate `rate`; a non-numeric `rate`, `nper`, or `pv` is a `TYPE` error; a non-positive or non-whole `nper` is a `TYPE` error; a `rate` of -1 or below is a `TYPE` error |
 
-Parameters, precision and worked examples for each are in
+Parameters, precision, units and worked examples for each are in
 [`function-reference.md`](function-reference.md), or `visimark ref NAME`.
 
 <!-- /generated: function-table -->

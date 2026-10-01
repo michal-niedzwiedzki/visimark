@@ -2,7 +2,7 @@ import type { AssertionResult, ChartResult, CheckResult } from "../eval/check.js
 import type { Value } from "../eval/value.js";
 import type { Proposal } from "../infer/propose.js";
 import { ERROR_CODES, isProblem, type Finding } from "../model/types.js";
-import { precisionPhrase, type FnEntry } from "../lang/reference.js";
+import { precisionPhrase, unitSigSlot, unitSigText, type FnEntry } from "../lang/reference.js";
 
 export type JsonWriter = (line: string) => void;
 export type CommandName = "check" | "fmt" | "infer" | "eval" | "explain" | "ref";
@@ -192,6 +192,11 @@ export function publicFnEntry(e: FnEntry): object {
     params: e.params.map((p) => ({ name: p.name, type: p.type, note: p.note })),
     returns: e.returns,
     precision: { ...e.precision, text: precisionPhrase(e.precision) },
+    units: {
+      params: Object.fromEntries(e.params.map((p) => [p.name, unitSigSlot(e.units.params[p.name]!)])),
+      returns: unitSigSlot(e.units.returns),
+      text: unitSigText(e.name, e),
+    },
     ...(e.rounding ? { rounding: e.rounding } : {}),
     errors: e.errors.map((x) => ({ when: x.when, code: x.code })),
     examples: e.examples.map((x) => ({ expr: x.expr, is: x.is })),
