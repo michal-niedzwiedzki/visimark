@@ -79,9 +79,13 @@ jobs:
           # its `"<workspace>":` key line, so "packages/visimark" cannot pick up
           # "packages/visimark-lsp"'s field — index() needs the exact `":`
           # right after the key text, which the longer name never produces.
+          # It stops at the block's own closing brace (four spaces then "},")
+          # rather than scanning past it: without that bound, a field missing
+          # from its own block would silently match the next workspace's.
           lock_field() {
             awk -v key="\"$1\":" -v marker="\"$2\": \"" '
-              index($0, key) { f=1 }
+              index($0, key) { f=1; next }
+              f && /^    \},?[ \t]*$/ { exit }
               f && index($0, marker) {
                 i = index($0, marker) + length(marker)
                 rest = substr($0, i)
@@ -105,6 +109,19 @@ jobs:
             exit 1
           fi
           fail=0
+          # Every bun.lock field above is mandatory — unlike $precommit, which
+          # can legitimately end up empty after an already-reported mismatch
+          # — so an empty result here means the workspace block or the field
+          # itself is missing, and that has to fail loudly rather than be
+          # skipped by the "$got" is empty" guard the comparison loop below
+          # uses for $precommit.
+          for lock_check in "packages/visimark version:$lock_engine" "packages/visimark-lsp version:$lock_lsp" "editors/vscode version:$lock_ext" "packages/remark-visimark version:$lock_remark_version" "packages/remark-visimark visimark dep:$lock_remark_dep" "packages/markdownlint-visimark version:$lock_markdownlint_version" "packages/markdownlint-visimark visimark dep:$lock_markdownlint_dep" "packages/visimark-mcp version:$lock_mcp_version" "packages/visimark-mcp visimark dep:$lock_mcp_dep"; do
+            name=${lock_check%%:*}; val=${lock_check#*:}
+            if [ -z "$val" ]; then
+              echo "::error file=bun.lock::could not find $name in bun.lock — the workspace block or the field moved. Fix this check or bun.lock — see docs/releasing.md."
+              fail=1
+            fi
+          done
           if [ "$precommit_count" != "1" ]; then
             echo "::error file=scripts/precommit-visimark-check.sh::expected exactly one visimark@<version> pin (the bunx and npx branches must agree), found: $(echo "$precommit_versions" | tr '\n' ' ')"
             fail=1

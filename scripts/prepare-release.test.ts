@@ -132,6 +132,25 @@ describe("prepare-release", () => {
     expect(lock.match(new RegExp(`"visimark": "${next}"`, "g"))).toHaveLength(3);
   });
 
+  test("refuses, writing nothing, when a bun.lock block is missing its version — rather than editing the next workspace's", () => {
+    const root = tree();
+    const lock = read(root, "bun.lock");
+    // Strip just packages/visimark-lsp's "version" line; editors/vscode (the
+    // very next block) keeps its own "version" field right after it, which is
+    // exactly what an unbounded lazy match could wander into instead.
+    const stripped = lock.replace(
+      /("packages\/visimark-lsp": \{\n {6}"name": "visimark-lsp",\n) {6}"version": "[^"]+",\n/,
+      "$1",
+    );
+    expect(stripped).not.toBe(lock);
+    writeFileSync(join(root, "bun.lock"), stripped);
+    const before = snapshot(root);
+    const r = runAt(root, next);
+    expect(r.code).toBe(1);
+    expect(r.out).toContain("packages/visimark-lsp");
+    expect(snapshot(root)).toEqual(before);
+  });
+
   test("turns the changelogs over", () => {
     const root = tree();
     runAt(root, next, "--date", "2030-01-02");

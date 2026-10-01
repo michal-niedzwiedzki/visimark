@@ -182,24 +182,54 @@ for (const [file, pinsEngine] of manifests) {
 // for bookkeeping — bun never refuses --frozen-lockfile over this drifting,
 // since it links a workspace-named dependency locally regardless of what the
 // pin says, so it sat two releases stale (0.1.8, through v0.1.9 and v0.1.10)
-// before anyone noticed. Each pattern is anchored at its own `"<workspace>":
-// {` line so it cannot touch a same-named field in a different workspace.
-const escapeRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
+// before anyone noticed.
+//
+// Each lookup is bounded to its own "<workspace>": { ... } block, found by
+// plain substring search (so there is no workspace-path-shaped regex to
+// escape) and closed by the first line that is exactly four spaces then
+// "},". Without that bound, a field missing from its own block would let the
+// search run on and silently match — and overwrite — the next workspace's.
 const lockFile = "bun.lock";
-for (const [file, pinsEngine] of manifests) {
-  const workspace = escapeRegExp(file.replace(/\/package\.json$/, ""));
-  edit(
-    lockFile,
-    new RegExp(`("${workspace}": \\{[\\s\\S]*?"version": ")[^"]+(")`),
-    `$1${version}$2`,
-    `"${file.replace(/\/package\.json$/, "")}"'s "version" in bun.lock`,
-  );
-  if (pinsEngine) {
-    edit(
+function editInLockBlock(
+  workspace: string,
+  pattern: RegExp,
+  replacement: string,
+  what: string,
+): void {
+  const text = pending.get(lockFile) ?? read(lockFile);
+  const start = text.indexOf(`"${workspace}": {`);
+  if (start === -1)
+    refuse(
       lockFile,
-      new RegExp(`("${workspace}": \\{[\\s\\S]*?"visimark": ")\\d+\\.\\d+\\.\\d+(")`),
+      `${lockFile}: cannot find the "${workspace}" workspace block. The layout moved; fix scripts/prepare-release.ts.`,
+    );
+  const close = /\n {4}\},?\n/.exec(text.slice(start));
+  if (close === null)
+    refuse(
+      lockFile,
+      `${lockFile}: cannot find the end of the "${workspace}" workspace block. The layout moved; fix scripts/prepare-release.ts.`,
+    );
+  const end = start + close.index + close[0].length;
+  const block = text.slice(start, end);
+  if (!pattern.test(block))
+    refuse(
+      lockFile,
+      `${lockFile}: cannot find ${what} inside the "${workspace}" workspace block. The layout moved; fix scripts/prepare-release.ts.`,
+    );
+  pending.set(
+    lockFile,
+    text.slice(0, start) + block.replace(pattern, replacement) + text.slice(end),
+  );
+}
+for (const [file, pinsEngine] of manifests) {
+  const workspace = file.replace(/\/package\.json$/, "");
+  editInLockBlock(workspace, /("version": ")[^"]+(")/, `$1${version}$2`, 'a "version"');
+  if (pinsEngine) {
+    editInLockBlock(
+      workspace,
+      /("visimark": ")\d+\.\d+\.\d+(")/,
       `$1${version}$2`,
-      `"${file.replace(/\/package\.json$/, "")}"'s "visimark" dependency pin in bun.lock`,
+      'a "visimark" dependency pin',
     );
   }
 }
