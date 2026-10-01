@@ -184,9 +184,10 @@ for (const [file, pinsEngine] of manifests) {
 // pin says, so it sat two releases stale (0.1.8, through v0.1.9 and v0.1.10)
 // before anyone noticed. Each pattern is anchored at its own `"<workspace>":
 // {` line so it cannot touch a same-named field in a different workspace.
+const escapeRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
 const lockFile = "bun.lock";
 for (const [file, pinsEngine] of manifests) {
-  const workspace = file.replace(/\/package\.json$/, "").replace(/[/.]/g, "\\$&");
+  const workspace = escapeRegExp(file.replace(/\/package\.json$/, ""));
   edit(
     lockFile,
     new RegExp(`("${workspace}": \\{[\\s\\S]*?"version": ")[^"]+(")`),
