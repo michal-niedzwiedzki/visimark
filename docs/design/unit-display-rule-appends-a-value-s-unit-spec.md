@@ -202,7 +202,13 @@ reworded to name `percent` and to exempt `unit`.
 
 `check`, `fmt`, `infer`, `explain`, `eval`, `eval --json` and the did-you-mean
 list gain **no** option, key or output. `eval` and `explain` already report
-the unit map; `infer` never proposes `|unit`. The LSP and the Obsidian plugin
+the unit map; `infer` never proposes `|unit`. `infer` does learn one thing: a
+prose figure that carries the value's own unit as a suffix (`**23300.00 PLN**`
+for a value derived in `PLN`) states that value, and gets a **plain** anchor —
+which keeps the author's spelling, so `fmt` writes it back unchanged. Without
+this, the stripped invoice that `infer`'s acceptance derives from
+`docs/example-invoice.md` would recover no scalars once the invoice adopts
+`|unit` (settled while implementing). The LSP and the Obsidian plugin
 mark a stale anchor by its `STALE` span, which for `|unit` is the inside seed,
 so neither changes. Imports, `param`, `assert`, `chart`, column aliases and
 declared precision are untouched: `|unit` is read from a scalar that already
@@ -338,11 +344,12 @@ Floor area **42 m^2**<!--vmark=flat.total--> and **50 1/s**<!--vmark=flat.rate--
 `43 m^2`, never `43` and never `43 m²`. A column mixing `12 m^2`, `30 m²` and
 `4 kg` is `UNIT`, naming the forms seen.
 
-**Existing examples.** `docs/example-invoice.md` adopts `|unit` on all six
-prose anchors followed by `PLN` — the summary sentence's `net_total`,
-`vat_total` and `gross_total`, and the `#recon` paragraph's `scheduled`,
-`gross_total` and `variance` — each moving `PLN` inside the delimiter, so no
-bare `PLN` is left after an anchor. Its sentence "The anchored numbers stay bare — `PLN`
+**Existing examples.** `docs/example-invoice.md` adopts `|unit` on all ten
+prose anchors followed by a unit — `net_total`, `vat_total`, `gross_total`,
+`schedule.covered`, `terms.early_pay_total`, `terms.early_pay_saved`,
+`terms.eur_total` (EUR), and the `#recon` paragraph's `scheduled`,
+`gross_total` and `variance` — each moving the unit inside the delimiter, so no
+bare unit is left after an anchor. Its sentence "The anchored numbers stay bare — `PLN`
 and `EUR` stay in the prose" is replaced to describe `|unit`.
 `example-invoice-drift.md` and `example-invoice-csv-import.md` are unchanged
 (their expected output is pinned and they do not need the rule). `check` over

@@ -61,7 +61,8 @@ TypeScript, the Bun test runner, `decimal.js`, and the repo's own CLI via
   `nbsp` finding are unchanged, except the shared `TYPE` parenthetical, which
   gains `; unit: numeric with a unit`.
 - `eval`, `explain`, `infer`, `--json` and the did-you-mean list gain no option,
-  key or output (spec §5.3).
+  key or output (spec §5.3). `infer` learns only to match a figure carrying the
+  value's own unit (Task 6, step 5); it never proposes `|unit`.
 - `fmt --fix-units` is not extended to decorations (spec §7).
 - No `.skip` or `.only` is left in tests, and no assertion is loosened to pass.
   Where an existing test pins the old `TYPE` text or the old invoice text, the
@@ -249,7 +250,7 @@ from spec §6); `packages/visimark/test/cli/cli.test.ts`.
 
 ## Task 6: The invoice adopts `|unit`
 
-**Files:** `docs/example-invoice.md`, its generated copy
+**Files:** `docs/example-invoice.md`, `packages/visimark/src/infer/verify.ts`, its generated copy
 `packages/visimark-mcp/docs/example-invoice.md` (via `bun run gen:mcp`),
 whatever `bun run gen:docs` regenerates from it, and every test that pins the
 invoice's text or anchor offsets — at least
@@ -263,7 +264,10 @@ invoice's text or anchor offsets — at least
 - [ ] **Step 1** — `check` the invoice before the edit and save the output.
 - [ ] **Step 2** — move `PLN` inside the delimiter and add `|unit` on all six
   anchors: lines 33–35 (`net_total`, `vat_total`, `gross_total`) and lines
-  77–79 (`recon.scheduled`, `lines.gross_total`, `recon.variance`). Example:
+  77–79 (`recon.scheduled`, `lines.gross_total`, `recon.variance`) — and, as
+  settled while implementing, the other four anchors followed by a unit:
+  `schedule.covered`, `terms.early_pay_total`, `terms.early_pay_saved` and
+  `terms.eur_total` (EUR). Example:
   `**23300.00 PLN**<!--vmark=lines.net_total|unit-->.` Replace the paragraph
   ending "The anchored numbers stay bare — `PLN` and `EUR` stay in the prose,
   where a reader expects them." with one that says the anchors carry `|unit`,
@@ -274,7 +278,14 @@ invoice's text or anchor offsets — at least
 - [ ] **Step 4** — run the full suite; update each failing pinned expectation
   to the new literal text or offset, one by one, confirming each failure is
   only the moved `PLN`. Any other failure is a bug, not an expectation to
-  update. Commit: `docs(example-invoice): carry PLN through |unit (#323)`.
+  update.
+- [ ] **Step 5 — `infer` (added while implementing).** With `PLN` inside the
+  bold, `infer`'s acceptance (derived from the stripped invoice) recovered no
+  scalars: `verifyScalar.writes` compared a figure only with the column's
+  decoration. It now also accepts a figure whose suffix parses as a unit equal
+  to the scalar's unit map, and proposes a plain anchor there. Test in
+  `packages/visimark/test/infer/verify.test.ts`. Commit:
+  `docs(example-invoice): carry PLN through |unit (#323)`.
 
 ## Task 7: Documentation
 
