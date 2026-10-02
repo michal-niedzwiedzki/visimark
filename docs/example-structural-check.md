@@ -14,18 +14,18 @@ Two units are defined once, so the checker knows a pressure in `psf` is
 pounds per square foot and a stress in `psi` is pounds per square inch:
 
 ```vmark
-[psf] = [lb/ft^2]
-[psi] = [lb/in^2]
+[psf] = [lb/ft²]
+[psi] = [lb/in²]
 ```
 
-| Component     | psf [psf] |
-|---------------|----------:|
-| Dead load     |      10.0 |
-| Live load     |      40.0 |
-| Snow load     |       0.0 |
+| Component     | Load [psf] |
+|---------------|-----------:|
+| Dead load     |       10.0 |
+| Live load     |       40.0 |
+| Snow load     |        0.0 |
 
 ```vmark #loads
-total [psf] = SUM(psf)
+total [psf] = SUM(Load)
 ```
 
 The design load for this deck, in a snow-free region, is
@@ -36,12 +36,12 @@ every load case considered.
 ## Joist sizing
 
 Joists are `2x10` Douglas fir-larch, allowable bending stress
-`Fb = 875 psi`, section modulus `S = 21.39 in^3` for the actual (dressed)
+`Fb = 875 psi`, section modulus `S = 21.39 in³` for the actual (dressed)
 dimension. Spacing is 16 inches on center.
 
 ```vmark #joist
 Fb [psi]        = 875
-S [in^3]        = 21.39
+S [in³]        = 21.39
 spacing_in [in] = 16
 
 w_plf [lb/ft] precision 2 = loads.total * spacing_in / 12 [in/ft]

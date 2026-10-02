@@ -507,19 +507,19 @@ kind of document where a human error verifier earns its keep independently of
 whether anyone ever asked for a spreadsheet.</p></div><pre class="src">## Loads</pre><div class="out"><h2 id="loads">Loads</h2></div><pre class="src">Two units are defined once, so the checker knows a pressure in `psf` is
 pounds per square foot and a stress in `psi` is pounds per square inch:</pre><div class="out"><p>Two units are defined once, so the checker knows a pressure in <code>psf</code> is
 pounds per square foot and a stress in <code>psi</code> is pounds per square inch:</p></div><pre class="src">```vmark
-[psf] = [lb/ft^2]
-[psi] = [lb/in^2]
-```</pre><div class="out"><pre><code class="language-vmark">[psf] = [lb/ft^2]
-[psi] = [lb/in^2]
-</code></pre></div><pre class="src">| Component     | psf [psf] |
-|---------------|----------:|
-| Dead load     |      10.0 |
-| Live load     |      40.0 |
-| Snow load     |       0.0 |</pre><div class="out"><table>
+[psf] = [lb/ft²]
+[psi] = [lb/in²]
+```</pre><div class="out"><pre><code class="language-vmark">[psf] = [lb/ft²]
+[psi] = [lb/in²]
+</code></pre></div><pre class="src">| Component     | Load [psf] |
+|---------------|-----------:|
+| Dead load     |       10.0 |
+| Live load     |       40.0 |
+| Snow load     |        0.0 |</pre><div class="out"><table>
 <thead>
 <tr>
 <th>Component</th>
-<th align="right">psf [psf]</th>
+<th align="right">Load [psf]</th>
 </tr>
 </thead>
 <tbody>
@@ -537,8 +537,8 @@ pounds per square foot and a stress in <code>psi</code> is pounds per square inc
 </tr>
 </tbody>
 </table></div><pre class="src">```vmark #loads
-total [psf] = SUM(psf)
-```</pre><div class="out"><pre><code class="language-vmark">total [psf] = SUM(psf)
+total [psf] = SUM(Load)
+```</pre><div class="out"><pre><code class="language-vmark">total [psf] = SUM(Load)
 </code></pre></div><pre class="src">The design load for this deck, in a snow-free region, is
 **50.0**&lt;!--vmark=loads.total--&gt; psf — dead plus live, snow left at zero
 rather than omitted, so the column still reads as a complete accounting of
@@ -546,17 +546,17 @@ every load case considered.</pre><div class="out"><p>The design load for this de
 <strong>50.0</strong> psf — dead plus live, snow left at zero
 rather than omitted, so the column still reads as a complete accounting of
 every load case considered.</p></div><pre class="src">## Joist sizing</pre><div class="out"><h2 id="joist-sizing">Joist sizing</h2></div><pre class="src">Joists are `2x10` Douglas fir-larch, allowable bending stress
-`Fb = 875 psi`, section modulus `S = 21.39 in^3` for the actual (dressed)
+`Fb = 875 psi`, section modulus `S = 21.39 in³` for the actual (dressed)
 dimension. Spacing is 16 inches on center.</pre><div class="out"><p>Joists are <code>2x10</code> Douglas fir-larch, allowable bending stress
-<code>Fb = 875 psi</code>, section modulus <code>S = 21.39 in^3</code> for the actual (dressed)
+<code>Fb = 875 psi</code>, section modulus <code>S = 21.39 in³</code> for the actual (dressed)
 dimension. Spacing is 16 inches on center.</p></div><pre class="src">```vmark #joist
 Fb [psi]        = 875
-S [in^3]        = 21.39
+S [in³]        = 21.39
 spacing_in [in] = 16
 
 w_plf [lb/ft] precision 2 = loads.total * spacing_in / 12 [in/ft]
 ```</pre><div class="out"><pre><code class="language-vmark">Fb [psi]        = 875
-S [in^3]        = 21.39
+S [in³]        = 21.39
 spacing_in [in] = 16
 
 w_plf [lb/ft] precision 2 = loads.total * spacing_in / 12 [in/ft]
