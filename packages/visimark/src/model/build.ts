@@ -585,6 +585,7 @@ function parseOne(
         ...(s.precision === undefined ? {} : { precision: s.precision }),
         ...(s.param === undefined ? {} : { param: s.param }),
         ...(s.domain === undefined ? {} : { domain: s.domain }),
+        ...(s.lattice === undefined ? {} : { lattice: s.lattice }),
         ...(s.unit === undefined ? {} : { unitText: shiftUnit(s.unit, rb.start) }),
         span: { start: rb.start, end: rb.end },
       },

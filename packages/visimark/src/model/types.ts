@@ -1,6 +1,7 @@
 import type { Expr, UnitText } from "../lang/ast.js";
 import type { UnitDefs, UnitMap } from "../lang/unit-expr.js";
 import type { Domain } from "../lang/domain.js";
+import type { Lattice } from "../lang/lattice.js";
 import type { LangError } from "../lang/token.js";
 import type {
   ImportDecl,
@@ -119,6 +120,9 @@ export interface Binding {
   /** a `param`'s optional domain clause. See
    *  docs/design/a-param-declares-the-set-of-values-it-ac-spec.md §2. */
   domain?: Domain;
+  /** a `param`'s optional `lattice STEP` clause. See
+   *  docs/design/lattice-on-param-and-report-statements-spec.md §2.1. */
+  lattice?: Lattice;
   /** the `[unit]` bracket on the head, as written, with an absolute span. See
    *  docs/design/algebraic-unit-maps-on-names-spec.md §2.2. */
   unitText?: UnitText;

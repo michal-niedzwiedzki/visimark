@@ -1,5 +1,6 @@
 import { Decimal } from "decimal.js";
 import { type Domain, firstFailingLeaf, type Leaf } from "../lang/domain.js";
+import type { Lattice } from "../lang/lattice.js";
 import { type Binding, type DocModel, DOC_SCOPE } from "../model/types.js";
 import { closest } from "../report/levenshtein.js";
 
@@ -40,6 +41,8 @@ export interface ParamInfo {
   /** a `param`'s optional domain clause. See
    *  docs/design/a-param-declares-the-set-of-values-it-ac-spec.md §4.2. */
   domain?: Domain;
+  /** a `param`'s optional lattice, reported beside its domain */
+  lattice?: Lattice;
   binding: Binding;
 }
 
@@ -129,6 +132,7 @@ export function listParams(model: DocModel): ParamInfo[] {
       percent: b.param.percent,
       defaultValue: b.expr.type === "num" ? new Decimal(b.expr.value).toString() : b.param.text,
       ...(b.domain === undefined ? {} : { domain: b.domain }),
+      ...(b.lattice === undefined ? {} : { lattice: b.lattice }),
       binding: b,
     });
   };

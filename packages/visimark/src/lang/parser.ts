@@ -11,6 +11,7 @@ import {
   type UnitText,
 } from "./ast.js";
 import type { Domain, Leaf, PresetName, RangeLeaf, SetLeaf } from "./domain.js";
+import type { Lattice } from "./lattice.js";
 import { lex } from "./lexer.js";
 import { DELIM_OPENER_OF, DELIM_PAIRS } from "./notation.js";
 import { LangError, type Token } from "./token.js";
@@ -376,6 +377,9 @@ export interface Binding {
   /** a `param`'s optional domain clause. See
    *  docs/design/a-param-declares-the-set-of-values-it-ac-spec.md §2. */
   domain?: Domain;
+  /** a `param`'s optional `lattice STEP` clause, a sibling of `domain` and not
+   *  part of it. See docs/design/lattice-on-param-and-report-statements-spec.md §2.1. */
+  lattice?: Lattice;
 }
 
 const LEADING_NAME_RE = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=/;
@@ -605,6 +609,14 @@ function parseParamInner(line: string, toks: Token[], kw: Token, nameTok: Token)
     precision = n;
     rest = rest.slice(2);
   }
+  // `lattice STEP` is last in the header, so everything from the keyword on is
+  // the clause and everything before it is the domain
+  let lattice: Lattice | undefined;
+  const latticeAt = rest.findIndex((t) => t.kind === "ident" && t.value === "lattice");
+  if (latticeAt !== -1) {
+    lattice = parseLatticeClause(line, rest.slice(latticeAt));
+    rest = rest.slice(0, latticeAt);
+  }
   const domain = rest.length === 0 ? undefined : parseParamDomainClause(line, rest);
   const dflt = toks[eqIndex + 1]!;
   if (dflt.kind !== "ident" || dflt.value !== "default") {
@@ -641,6 +653,7 @@ function parseParamInner(line: string, toks: Token[], kw: Token, nameTok: Token)
     ...(unit === undefined ? {} : { unit }),
     param: { text: line.slice(litStart, lit.end), percent },
     ...(domain === undefined ? {} : { domain }),
+    ...(lattice === undefined ? {} : { lattice }),
   };
 }
 
@@ -701,6 +714,32 @@ function parseParamDomainClause(line: string, tokens: Token[]): Domain {
     );
   }
   return { parts };
+}
+
+export const PARAM_LATTICE_LITERAL_MESSAGE = "a lattice step must be a number literal";
+
+/**
+ * `lattice STEP`, the optional last clause of a `param` header. `tokens[0]` is
+ * the keyword. The step is a number literal as a domain bound is; anything
+ * after it (a second clause, a domain written after the lattice) is malformed.
+ * See docs/design/lattice-on-param-and-report-statements-spec.md §2.1 and §4.1.
+ */
+function parseLatticeClause(line: string, tokens: Token[]): Lattice {
+  const kw = tokens[0]!;
+  const first = tokens[1];
+  const literal = first?.kind === "op" && first.value === "-" ? tokens[2] : first;
+  if (!literal || (literal.kind !== "number" && literal.kind !== "percent")) {
+    throw new LangError(PARAM_LATTICE_LITERAL_MESSAGE, kw.start, (first ?? kw).end);
+  }
+  const parsed = parseDomainLiteral(line, tokens, 1);
+  if (parsed.next !== tokens.length) {
+    throw new LangError(
+      PARAM_DOMAIN_MALFORMED_MESSAGE,
+      tokens[parsed.next]!.start,
+      tokens[tokens.length - 1]!.end,
+    );
+  }
+  return { step: parsed.value, literal: parsed.literal };
 }
 
 function parseDomainRangeOrSet(
