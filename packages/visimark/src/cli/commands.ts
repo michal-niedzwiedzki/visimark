@@ -22,6 +22,7 @@ import {
   unitSigText,
 } from "../lang/reference.js";
 import { domainJson, formatDomain } from "../lang/domain.js";
+import { latticeJson } from "../lang/lattice.js";
 import { closest } from "../report/levenshtein.js";
 import {
   emitJson,
@@ -469,6 +470,7 @@ export function cmdEval(args: string[], out: Writer, err: Writer): number {
         default: p.defaultValue,
         source: scenario?.supplied.has(p.id) ? "scenario" : "default",
         domain: domainJson(p.domain!),
+        ...(p.lattice === undefined ? {} : { lattice: latticeJson(p.lattice) }),
       };
     }
     return out;
@@ -478,7 +480,11 @@ export function cmdEval(args: string[], out: Writer, err: Writer): number {
     const w = Math.max(...domainParams.map((p) => p.id.length));
     return [
       "params:",
-      ...domainParams.map((p) => `  ${p.id.padEnd(w)}   ${formatDomain(p.domain!)}`),
+      ...domainParams.map(
+        (p) =>
+          `  ${p.id.padEnd(w)}   ${formatDomain(p.domain!)}` +
+          (p.lattice === undefined ? "" : ` lattice ${p.lattice.literal.text}`),
+      ),
     ];
   };
 
