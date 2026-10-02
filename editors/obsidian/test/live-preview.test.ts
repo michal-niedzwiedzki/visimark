@@ -29,7 +29,7 @@ const { EditorState } = CmState;
 const docs = resolve(import.meta.dir, "../../../docs");
 const invoice = readFileSync(join(docs, "example-invoice.md"), "utf8");
 const NAME = "lines.net_total";
-const ANCHORED_TEXT = "23300.00";
+const ANCHORED_TEXT = "23300.00 PLN";
 
 const noopRead = async (): Promise<string> => {
   throw new Error("not modelled: no vault reads expected in this test");

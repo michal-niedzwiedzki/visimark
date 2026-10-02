@@ -1,3 +1,4 @@
+import { formatUnit, isDimensionless, type UnitMap } from "../lang/unit-expr.js";
 import type { Value } from "./value.js";
 import { roundToPlaces } from "./value.js";
 
@@ -33,18 +34,43 @@ export function nbspDisplay(v: Value): string {
   return v.s.trim().split(/\s+/).join("&nbsp;");
 }
 
+/**
+ * Print a stored number with its unit: the number at the binding's write
+ * precision, one space, and the unit map in the normalised spelling
+ * (`23300.00 PLN`, `5 m²`, `50 1/s`). A value that rounds to zero never
+ * prints `-0`. The unit is the binding's own — declared or derived — and a
+ * dimensionless value is refused before this is reached.
+ */
+export function unitDisplay(v: Value, places: number, unit?: UnitMap): string {
+  if (v.t !== "num") {
+    throw new Error("unitDisplay expects a number");
+  }
+  if (unit === undefined || isDimensionless(unit)) {
+    throw new Error("unitDisplay expects a unit");
+  }
+  const rounded = roundToPlaces(v.d, places);
+  const shown = rounded.abs().toFixed(places);
+  const sign = rounded.isNeg() && !rounded.isZero() ? "-" : "";
+  return `${sign}${shown} ${formatUnit(unit)}`;
+}
+
 /** A named, chainless anchor-comment display transform — `<!--vmark=x.y|name-->`.
  *  Registered under a closed, catalogue-governed name; never user-defined
  *  (see docs/design/display-rules-replacing-percent-sigil-spec.md). */
 export interface DisplayRule {
   /** true if this rule accepts a scalar of this value's type */
   accepts(v: Value): boolean;
-  /** stored value, at the binding's write precision, to rendered text */
-  render(v: Value, places: number): string;
+  /** stored value, at the binding's write precision, to rendered text;
+   *  `unit` is the binding's unit map, which only a `needsUnit` rule reads */
+  render(v: Value, places: number, unit?: UnitMap): string;
   /** the accepted-type phrase in the shared TYPE message, e.g. "numeric only" */
   accepted: string;
   /** false when the rendering is not legible inside a code span */
   inlineCode: boolean;
+  /** true when the rule prints the value's unit: a dimensionless value is
+   *  then a TYPE, and the rule is exempt from "cannot render a value with a
+   *  unit", which every other rule is subject to */
+  needsUnit: boolean;
 }
 
 /** The closed registry. Adding an entry means adding a key here, behind its
@@ -59,12 +85,21 @@ export const DISPLAY_RULES: Readonly<Record<string, DisplayRule>> = Object.assig
       render: percentDisplay,
       accepted: "numeric only",
       inlineCode: true,
+      needsUnit: false,
     },
     nbsp: {
       accepts: (v: Value) => v.t === "str",
       render: nbspDisplay,
       accepted: "string only",
       inlineCode: false,
+      needsUnit: false,
+    },
+    unit: {
+      accepts: (v: Value) => v.t === "num",
+      render: unitDisplay,
+      accepted: "numeric with a unit",
+      inlineCode: true,
+      needsUnit: true,
     },
   },
 );

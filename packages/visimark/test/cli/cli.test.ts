@@ -393,7 +393,7 @@ test("check on the display-rule-nbsp-errors fixture reports all nine refusals", 
   expect(await runCli(["check", nbspErrorsFixture], c.io)).toBe(1);
   const out = c.out();
   for (const line of [
-    "TYPE    s.n               a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only)",
+    "TYPE    s.n               a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only; unit: numeric with a unit)",
     "ANCHOR  .                 malformed anchor comment — expected `<!--vmark=sheet.name-->` or `<!--vmark=sheet.name|rule-->`",
     "ANCHOR  s.bare            a display rule needs a delimited seed — wrap a placeholder instead, such as **_**",
     "ANCHOR  s.code            display rule `nbsp` cannot render inside a code span — wrap the seed in **…** or *…* instead",
@@ -417,6 +417,133 @@ test("fmt leaves the display-rule-nbsp-errors fixture byte-identical", async () 
   await runCli(["fmt", path], f.io);
   expect(f.out()).toContain("unchanged");
   expect(readFileSync(path, "utf8")).toBe(src);
+});
+
+// ── |unit (#323) ────────────────────────────────────────────────────────────
+
+const unitFixture = fileURLToPath(new URL("../fixtures/display-rule-unit.md", import.meta.url));
+const unitErrorsFixture = fileURLToPath(
+  new URL("../fixtures/display-rule-unit-errors.md", import.meta.url),
+);
+const spellingFixture = fileURLToPath(
+  new URL("../fixtures/decoration-unit-spelling.md", import.meta.url),
+);
+
+/** a copy of `fixture` with `from` replaced by `to`, in a fresh temp dir */
+function variant(fixture: string, from: string, to: string): string {
+  const src = readFileSync(fixture, "utf8");
+  expect(src).toContain(from);
+  const path = join(mkdtempSync(join(tmpdir(), "vm-unit-")), "u.md");
+  writeFileSync(path, src.replace(from, to));
+  return path;
+}
+
+test("check passes the display-rule-unit fixture and fmt leaves it unchanged", async () => {
+  const c = capture();
+  expect(await runCli(["check", unitFixture], c.io)).toBe(0);
+  expect(c.out()).toContain("0 problems (0 stale, 0 errors)");
+  const path = variant(unitFixture, "", "");
+  const f = capture();
+  expect(await runCli(["fmt", path], f.io)).toBe(0);
+  expect(f.out()).toContain("unchanged");
+});
+
+test("eval --json on the display-rule-unit fixture reports the stored value", async () => {
+  const c = capture();
+  expect(await runCli(["eval", unitFixture, "--json"], c.io)).toBe(0);
+  const j = JSON.parse(c.out()) as {
+    values: Record<string, string>;
+    units: Record<string, Record<string, number>>;
+  };
+  expect(j.values["s.total"]).toBe("23300");
+  expect(j.units["s.total"]).toEqual({ PLN: 1 });
+});
+
+test("a changed total is one STALE, and fmt rewrites that one span", async () => {
+  const path = variant(
+    unitFixture,
+    "total [PLN] precision 2 = 23300 [PLN]",
+    "total [PLN] precision 2 = 24000 [PLN]",
+  );
+  const c = capture();
+  expect(await runCli(["check", path], c.io)).toBe(1);
+  expect(c.out()).toContain(
+    "STALE   s.total                              23300.00 PLN ≠ 24000.00 PLN",
+  );
+  expect(c.out()).toContain("2 problems (2 stale, 0 errors)");
+  const f = capture();
+  expect(await runCli(["fmt", path], f.io)).toBe(0);
+  expect(f.out()).toContain("updated 1 anchor");
+  expect(readFileSync(path, "utf8")).toContain("Total **24000.00 PLN**<!--vmark=s.total|unit-->");
+  const again = capture();
+  expect(await runCli(["fmt", path], again.io)).toBe(0);
+  expect(again.out()).toContain("unchanged");
+  expect(await runCli(["check", path], capture().io)).toBe(0);
+});
+
+test("a changed declaration rewrites only the unit token", async () => {
+  const path = variant(
+    unitFixture,
+    "total [PLN] precision 2 = 23300 [PLN]",
+    "total [EUR] precision 2 = 23300 [EUR]",
+  );
+  const before = readFileSync(path, "utf8");
+  const c = capture();
+  expect(await runCli(["check", path], c.io)).toBe(1);
+  expect(c.out()).toContain("23300.00 PLN ≠ 23300.00 EUR");
+  expect(await runCli(["fmt", path], capture().io)).toBe(0);
+  expect(readFileSync(path, "utf8")).toBe(
+    before.replace(
+      "**23300.00 PLN**<!--vmark=s.total|unit-->",
+      "**23300.00 EUR**<!--vmark=s.total|unit-->",
+    ),
+  );
+});
+
+test("fmt normalises the |unit spelling and keeps the plain sibling's", async () => {
+  const path = variant(
+    unitFixture,
+    "area [m²] precision 0 = 5 [m²]",
+    "area [m²] precision 0 = 6 [m²]",
+  );
+  expect(await runCli(["fmt", path], capture().io)).toBe(0);
+  const after = readFileSync(path, "utf8");
+  expect(after).toContain("`6 m²`<!--vmark=s.area|unit-->");
+  expect(after).toContain("**6 m^2**<!--vmark=s.area-->");
+});
+
+test("check on the display-rule-unit-errors fixture reports all six refusals", async () => {
+  const c = capture();
+  expect(await runCli(["check", unitErrorsFixture], c.io)).toBe(1);
+  const out = c.out();
+  const typeMsg =
+    "a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only; unit: numeric with a unit)";
+  for (const line of [
+    `TYPE    s.bare            ${typeMsg}`,
+    "TYPE    s.n               |percent cannot render a value with a unit (PLN)",
+    `TYPE    s.ratio           ${typeMsg}`,
+    `TYPE    s.word            ${typeMsg}`,
+    "ANCHOR  .                 malformed anchor comment — expected `<!--vmark=sheet.name-->` or `<!--vmark=sheet.name|rule-->`",
+    "ANCHOR  s.n               a display rule needs a delimited seed — wrap a placeholder instead, such as **_**",
+  ]) {
+    expect(out).toContain(line);
+  }
+  expect(out).toContain("6 problems (0 stale, 6 errors)");
+});
+
+test("plain decorations keep their unit spelling through fmt", async () => {
+  const c = capture();
+  expect(await runCli(["check", spellingFixture], c.io)).toBe(0);
+  const path = variant(spellingFixture, "|  12 m^2   |", "|  13 m^2   |");
+  const s = capture();
+  expect(await runCli(["check", path], s.io)).toBe(1);
+  expect(s.out()).toContain("42 m^2 ≠ 43 m^2");
+  expect(await runCli(["fmt", path], capture().io)).toBe(0);
+  expect(readFileSync(path, "utf8")).toContain("Floor area **43 m^2**<!--vmark=flat.total-->");
+  const mixed = variant(spellingFixture, "|  30 m²    |", "|  30 m²    |\n| store  |   4 kg    |");
+  const m = capture();
+  expect(await runCli(["check", mixed], m.io)).toBe(1);
+  expect(m.out()).toContain("column mixes units: m^2 and kg");
 });
 
 const anchorAcceptanceFixture = fileURLToPath(

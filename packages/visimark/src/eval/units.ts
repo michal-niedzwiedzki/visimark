@@ -28,11 +28,18 @@ const DECORATED = new RegExp(
     `(?<num>\\d+(?:\\.\\d+)?)\\s*(?<post>${DECOR}*)$`,
 );
 
+/**
+ * The second chance: a number, whitespace, and a suffix the unit grammar
+ * accepts. It reaches the units `DECOR` cannot, because they hold a digit —
+ * `5 m^2`, `50 1/s`, `6.0 N⋅m/s²`. The author's spelling is kept.
+ */
+const UNIT_SUFFIXED = /^(?<sign>-?)(?<num>\d+(?:\.\d+)?)\s+(?<rest>\S.*)$/;
+
 export function parseDecorated(text: string): Decorated {
   const t = text.trim();
   if (t === "") return { kind: "not-a-number" };
   const m = DECORATED.exec(t);
-  if (!m?.groups) return { kind: "not-a-number" };
+  if (!m?.groups) return parseUnitSuffixed(t);
   const { sign1, pre, sign2, num, post } = m.groups as Record<string, string>;
   if (sign1 && sign2) return { kind: "not-a-number" };
   if (pre && post) return { kind: "both-sides", pre, post };
@@ -45,8 +52,31 @@ export function parseDecorated(text: string): Decorated {
   return { kind: "number", num: sign + num, unit };
 }
 
+function parseUnitSuffixed(t: string): Decorated {
+  const m = UNIT_SUFFIXED.exec(t);
+  if (!m?.groups) return { kind: "not-a-number" };
+  const rest = m.groups.rest!;
+  if (!parseUnit(rest).ok) return { kind: "not-a-number" };
+  return {
+    kind: "number",
+    num: m.groups.sign! + m.groups.num!,
+    unit: { text: rest, side: "suffix" },
+  };
+}
+
+/**
+ * Two decorations are the same when their keys are. A suffix the unit grammar
+ * reads keys by its normalised map, so `m^2` and `m²` agree; definitions are
+ * not expanded, so `J` and `N⋅m` stay two decorations. Anything else keys by
+ * its text.
+ */
 export function unitKey(u: Unit | null): string {
-  return u ? `${u.side}:${u.text}` : "(none)";
+  if (!u) return "(none)";
+  if (u.side === "suffix") {
+    const parsed = parseUnit(u.text);
+    if (parsed.ok) return `suffix~${formatUnit(parsed.map)}`;
+  }
+  return `${u.side}:${u.text}`;
 }
 
 export function showUnit(u: Unit | null): string {
@@ -100,10 +130,13 @@ export function inferColumnUnit(cellTexts: (string | undefined)[]): ColumnUnit {
     };
   }
 
+  // one form per distinct decoration, in the spelling first seen
   const forms: string[] = [];
+  const keys = new Set<string>();
   for (const s of seen) {
-    const label = showUnit(s.unit);
-    if (!forms.includes(label)) forms.push(label);
+    if (keys.has(s.key)) continue;
+    keys.add(s.key);
+    forms.push(showUnit(s.unit));
   }
   return { unit: null, conflict: true, forms, firstDeviantRow: deviant.row };
 }

@@ -135,7 +135,15 @@ Invoice total: **28659.00**<!--vmark=lines.gross_total-->
 An optional `|name` suffix on the comment names a **display rule**: a named
 transform, drawn from a small closed registry, that asks `fmt` to render the
 scalar differently in prose without changing the stored value. The registry
-holds two entries. `percent` renders a number — stored × 100 at precision − 2,
+holds three entries:
+
+| Rule | Accepts | Renders | Example seed | Request |
+|------|---------|---------|--------------|---------|
+| `percent` | a number | stored × 100 at precision − 2, with `%` | `**40.26%**<!--vmark=lines.margin\|percent-->` | [#297](https://github.com/michal-niedzwiedzki/visimark/issues/297) |
+| `nbsp` | a string | the words joined with `&nbsp;` | `**past&nbsp;due**<!--vmark=s.status\|nbsp-->` | [#305](https://github.com/michal-niedzwiedzki/visimark/issues/305) |
+| `unit` | a number with a unit | the number at write precision, one space, the unit | `**23300.00 PLN**<!--vmark=lines.net_total\|unit-->` | [#323](https://github.com/michal-niedzwiedzki/visimark/issues/323) |
+
+`percent` renders a number — stored × 100 at precision − 2,
 with a leading minus when the ratio is negative:
 
 ```markdown
@@ -149,20 +157,37 @@ multi-word value never wraps and a renderer shows it as the plain words:
 Account status: **past&nbsp;due**<!--vmark=s.status|nbsp--> as of today.
 ```
 
+`unit` renders a number that carries a unit — declared or derived
+([§21](#21-units)) — as the number at its write precision, one space, and the
+unit in its normalised spelling (`⋅`, superscripts, atoms in code-point order,
+`1/s` for an empty numerator). A binding that declares `[J]` prints `J`; one
+that derives `N⋅m` prints `N⋅m`. The unit sits inside the delimiter, so the
+anchor's span is still the one node before the comment:
+
+```markdown
+Net of tax the engagement comes to **23300.00 PLN**<!--vmark=lines.net_total|unit-->.
+```
+
 For `percent`, `check`'s verdict stays numeric: `40.26%` and `0.4026` agree
-when the stored value is `0.4026`. For `nbsp`, the span is compared
-byte-for-byte with the rendering, and every rendering is first proved by an
+when the stored value is `0.4026`. For `unit`, the span is compared byte for
+byte with the rendering: a bare number, a missing, wrong or non-normal unit
+(`m^2` for `m²`), a `$` prefix or a bracket is `STALE`, and `fmt` rewrites the
+whole span. The same wrong text on a plain anchor is `UNIT`, fixed by hand —
+the comment is what hands the tool the unit. The separator is an ordinary
+space, so the number and its unit may wrap at a line end. For `nbsp`, the span
+is compared byte-for-byte with the rendering, and every rendering is first proved by an
 in-place re-parse: the document is re-read with the rendering spliced in, and
 the anchor must still target the same node, wrapping one text child that
 decodes to the stored words. A value that would not read back as itself (one
 holding Markdown syntax, an empty one, one that would autolink) is `ANCHOR`,
 and `fmt` never writes it. `nbsp` is also `ANCHOR` in a code span, where
 `&nbsp;` shows literally. Two anchors of one scalar may disagree about their display
-rule; each comment is its own rendering. A display rule mixed with a unit in
-the same span is `UNIT`. A display rule applied to a value of a type it does
+rule; each comment is its own rendering. `percent` mixed with a unit in the
+same span is `UNIT`. A display rule applied to a value of a type it does
 not accept — a date or a string for `percent`, a number or a date for
-`nbsp`, or a chart/image target — is
-`TYPE`. An unrecognised `|name` is `ANCHOR`. `percent` specifically also
+`nbsp`, anything but a number with a unit for `unit` (including a ratio
+whose units cancel), or a chart/image target — is
+`TYPE`; so is `percent` or `nbsp` on a value with a unit. An unrecognised `|name` is `ANCHOR`. `percent` specifically also
 requires precision 2 or more (`PRECISION`); a width floor is not a property
 every future display rule need share. The registry is closed — no
 document-supplied name — matching the no-plugin-architecture rule
@@ -573,9 +598,12 @@ unit is the bracket after a name — `Rate [PLN]` on a header, `fx_eur [PLN/EUR]
 on a head — and it propagates through every formula as a map from unit atom to
 integer exponent ([§21](#21-units)). Under a header that declares one, a
 decoration answers to it: a suffix must be the same unit, and a prefix is
-refused. The compromise this replaces is in [§15](#15-known-tensions). The
-invoice's `**23300.00**<!--vmark=lines.net_total--> PLN` is unaffected: the
-anchored value is bare and `PLN` sits in the prose after the comment.
+refused. The compromise this replaces is in [§15](#15-known-tensions). A plain
+anchor or cell may spell its unit any way the unit grammar reads (`m^2` or
+`m²`, `1/s`); the two compare by unit map and `fmt` keeps the author's
+spelling. The invoice instead writes
+`**23300.00 PLN**<!--vmark=lines.net_total|unit-->`, so the unit is the
+declaration's and `fmt` owns it.
 
 `%` is not a unit. `23%` remains exactly `0.23` by the rule in section 4; a
 unit never scales the number it decorates, a `%` literal is never given one,
@@ -675,12 +703,12 @@ justifies the project.
 |------|---------|--------------|
 | `STALE` | stored value **or artifact** disagrees with its formula | yes, by `fmt` |
 | `DATE` | not an ISO 8601 calendar date | only if decidable, with `--fix-dates` |
-| `UNIT` | a column mixes unit decorations, a value is decorated on both sides, or a display rule shares a span with a unit; or units disagree — a declared unit the formula does not derive, `+`/`-`/comparison over different units, a builtin argument against its unit signature, a malformed unit bracket, a decoration against its header's unit ([§21](#21-units)) | no |
+| `UNIT` | a column mixes unit decorations, a value is decorated on both sides, or `percent` shares a span with a unit; or units disagree — a declared unit the formula does not derive, `+`/`-`/comparison over different units, a builtin argument against its unit signature, a malformed unit bracket, a decoration against its header's unit ([§21](#21-units)) | no |
 | `UNDEF` | unresolvable name | no |
 | `DUP` | a name is bound twice in one scope, two header cells sharing a name, or a unit defined twice | no |
 | `VECTOR` | foreign column outside an aggregate | no |
 | `CYCLE` | circular dependency, among bindings or among unit definitions | no |
-| `TYPE` | illegal operand types, a malformed call (name, arity, shape), or a display rule on a value of a type it does not accept (a date or a string for `percent`; a number or a date for `nbsp`; any value with a unit), or a chart/image | no |
+| `TYPE` | illegal operand types, a malformed call (name, arity, shape), or a display rule on a value of a type it does not accept (a date or a string for `percent`; a number or a date for `nbsp`; any value with a unit for those two, and any value without one for `unit`), or a chart/image | no |
 | `SHEET` | column rules with no table, an `assert` in a document-scope block, or a unit definition in a sheet block | no |
 | `ANCHOR` | anchor with no rewritable target, an unrecognised display-rule name, a display-rule anchor with no delimited seed, a display rule that cannot render in a code span, or a string display rule whose rendering would not read back as the stored text | no |
 | `PRECISION` | a numeric binding with no declared width and none derivable, a value too large to carry the width it has ([§7](#7-numeric-semantics)), or a `percent` display rule on a binding whose width is below 2 | no |
@@ -1343,8 +1371,9 @@ is the full specification; this section is the summary.
   (§8). A binding whose units disagree gets no value and its readers are
   suppressed.
 - **What it does not do.** No conversion factor, so "re-add it on a
-  calculator" still holds exactly (§7). No rate table, no locale. Anchors stay
-  bare; a display rule refuses a value with a unit.
+  calculator" still holds exactly (§7). No rate table, no locale. An anchor
+  prints its unit only under `|unit` (§3); `percent` and `nbsp` refuse a value
+  with a unit.
 - **Reporting.** `eval` prints `name [unit]`, and `eval --json` adds a `units`
   object of exponent maps. `explain` shows each binding's unit and whether it
   was declared or derived. `infer` proposes a missing derived unit and

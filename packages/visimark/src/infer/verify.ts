@@ -1,6 +1,13 @@
 import { check, matchesStored, roundValue, showValue } from "../eval/check.js";
 import { applyUnit, cellPrecision, parseDecorated, type Unit } from "../eval/units.js";
 import type { Value } from "../eval/value.js";
+import {
+  isDimensionless,
+  parseUnit,
+  sameUnit,
+  type UnitDefs,
+  type UnitMap,
+} from "../lang/unit-expr.js";
 import type { Binding } from "../model/types.js";
 import type { Span } from "../parse/document.js";
 import { type InferContext, type InferSheet, makeBinding, provisional } from "./context.js";
@@ -166,12 +173,14 @@ export function verifyScalar(
   const v = result.values.get(binding.id);
   if (!v) return miss;
   const unit = unitFrom ? (result.columnUnits.get(`${sheet.id}.${unitFrom}`) ?? null) : null;
+  const unitMap = result.unitMaps.get(binding.id)?.map;
 
   return {
     usable: true,
     derivable: result.scalarPrecision.has(binding.id),
     text: (places) => showValue(v, places),
-    writes: (figure) => writesExactly(v, unit, figure),
+    writes: (figure) =>
+      writesExactly(v, unit, figure) || writesWithOwnUnit(v, unitMap, model.unitDefs, figure),
   };
 }
 
@@ -195,6 +204,26 @@ function writesExactly(v: Value, unit: Unit | null, figure: string): boolean {
   if (!m) return false;
   const places = m[1]?.length ?? 0;
   return applyUnit(showValue(roundValue(v, places), places), unit) === text;
+}
+
+/**
+ * `writesExactly` for a figure that carries the value's own unit as a suffix —
+ * `**23300.00 PLN**` for a value derived in `PLN` — where the column it reduces
+ * is bare. A plain anchor on that figure keeps the author's spelling, so `fmt`
+ * would write it back unchanged; that is the same exact question (#323).
+ */
+function writesWithOwnUnit(
+  v: Value,
+  unitMap: UnitMap | undefined,
+  defs: UnitDefs,
+  figure: string,
+): boolean {
+  if (!unitMap || isDimensionless(unitMap)) return false;
+  const dec = parseDecorated(figure.trim());
+  if (dec.kind !== "number" || dec.unit?.side !== "suffix") return false;
+  const parsed = parseUnit(dec.unit.text);
+  if (!parsed.ok || !sameUnit(parsed.map, unitMap, defs)) return false;
+  return writesExactly(v, dec.unit, figure);
 }
 
 function bindings(accepted: Accepted[]): Binding[] {

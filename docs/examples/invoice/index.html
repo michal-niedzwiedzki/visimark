@@ -607,11 +607,11 @@ Gross             = Net + VAT
 net_total   [PLN] = SUM(Net)
 vat_total   [PLN] = SUM(VAT)
 gross_total [PLN] = SUM(Gross)
-</code></pre></div><pre class="src">Net of tax the engagement comes to **23300.00**&lt;!--vmark=lines.net_total--&gt; PLN.
-VAT at 23% adds **5359.00**&lt;!--vmark=lines.vat_total--&gt; PLN, giving a total due of
-**28659.00**&lt;!--vmark=lines.gross_total--&gt; PLN.</pre><div class="out"><p>Net of tax the engagement comes to <strong>23300.00</strong> PLN.
-VAT at 23% adds <strong>5359.00</strong> PLN, giving a total due of
-<strong>28659.00</strong> PLN.</p></div><pre class="src">## Payment schedule</pre><div class="out"><h2 id="payment-schedule">Payment schedule</h2></div><pre class="src">| Milestone           | Share | Amount [PLN] | Due        |
+</code></pre></div><pre class="src">Net of tax the engagement comes to **23300.00 PLN**&lt;!--vmark=lines.net_total|unit--&gt;.
+VAT at 23% adds **5359.00 PLN**&lt;!--vmark=lines.vat_total|unit--&gt;, giving a total due of
+**28659.00 PLN**&lt;!--vmark=lines.gross_total|unit--&gt;.</pre><div class="out"><p>Net of tax the engagement comes to <strong>23300.00 PLN</strong>.
+VAT at 23% adds <strong>5359.00 PLN</strong>, giving a total due of
+<strong>28659.00 PLN</strong>.</p></div><pre class="src">## Payment schedule</pre><div class="out"><h2 id="payment-schedule">Payment schedule</h2></div><pre class="src">| Milestone           | Share | Amount [PLN] | Due        |
 |---------------------|------:|-------------:|------------|
 | Signature           |   30% |      8597.70 | 2026-09-10 |
 | Delivery of backend |   40% |     11463.60 | 2026-10-15 |
@@ -651,7 +651,7 @@ covered [PLN] = SUM(Amount)
 ```</pre><div class="out"><pre><code class="language-vmark">Amount precision 2 = Share * lines.gross_total
 
 covered [PLN] = SUM(Amount)
-</code></pre></div><pre class="src">The three milestones account for **28659.00**&lt;!--vmark=schedule.covered--&gt; PLN.</pre><div class="out"><p>The three milestones account for <strong>28659.00</strong> PLN.</p></div><pre class="src">## Payment terms</pre><div class="out"><h2 id="payment-terms">Payment terms</h2></div><pre class="src">```vmark #terms
+</code></pre></div><pre class="src">The three milestones account for **28659.00 PLN**&lt;!--vmark=schedule.covered|unit--&gt;.</pre><div class="out"><p>The three milestones account for <strong>28659.00 PLN</strong>.</p></div><pre class="src">## Payment terms</pre><div class="out"><h2 id="payment-terms">Payment terms</h2></div><pre class="src">```vmark #terms
 early_pay_total [PLN] precision 2 = lines.gross_total * (1 - early_pay_disc)
 early_pay_saved [PLN]             = lines.gross_total - early_pay_total
 eur_total       [EUR] precision 2 = lines.gross_total / fx_eur
@@ -659,13 +659,13 @@ eur_total       [EUR] precision 2 = lines.gross_total / fx_eur
 early_pay_saved [PLN]             = lines.gross_total - early_pay_total
 eur_total       [EUR] precision 2 = lines.gross_total / fx_eur
 </code></pre></div><pre class="src">Settlement within 7 days qualifies for a 2% early-payment discount, reducing the
-amount due to **28085.82**&lt;!--vmark=terms.early_pay_total--&gt; PLN — a saving of
-**573.18**&lt;!--vmark=terms.early_pay_saved--&gt; PLN.</pre><div class="out"><p>Settlement within 7 days qualifies for a 2% early-payment discount, reducing the
-amount due to <strong>28085.82</strong> PLN — a saving of
-<strong>573.18</strong> PLN.</p></div><pre class="src">For reference, the gross total is approximately
-**6719.58**&lt;!--vmark=terms.eur_total--&gt; EUR at the ECB reference rate of
+amount due to **28085.82 PLN**&lt;!--vmark=terms.early_pay_total|unit--&gt; — a saving of
+**573.18 PLN**&lt;!--vmark=terms.early_pay_saved|unit--&gt;.</pre><div class="out"><p>Settlement within 7 days qualifies for a 2% early-payment discount, reducing the
+amount due to <strong>28085.82 PLN</strong> — a saving of
+<strong>573.18 PLN</strong>.</p></div><pre class="src">For reference, the gross total is approximately
+**6719.58 EUR**&lt;!--vmark=terms.eur_total|unit--&gt; at the ECB reference rate of
 4.2650 PLN/EUR recorded on the delivery date.</pre><div class="out"><p>For reference, the gross total is approximately
-<strong>6719.58</strong> EUR at the ECB reference rate of
+<strong>6719.58 EUR</strong> at the ECB reference rate of
 4.2650 PLN/EUR recorded on the delivery date.</p></div><pre class="src">## Reconciliation</pre><div class="out"><h2 id="reconciliation">Reconciliation</h2></div><pre class="src">```vmark #recon
 scheduled [PLN] = SUM(schedule.Amount)
 variance  [PLN] = lines.gross_total - scheduled
@@ -673,11 +673,11 @@ assert variance == 0
 ```</pre><div class="out"><pre><code class="language-vmark">scheduled [PLN] = SUM(schedule.Amount)
 variance  [PLN] = lines.gross_total - scheduled
 assert variance == 0
-</code></pre></div><pre class="src">Scheduled instalments total **28659.00**&lt;!--vmark=recon.scheduled--&gt; PLN against a
-gross invoice value of **28659.00**&lt;!--vmark=lines.gross_total--&gt; PLN, leaving a
-variance of **0.00**&lt;!--vmark=recon.variance--&gt; PLN.</pre><div class="out"><p>Scheduled instalments total <strong>28659.00</strong> PLN against a
-gross invoice value of <strong>28659.00</strong> PLN, leaving a
-variance of <strong>0.00</strong> PLN.</p></div><pre class="src">---</pre><div class="out"><hr></div><pre class="src">## Appendix — how this document computes</pre><div class="out"><h2 id="appendix-how-this-document-computes">Appendix — how this document computes</h2></div><pre class="src">Everything above renders as ordinary Markdown. The mechanics are four ideas.</pre><div class="out"><p>Everything above renders as ordinary Markdown. The mechanics are four ideas.</p></div><pre class="src">**A `vmark` block declares formulas for the table above it.** The block carries the
+</code></pre></div><pre class="src">Scheduled instalments total **28659.00 PLN**&lt;!--vmark=recon.scheduled|unit--&gt; against a
+gross invoice value of **28659.00 PLN**&lt;!--vmark=lines.gross_total|unit--&gt;, leaving a
+variance of **0.00 PLN**&lt;!--vmark=recon.variance|unit--&gt;.</pre><div class="out"><p>Scheduled instalments total <strong>28659.00 PLN</strong> against a
+gross invoice value of <strong>28659.00 PLN</strong>, leaving a
+variance of <strong>0.00 PLN</strong>.</p></div><pre class="src">---</pre><div class="out"><hr></div><pre class="src">## Appendix — how this document computes</pre><div class="out"><h2 id="appendix-how-this-document-computes">Appendix — how this document computes</h2></div><pre class="src">Everything above renders as ordinary Markdown. The mechanics are four ideas.</pre><div class="out"><p>Everything above renders as ordinary Markdown. The mechanics are four ideas.</p></div><pre class="src">**A `vmark` block declares formulas for the table above it.** The block carries the
 sheet's identity as `#lines`, `#schedule` and so on. A block with no identity —
 the one near the top of this file — declares document-level constants that every
 sheet can read, which is why `vat` and `fx_eur` resolve without qualification.</pre><div class="out"><p><strong>A <code>vmark</code> block declares formulas for the table above it.</strong> The block carries the
@@ -728,16 +728,20 @@ units — `Net [PLN]`, `net_total [PLN]` and the rest — were written by
 `visimark infer --write`, which records the unit each formula derives; from then
 on each one is checked like any other declaration. Dividing `PLN` by `PLN/EUR`
 derives the `EUR` that `eur_total` declares, so multiplying by the rate instead,
-or adding a euro amount to a złoty one, fails `check`. The anchored numbers stay
-bare — `PLN` and `EUR` stay in the prose, where a reader expects them.</pre><div class="out"><p><strong>A unit is declared in a bracket after a name, and checked.</strong> <code>Rate [PLN]</code> says
+or adding a euro amount to a złoty one, fails `check`. Every anchored figure
+carries the `|unit` display rule, so `fmt` writes the unit from the declaration
+along with the number, and a changed declaration rewrites the unit in the
+sentence too.</pre><div class="out"><p><strong>A unit is declared in a bracket after a name, and checked.</strong> <code>Rate [PLN]</code> says
 each rate is złoty per item, <code>fx_eur [PLN/EUR]</code> says what the exchange rate
 converts, and <code>eur_total [EUR]</code> says what the conversion must produce. The other
 units — <code>Net [PLN]</code>, <code>net_total [PLN]</code> and the rest — were written by
 <code>visimark infer --write</code>, which records the unit each formula derives; from then
 on each one is checked like any other declaration. Dividing <code>PLN</code> by <code>PLN/EUR</code>
 derives the <code>EUR</code> that <code>eur_total</code> declares, so multiplying by the rate instead,
-or adding a euro amount to a złoty one, fails <code>check</code>. The anchored numbers stay
-bare — <code>PLN</code> and <code>EUR</code> stay in the prose, where a reader expects them.</p></div><pre class="src">The payoff is the last section. `visimark check` recomputes every formula and
+or adding a euro amount to a złoty one, fails <code>check</code>. Every anchored figure
+carries the <code>|unit</code> display rule, so <code>fmt</code> writes the unit from the declaration
+along with the number, and a changed declaration rewrites the unit in the
+sentence too.</p></div><pre class="src">The payoff is the last section. `visimark check` recomputes every formula and
 exits non-zero if any stored number disagrees, so an arithmetic error in this
 invoice fails CI instead of reaching the buyer — whether a human or an agent
 wrote it.</pre><div class="out"><p>The payoff is the last section. <code>visimark check</code> recomputes every formula and
