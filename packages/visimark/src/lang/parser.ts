@@ -7,6 +7,9 @@ import {
   type Call,
   type Expr,
   type Ref,
+  type ReportDecl,
+  REPORT_NAMES,
+  type ReportName,
   type UnitDef,
   type UnitText,
 } from "./ast.js";
@@ -405,7 +408,7 @@ export function parseBinding(line: string): Binding {
  */
 export function parseStatement(
   line: string,
-): Binding | Assertion | ChartDecl | AliasDecl | UnitDef {
+): Binding | Assertion | ChartDecl | AliasDecl | UnitDef | ReportDecl {
   try {
     return parseStatementInner(line);
   } catch (e) {
@@ -417,11 +420,23 @@ export function parseStatement(
   }
 }
 
-function parseStatementInner(line: string): Binding | Assertion | ChartDecl | AliasDecl | UnitDef {
+function parseStatementInner(
+  line: string,
+): Binding | Assertion | ChartDecl | AliasDecl | UnitDef | ReportDecl {
   const toks = lex(line);
   const first = toks.find((t) => t.kind !== "eof");
   if (first?.kind === "unit") {
     return parseUnitDef(toks, first);
+  }
+  // `report` is contextual, like `param`: a statement only as the first token
+  // of a line with no `=`. A binding always has an `=`, so `report = 5` and
+  // `report precision 2 = 5` stay ordinary bindings.
+  if (
+    first?.kind === "ident" &&
+    first.value === "report" &&
+    !toks.some((t) => t.kind === "op" && t.value === "=")
+  ) {
+    return parseReport(toks, first);
   }
   if (first?.kind === "chart") {
     return parseChart(toks, first);
@@ -1027,6 +1042,115 @@ function parseChart(toks: Token[], kw: Token): ChartDecl {
     );
   }
   return { type: "chart", name, engine, series, labels, aspect, start: kw.start, end: end.start };
+}
+
+const REPORT_SYNOPSIS: Record<ReportName, string | null> = {
+  ledger: "[assertions broken]",
+  deltas: "[on REF {, REF}]",
+  gates: null,
+  best: "scalar REF direction max|min [among feasible]",
+  forbidden: null,
+};
+
+/**
+ * `report NAME [OPTIONS]` — see docs/design/lattice-on-param-and-report-statements-spec.md
+ * §2.2. Each shipped name has a closed option grammar; anything else is a
+ * `TYPE` finding naming the synopsis. `REF`s are parsed, not resolved: `check`
+ * resolves them (eval/check-reports.ts).
+ */
+function parseReport(toks: Token[], kw: Token): ReportDecl {
+  let i = toks.indexOf(kw) + 1;
+  const last = toks[toks.length - 1]!;
+  const at = (): Token => toks[i] ?? last;
+
+  const nameTok = at();
+  if (nameTok.kind === "eof") throw new LangError("a report needs a name", kw.start, kw.end);
+  if (nameTok.kind !== "ident" || !(REPORT_NAMES as readonly string[]).includes(nameTok.value)) {
+    throw new LangError(
+      `unknown report \`${nameTok.value}\`; the reports are ${REPORT_NAMES.join(", ")}`,
+      nameTok.start,
+      nameTok.end,
+    );
+  }
+  const name = nameTok.value as ReportName;
+  i++;
+
+  const bad = (): never => {
+    const synopsis = REPORT_SYNOPSIS[name];
+    throw new LangError(
+      synopsis === null
+        ? `\`report ${name}\` takes no options`
+        : `\`report ${name}\` takes: ${synopsis}`,
+      at().start,
+      last.end,
+    );
+  };
+  const isWord = (w: string): boolean => at().kind === "ident" && at().value === w;
+  const word = (w: string): void => {
+    if (!isWord(w)) bad();
+    i++;
+  };
+  const ref = (): Ref => {
+    const head = at();
+    if (head.kind !== "ident") return bad();
+    i++;
+    if (at().kind === "dot") {
+      i++;
+      const tail = at();
+      if (tail.kind !== "ident") return bad();
+      i++;
+      return {
+        type: "ref",
+        name: tail.value,
+        qualifier: head.value,
+        start: head.start,
+        end: tail.end,
+      };
+    }
+    return { type: "ref", name: head.value, start: head.start, end: head.end };
+  };
+  const refText = (r: Ref): string => (r.qualifier ? `${r.qualifier}.${r.name}` : r.name);
+
+  const refs: Ref[] = [];
+  const pieces: string[] = [];
+  if (name === "ledger" && isWord("assertions")) {
+    i++;
+    word("broken");
+    pieces.push("assertions broken");
+  } else if (name === "deltas" && isWord("on")) {
+    i++;
+    for (;;) {
+      refs.push(ref());
+      if (at().kind === "comma") {
+        i++;
+        continue;
+      }
+      break;
+    }
+    pieces.push(`on ${refs.map(refText).join(", ")}`);
+  } else if (name === "best") {
+    word("scalar");
+    refs.push(ref());
+    word("direction");
+    const dir = at();
+    if (dir.kind !== "ident" || (dir.value !== "max" && dir.value !== "min")) bad();
+    i++;
+    pieces.push(`scalar ${refText(refs[0]!)} direction ${dir.value}`);
+    if (isWord("among")) {
+      i++;
+      word("feasible");
+      pieces.push("among feasible");
+    }
+  }
+  if (at().kind !== "eof") bad();
+  return {
+    type: "report",
+    name,
+    refs,
+    text: ["report", name, ...pieces].join(" "),
+    start: kw.start,
+    end: at().start,
+  };
 }
 
 /** `"<header>" is <symbol>` — see docs/design/human-readable-column-aliases-spec.md */

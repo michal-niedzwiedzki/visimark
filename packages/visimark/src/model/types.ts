@@ -1,4 +1,4 @@
-import type { Expr, UnitText } from "../lang/ast.js";
+import type { Expr, Ref, ReportName, UnitText } from "../lang/ast.js";
 import type { UnitDefs, UnitMap } from "../lang/unit-expr.js";
 import type { Domain } from "../lang/domain.js";
 import type { Lattice } from "../lang/lattice.js";
@@ -176,6 +176,8 @@ export interface Sheet {
   assertions: Assertion[];
   /** `chart` declarations, in block-declaration order */
   charts: Chart[];
+  /** `report` statements, in block-declaration order */
+  reports: Report[];
   /** a `from <path> ...` declaration — non-null marks this sheet as a
    *  **declared input**: read-only, its table sourced from a local CSV file
    *  rather than an inline GFM table. See visimark-design.md §3/§9. */
@@ -209,6 +211,25 @@ export interface Chart {
   series: string[];
   labels: string;
   aspect: { w: number; h: number } | null;
+  span: Span;
+  source: string;
+}
+
+/**
+ * A `report` statement: a request that a named, shipped reading of a simulation
+ * be printed under the sheet's heading. Not a graph node and never evaluated by
+ * `check`; its refs are resolved and counted as reads. See
+ * docs/design/lattice-on-param-and-report-statements-spec.md.
+ */
+export interface Report {
+  /** `<sheetId>::report@<offset>` */
+  id: string;
+  sheetId: string;
+  name: ReportName;
+  /** the `REF`s in the options, source order, absolute spans */
+  refs: Ref[];
+  /** whitespace-normalised statement; the duplicate key */
+  text: string;
   span: Span;
   source: string;
 }

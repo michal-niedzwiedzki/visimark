@@ -12,6 +12,7 @@ import {
   type DocModel,
   DOC_SCOPE,
   type Finding,
+  type Report,
   type Sheet,
   type UnitDefinition,
 } from "./types.js";
@@ -75,6 +76,15 @@ function buildDocScope(
         message: "`chart` must be in a `#id` sheet block",
         sourceOffset: stmt.chart.span.start,
         span: stmt.chart.span,
+      });
+      continue;
+    }
+    if (stmt.kind === "report") {
+      findings.push({
+        code: "SHEET",
+        message: "`report` must be in a `#id` sheet block",
+        sourceOffset: stmt.report.span.start,
+        span: stmt.report.span,
       });
       continue;
     }
@@ -340,6 +350,22 @@ export function build(doc: LocatedDoc): DocModel {
         sheet.charts.push(stmt.chart);
         continue;
       }
+      if (stmt.kind === "report") {
+        const first = sheet.reports.find((r) => r.text === stmt.report.text);
+        if (first) {
+          findings.push({
+            code: "DUP",
+            sheetId,
+            message: `${stmt.report.text} is declared twice in sheet ${sheetId}`,
+            sourceOffset: stmt.report.span.start,
+            span: stmt.report.span,
+            relatedSpan: first.span,
+          });
+          continue;
+        }
+        sheet.reports.push(stmt.report);
+        continue;
+      }
 
       const parsed = stmt.binding;
       const alias = stmt.quoted ? undefined : sheet.aliases.get(parsed.name);
@@ -498,6 +524,7 @@ function ensureSheet(
       aliases: new Map(),
       assertions: [],
       charts: [],
+      reports: [],
       imported,
     };
     sheets.set(id, s);
@@ -512,6 +539,7 @@ type Stmt =
   | { kind: "binding"; binding: Binding; quoted: boolean }
   | { kind: "assert"; assertion: Assertion }
   | { kind: "chart"; chart: Chart }
+  | { kind: "report"; report: Report }
   | { kind: "alias"; alias: { header: string; symbol: string; span: Span } }
   | { kind: "unitdef"; def: { atom: UnitText; unit: UnitText; span: Span } };
 
@@ -534,6 +562,21 @@ function parseOne(
           series: s.series,
           labels: s.labels,
           aspect: s.aspect,
+          span: { start: rb.start, end: rb.end },
+          source: rb.raw,
+        },
+      };
+    }
+    if ("type" in s && s.type === "report") {
+      for (const r of s.refs) rebase(r, rb.start);
+      return {
+        kind: "report",
+        report: {
+          id: `${sheetId}::report@${rb.start}`,
+          sheetId,
+          name: s.name,
+          refs: s.refs,
+          text: s.text,
           span: { start: rb.start, end: rb.end },
           source: rb.raw,
         },
