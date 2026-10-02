@@ -76,21 +76,29 @@ division, with more than a twofold margin.
 
 If `quotient − err` and `quotient + err` round half-up to the same 40
 significant digits, that rounding is the exact present value's, and it is
-returned. Otherwise the exact value may lie near a 40-digit rounding midpoint,
-where rounding once at 50 digits and again at 40 can disagree with rounding
-the exact value once. The pass then repeats at 100 digits and, if still
-undecided, at 200. The 200-digit rounding is returned as it stands. That last
-step is reached only when the exact value is within about 1e-198 (relative to
-the absolute terms) of a midpoint or of zero, and an exact tie rounds half-up
-correctly at any width.
+returned. Otherwise the exact value lies near a 40-digit rounding midpoint, or
+the flows cancel by more than the guard digits can absorb. Rounding once at
+50 digits and again at 40 can then disagree with rounding the exact value
+once, or lose a small flow entirely: `1e250 + 1 − 1e250` is `0` at any width
+under 251 digits.
+
+In that case `NPV` computes the exact fraction. Every finite decimal is an
+integer over a power of ten. With `r = R / 10^m`, the base is
+`b = (10^m + R) / 10^m`, and with `M` the most decimal places of any flow,
+every term shares the denominator `(10^m + R)^(n-1) · 10^M`. The numerator is
+a Horner sum in `BigInt`. One `decimal.js` division of the two integers
+returns the quotient rounded half-up to 40 significant digits, which
+`decimal.js` rounds correctly. The result is always the exact present value
+rounded once. The exact path runs only when the bounded pass cannot decide: a
+result of exactly zero, a value within the bound of a midpoint, or deep
+cancellation.
 
 The previous per-term sum was not correctly rounded: each term was rounded to
 40 digits before the sum, and cancellation between the outlay and the inflows
 cost the result its last few digits.
 
-The wider clones are created once per width and cached in `evaluate.ts`. They
-do not change `Decimal.precision` for anything else, and nothing outside
-`npv()` uses them.
+The 50-digit clone lives in `evaluate.ts`. It does not change
+`Decimal.precision` for anything else, and nothing outside `npv()` uses it.
 
 Error order is unchanged. The rate is checked first, then an empty column,
 then each cell's type, all before any arithmetic.
@@ -158,8 +166,15 @@ previous `evaluate.ts`.
   `1e-39 − 1e-60` is `1 + 5e-40 − 5e-61`, just below the midpoint between `1`
   and `1 + 1e-39`. A single 50-digit pass rounds the numerator up to
   `2 + 1e-39` and then lands exactly on the midpoint, returning `1 + 1e-39`.
-  The bounded pass cannot decide at 50 digits, repeats at 100, and returns
+  The bounded pass cannot decide at 50 digits, and the exact fraction returns
   `1`. A test in `functions.test.ts` pins it.
+- **`NPV`, cancellation below any fixed width (second review).**
+  `NPV(0, Cash)` on `1e250, 1, -1e250` is `1`. A 200-digit retry, the
+  previous fallback, returned `0`. The exact fraction returns `1`, and a
+  test pins it.
+- **`NPV`, the exact path alone.** Forced on for all of the 5,000 series
+  below, it was correctly rounded in every case and still about 3.6× faster
+  than the original per-term sum.
 - **`NPV`, 5,000 random series** (up to 200 flows, rates from −0.9 to 0.9,
   checked against a 150-digit reference). The new value equals the reference
   rounded to 40 significant digits in 5,000 cases, the old one in 1,119. The
@@ -173,8 +188,8 @@ previous `evaluate.ts`.
     up to 21 ulp.
   - The guard-digit form was correctly rounded in all 3,000, with 5, 10, or 20
     guard digits alike. Ten was kept for headroom against cancellation. A
-    fixed width cannot guarantee it, though (see the review case above),
-    which is why the error bound and the wider retries were added. They cost
+    fixed width cannot guarantee it, though (see the review cases above),
+    which is why the error bound and the exact fallback were added. They cost
     about half the speed gained, through the second Horner sum.
 - The full repository suite passes.
 

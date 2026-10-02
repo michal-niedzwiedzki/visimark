@@ -20,16 +20,11 @@ export interface EvalEnv {
   vector(ref: Ref): Value[];
 }
 
-/** `decimal.js` constructors at widths above the working precision, by width. */
-const widened = new Map<number, typeof Decimal>();
-function wider(digits: number): typeof Decimal {
-  let W = widened.get(digits);
-  if (!W) {
-    W = Decimal.clone({ precision: digits, rounding: Decimal.ROUND_HALF_UP });
-    widened.set(digits, W);
-  }
-  return W;
-}
+/** The working precision plus ten guard digits, for `NPV`'s one bounded pass. */
+const Guarded = Decimal.clone({
+  precision: MAX_SIGNIFICANT_DIGITS + 10,
+  rounding: Decimal.ROUND_HALF_UP,
+});
 
 const irrBands = new WeakMap<Decimal, { lo: Decimal; hi: Decimal }>();
 
@@ -333,31 +328,58 @@ function npv(rate: Value, vec: Value[]): Value {
   // digits. The same pass sums |flow_k| / b^k, which bounds the rounding error
   // of every step. When the value minus and plus that bound round to the same
   // 40 digits, that rounding is the exact present value's. Otherwise the true
-  // value may sit near a rounding midpoint, and the pass repeats at twice the
-  // width. The last width's rounding is taken as it stands.
+  // value sits near a rounding midpoint, or the flows cancel below the guard
+  // digits, and the exact fraction decides.
   const n = flows.length;
-  for (let digits = MAX_SIGNIFICANT_DIGITS + 10; ; digits *= 2) {
-    const W = wider(digits);
-    const base = new W(r).plus(1);
-    let s = new W(flows[0]!);
-    let a = s.abs();
-    for (let k = 1; k < n; k++) {
-      s = s.times(base).plus(flows[k]!);
-      a = a.times(base).plus(flows[k]!.abs());
-    }
-    const scale = base.pow(n - 1);
-    const value = s.div(scale);
-    const err = a
-      .div(scale)
-      .times(4 * n + 8)
-      .times(new W(10).pow(1 - digits));
-    const low = value.minus(err).toSignificantDigits(MAX_SIGNIFICANT_DIGITS);
-    const high = value.plus(err).toSignificantDigits(MAX_SIGNIFICANT_DIGITS);
-    if (low.eq(high) || digits >= 4 * MAX_SIGNIFICANT_DIGITS) {
-      const sum = new Decimal(value.toSignificantDigits(MAX_SIGNIFICANT_DIGITS));
-      return num(sum.isZero() ? new Decimal(0) : sum);
-    }
+  const base = new Guarded(r).plus(1);
+  let s = new Guarded(flows[0]!);
+  let a = s.abs();
+  for (let k = 1; k < n; k++) {
+    s = s.times(base).plus(flows[k]!);
+    a = a.times(base).plus(flows[k]!.abs());
   }
+  const scale = base.pow(n - 1);
+  const value = s.div(scale);
+  const err = a
+    .div(scale)
+    .times(4 * n + 8)
+    .times(new Guarded(10).pow(-MAX_SIGNIFICANT_DIGITS - 9));
+  const low = value.minus(err).toSignificantDigits(MAX_SIGNIFICANT_DIGITS);
+  const high = value.plus(err).toSignificantDigits(MAX_SIGNIFICANT_DIGITS);
+  const sum = low.eq(high) ? new Decimal(low) : exactNpv(r, flows);
+  return num(sum.isZero() ? new Decimal(0) : sum);
+}
+
+/** `d` as `[numerator, power of ten]`: `d = numerator / 10^places`, exactly. */
+function decimalFraction(d: Decimal): [bigint, number] {
+  const text = d.toFixed();
+  const dot = text.indexOf(".");
+  if (dot < 0) return [BigInt(text), 0];
+  return [BigInt(text.slice(0, dot) + text.slice(dot + 1)), text.length - dot - 1];
+}
+
+/**
+ * The present value as one exact fraction, divided once at the working
+ * precision: `decimal.js` rounds a quotient correctly. With `r = R / 10^m`,
+ * `b = (10^m + R) / 10^m`, so every term shares the denominator
+ * `(10^m + R)^(n-1) · 10^M`, where `M` is the most decimal places of any flow.
+ */
+function exactNpv(r: Decimal, flows: Decimal[]): Decimal {
+  const [rNum, rPlaces] = decimalFraction(r);
+  const q = 10n ** BigInt(rPlaces);
+  const p = q + rNum;
+  const parts = flows.map(decimalFraction);
+  const places = Math.max(...parts.map(([, k]) => k));
+  const scaled = parts.map(([f, k]) => f * 10n ** BigInt(places - k));
+  // Σ scaled_k · q^k · p^(n-1-k), by Horner's rule in p.
+  let top = scaled[0]!;
+  let qk = 1n;
+  for (let k = 1; k < scaled.length; k++) {
+    qk *= q;
+    top = top * p + scaled[k]! * qk;
+  }
+  const bottom = p ** BigInt(scaled.length - 1) * 10n ** BigInt(places);
+  return new Decimal(top.toString()).div(bottom.toString());
 }
 
 function aggregate(name: string, vec: Value[]): Value {

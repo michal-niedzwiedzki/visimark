@@ -866,6 +866,17 @@ test("NPV rounds a value just below a 40-digit midpoint down, not twice", () => 
   expect(v.d.toString()).toBe("1");
 });
 
+test("NPV keeps a flow that cancels below any fixed width", () => {
+  // 1e250 + 1 - 1e250 is 1, but the 1 is 250 digits below the outlay: any
+  // fixed width under that loses it and returns 0.
+  const big = "1" + "0".repeat(250);
+  const r = run(cashDoc("NPV(0, Cash)", `| ${big} |\n| 1 |\n| -${big} |`));
+  expect(r.findings.filter((f) => f.code !== "WARN")).toEqual([]);
+  const v = r.values.get("t.present");
+  if (!v || v.t !== "num") throw new Error("t.present");
+  expect(v.d.toString()).toBe("1");
+});
+
 test("NPV rejects a bad rate before an empty column, a blank, or a non-number", () => {
   const msg = (src: string) => typeFindings(run(src).findings)[0]?.message;
   const series = "| -48000 |\n|  20000 |\n|  20000 |\n|  20000 |";

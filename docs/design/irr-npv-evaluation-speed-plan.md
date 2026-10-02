@@ -9,8 +9,8 @@ roughly 525-evaluation search from `IRR`. Rates and precision verdicts stay as
 they were, and `NPV`'s working value becomes the correctly rounded one.
 
 **Architecture:** One file of engine code, `packages/visimark/src/eval/evaluate.ts`:
-the `irr()` and `npv()` functions and a module-level 50-digit `decimal.js`
-clone cache. One development benchmark, `packages/visimark/bench/finance.ts`. One
+the `irr()` and `npv()` functions, a module-level 50-digit `decimal.js`
+clone, and an exact `BigInt` fallback for `npv()`. One development benchmark, `packages/visimark/bench/finance.ts`. One
 updated spec, `docs/vocab/npv-spec.md`.
 
 **Tech Stack:** TypeScript, `decimal.js` (`Decimal.clone`), `bun:test`.
@@ -99,8 +99,8 @@ updated spec, `docs/vocab/npv-spec.md`.
 **Files:** `packages/visimark/src/eval/evaluate.ts`,
 `packages/visimark/test/eval/functions.test.ts`
 
-- [x] Add a module-level cache of `Decimal.clone({ precision, rounding: ROUND_HALF_UP })`
-  constructors by width (`wider(digits)`).
+- [x] Add the module-level clone
+  `Guarded = Decimal.clone({ precision: MAX_SIGNIFICANT_DIGITS + 10, rounding: ROUND_HALF_UP })`.
 - [x] Convert every cell before any arithmetic, so a bad cell is still
   reported first.
 - [x] Compute `Q(b) / b^(n-1)` at 50 digits, round with
@@ -121,18 +121,26 @@ Review on the PR showed that a fixed 50-digit pass can round twice. For
   fixed-width version with `1.000000000000000000000000000000000000001`.
 - [x] Sum `|flow_k|` by Horner's rule in the same pass, and derive
   `err = A / b^(n-1) · (4n + 8) · 10^(1 - digits)`.
-- [x] Return when `value ± err` round to the same 40 digits. Otherwise repeat
-  at 100 and then 200 digits, and take the 200-digit rounding as it stands.
-- [x] Check: the new test passes, 5,000 random series are still all correctly
-  rounded, and the NPV benchmark is about 2× slower than the fixed-width
-  version but still up to about 12× faster than the original.
+- [x] Return when `value ± err` round to the same 40 digits.
+- [x] First version: otherwise repeat at 100 and then 200 digits. The second
+  review showed that the 200-digit cap still loses a flow under deep
+  cancellation: `NPV(0, Cash)` on `1e250, 1, -1e250` returned `0`.
+- [x] Write that test first (it fails with `0`). Then replace the retries with
+  `exactNpv`: every flow and the rate as an integer over a power of ten, the
+  numerator as a `BigInt` Horner sum over the common denominator
+  `(10^m + R)^(n-1) · 10^M`, and one 40-digit `decimal.js` division.
+- [x] Check: both review tests pass. 5,000 random series are all correctly
+  rounded, and also with the exact path forced on for every series (about
+  3.6× faster than the original even then). The NPV benchmark is about 2×
+  slower than the fixed-width version but still up to about 12× faster than
+  the original.
 
 ### Task 9: Documents
 
 **Files:** `docs/vocab/npv-spec.md`, `CHANGELOG.md`, this plan and its spec
 
 - [x] `npv-spec.md`: rewrite the computation paragraph in §3, including the
-  error bound and the wider retries, update the
+  error bound and the exact fallback, update the
   three full working values in the cases table and the §6 acceptance list,
   and the rounding notes in §4 and §5.
 - [x] Leave `npv-plan.md` as the record of the previous implementation.
@@ -149,4 +157,6 @@ Review on the PR showed that a fixed 50-digit pass can round twice. For
   `series(n)` returns `n + 1` flows. Qualify the CHANGELOG's declared-width
   claim at the write-time ceiling. Rebuild `docs/vendor/` with the pinned
   Bun.
+- [x] Answer the second review: replace the capped wider retries with the
+  exact fraction (Task 8), and correct this plan's architecture line.
 - [ ] Wait for CI to go green, and merge.
