@@ -65,10 +65,12 @@
       "tags": ["Excel", "Markdown", "Git", "CI"],
       "teaser": "An .xlsx is a zip of XML. A VisiMark document is a Markdown file. What follows is what that difference does.",
       "icon": "../assets/excel.webp",
+      "banner": "10-things-excel-cannot-do-but-visimark-can/10-things-excel-cannot-do.webp",
       "path": "10-things-excel-cannot-do-but-visimark-can/10-things-excel-cannot-do.md",
       "posted": "https://visimark.dev/articles/10-things-excel-cannot-do-but-visimark-can/",
       "reposted": [
-        "https://dev.to/holdmybear/10-things-excel-cannot-do-but-visimark-can-1j2e-temp-slug-3340275"
+        "https://dev.to/holdmybear/10-things-excel-cannot-do-but-visimark-can-2241",
+        "https://visimark.hashnode.dev/10-things-excel-cannot-do-but-visimark-can"
       ],
       "featured": true
     },
@@ -82,6 +84,17 @@
       "banner": "howto-finance-npv-irr-pmt/howto-finance-npr-ip-pmt.webp",
       "path": "howto-finance-npv-irr-pmt/howto-finance-npv-irr-pmt.md",
       "reposted": ["https://dev.to/holdmybear/how-to-finance-with-visimark-npv-irr-pmt-f1a"],
+      "featured": true
+    },
+    {
+      "slug": "kiln-bonus",
+      "title": "The kiln bonus",
+      "author": "Michał Niedźwiedzki",
+      "tags": ["AI", "Agents", "Markdown", "CI"],
+      "teaser": "The quote passed its own sum. The oak rate was in the file, and the sum never used it. The bonus was the difference.",
+      "icon": "../assets/dollars.webp",
+      "banner": "kiln-bonus/the-kiln-bonus.webp",
+      "path": "kiln-bonus/the-kiln-bonus.md",
       "featured": true
     },
     {

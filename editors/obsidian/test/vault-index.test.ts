@@ -42,7 +42,11 @@ function vault(entries: Record<string, string>): {
 /** run a real sweep, seed a fresh index from it — every test's starting point */
 async function seeded(entries: Record<string, string>) {
   const { files, source } = vault(entries);
-  const index = new LiveVaultIndex(source.read);
+  const index = new LiveVaultIndex(
+    source.read,
+    (fn, ms) => setTimeout(fn, ms),
+    (id) => clearTimeout(id),
+  );
   index.seed(await sweep(source));
   return { files, index };
 }
