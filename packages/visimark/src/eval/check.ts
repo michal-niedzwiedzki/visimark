@@ -818,17 +818,21 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
         }
       }
       const anchorText = anchorValueText(model, binding.id);
+      // the decoration is read from a plain anchor only: a display rule owns
+      // its whole span, so a `|unit` seed such as `$3.50` is that rule's
+      // STALE, not the scalar's decoration (#323)
+      const plainText = plainAnchorValueText(model, binding.id);
       const anchorUnit =
-        anchorText !== undefined
+        plainText !== undefined
           ? (() => {
-              const d = parseDecorated(anchorText);
+              const d = parseDecorated(plainText);
               return d.kind === "number" ? d.unit : null;
             })()
           : null;
       scalarUnits.set(binding.id, anchorUnit);
-      if (anchorText !== undefined && binding.unit) {
+      if (plainText !== undefined && binding.unit) {
         const problem = decorationProblem(
-          anchorText,
+          plainText,
           binding.unit.map,
           model.unitDefs,
           "anchor",
@@ -840,7 +844,7 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
               code: "UNIT",
               sheetId: binding.sheetId,
               name: binding.name,
-              raw: anchorText,
+              raw: plainText,
               message: problem,
             },
             { sheetId: binding.sheetId },
@@ -876,9 +880,13 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
       const displayRuleMine = mine.filter((a) => a.displayRule !== undefined);
       const unknownMine = displayRuleMine.filter((a) => !DISPLAY_RULES[a.displayRule!]);
       const registeredMine = displayRuleMine.filter((a) => DISPLAY_RULES[a.displayRule!]);
-      const wrongTypeMine = registeredMine.filter(
-        (a) => !DISPLAY_RULES[a.displayRule!]!.accepts(v),
-      );
+      const unitMap = dimensions.unitOf(binding.id);
+      // a rule that prints the unit refuses a value without one, by the same
+      // TYPE as any other value it does not accept
+      const wrongTypeMine = registeredMine.filter((a) => {
+        const rule = DISPLAY_RULES[a.displayRule!]!;
+        return !rule.accepts(v) || (rule.needsUnit && isDimensionless(unitMap));
+      });
       const percentMine = registeredMine.filter((a) => a.displayRule === "percent");
       let sigilBlocked = false;
       for (const a of unknownMine) {
@@ -912,12 +920,13 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
         );
         sigilBlocked = true;
       }
-      // every display rule receives the value's unit, and none renders one
+      // every other display rule receives the value's unit and renders none
       // (units spec §5.4) — `|percent` of a PLN amount is a category error
-      const unitMap = dimensions.unitOf(binding.id);
       const unitBlocked = isDimensionless(unitMap)
         ? []
-        : registeredMine.filter((a) => !wrongTypeMine.includes(a));
+        : registeredMine.filter(
+            (a) => !wrongTypeMine.includes(a) && !DISPLAY_RULES[a.displayRule!]!.needsUnit,
+          );
       if (unitBlocked.length > 0) {
         emit(
           {
@@ -972,7 +981,13 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
         for (const a of mine) {
           if (refusedAnchors.has(a.commentSpan.start)) continue;
           const text = model.source.slice(a.value!.start, a.value!.end);
-          if (matchesStored(v, text, prec)) continue;
+          const rule = a.displayRule !== undefined ? DISPLAY_RULES[a.displayRule] : undefined;
+          const rendered = rule
+            ? rule.render(v, prec, unitMap)
+            : applyUnit(showValue(v, prec), anchorUnit);
+          // a rule that prints the unit owns the span's every byte, like
+          // `nbsp`; the others compare the number, as they always have
+          if (rule?.needsUnit ? text === rendered : matchesStored(v, text, prec)) continue;
           staleScalars.add(binding.id);
           if (!isCrossSheetAggregate(model, binding)) {
             emit(
@@ -981,10 +996,7 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
                 sheetId: binding.sheetId,
                 name: binding.name,
                 stored: text,
-                computed:
-                  a.displayRule !== undefined && DISPLAY_RULES[a.displayRule]
-                    ? DISPLAY_RULES[a.displayRule]!.render(v, prec)
-                    : applyUnit(showValue(v, prec), anchorUnit),
+                computed: rendered,
                 formula: formulaText(model, binding),
                 span: { start: a.value!.start, end: a.value!.end },
               },
@@ -1492,6 +1504,16 @@ function valueAnchorsOf(model: DocModel, id: string) {
 function anchorValueText(model: DocModel, id: string): string | undefined {
   for (const a of model.anchors) {
     if (`${a.sheetId}.${a.name}` === id && a.value) {
+      return model.source.slice(a.value.start, a.value.end);
+    }
+  }
+  return undefined;
+}
+
+/** `anchorValueText`, skipping every anchor that carries a display rule */
+function plainAnchorValueText(model: DocModel, id: string): string | undefined {
+  for (const a of model.anchors) {
+    if (`${a.sheetId}.${a.name}` === id && a.value && a.displayRule === undefined) {
       return model.source.slice(a.value.start, a.value.end);
     }
   }

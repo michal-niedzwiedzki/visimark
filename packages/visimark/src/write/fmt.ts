@@ -151,9 +151,13 @@ export function planFmt(model: DocModel, result: CheckResult, opts: FmtOptions):
     const unit = result.scalarUnits.get(id) ?? null;
     const rounded = roundValue(v, prec);
     const rule = a.displayRule !== undefined ? DISPLAY_RULES[a.displayRule] : undefined;
-    const wanted = rule ? rule.render(rounded, prec) : applyUnit(showValue(rounded, prec), unit);
+    const unitMap = result.unitMaps.get(id)?.map;
+    const wanted = rule
+      ? rule.render(rounded, prec, unitMap)
+      : applyUnit(showValue(rounded, prec), unit);
+    // a rule that prints the unit owns every byte of its span (#323)
     const rewrite =
-      a.displayRule === "percent" || isPercentText(current)
+      rule?.needsUnit || a.displayRule === "percent" || isPercentText(current)
         ? current !== wanted
         : !matchesStored(rounded, current, prec);
     if (rewrite) {

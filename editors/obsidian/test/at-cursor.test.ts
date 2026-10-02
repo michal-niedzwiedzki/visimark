@@ -27,7 +27,7 @@ test("a caret in an anchored number names what the number is bound to", () => {
 test("a caret inside the anchor comment names the same thing", () => {
   // in reading mode the comment is invisible; in Live Preview it is not, so a
   // caret "on the number" lands in either half
-  expect(nameAt(model, result, at("<!--vmark=lines.net_total-->", 5))).toEqual({
+  expect(nameAt(model, result, at("<!--vmark=lines.net_total|unit-->", 5))).toEqual({
     name: "lines.net_total",
   });
 });

@@ -78,7 +78,7 @@ test("strong-wrapped prose anchor locates its value span", () => {
   const a = d.anchors.find((x) => x.sheetId === "lines" && x.name === "gross_total")!;
   expect(a.value).not.toBeNull();
   expect(a.value!.kind).toBe("strong");
-  expect(clean.slice(a.value!.start, a.value!.end)).toBe("28659.00");
+  expect(clean.slice(a.value!.start, a.value!.end)).toBe("28659.00 PLN");
 });
 
 test("finds every anchor in the clean example", () => {

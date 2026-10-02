@@ -688,7 +688,7 @@ d = 2026-03-31
   const r = run(src);
   const t = r.findings.find((f) => f.code === "TYPE")!;
   expect(t.message).toBe(
-    "a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only)",
+    "a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only; unit: numeric with a unit)",
   );
 });
 
@@ -718,7 +718,7 @@ chart cost as pie of Price labelled Item
   const r = run(src);
   const t = r.findings.find((f) => f.code === "TYPE")!;
   expect(t.message).toBe(
-    "a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only)",
+    "a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only; unit: numeric with a unit)",
   );
 });
 
@@ -1342,7 +1342,7 @@ The status is no problem<!--vmark=s.status|percent--> today.
   expect(r.findings.map((f) => f.code).sort()).toEqual(["ANCHOR", "TYPE"]);
   const type = r.findings.find((f) => f.code === "TYPE")!;
   expect(type.message).toBe(
-    "a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only)",
+    "a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only; unit: numeric with a unit)",
   );
 });
 
@@ -1471,7 +1471,7 @@ test("|nbsp: a code span on a number is TYPE and ANCHOR", () => {
   const r = run(nbspDoc("n precision 2 = 3", "Number `3.00`<!--vmark=s.n|nbsp-->."));
   expect(r.findings.map((f) => f.code).sort()).toEqual(["ANCHOR", "TYPE"]);
   expect(messages(r, "TYPE")).toEqual([
-    "a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only)",
+    "a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only; unit: numeric with a unit)",
   ]);
 });
 
@@ -1512,4 +1512,93 @@ test("|nbsp: a &nbsp;&nbsp; separator beside the anchor is clean", () => {
     "**Status:** **past&nbsp;due**<!--vmark=s.status|nbsp--> &nbsp;&nbsp; **Also:** *past&nbsp;due*<!--vmark=s.status|nbsp-->",
   );
   expect(r.findings).toEqual([]);
+});
+
+// ── |unit (#323) ────────────────────────────────────────────────────────────
+
+const TYPE_MSG =
+  "a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only; unit: numeric with a unit)";
+
+const unitDoc = (seed: string, decl = "total [PLN] precision 2 = 23300 [PLN]") => `X ${seed}.
+
+\`\`\`vmark #s
+${decl}
+\`\`\`
+`;
+
+test("|unit on a value without a unit, a string or a date is TYPE", () => {
+  for (const decl of [
+    "total precision 2 = 3",
+    "total precision 2 = 6 [PLN] / 2 [PLN]",
+    'total = "past due"',
+    "total = 2026-03-31",
+  ]) {
+    const r = run(unitDoc("**_**<!--vmark=s.total|unit-->", decl));
+    const types = r.findings.filter((f) => f.code === "TYPE");
+    expect(types.map((f) => f.message)).toEqual([TYPE_MSG]);
+    expect(r.findings.some((f) => f.code === "STALE")).toBe(false);
+    expect(r.exitCode).toBe(1);
+  }
+});
+
+test("|percent on a unit-bearing value is still TYPE naming the unit", () => {
+  const r = run(unitDoc("**_**<!--vmark=s.total|percent-->"));
+  expect(r.findings.filter((f) => f.code === "TYPE").map((f) => f.message)).toEqual([
+    "|percent cannot render a value with a unit (PLN)",
+  ]);
+});
+
+test("a |unit span equal to the rendering is clean", () => {
+  const r = run(unitDoc("**23300.00 PLN**<!--vmark=s.total|unit-->"));
+  expect(r.findings.filter((f) => f.code !== "WARN")).toEqual([]);
+  expect(r.exitCode).toBe(0);
+});
+
+test("any other |unit span is STALE, never UNIT, compared byte for byte", () => {
+  for (const seed of [
+    "23300",
+    "23300.00",
+    "23300.00  PLN",
+    "$23300.00",
+    "[PLN] 23300.00",
+    "23300.00 EUR",
+    "23300.00 pln",
+    "_",
+    "0",
+  ]) {
+    const r = run(unitDoc(`**${seed}**<!--vmark=s.total|unit-->`));
+    // the scalar's own findings; the unnamed STALE is the prose-anchor summary
+    const codes = r.findings.filter((f) => f.name === "total").map((f) => f.code);
+    expect({ seed, codes }).toEqual({ seed, codes: ["STALE"] });
+    expect(r.findings.some((f) => f.code === "UNIT")).toBe(false);
+    const stale = r.findings.find((f) => f.code === "STALE")!;
+    expect(stale.stored).toBe(seed);
+    expect(stale.computed).toBe("23300.00 PLN");
+  }
+});
+
+test("the same wrong text on a plain anchor stays UNIT", () => {
+  for (const seed of ["$23300.00", "23300.00 EUR"]) {
+    const r = run(unitDoc(`**${seed}**<!--vmark=s.total-->`));
+    expect(r.findings.some((f) => f.code === "UNIT")).toBe(true);
+    expect(r.findings.some((f) => f.code === "STALE")).toBe(false);
+  }
+});
+
+test("a |unit anchor does not lend its decoration to a plain sibling", () => {
+  const r = run(
+    unitDoc("**$3.50**<!--vmark=s.total|unit--> and **23300.00 PLN**<!--vmark=s.total-->"),
+  );
+  const mine = r.findings.filter((f) => f.name === "total");
+  expect(mine.map((f) => [f.code, f.stored])).toEqual([["STALE", "$3.50"]]);
+  expect(r.findings.some((f) => f.code === "UNIT")).toBe(false);
+  expect(r.scalarUnits.get("s.total")).toEqual({ text: "PLN", side: "suffix" });
+});
+
+test("a |unit anchor on a value that fails upstream is left alone", () => {
+  const r = run(
+    unitDoc("**_**<!--vmark=s.total|unit-->", "total [PLN] precision 2 = nope + 1 [PLN]"),
+  );
+  expect(r.findings.some((f) => f.code === "STALE")).toBe(false);
+  expect(r.findings.some((f) => f.code === "TYPE")).toBe(false);
 });

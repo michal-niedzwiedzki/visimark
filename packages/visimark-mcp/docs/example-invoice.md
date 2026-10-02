@@ -30,9 +30,9 @@ vat_total   [PLN] = SUM(VAT)
 gross_total [PLN] = SUM(Gross)
 ```
 
-Net of tax the engagement comes to **23300.00**<!--vmark=lines.net_total--> PLN.
-VAT at 23% adds **5359.00**<!--vmark=lines.vat_total--> PLN, giving a total due of
-**28659.00**<!--vmark=lines.gross_total--> PLN.
+Net of tax the engagement comes to **23300.00 PLN**<!--vmark=lines.net_total|unit-->.
+VAT at 23% adds **5359.00 PLN**<!--vmark=lines.vat_total|unit-->, giving a total due of
+**28659.00 PLN**<!--vmark=lines.gross_total|unit-->.
 
 ## Payment schedule
 
@@ -48,7 +48,7 @@ Amount precision 2 = Share * lines.gross_total
 covered [PLN] = SUM(Amount)
 ```
 
-The three milestones account for **28659.00**<!--vmark=schedule.covered--> PLN.
+The three milestones account for **28659.00 PLN**<!--vmark=schedule.covered|unit-->.
 
 ## Payment terms
 
@@ -59,11 +59,11 @@ eur_total       [EUR] precision 2 = lines.gross_total / fx_eur
 ```
 
 Settlement within 7 days qualifies for a 2% early-payment discount, reducing the
-amount due to **28085.82**<!--vmark=terms.early_pay_total--> PLN — a saving of
-**573.18**<!--vmark=terms.early_pay_saved--> PLN.
+amount due to **28085.82 PLN**<!--vmark=terms.early_pay_total|unit--> — a saving of
+**573.18 PLN**<!--vmark=terms.early_pay_saved|unit-->.
 
 For reference, the gross total is approximately
-**6719.58**<!--vmark=terms.eur_total--> EUR at the ECB reference rate of
+**6719.58 EUR**<!--vmark=terms.eur_total|unit--> at the ECB reference rate of
 4.2650 PLN/EUR recorded on the delivery date.
 
 ## Reconciliation
@@ -74,9 +74,9 @@ variance  [PLN] = lines.gross_total - scheduled
 assert variance == 0
 ```
 
-Scheduled instalments total **28659.00**<!--vmark=recon.scheduled--> PLN against a
-gross invoice value of **28659.00**<!--vmark=lines.gross_total--> PLN, leaving a
-variance of **0.00**<!--vmark=recon.variance--> PLN.
+Scheduled instalments total **28659.00 PLN**<!--vmark=recon.scheduled|unit--> against a
+gross invoice value of **28659.00 PLN**<!--vmark=lines.gross_total|unit-->, leaving a
+variance of **0.00 PLN**<!--vmark=recon.variance|unit-->.
 
 ---
 
@@ -125,8 +125,10 @@ units — `Net [PLN]`, `net_total [PLN]` and the rest — were written by
 `visimark infer --write`, which records the unit each formula derives; from then
 on each one is checked like any other declaration. Dividing `PLN` by `PLN/EUR`
 derives the `EUR` that `eur_total` declares, so multiplying by the rate instead,
-or adding a euro amount to a złoty one, fails `check`. The anchored numbers stay
-bare — `PLN` and `EUR` stay in the prose, where a reader expects them.
+or adding a euro amount to a złoty one, fails `check`. Every anchored figure
+carries the `|unit` display rule, so `fmt` writes the unit from the declaration
+along with the number, and a changed declaration rewrites the unit in the
+sentence too.
 
 The payoff is the last section. `visimark check` recomputes every formula and
 exits non-zero if any stored number disagrees, so an arithmetic error in this

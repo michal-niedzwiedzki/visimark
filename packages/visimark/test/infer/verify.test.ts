@@ -68,3 +68,19 @@ describe("verify runs the real evaluator against the stored cells", () => {
     expect(r.text(2)).toBe("28659.00");
   });
 });
+
+describe("a figure carrying the value's own unit is stated by it (#323)", () => {
+  test("23300.00 PLN is SUM(Net) in PLN; EUR, a prefix and a double space are not", () => {
+    const { ctx, sheet } = services(strippedClean);
+    const accepted = [{ sheet, rule: "Net = Qty * Rate" }];
+    const r = verifyScalar(ctx, sheet, "net_total = SUM(Net)", accepted, "Net");
+    expect(r.usable).toBe(true);
+    expect(r.writes("23300.00 PLN")).toBe(true);
+    expect(r.writes("23300.00")).toBe(true);
+    expect(r.writes("23300.00 EUR")).toBe(false);
+    expect(r.writes("$23300.00")).toBe(false);
+    expect(r.writes("23300.00  PLN")).toBe(false);
+    // a figure may state the value at its own decimals, as a bare one may
+    expect(r.writes("23300 PLN")).toBe(true);
+  });
+});
