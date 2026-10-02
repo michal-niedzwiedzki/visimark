@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { Domain } from "../../src/lang/domain.js";
-import { analyzeLattice, isIntegral, latticeJson } from "../../src/lang/lattice.js";
+import { analyzeLattice, isIntegral, latticeJson, latticePoints } from "../../src/lang/lattice.js";
 import { parseStatement } from "../../src/lang/parser.js";
 
 // docs/design/lattice-on-param-and-report-statements-spec.md §3.1
@@ -147,5 +147,43 @@ describe("isIntegral and latticeJson", () => {
     expect(latticeJson({ step: "0.010", literal: { text: "1%", percent: true } })).toEqual({
       step: "0.01",
     });
+  });
+});
+
+describe("latticePoints (add-a-simulate-command-spec.md §3.1)", () => {
+  const pts = (clause: string, step: string, opts: { text?: string; percent?: boolean } = {}) =>
+    latticePoints({
+      name: "x",
+      domain: domainOf(clause),
+      step,
+      stepText: opts.text ?? step,
+      percent: opts.percent ?? false,
+    });
+  const cases: [string, string, string[], { text?: string; percent?: boolean }?][] = [
+    [
+      "in [0%, 10%]",
+      "0.01",
+      ["0", "0.01", "0.02", "0.03", "0.04", "0.05", "0.06", "0.07", "0.08", "0.09", "0.1"],
+      { text: "1%", percent: true },
+    ],
+    ["integer in [0, 80]", "20", ["0", "20", "40", "60", "80"]],
+    ["integer in [3, 83]", "20", ["3", "23", "43", "63", "83"]],
+    ["integer in [-10, 10]", "5", ["-10", "-5", "0", "5", "10"]],
+    ["in (0, 10)", "5", ["5"]],
+    ["integer in (0, 10)", "1", ["1", "2", "3", "4", "5", "6", "7", "8", "9"]],
+    ["positive in [0, 10]", "5", ["5", "10"]],
+    ["in [3, 3]", "1", ["3"]],
+  ];
+  for (const [clause, step, want, opts] of cases) {
+    test(`${clause} lattice ${opts?.text ?? step}`, () => {
+      const got = pts(clause, step, opts);
+      expect(got).toEqual(want);
+      const a = run(clause, step, opts);
+      expect(a.ok && a.count).toBe(got.length);
+    });
+  }
+  test("a fault throws", () => {
+    expect(() => pts("in [0, 10]", "3")).toThrow();
+    expect(() => pts("in (0, 5)", "5")).toThrow();
   });
 });
