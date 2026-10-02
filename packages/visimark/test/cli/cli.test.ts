@@ -393,7 +393,7 @@ test("check on the display-rule-nbsp-errors fixture reports all nine refusals", 
   expect(await runCli(["check", nbspErrorsFixture], c.io)).toBe(1);
   const out = c.out();
   for (const line of [
-    "TYPE    s.n               a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only)",
+    "TYPE    s.n               a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only; unit: numeric with a unit)",
     "ANCHOR  .                 malformed anchor comment — expected `<!--vmark=sheet.name-->` or `<!--vmark=sheet.name|rule-->`",
     "ANCHOR  s.bare            a display rule needs a delimited seed — wrap a placeholder instead, such as **_**",
     "ANCHOR  s.code            display rule `nbsp` cannot render inside a code span — wrap the seed in **…** or *…* instead",

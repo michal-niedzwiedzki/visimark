@@ -688,7 +688,7 @@ d = 2026-03-31
   const r = run(src);
   const t = r.findings.find((f) => f.code === "TYPE")!;
   expect(t.message).toBe(
-    "a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only)",
+    "a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only; unit: numeric with a unit)",
   );
 });
 
@@ -718,7 +718,7 @@ chart cost as pie of Price labelled Item
   const r = run(src);
   const t = r.findings.find((f) => f.code === "TYPE")!;
   expect(t.message).toBe(
-    "a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only)",
+    "a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only; unit: numeric with a unit)",
   );
 });
 
@@ -1342,7 +1342,7 @@ The status is no problem<!--vmark=s.status|percent--> today.
   expect(r.findings.map((f) => f.code).sort()).toEqual(["ANCHOR", "TYPE"]);
   const type = r.findings.find((f) => f.code === "TYPE")!;
   expect(type.message).toBe(
-    "a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only)",
+    "a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only; unit: numeric with a unit)",
   );
 });
 
@@ -1471,7 +1471,7 @@ test("|nbsp: a code span on a number is TYPE and ANCHOR", () => {
   const r = run(nbspDoc("n precision 2 = 3", "Number `3.00`<!--vmark=s.n|nbsp-->."));
   expect(r.findings.map((f) => f.code).sort()).toEqual(["ANCHOR", "TYPE"]);
   expect(messages(r, "TYPE")).toEqual([
-    "a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only)",
+    "a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only; unit: numeric with a unit)",
   ]);
 });
 
