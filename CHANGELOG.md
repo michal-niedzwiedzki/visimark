@@ -72,6 +72,21 @@
   a unit, such as `Revenue [1]`, is `UNIT`; escape it as `Revenue \[1\]` to
   keep the bracket in the name. A display rule such as `|percent` refuses a
   value with a unit (`TYPE`).
+- **`IRR` is about 25–90× faster.** It evaluates the cash-flow polynomial by
+  Horner's rule instead of one power per flow, and narrows the bracket with
+  the Illinois method instead of about 133 bisection steps: a 4-flow series
+  takes 0.1 ms instead of 6 ms, a 360-flow series 11 ms instead of 1 s. Rates
+  agree with the previous engine to 30 decimal places and precision verdicts
+  are unchanged. `bun run bench:finance` in `packages/visimark` times it.
+- **`NPV` is about 2–25× faster, and its full working value is correctly
+  rounded to 40 digits.** It uses the same Horner form with one power and one division,
+  carried at 50 significant digits and rounded once to 40. A 360-flow series
+  takes 0.2 ms instead of 4–5 ms. The old per-term sum could be off by a few
+  units in the last digits, so an unrounded `eval` can print different
+  trailing digits: `NPV(0.08, Cash)` on `-48000, 20000, 20000, 20000` is now
+  `3541.939744957577605039882131788853325204` (was
+  `3541.9397449575776050398821317888533252`). Values written at a declared
+  width do not change.
 
 ### Fixed
 

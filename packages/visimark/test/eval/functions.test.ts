@@ -844,9 +844,9 @@ units = NPV(0, Tagged)
     return v.d.toString();
   };
   expect(str("t.zero")).toBe("12000");
-  expect(str("t.main")).toBe("3541.9397449575776050398821317888533252");
+  expect(str("t.main")).toBe("3541.939744957577605039882131788853325204");
   expect(str("t.pct")).toBe(str("t.main"));
-  expect(str("small.ten")).toBe("-5.2592036063110443275732531930879038317");
+  expect(str("small.ten")).toBe("-5.259203606311044327573253193087903831705");
   expect(str("again.neg")).toBe("18540.31199883364922000291587694999271031");
   expect(str("one.single")).toBe("-48000");
   expect(str("pair.neg")).toBe("300");
