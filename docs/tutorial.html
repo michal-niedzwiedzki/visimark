@@ -664,6 +664,7 @@
 <a href="#domains-which-values-are-even-askable" data-level="3">Domains: which values are even askable</a>
 <a href="#what-a-reader-sees" data-level="3">What a reader sees</a>
 <a href="#mistakes-and-what-they-report" data-level="3">Mistakes, and what they report</a>
+<a href="#a-lattice-names-the-sweep-spacing" data-level="3">A lattice names the sweep spacing</a>
 <a href="#param-is-not-a-reserved-word" data-level="3">`param` is not a reserved word</a>
 <a href="#what-should-be-a-param" data-level="3">What should be a `param`?</a>
 <a href="#30-scenarios-asking-what-if-without-editing" data-level="2">30. Scenarios: asking what-if without editing</a>
@@ -4001,7 +4002,24 @@ is evaluated:</p></div><pre class="src">```console
 ```</pre><div class="out"><pre><code class="language-console">  DOMAIN  levers.extra_hours  default 100 is not in the domain of extra_hours: integer in [0, 80]
 </code></pre></div><pre class="src">A `param` with the same name as a column of its sheet is a `DUP` error, and one
 nothing reads gets the usual `WARN`.</pre><div class="out"><p>A <code>param</code> with the same name as a column of its sheet is a <code>DUP</code> error, and one
-nothing reads gets the usual <code>WARN</code>.</p></div><pre class="src">### `param` is not a reserved word</pre><div class="out"><h3 id="param-is-not-a-reserved-word"><code>param</code> is not a reserved word</h3></div><pre class="src">`param` and `default` are only keywords in exactly this statement. `param = 5`
+nothing reads gets the usual <code>WARN</code>.</p></div><pre class="src">### A lattice names the sweep spacing</pre><div class="out"><h3 id="a-lattice-names-the-sweep-spacing">A lattice names the sweep spacing</h3></div><pre class="src">A domain says which values are legal. It does not say which of them a later
+sweep should visit. A `lattice` at the end of the domain does:</pre><div class="out"><p>A domain says which values are legal. It does not say which of them a later
+sweep should visit. A <code>lattice</code> at the end of the domain does:</p></div><pre class="src">```text
+param extra_hours precision 0 integer in [0, 80] lattice 20 = default 40
+param volume_disc precision 3 in [0%, 10%] lattice 1% = default 0%
+```</pre><div class="out"><pre><code class="language-text">param extra_hours precision 0 integer in [0, 80] lattice 20 = default 40
+param volume_disc precision 3 in [0%, 10%] lattice 1% = default 0%
+</code></pre></div><pre class="src">`extra_hours` is visited at 0, 20, 40, 60 and 80, and `volume_disc` at 0%, 1%,
+… 10%. The lattice narrows nothing: `7` is still a legal `extra_hours`, as a
+default and as a scenario value. A lattice needs a finite interval and a step
+that lands on both ends, so `lattice 3` on `[0, 10]` is a `TYPE` error at the
+declaration rather than a last point quietly dropped. `eval` and `explain` print
+the lattice beside the domain.</pre><div class="out"><p><code>extra_hours</code> is visited at 0, 20, 40, 60 and 80, and <code>volume_disc</code> at 0%, 1%,
+… 10%. The lattice narrows nothing: <code>7</code> is still a legal <code>extra_hours</code>, as a
+default and as a scenario value. A lattice needs a finite interval and a step
+that lands on both ends, so <code>lattice 3</code> on <code>[0, 10]</code> is a <code>TYPE</code> error at the
+declaration rather than a last point quietly dropped. <code>eval</code> and <code>explain</code> print
+the lattice beside the domain.</p></div><pre class="src">### `param` is not a reserved word</pre><div class="out"><h3 id="param-is-not-a-reserved-word"><code>param</code> is not a reserved word</h3></div><pre class="src">`param` and `default` are only keywords in exactly this statement. `param = 5`
 still binds a scalar called `param`, and `default = 3` still binds one called
 `default`. No older document changes meaning.</pre><div class="out"><p><code>param</code> and <code>default</code> are only keywords in exactly this statement. <code>param = 5</code>
 still binds a scalar called <code>param</code>, and <code>default = 3</code> still binds one called

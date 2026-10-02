@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- A `lattice` clause on a `param` and a `report` statement are now understood: an impossible lattice, an unknown report name or a report option that does not match its grammar gets a diagnostic.
 - Hovering a binding or a column now shows its unit and whether it was declared or derived (`unit: [PLN] (declared)`); hovering a builtin shows its unit signature (`SUM(col: U) → U`). Units that disagree — a declared unit the formula does not derive, two different units added together, a malformed unit bracket — get a `UNIT` diagnostic.
 
 ## 0.1.11 - 2026-09-30

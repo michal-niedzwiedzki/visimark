@@ -2871,6 +2871,23 @@ is evaluated:
 A `param` with the same name as a column of its sheet is a `DUP` error, and one
 nothing reads gets the usual `WARN`.
 
+### A lattice names the sweep spacing
+
+A domain says which values are legal. It does not say which of them a later
+sweep should visit. A `lattice` at the end of the domain does:
+
+```text
+param extra_hours precision 0 integer in [0, 80] lattice 20 = default 40
+param volume_disc precision 3 in [0%, 10%] lattice 1% = default 0%
+```
+
+`extra_hours` is visited at 0, 20, 40, 60 and 80, and `volume_disc` at 0%, 1%,
+… 10%. The lattice narrows nothing: `7` is still a legal `extra_hours`, as a
+default and as a scenario value. A lattice needs a finite interval and a step
+that lands on both ends, so `lattice 3` on `[0, 10]` is a `TYPE` error at the
+declaration rather than a last point quietly dropped. `eval` and `explain` print
+the lattice beside the domain.
+
 ### `param` is not a reserved word
 
 `param` and `default` are only keywords in exactly this statement. `param = 5`
