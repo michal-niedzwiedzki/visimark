@@ -135,6 +135,25 @@ export function analyzeLattice(input: LatticeInput): LatticeAnalysis {
   };
 }
 
+/**
+ * Every point a lattice declares, ascending, as canonical decimals. Only for a
+ * lattice `check` accepted: a fault throws. Built by exact decimal steps from
+ * the first point, so `1%` steps never drift. See
+ * docs/design/add-a-simulate-command-spec.md §3.1.
+ */
+export function latticePoints(input: LatticeInput): string[] {
+  const a = analyzeLattice(input);
+  if (!a.ok) throw new Error(a.message);
+  const step = new Decimal(input.step);
+  const out: string[] = [];
+  let v = new Decimal(a.first);
+  for (let i = 0; i < a.count; i++) {
+    out.push(v.toString());
+    v = v.plus(step);
+  }
+  return out;
+}
+
 /** the JSON form of a lattice: a sibling of `domain`, the canonical decimal */
 export function latticeJson(l: Lattice): { step: string } {
   return { step: new Decimal(l.step).toString() };

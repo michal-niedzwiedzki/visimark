@@ -545,7 +545,7 @@ hand arbitrary commands to, and no reason to already know a CLI called
 framework, a chat client) declares a server, the server declares tools, and
 the model calls them the way it calls any other tool. <code>visimark-mcp</code> is
 VisiMark's half of that: it imports the same engine the CLI does — never
-shells out to it — and serves every command as a tool, the authoring
+shells out to it — and serves every command except <code>simulate</code> as a tool, the authoring
 discipline as resources, and two orderings agents reliably get wrong as
 prompts.</p>
 <p>The "imports, never shells out" part matters for one concrete reason: a

@@ -576,6 +576,7 @@ function parseOne(
           sheetId,
           name: s.name,
           refs: s.refs,
+          options: s.options,
           text: s.text,
           span: { start: rb.start, end: rb.end },
           source: rb.raw,

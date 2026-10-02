@@ -30,6 +30,19 @@ const REFUSED: [CommandName, string[], string][] = [
   ["eval", ["a.md", "--get", "--json"], "visimark: --get needs a name"],
   ["eval", ["a.md", "--scenario"], "visimark: --scenario needs a file, or - for stdin"],
   ["eval", ["a.md", "--scenario", "--json"], "visimark: --scenario needs a file, or - for stdin"],
+  // add-a-simulate-command-spec.md §2
+  ["simulate", ["--json", "f.md"], "visimark: simulate has no --json mode"],
+  ["simulate", ["f.md", "--json"], "visimark: simulate has no --json mode"],
+  ["simulate", ["--get", "x", "f.md"], "visimark: --get is only valid with eval"],
+  ["simulate", ["--scenario", "s.json", "f.md"], "visimark: --scenario is only valid with eval"],
+  [
+    "simulate",
+    ["--fail-on-faults", "f.md"],
+    "visimark: unknown option --fail-on-faults — did you mean `--fail-on-fault`?",
+  ],
+  ["simulate", ["#plan", "f.md"], "visimark: #plan is only valid with explain"],
+  ["check", ["--progress", "f.md"], "visimark: --progress is only valid with simulate"],
+  ["eval", ["--fail-on-fault", "f.md"], "visimark: --fail-on-fault is only valid with simulate"],
 ];
 
 const ACCEPTED: [CommandName, string[]][] = [
@@ -38,6 +51,7 @@ const ACCEPTED: [CommandName, string[]][] = [
   ["infer", ["a.md", "--write"]],
   ["eval", ["a.md", "--get", "vat", "--json"]],
   ["eval", ["a.md", "--scenario", "-"]],
+  ["simulate", ["a.md", "b.md", "--fail-on-fault", "--progress"]],
   ["explain", ["a.md", "#lines", "#recon"]],
   ["ref", []],
   ["ref", ["SUM", "--json"]],
@@ -112,4 +126,25 @@ test("usageLine returns the strings the commands print today", () => {
   expect(usageLine("eval")).toBe(
     "usage: visimark eval FILE [--scenario FILE|-] [--get NAME] [--json]",
   );
+});
+
+describe("simulate", () => {
+  test("usage line", () => {
+    expect(usageLine("simulate")).toBe(
+      "usage: visimark simulate FILE... [--fail-on-fault] [--progress]",
+    );
+  });
+  test("--json is refused as a json request", () => {
+    const r = parseArgs("simulate", ["f.md", "--json"]);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.json).toBe(true);
+  });
+  test("files and flags", () => {
+    const r = parseArgs("simulate", ["a.md", "b.md", "--fail-on-fault", "--progress"]);
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.parsed.files).toEqual(["a.md", "b.md"]);
+      expect([...r.parsed.flags].sort()).toEqual(["fail-on-fault", "progress"]);
+    }
+  });
 });

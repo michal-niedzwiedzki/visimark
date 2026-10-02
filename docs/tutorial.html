@@ -676,8 +676,15 @@
 <a href="#for-a-program---json-1" data-level="3">For a program: `--json`</a>
 <a href="#why-this-is-safe-to-hand-to-an-agent" data-level="3">Why this is safe to hand to an agent</a>
 <a href="#what-a-scenario-is-not" data-level="3">What a scenario is not</a>
+<a href="#31-simulation-sweeping-the-parameters" data-level="2">31. Simulation: sweeping the parameters</a>
+<a href="#saying-which-values-to-try-lattice" data-level="3">Saying which values to try: `lattice`</a>
+<a href="#saying-which-readings-you-want-report" data-level="3">Saying which readings you want: `report`</a>
+<a href="#running-it" data-level="3">Running it</a>
+<a href="#when-a-sheet-cannot-start" data-level="3">When a sheet cannot start</a>
+<a href="#exit-codes-on-purpose-different-from-check" data-level="3">Exit codes, on purpose different from `check`</a>
+<a href="#what-simulate-does-not-do" data-level="3">What simulate does not do</a>
 <a href="#part-9-putting-it-together" data-level="1">Part 9 — Putting it together</a>
-<a href="#31-capstone-a-quote-end-to-end" data-level="2">31. Capstone: a quote, end to end</a>
+<a href="#32-capstone-a-quote-end-to-end" data-level="2">32. Capstone: a quote, end to end</a>
 <a href="#step-1-the-table-inputs-only" data-level="3">Step 1 — the table, inputs only</a>
 <a href="#step-2-the-block" data-level="3">Step 2 — the block</a>
 <a href="#step-3-the-prose-with-anchors-1" data-level="3">Step 3 — the prose, with anchors</a>
@@ -689,9 +696,9 @@
 <a href="#step-9-put-it-in-ci" data-level="3">Step 9 — put it in CI</a>
 <a href="#step-10-read-a-number-back-out" data-level="3">Step 10 — read a number back out</a>
 <a href="#step-11-ask-a-what-if" data-level="3">Step 11 — ask a what-if</a>
-<a href="#32-what-visimark-refuses-to-do" data-level="2">32. What VisiMark refuses to do</a>
+<a href="#33-what-visimark-refuses-to-do" data-level="2">33. What VisiMark refuses to do</a>
 <a href="#asking-for-something-new" data-level="3">Asking for something new</a>
-<a href="#33-where-to-go-next" data-level="2">33. Where to go next</a>
+<a href="#34-where-to-go-next" data-level="2">34. Where to go next</a>
 <a href="#reference" data-level="3">Reference</a>
 <a href="#worked-examples-to-read" data-level="3">Worked examples to read</a>
 <a href="#try-it-without-installing" data-level="3">Try it without installing</a>
@@ -719,8 +726,8 @@ Most were captured with <code>visimark 0.1.5</code> or <code>0.1.6</code>. Two f
 than the last release, and the chapters that teach them say so: percent display
 on an anchor (chapter 15) and the maths spellings <code>|x|</code>, <code>⌊x⌋</code>, <code>⌈x⌉</code> and
 <code>√(x)</code> (chapter 12). Their transcripts come from the development build, and
-the features ship in the next release.</p></div><pre class="src">## How to read this</pre><div class="out"><h2 id="how-to-read-this">How to read this</h2></div><pre class="src">There are 33 short chapters in nine parts. They are meant to be read in order:
-each one exists because the one before it left a problem open.</pre><div class="out"><p>There are 33 short chapters in nine parts. They are meant to be read in order:
+the features ship in the next release.</p></div><pre class="src">## How to read this</pre><div class="out"><h2 id="how-to-read-this">How to read this</h2></div><pre class="src">There are 34 short chapters in nine parts. They are meant to be read in order:
+each one exists because the one before it left a problem open.</pre><div class="out"><p>There are 34 short chapters in nine parts. They are meant to be read in order:
 each one exists because the one before it left a problem open.</p></div><pre class="src">| Part | Chapters | What you get |
 |---|---|---|
 | 1. The problem | 1–2 | Why this tool exists |
@@ -730,8 +737,8 @@ each one exists because the one before it left a problem open.</p></div><pre cla
 | 5. Other people's documents | 20–22 | How to adopt it on files you did not write |
 | 6. Beyond one file | 23–24 | CSV rows and charts |
 | 7. Automation | 25–28 | CI, scripts, agents, your editor |
-| 8. Modelling | 29–30 | What-if runs that never edit the document |
-| 9. Putting it together | 31–33 | A full document, unaided |</pre><div class="out"><table>
+| 8. Modelling | 29–31 | What-if runs and sweeps that never edit the document |
+| 9. Putting it together | 32–34 | A full document, unaided |</pre><div class="out"><table>
 <thead>
 <tr>
 <th>Part</th>
@@ -777,12 +784,12 @@ each one exists because the one before it left a problem open.</p></div><pre cla
 </tr>
 <tr>
 <td>8. Modelling</td>
-<td>29–30</td>
-<td>What-if runs that never edit the document</td>
+<td>29–31</td>
+<td>What-if runs and sweeps that never edit the document</td>
 </tr>
 <tr>
 <td>9. Putting it together</td>
-<td>31–33</td>
+<td>32–34</td>
 <td>A full document, unaided</td>
 </tr>
 </tbody>
@@ -792,14 +799,18 @@ them right now:</p></div><pre class="src">- [`tutorial/order.md`](tutorial/order
   chapters 4 to 19.
 - [`tutorial/runway.md`](tutorial/runway.md) — the model used in chapters 29
   and 30.
+- [`tutorial/runway-sweep.md`](tutorial/runway-sweep.md) — the same model,
+  swept, in chapter 31.
 - [`tutorial/capstone.md`](tutorial/capstone.md) — the full quote built in
-  chapter 31.</pre><div class="out"><ul>
+  chapter 32.</pre><div class="out"><ul>
 <li><a href="tutorial/order.md"><code>tutorial/order.md</code></a> — the small document built in
 chapters 4 to 19.</li>
 <li><a href="tutorial/runway.md"><code>tutorial/runway.md</code></a> — the model used in chapters 29
 and 30.</li>
+<li><a href="tutorial/runway-sweep.md"><code>tutorial/runway-sweep.md</code></a> — the same model,
+swept, in chapter 31.</li>
 <li><a href="tutorial/capstone.md"><code>tutorial/capstone.md</code></a> — the full quote built in
-chapter 31.</li>
+chapter 32.</li>
 </ul></div><pre class="src">---</pre><div class="out"><hr></div><pre class="src"># Part 1 — The problem</pre><div class="out"><h1 id="part-1-the-problem">Part 1 — The problem</h1></div><pre class="src">## 1. A number that is no longer true</pre><div class="out"><h2 id="1-a-number-that-is-no-longer-true">1. A number that is no longer true</h2></div><pre class="src">Here is an order, written in ordinary Markdown.</pre><div class="out"><p>Here is an order, written in ordinary Markdown.</p></div><pre class="src">```markdown
 | Item      | Qty | Price |    Net |
 |-----------|----:|------:|-------:|
@@ -2453,10 +2464,10 @@ reads better as a percent is your call.</pre><div class="out"><p>Two things the 
 wrote without one, and <code>infer --write</code> never proposes one. Whether a ratio
 reads better as a percent is your call.</p></div><pre class="src">### A percent in a what-if</pre><div class="out"><h3 id="a-percent-in-a-what-if">A percent in a what-if</h3></div><pre class="src">A percent value also matters in Part 8. A `param` whose default is written as a
 percent, such as `param vat_rate precision 2 = default 23%`, only accepts a
-percent from a scenario. The capstone (chapter 31) uses such a `param` and
+percent from a scenario. The capstone (chapter 32) uses such a `param` and
 prints it with a `|percent` anchor.</pre><div class="out"><p>A percent value also matters in Part 8. A <code>param</code> whose default is written as a
 percent, such as <code>param vat_rate precision 2 = default 23%</code>, only accepts a
-percent from a scenario. The capstone (chapter 31) uses such a <code>param</code> and
+percent from a scenario. The capstone (chapter 32) uses such a <code>param</code> and
 prints it with a <code>|percent</code> anchor.</p></div><pre class="src">### A multi-word string: add `|nbsp`</pre><div class="out"><h3 id="a-multi-word-string-add-nbsp">A multi-word string: add <code>|nbsp</code></h3></div><pre class="src">*New after 0.1.10: this ships in the next release.*</pre><div class="out"><p><em>New after 0.1.10: this ships in the next release.</em></p></div><pre class="src">A plain string anchor is never compared with its prose. Change the value and
 `check` still reports nothing:</pre><div class="out"><p>A plain string anchor is never compared with its prose. Change the value and
 <code>check</code> still reports nothing:</p></div><pre class="src">````markdown
@@ -3732,9 +3743,11 @@ result, and put the edit back. That edit is the problem. It rewrites every
 figure below it, and it leaves a diff for a question nobody meant to commit.
 Forget to put it back, and the document now says something nobody decided.</p></div><pre class="src">VisiMark splits this in two. The document says **which** numbers are
 assumptions (chapter 29). `eval` answers the what-if **without writing
-anything** (chapter 30).</pre><div class="out"><p>VisiMark splits this in two. The document says <strong>which</strong> numbers are
+anything** (chapter 30). `simulate` asks a whole family of what-ifs at once,
+and still writes nothing (chapter 31).</pre><div class="out"><p>VisiMark splits this in two. The document says <strong>which</strong> numbers are
 assumptions (chapter 29). <code>eval</code> answers the what-if <strong>without writing
-anything</strong> (chapter 30).</p></div><pre class="src">## 29. Parameters: the assumptions a reader may vary</pre><div class="out"><h2 id="29-parameters-the-assumptions-a-reader-may-vary">29. Parameters: the assumptions a reader may vary</h2></div><pre class="src">The example for this part is [`tutorial/runway.md`](tutorial/runway.md), a
+anything</strong> (chapter 30). <code>simulate</code> asks a whole family of what-ifs at once,
+and still writes nothing (chapter 31).</p></div><pre class="src">## 29. Parameters: the assumptions a reader may vary</pre><div class="out"><h2 id="29-parameters-the-assumptions-a-reader-may-vary">29. Parameters: the assumptions a reader may vary</h2></div><pre class="src">The example for this part is [`tutorial/runway.md`](tutorial/runway.md), a
 small plan for how long a company's cash lasts:</pre><div class="out"><p>The example for this part is <a href="tutorial/runway.md"><code>tutorial/runway.md</code></a>, a
 small plan for how long a company's cash lasts:</p></div><pre class="src">````markdown
 | Team        | Heads |   Salary |     Cost |
@@ -4434,7 +4447,333 @@ the document. The scenario files are yours: keep them next to the document,
 or build them in a script.</li>
 <li><strong>Not a way to vary a formula.</strong> Only <code>param</code> values vary. The rules are the
 same in every scenario.</li>
-</ul></div><pre class="src">---</pre><div class="out"><hr></div><pre class="src"># Part 9 — Putting it together</pre><div class="out"><h1 id="part-9-putting-it-together">Part 9 — Putting it together</h1></div><pre class="src">## 31. Capstone: a quote, end to end</pre><div class="out"><h2 id="31-capstone-a-quote-end-to-end">31. Capstone: a quote, end to end</h2></div><pre class="src">Now build a real document from nothing, using everything. The finished file is
+</ul></div><pre class="src">## 31. Simulation: sweeping the parameters</pre><div class="out"><h2 id="31-simulation-sweeping-the-parameters">31. Simulation: sweeping the parameters</h2></div><pre class="src">A scenario answers one question. The questions people actually bring to a
+plan come in families. *How many people can we hire, at any raise from zero to
+six percent, and still have a year of cash?* That is twenty-eight scenarios. You
+could write twenty-eight JSON files and run `eval` twenty-eight times, but then
+the question lives in a script beside the document, and nobody reviews the
+script.</pre><div class="out"><p>A scenario answers one question. The questions people actually bring to a
+plan come in families. <em>How many people can we hire, at any raise from zero to
+six percent, and still have a year of cash?</em> That is twenty-eight scenarios. You
+could write twenty-eight JSON files and run <code>eval</code> twenty-eight times, but then
+the question lives in a script beside the document, and nobody reviews the
+script.</p></div><pre class="src">`visimark simulate` asks the whole family in one run. The document says which
+values to try and which readings it wants. The command asks every question,
+writes nothing, and prints the readings.</pre><div class="out"><p><code>visimark simulate</code> asks the whole family in one run. The document says which
+values to try and which readings it wants. The command asks every question,
+writes nothing, and prints the readings.</p></div><pre class="src">The example for this chapter is
+[`tutorial/runway-sweep.md`](tutorial/runway-sweep.md). It is the runway plan
+from chapters 29 and 30 with two `param` lines extended and one sheet added.</pre><div class="out"><p>The example for this chapter is
+<a href="tutorial/runway-sweep.md"><code>tutorial/runway-sweep.md</code></a>. It is the runway plan
+from chapters 29 and 30 with two <code>param</code> lines extended and one sheet added.</p></div><pre class="src">### Saying which values to try: `lattice`</pre><div class="out"><h3 id="saying-which-values-to-try-lattice">Saying which values to try: <code>lattice</code></h3></div><pre class="src">A domain (chapter 29) says which values a param may take. A **lattice** says
+which of them a sweep should visit:</pre><div class="out"><p>A domain (chapter 29) says which values a param may take. A <strong>lattice</strong> says
+which of them a sweep should visit:</p></div><pre class="src">````markdown
+```vmark #team
+param raise     precision 3 in [0%, 6%] lattice 2% = default 3%
+```
+
+```vmark #runway
+param new_hires precision 0 integer in [0, 6] lattice 1 = default 2
+```
+````</pre><div class="out"><pre><code class="language-markdown">```vmark #team
+param raise     precision 3 in [0%, 6%] lattice 2% = default 3%
+```
+
+```vmark #runway
+param new_hires precision 0 integer in [0, 6] lattice 1 = default 2
+```
+</code></pre></div><pre class="src">`lattice STEP` comes last in the header, before `= default`. The sweep starts
+at the low end of the domain and steps up to the high end: `raise` is visited
+at 0%, 2%, 4% and 6%, and `new_hires` at every whole number from 0 to 6.</pre><div class="out"><p><code>lattice STEP</code> comes last in the header, before <code>= default</code>. The sweep starts
+at the low end of the domain and steps up to the high end: <code>raise</code> is visited
+at 0%, 2%, 4% and 6%, and <code>new_hires</code> at every whole number from 0 to 6.</p></div><pre class="src">Three things are worth knowing.</pre><div class="out"><p>Three things are worth knowing.</p></div><pre class="src">- **It narrows nothing.** The default, 3%, is not on the lattice, and that is
+  legal. A scenario may still ask for 2.5%. The lattice is only the spacing a
+  sweep uses.
+- **The step must land exactly on the far end.** The tool never drops the last
+  point to make a step fit. `lattice 2.5%` on `[0%, 6%]` would stop at 5%, so
+  `check` refuses it:</pre><div class="out"><ul>
+<li><strong>It narrows nothing.</strong> The default, 3%, is not on the lattice, and that is
+legal. A scenario may still ask for 2.5%. The lattice is only the spacing a
+sweep uses.</li>
+<li><strong>The step must land exactly on the far end.</strong> The tool never drops the last
+point to make a step fit. <code>lattice 2.5%</code> on <code>[0%, 6%]</code> would stop at 5%, so
+<code>check</code> refuses it:</li>
+</ul></div><pre class="src">  ```text
+  TYPE    team.raise        lattice step 2.5% does not reach the end of [0%, 6%]: 6% is not a multiple of 2.5% above 0%
+  ```</pre><div class="out"><pre><code class="language-text">TYPE    team.raise        lattice step 2.5% does not reach the end of [0%, 6%]: 6% is not a multiple of 2.5% above 0%
+</code></pre></div><pre class="src">  A lattice also needs a domain with both ends, it cannot be put on a set (a
+  set already lists its points), and its step needs a width the param can
+  write. Every one of these is a `TYPE` or `PRECISION` finding from `check`.
+- **A param with no lattice is held at its default.** `cash`, `overhead` and
+  `hire_cost` are not swept. Every lattice param in the file is swept, and the
+  questions are every combination of their points: 4 × 7 = 28.</pre><div class="out"><p>A lattice also needs a domain with both ends, it cannot be put on a set (a
+set already lists its points), and its step needs a width the param can
+write. Every one of these is a <code>TYPE</code> or <code>PRECISION</code> finding from <code>check</code>.</p>
+<ul>
+<li><strong>A param with no lattice is held at its default.</strong> <code>cash</code>, <code>overhead</code> and
+<code>hire_cost</code> are not swept. Every lattice param in the file is swept, and the
+questions are every combination of their points: 4 × 7 = 28.</li>
+</ul></div><pre class="src">### Saying which readings you want: `report`</pre><div class="out"><h3 id="saying-which-readings-you-want-report">Saying which readings you want: <code>report</code></h3></div><pre class="src">A sheet asks for readings with `report` lines:</pre><div class="out"><p>A sheet asks for readings with <code>report</code> lines:</p></div><pre class="src">````markdown
+```vmark #sweep
+report ledger assertions broken
+report deltas on runway.months
+report gates
+report best scalar runway.new_hires direction max among feasible
+report forbidden
+```
+````</pre><div class="out"><pre><code class="language-markdown">```vmark #sweep
+report ledger assertions broken
+report deltas on runway.months
+report gates
+report best scalar runway.new_hires direction max among feasible
+report forbidden
+```
+</code></pre></div><pre class="src">There are five reports, and the list is closed. A document can ask for these
+five and nothing else, so a Markdown file can never make the tool run code it
+does not ship. `check` reads each line, checks its options, and resolves every
+name in it. A `report` that names a missing value is `UNDEF`, like a formula
+would be. `check` never runs a report.</pre><div class="out"><p>There are five reports, and the list is closed. A document can ask for these
+five and nothing else, so a Markdown file can never make the tool run code it
+does not ship. <code>check</code> reads each line, checks its options, and resolves every
+name in it. A <code>report</code> that names a missing value is <code>UNDEF</code>, like a formula
+would be. <code>check</code> never runs a report.</p></div><pre class="src">### Running it</pre><div class="out"><h3 id="running-it">Running it</h3></div><pre class="src">```console
+$ visimark simulate runway-sweep.md
+simulate: runway-sweep.md: 29 questions (2 lattice params)
+==&gt; runway-sweep.md &lt;==
+#sweep
+
+report ledger assertions broken
+
+  question  raise  new_hires  feasible  broken
+  base       3.0%          2  yes
+  1          0.0%          0  yes
+  2          0.0%          1  yes
+  3          0.0%          2  yes
+  4          0.0%          3  yes
+  5          0.0%          4  no        months &gt;= 12
+  6          0.0%          5  no        months &gt;= 12
+  7          0.0%          6  no        months &gt;= 12
+  8          2.0%          0  yes
+  9          2.0%          1  yes
+  10         2.0%          2  yes
+  11         2.0%          3  yes
+  12         2.0%          4  no        months &gt;= 12
+  13         2.0%          5  no        months &gt;= 12
+  14         2.0%          6  no        months &gt;= 12
+  15         4.0%          0  yes
+  16         4.0%          1  yes
+  17         4.0%          2  yes
+  18         4.0%          3  yes
+  19         4.0%          4  no        months &gt;= 12
+  20         4.0%          5  no        months &gt;= 12
+  21         4.0%          6  no        months &gt;= 12
+  22         6.0%          0  yes
+  23         6.0%          1  yes
+  24         6.0%          2  yes
+  25         6.0%          3  yes
+  26         6.0%          4  no        months &gt;= 12
+  27         6.0%          5  no        months &gt;= 12
+  28         6.0%          6  no        months &gt;= 12
+
+report deltas on runway.months
+
+  runway.months  base 13.1
+    low   10.1  (-3.0)  raise=6.0% new_hires=6
+    high  15.5  (+2.4)  raise=0.0% new_hires=0
+
+report gates
+
+  28 questions
+  assert        holds  fails  faulted  base   first failure
+  months &gt;= 12     16     12        0  holds  raise=0.0% new_hires=4
+
+report best scalar runway.new_hires direction max among feasible
+
+  raise=0.0% new_hires=3
+  runway.new_hires  3  (+1 against base)
+  chosen from 16 feasible of 28 questions
+  4 questions tie; the first in grid order is shown
+
+report forbidden
+
+  new_hires = 4  every question with it breaks an assertion
+  new_hires = 5  every question with it breaks an assertion
+  new_hires = 6  every question with it breaks an assertion
+  12 of 28 questions are infeasible
+simulate: runway-sweep.md: 1 of 1 sheets ran
+```</pre><div class="out"><pre><code class="language-console">$ visimark simulate runway-sweep.md
+simulate: runway-sweep.md: 29 questions (2 lattice params)
+==> runway-sweep.md &#x3C;==
+#sweep
+
+report ledger assertions broken
+
+  question  raise  new_hires  feasible  broken
+  base       3.0%          2  yes
+  1          0.0%          0  yes
+  2          0.0%          1  yes
+  3          0.0%          2  yes
+  4          0.0%          3  yes
+  5          0.0%          4  no        months >= 12
+  6          0.0%          5  no        months >= 12
+  7          0.0%          6  no        months >= 12
+  8          2.0%          0  yes
+  9          2.0%          1  yes
+  10         2.0%          2  yes
+  11         2.0%          3  yes
+  12         2.0%          4  no        months >= 12
+  13         2.0%          5  no        months >= 12
+  14         2.0%          6  no        months >= 12
+  15         4.0%          0  yes
+  16         4.0%          1  yes
+  17         4.0%          2  yes
+  18         4.0%          3  yes
+  19         4.0%          4  no        months >= 12
+  20         4.0%          5  no        months >= 12
+  21         4.0%          6  no        months >= 12
+  22         6.0%          0  yes
+  23         6.0%          1  yes
+  24         6.0%          2  yes
+  25         6.0%          3  yes
+  26         6.0%          4  no        months >= 12
+  27         6.0%          5  no        months >= 12
+  28         6.0%          6  no        months >= 12
+
+report deltas on runway.months
+
+  runway.months  base 13.1
+    low   10.1  (-3.0)  raise=6.0% new_hires=6
+    high  15.5  (+2.4)  raise=0.0% new_hires=0
+
+report gates
+
+  28 questions
+  assert        holds  fails  faulted  base   first failure
+  months >= 12     16     12        0  holds  raise=0.0% new_hires=4
+
+report best scalar runway.new_hires direction max among feasible
+
+  raise=0.0% new_hires=3
+  runway.new_hires  3  (+1 against base)
+  chosen from 16 feasible of 28 questions
+  4 questions tie; the first in grid order is shown
+
+report forbidden
+
+  new_hires = 4  every question with it breaks an assertion
+  new_hires = 5  every question with it breaks an assertion
+  new_hires = 6  every question with it breaks an assertion
+  12 of 28 questions are infeasible
+simulate: runway-sweep.md: 1 of 1 sheets ran
+</code></pre></div><pre class="src">The first stderr line says how many questions the run asks: the 28 on the grid
+plus the **base**, which is the document at its defaults. It is printed before
+any question is asked, so a sweep that is far bigger than you meant shows up
+straight away. stdout is the readings, under the sheet that asked for them.
+The last line says how many report sheets ran.</pre><div class="out"><p>The first stderr line says how many questions the run asks: the 28 on the grid
+plus the <strong>base</strong>, which is the document at its defaults. It is printed before
+any question is asked, so a sweep that is far bigger than you meant shows up
+straight away. stdout is the readings, under the sheet that asked for them.
+The last line says how many report sheets ran.</p></div><pre class="src">Every question is asked the way `eval --scenario` would ask it. A question is
+**feasible** when every `assert` in the document holds.</pre><div class="out"><p>Every question is asked the way <code>eval --scenario</code> would ask it. A question is
+<strong>feasible</strong> when every <code>assert</code> in the document holds.</p></div><pre class="src">- **`ledger`** is one row per question, base first. `assertions broken` adds
+  the assertions each row breaks. Here every plan with four or more hires
+  breaks the runway floor, whatever the raise.
+- **`deltas`** shows how far a value moves across the grid, from base to the
+  lowest and the highest, and which question takes it there. Runway ranges from
+  about ten months to over fifteen.
+- **`gates`** is one row per assertion: how many questions it holds in, how
+  many it fails in, and the first question that breaks it.
+- **`best`** picks the question that maximises or minimises a value.
+  `among feasible` only considers questions that break nothing. The answer here
+  is three hires. Four questions tie, one for each raise, which tells you the
+  raise does not change the answer.
+- **`forbidden`** lists the lattice points at which *every* question breaks an
+  assertion, so no other choice can save them. Four, five and six hires are out
+  at any raise on the grid.</pre><div class="out"><ul>
+<li><strong><code>ledger</code></strong> is one row per question, base first. <code>assertions broken</code> adds
+the assertions each row breaks. Here every plan with four or more hires
+breaks the runway floor, whatever the raise.</li>
+<li><strong><code>deltas</code></strong> shows how far a value moves across the grid, from base to the
+lowest and the highest, and which question takes it there. Runway ranges from
+about ten months to over fifteen.</li>
+<li><strong><code>gates</code></strong> is one row per assertion: how many questions it holds in, how
+many it fails in, and the first question that breaks it.</li>
+<li><strong><code>best</code></strong> picks the question that maximises or minimises a value.
+<code>among feasible</code> only considers questions that break nothing. The answer here
+is three hires. Four questions tie, one for each raise, which tells you the
+raise does not change the answer.</li>
+<li><strong><code>forbidden</code></strong> lists the lattice points at which <em>every</em> question breaks an
+assertion, so no other choice can save them. Four, five and six hires are out
+at any raise on the grid.</li>
+</ul></div><pre class="src">### When a sheet cannot start</pre><div class="out"><h3 id="when-a-sheet-cannot-start">When a sheet cannot start</h3></div><pre class="src">If `check` finds a problem in a report line, or in a value one of its reports
+reads, that sheet cannot start. It prints `(cannot start)` under its heading,
+and stderr says why:</pre><div class="out"><p>If <code>check</code> finds a problem in a report line, or in a value one of its reports
+reads, that sheet cannot start. It prints <code>(cannot start)</code> under its heading,
+and stderr says why:</p></div><pre class="src">```text
+simulate: runway-sweep.md: #sweep cannot start: UNDEF: unknown name `runway.monhts`; did you mean `months`?
+```</pre><div class="out"><pre><code class="language-text">simulate: runway-sweep.md: #sweep cannot start: UNDEF: unknown name `runway.monhts`; did you mean `months`?
+</code></pre></div><pre class="src">The rest of the file still runs. If a lattice itself is broken, no grid can be
+built, so every report sheet in that file is stopped.</pre><div class="out"><p>The rest of the file still runs. If a lattice itself is broken, no grid can be
+built, so every report sheet in that file is stopped.</p></div><pre class="src">A question can also be **faulted**. That happens when something the readings
+need cannot be computed for that one question, such as a division by zero at
+one corner of the grid. The ledger marks it `faulted`, and `best` and `deltas`
+leave it out. A faulted question is a reading, not a failure of the command.</pre><div class="out"><p>A question can also be <strong>faulted</strong>. That happens when something the readings
+need cannot be computed for that one question, such as a division by zero at
+one corner of the grid. The ledger marks it <code>faulted</code>, and <code>best</code> and <code>deltas</code>
+leave it out. A faulted question is a reading, not a failure of the command.</p></div><pre class="src">### Exit codes, on purpose different from `check`</pre><div class="out"><h3 id="exit-codes-on-purpose-different-from-check">Exit codes, on purpose different from <code>check</code></h3></div><pre class="src">| Exit | When |
+|---|---|
+| `0` | Every sheet that could start printed its readings, whatever its assertions found |
+| `1` | No file has a `report` statement, or a sheet could not start and you passed `--fail-on-fault` |
+| `2` | A file could not be read, or the command line is wrong |</pre><div class="out"><table>
+<thead>
+<tr>
+<th>Exit</th>
+<th>When</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0</code></td>
+<td>Every sheet that could start printed its readings, whatever its assertions found</td>
+</tr>
+<tr>
+<td><code>1</code></td>
+<td>No file has a <code>report</code> statement, or a sheet could not start and you passed <code>--fail-on-fault</code></td>
+</tr>
+<tr>
+<td><code>2</code></td>
+<td>A file could not be read, or the command line is wrong</td>
+</tr>
+</tbody>
+</table></div><pre class="src">A failed assertion does not fail `simulate`. Infeasible questions are the
+point of a sweep, in the same way `eval` still prints values when an assertion
+is false. If you want a build to stop when a report sheet cannot run, pass
+`--fail-on-fault`.</pre><div class="out"><p>A failed assertion does not fail <code>simulate</code>. Infeasible questions are the
+point of a sweep, in the same way <code>eval</code> still prints values when an assertion
+is false. If you want a build to stop when a report sheet cannot run, pass
+<code>--fail-on-fault</code>.</p></div><pre class="src">`simulate` takes several files and prints a `==&gt; FILE &lt;==` header for each,
+separated by `---`. A long sweep can show its progress with `--progress`,
+which writes a `question i of N` line to stderr. That line is rewritten in
+place on a terminal, and printed at every tenth of the run in a CI log.</pre><div class="out"><p><code>simulate</code> takes several files and prints a <code>==> FILE &#x3C;==</code> header for each,
+separated by <code>---</code>. A long sweep can show its progress with <code>--progress</code>,
+which writes a <code>question i of N</code> line to stderr. That line is rewritten in
+place on a terminal, and printed at every tenth of the run in a CI log.</p></div><pre class="src">### What simulate does not do</pre><div class="out"><h3 id="what-simulate-does-not-do">What simulate does not do</h3></div><pre class="src">- **It writes nothing.** No cell, anchor or chart changes. To adopt a value
+  the sweep found, edit the default and run `fmt`, exactly as in chapter 30.
+- **It has no `--json`.** The readings are text for people. For a single value
+  a machine needs, use `eval --scenario`.
+- **It has no limit.** A grid of a million questions will be asked, one at a
+  time. The count line tells you how big the run is before it starts.</pre><div class="out"><ul>
+<li><strong>It writes nothing.</strong> No cell, anchor or chart changes. To adopt a value
+the sweep found, edit the default and run <code>fmt</code>, exactly as in chapter 30.</li>
+<li><strong>It has no <code>--json</code>.</strong> The readings are text for people. For a single value
+a machine needs, use <code>eval --scenario</code>.</li>
+<li><strong>It has no limit.</strong> A grid of a million questions will be asked, one at a
+time. The count line tells you how big the run is before it starts.</li>
+</ul></div><pre class="src">[`example-battery-storage.md`](example-battery-storage.md) is the large worked
+case: five levers, 577 questions, four lender covenants and all five reports,
+in a project-finance model of a grid-scale battery.</pre><div class="out"><p><a href="example-battery-storage.md"><code>example-battery-storage.md</code></a> is the large worked
+case: five levers, 577 questions, four lender covenants and all five reports,
+in a project-finance model of a grid-scale battery.</p></div><pre class="src">---</pre><div class="out"><hr></div><pre class="src"># Part 9 — Putting it together</pre><div class="out"><h1 id="part-9-putting-it-together">Part 9 — Putting it together</h1></div><pre class="src">## 32. Capstone: a quote, end to end</pre><div class="out"><h2 id="32-capstone-a-quote-end-to-end">32. Capstone: a quote, end to end</h2></div><pre class="src">Now build a real document from nothing, using everything. The finished file is
 [`tutorial/capstone.md`](tutorial/capstone.md). It is a consulting quote with
 line items, VAT, a payment schedule derived from the total, a reconciliation
 that proves the instalments add up, and a VAT rate you can ask what-if
@@ -4753,7 +5092,7 @@ code is <code>0</code>. And <code>capstone.md</code> has not changed by a single
 fails a build when it drifts, answers a script, and answers a what-if without
 being edited.</pre><div class="out"><p>You are done. That document now computes itself, states its own invariants,
 fails a build when it drifts, answers a script, and answers a what-if without
-being edited.</p></div><pre class="src">## 32. What VisiMark refuses to do</pre><div class="out"><h2 id="32-what-visimark-refuses-to-do">32. What VisiMark refuses to do</h2></div><pre class="src">Knowing the limits saves you from fighting them.</pre><div class="out"><p>Knowing the limits saves you from fighting them.</p></div><pre class="src">**Where a value could mean two things, it errors rather than guesses.** Dates are
+being edited.</p></div><pre class="src">## 33. What VisiMark refuses to do</pre><div class="out"><h2 id="33-what-visimark-refuses-to-do">33. What VisiMark refuses to do</h2></div><pre class="src">Knowing the limits saves you from fighting them.</pre><div class="out"><p>Knowing the limits saves you from fighting them.</p></div><pre class="src">**Where a value could mean two things, it errors rather than guesses.** Dates are
 ISO only. Thousands separators are refused. A column mixing `$` and `€` is an
 error, not a sum. A name bound twice is an error, not an overwrite.</pre><div class="out"><p><strong>Where a value could mean two things, it errors rather than guesses.</strong> Dates are
 ISO only. Thousands separators are refused. A column mixing <code>$</code> and <code>€</code> is an
@@ -4793,7 +5132,7 @@ the decision on it. The review process is
 change, go through
 <a href="vocabulary-catalogue.md"><code>vocabulary-catalogue.md</code></a>, which records every one and
 the decision on it. The review process is
-<a href="issue-runbook.md"><code>issue-runbook.md</code></a>.</p></div><pre class="src">## 33. Where to go next</pre><div class="out"><h2 id="33-where-to-go-next">33. Where to go next</h2></div><pre class="src">### Reference</pre><div class="out"><h3 id="reference">Reference</h3></div><pre class="src">| Document | What it answers |
+<a href="issue-runbook.md"><code>issue-runbook.md</code></a>.</p></div><pre class="src">## 34. Where to go next</pre><div class="out"><h2 id="34-where-to-go-next">34. Where to go next</h2></div><pre class="src">### Reference</pre><div class="out"><h3 id="reference">Reference</h3></div><pre class="src">| Document | What it answers |
 |---|---|
 | [`ci.md`](ci.md) | Protect your Markdown numbers with CI — the Action, globs, annotations, pinning and rollout |
 | [`mcp-server.md`](mcp-server.md) | Set up and run `visimark-mcp` — a host, the write gate, the plan/apply split |
@@ -4837,7 +5176,8 @@ the decision on it. The review process is
 | [`example-structural-check.md`](example-structural-check.md) | An engineering calculation, and a transposed digit caught before the framer sees it. |
 | [`example-ci-sharding.md`](example-ci-sharding.md) | A document a build tool reads. |
 | [`example-agent-budget.md`](example-agent-budget.md) | A spending cap an agent cannot talk itself out of, and a what-if run against it. |
-| [`example-executable-documentation.md`](example-executable-documentation.md) | A capacity decision that stopped being a second source of truth, with ratios printed as percents. |</pre><div class="out"><table>
+| [`example-executable-documentation.md`](example-executable-documentation.md) | A capacity decision that stopped being a second source of truth, with ratios printed as percents. |
+| [`example-battery-storage.md`](example-battery-storage.md) | A battery project a lender can sweep: 577 questions, four covenants, all five `simulate` reports. |</pre><div class="out"><table>
 <thead>
 <tr>
 <th>Document</th>
@@ -4876,6 +5216,10 @@ the decision on it. The review process is
 <tr>
 <td><a href="example-executable-documentation.md"><code>example-executable-documentation.md</code></a></td>
 <td>A capacity decision that stopped being a second source of truth, with ratios printed as percents.</td>
+</tr>
+<tr>
+<td><a href="example-battery-storage.md"><code>example-battery-storage.md</code></a></td>
+<td>A battery project a lender can sweep: 577 questions, four covenants, all five <code>simulate</code> reports.</td>
 </tr>
 </tbody>
 </table></div><pre class="src">### Try it without installing</pre><div class="out"><h3 id="try-it-without-installing">Try it without installing</h3></div><pre class="src">[`playground.html`](playground.html) runs the real engine in your browser, with

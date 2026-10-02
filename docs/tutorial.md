@@ -19,7 +19,7 @@ the features ship in the next release.
 
 ## How to read this
 
-There are 33 short chapters in nine parts. They are meant to be read in order:
+There are 34 short chapters in nine parts. They are meant to be read in order:
 each one exists because the one before it left a problem open.
 
 | Part | Chapters | What you get |
@@ -31,8 +31,8 @@ each one exists because the one before it left a problem open.
 | 5. Other people's documents | 20–22 | How to adopt it on files you did not write |
 | 6. Beyond one file | 23–24 | CSV rows and charts |
 | 7. Automation | 25–28 | CI, scripts, agents, your editor |
-| 8. Modelling | 29–30 | What-if runs that never edit the document |
-| 9. Putting it together | 31–33 | A full document, unaided |
+| 8. Modelling | 29–31 | What-if runs and sweeps that never edit the document |
+| 9. Putting it together | 32–34 | A full document, unaided |
 
 Three finished documents come with this tutorial. You can run the tool against
 them right now:
@@ -41,8 +41,10 @@ them right now:
   chapters 4 to 19.
 - [`tutorial/runway.md`](tutorial/runway.md) — the model used in chapters 29
   and 30.
+- [`tutorial/runway-sweep.md`](tutorial/runway-sweep.md) — the same model,
+  swept, in chapter 31.
 - [`tutorial/capstone.md`](tutorial/capstone.md) — the full quote built in
-  chapter 31.
+  chapter 32.
 
 ---
 
@@ -1421,7 +1423,7 @@ reads better as a percent is your call.
 
 A percent value also matters in Part 8. A `param` whose default is written as a
 percent, such as `param vat_rate precision 2 = default 23%`, only accepts a
-percent from a scenario. The capstone (chapter 31) uses such a `param` and
+percent from a scenario. The capstone (chapter 32) uses such a `param` and
 prints it with a `|percent` anchor.
 
 ### A multi-word string: add `|nbsp`
@@ -2671,7 +2673,8 @@ Forget to put it back, and the document now says something nobody decided.
 
 VisiMark splits this in two. The document says **which** numbers are
 assumptions (chapter 29). `eval` answers the what-if **without writing
-anything** (chapter 30).
+anything** (chapter 30). `simulate` asks a whole family of what-ifs at once,
+and still writes nothing (chapter 31).
 
 ## 29. Parameters: the assumptions a reader may vary
 
@@ -3210,11 +3213,230 @@ spending cap.
 - **Not a way to vary a formula.** Only `param` values vary. The rules are the
   same in every scenario.
 
+## 31. Simulation: sweeping the parameters
+
+A scenario answers one question. The questions people actually bring to a
+plan come in families. *How many people can we hire, at any raise from zero to
+six percent, and still have a year of cash?* That is twenty-eight scenarios. You
+could write twenty-eight JSON files and run `eval` twenty-eight times, but then
+the question lives in a script beside the document, and nobody reviews the
+script.
+
+`visimark simulate` asks the whole family in one run. The document says which
+values to try and which readings it wants. The command asks every question,
+writes nothing, and prints the readings.
+
+The example for this chapter is
+[`tutorial/runway-sweep.md`](tutorial/runway-sweep.md). It is the runway plan
+from chapters 29 and 30 with two `param` lines extended and one sheet added.
+
+### Saying which values to try: `lattice`
+
+A domain (chapter 29) says which values a param may take. A **lattice** says
+which of them a sweep should visit:
+
+````markdown
+```vmark #team
+param raise     precision 3 in [0%, 6%] lattice 2% = default 3%
+```
+
+```vmark #runway
+param new_hires precision 0 integer in [0, 6] lattice 1 = default 2
+```
+````
+
+`lattice STEP` comes last in the header, before `= default`. The sweep starts
+at the low end of the domain and steps up to the high end: `raise` is visited
+at 0%, 2%, 4% and 6%, and `new_hires` at every whole number from 0 to 6.
+
+Three things are worth knowing.
+
+- **It narrows nothing.** The default, 3%, is not on the lattice, and that is
+  legal. A scenario may still ask for 2.5%. The lattice is only the spacing a
+  sweep uses.
+- **The step must land exactly on the far end.** The tool never drops the last
+  point to make a step fit. `lattice 2.5%` on `[0%, 6%]` would stop at 5%, so
+  `check` refuses it:
+
+  ```text
+  TYPE    team.raise        lattice step 2.5% does not reach the end of [0%, 6%]: 6% is not a multiple of 2.5% above 0%
+  ```
+
+  A lattice also needs a domain with both ends, it cannot be put on a set (a
+  set already lists its points), and its step needs a width the param can
+  write. Every one of these is a `TYPE` or `PRECISION` finding from `check`.
+- **A param with no lattice is held at its default.** `cash`, `overhead` and
+  `hire_cost` are not swept. Every lattice param in the file is swept, and the
+  questions are every combination of their points: 4 × 7 = 28.
+
+### Saying which readings you want: `report`
+
+A sheet asks for readings with `report` lines:
+
+````markdown
+```vmark #sweep
+report ledger assertions broken
+report deltas on runway.months
+report gates
+report best scalar runway.new_hires direction max among feasible
+report forbidden
+```
+````
+
+There are five reports, and the list is closed. A document can ask for these
+five and nothing else, so a Markdown file can never make the tool run code it
+does not ship. `check` reads each line, checks its options, and resolves every
+name in it. A `report` that names a missing value is `UNDEF`, like a formula
+would be. `check` never runs a report.
+
+### Running it
+
+```console
+$ visimark simulate runway-sweep.md
+simulate: runway-sweep.md: 29 questions (2 lattice params)
+==> runway-sweep.md <==
+#sweep
+
+report ledger assertions broken
+
+  question  raise  new_hires  feasible  broken
+  base       3.0%          2  yes
+  1          0.0%          0  yes
+  2          0.0%          1  yes
+  3          0.0%          2  yes
+  4          0.0%          3  yes
+  5          0.0%          4  no        months >= 12
+  6          0.0%          5  no        months >= 12
+  7          0.0%          6  no        months >= 12
+  8          2.0%          0  yes
+  9          2.0%          1  yes
+  10         2.0%          2  yes
+  11         2.0%          3  yes
+  12         2.0%          4  no        months >= 12
+  13         2.0%          5  no        months >= 12
+  14         2.0%          6  no        months >= 12
+  15         4.0%          0  yes
+  16         4.0%          1  yes
+  17         4.0%          2  yes
+  18         4.0%          3  yes
+  19         4.0%          4  no        months >= 12
+  20         4.0%          5  no        months >= 12
+  21         4.0%          6  no        months >= 12
+  22         6.0%          0  yes
+  23         6.0%          1  yes
+  24         6.0%          2  yes
+  25         6.0%          3  yes
+  26         6.0%          4  no        months >= 12
+  27         6.0%          5  no        months >= 12
+  28         6.0%          6  no        months >= 12
+
+report deltas on runway.months
+
+  runway.months  base 13.1
+    low   10.1  (-3.0)  raise=6.0% new_hires=6
+    high  15.5  (+2.4)  raise=0.0% new_hires=0
+
+report gates
+
+  28 questions
+  assert        holds  fails  faulted  base   first failure
+  months >= 12     16     12        0  holds  raise=0.0% new_hires=4
+
+report best scalar runway.new_hires direction max among feasible
+
+  raise=0.0% new_hires=3
+  runway.new_hires  3  (+1 against base)
+  chosen from 16 feasible of 28 questions
+  4 questions tie; the first in grid order is shown
+
+report forbidden
+
+  new_hires = 4  every question with it breaks an assertion
+  new_hires = 5  every question with it breaks an assertion
+  new_hires = 6  every question with it breaks an assertion
+  12 of 28 questions are infeasible
+simulate: runway-sweep.md: 1 of 1 sheets ran
+```
+
+The first stderr line says how many questions the run asks: the 28 on the grid
+plus the **base**, which is the document at its defaults. It is printed before
+any question is asked, so a sweep that is far bigger than you meant shows up
+straight away. stdout is the readings, under the sheet that asked for them.
+The last line says how many report sheets ran.
+
+Every question is asked the way `eval --scenario` would ask it. A question is
+**feasible** when every `assert` in the document holds.
+
+- **`ledger`** is one row per question, base first. `assertions broken` adds
+  the assertions each row breaks. Here every plan with four or more hires
+  breaks the runway floor, whatever the raise.
+- **`deltas`** shows how far a value moves across the grid, from base to the
+  lowest and the highest, and which question takes it there. Runway ranges from
+  about ten months to over fifteen.
+- **`gates`** is one row per assertion: how many questions it holds in, how
+  many it fails in, and the first question that breaks it.
+- **`best`** picks the question that maximises or minimises a value.
+  `among feasible` only considers questions that break nothing. The answer here
+  is three hires. Four questions tie, one for each raise, which tells you the
+  raise does not change the answer.
+- **`forbidden`** lists the lattice points at which *every* question breaks an
+  assertion, so no other choice can save them. Four, five and six hires are out
+  at any raise on the grid.
+
+### When a sheet cannot start
+
+If `check` finds a problem in a report line, or in a value one of its reports
+reads, that sheet cannot start. It prints `(cannot start)` under its heading,
+and stderr says why:
+
+```text
+simulate: runway-sweep.md: #sweep cannot start: UNDEF: unknown name `runway.monhts`; did you mean `months`?
+```
+
+The rest of the file still runs. If a lattice itself is broken, no grid can be
+built, so every report sheet in that file is stopped.
+
+A question can also be **faulted**. That happens when something the readings
+need cannot be computed for that one question, such as a division by zero at
+one corner of the grid. The ledger marks it `faulted`, and `best` and `deltas`
+leave it out. A faulted question is a reading, not a failure of the command.
+
+### Exit codes, on purpose different from `check`
+
+| Exit | When |
+|---|---|
+| `0` | Every sheet that could start printed its readings, whatever its assertions found |
+| `1` | No file has a `report` statement, or a sheet could not start and you passed `--fail-on-fault` |
+| `2` | A file could not be read, or the command line is wrong |
+
+A failed assertion does not fail `simulate`. Infeasible questions are the
+point of a sweep, in the same way `eval` still prints values when an assertion
+is false. If you want a build to stop when a report sheet cannot run, pass
+`--fail-on-fault`.
+
+`simulate` takes several files and prints a `==> FILE <==` header for each,
+separated by `---`. A long sweep can show its progress with `--progress`,
+which writes a `question i of N` line to stderr. That line is rewritten in
+place on a terminal, and printed at every tenth of the run in a CI log.
+
+### What simulate does not do
+
+- **It writes nothing.** No cell, anchor or chart changes. To adopt a value
+  the sweep found, edit the default and run `fmt`, exactly as in chapter 30.
+- **It has no `--json`.** The readings are text for people. For a single value
+  a machine needs, use `eval --scenario`.
+- **It has no limit.** A grid of a million questions will be asked, one at a
+  time. The count line tells you how big the run is before it starts.
+
+[`example-battery-storage.md`](example-battery-storage.md) is the large worked
+case: five levers, 577 questions, four lender covenants and all five reports,
+in a project-finance model of a grid-scale battery.
+
 ---
 
 # Part 9 — Putting it together
 
-## 31. Capstone: a quote, end to end
+## 32. Capstone: a quote, end to end
 
 Now build a real document from nothing, using everything. The finished file is
 [`tutorial/capstone.md`](tutorial/capstone.md). It is a consulting quote with
@@ -3460,7 +3682,7 @@ You are done. That document now computes itself, states its own invariants,
 fails a build when it drifts, answers a script, and answers a what-if without
 being edited.
 
-## 32. What VisiMark refuses to do
+## 33. What VisiMark refuses to do
 
 Knowing the limits saves you from fighting them.
 
@@ -3502,7 +3724,7 @@ change, go through
 the decision on it. The review process is
 [`issue-runbook.md`](issue-runbook.md).
 
-## 33. Where to go next
+## 34. Where to go next
 
 ### Reference
 
@@ -3528,6 +3750,7 @@ Or ask the tool: `visimark ref NAME`.
 | [`example-ci-sharding.md`](example-ci-sharding.md) | A document a build tool reads. |
 | [`example-agent-budget.md`](example-agent-budget.md) | A spending cap an agent cannot talk itself out of, and a what-if run against it. |
 | [`example-executable-documentation.md`](example-executable-documentation.md) | A capacity decision that stopped being a second source of truth, with ratios printed as percents. |
+| [`example-battery-storage.md`](example-battery-storage.md) | A battery project a lender can sweep: 577 questions, four covenants, all five `simulate` reports. |
 
 ### Try it without installing
 

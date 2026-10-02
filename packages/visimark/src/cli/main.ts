@@ -6,6 +6,7 @@ import {
   cmdFmt,
   cmdInfer,
   cmdRef,
+  cmdSimulate,
   type Writer,
 } from "./commands.js";
 import { readVersion } from "./version.js";
@@ -22,6 +23,9 @@ usage:
   visimark infer FILE... [--write] [--json]
   visimark eval  FILE [--get NAME] [--json]
   visimark explain FILE [#sheet] [--json]
+  visimark simulate FILE... [--fail-on-fault] [--progress]
+                                        every question a document's lattices
+                                        declare; prints its report readings
   visimark ref   [NAME] [--json]        the language's builtin functions;
                                         reads no file
   visimark --version | -v | version    print the version and exit
@@ -31,6 +35,10 @@ exit codes: 0 clean, 1 findings, 2 usage or read failure`;
 export interface CliIO {
   out?: Writer;
   err?: Writer;
+  /** whether stderr is a terminal, for `simulate --progress`; defaults to process.stderr.isTTY */
+  errTTY?: boolean;
+  /** a raw stderr write with no newline, for the `\r` progress line */
+  errRaw?: (s: string) => void;
 }
 
 export async function runCli(argv: string[], io: CliIO = {}): Promise<number> {
@@ -51,6 +59,11 @@ export async function runCli(argv: string[], io: CliIO = {}): Promise<number> {
       return cmdExplain(rest, out, err);
     case "ref":
       return cmdRef(rest, out, err);
+    case "simulate":
+      return cmdSimulate(rest, out, err, {
+        isTTY: io.errTTY ?? process.stderr.isTTY === true,
+        raw: io.errRaw ?? ((s: string) => void process.stderr.write(s)),
+      });
     case "-v":
     case "--version":
     case "version":

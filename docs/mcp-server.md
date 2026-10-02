@@ -48,7 +48,7 @@ MCP is the standard answer to that gap — a host (an editor, an agent
 framework, a chat client) declares a server, the server declares tools, and
 the model calls them the way it calls any other tool. `visimark-mcp` is
 VisiMark's half of that: it imports the same engine the CLI does — never
-shells out to it — and serves every command as a tool, the authoring
+shells out to it — and serves every command except `simulate` as a tool, the authoring
 discipline as resources, and two orderings agents reliably get wrong as
 prompts.
 

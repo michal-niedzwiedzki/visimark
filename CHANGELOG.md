@@ -4,6 +4,23 @@
 
 ### Added
 
+- **`visimark simulate FILE... [--fail-on-fault] [--progress]`.** Asks every
+  question a document's `lattice` params declare (every combination of their
+  points, plus the defaults) once each, in one process, and prints the readings
+  its `report` statements ask for: `ledger`, `deltas`, `gates`, `best` and
+  `forbidden`, under a `==> FILE <==` header per file. It writes nothing. A false
+  assertion is a reading, so it exits `0`; it exits `1` when no file has a
+  `report`, or when a report sheet cannot start under `--fail-on-fault`. stderr
+  carries the question count before the run, any `cannot start` line and a
+  summary. It has no `--json`. The tutorial gains chapter 31 and the CI guide a
+  chapter on it, and `docs/ci.md` is renumbered. See
+  [#259](https://github.com/michal-niedzwiedzki/visimark/issues/259) and
+  [`docs/design/add-a-simulate-command-spec.md`](docs/design/add-a-simulate-command-spec.md).
+- **A battery storage example that a lender can sweep.**
+  [`docs/example-battery-storage.md`](docs/example-battery-storage.md) models a
+  grid-scale battery with units, `PMT`, `NPV` and `IRR`, four covenants as
+  assertions and five lattice levers. Its quoted `simulate` session of 577
+  questions is held to the tool's output by a test (#259).
 - **`lattice` on a `param`, and `report` statements.** A `param` header may end
   its domain with `lattice STEP` (`param volume_disc precision 3 in [0%, 10%]
   lattice 1% = default 0%`): the spacing a sweep visits the interval at. It

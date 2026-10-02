@@ -302,7 +302,8 @@ declaration. `lattice` is contextual: `lattice = 5` still binds a scalar.
 a statement beside `chart`. `NAME` is one of `ledger`, `deltas`, `gates`, `best`
 and `forbidden`, each with a closed option grammar. `check` parses the line,
 resolves its refs and counts them as reads, and never runs a question; `fmt`
-leaves it alone. What each report computes belongs to the `simulate` command.
+leaves it alone. What each report computes is the `simulate` command's
+([`design/add-a-simulate-command-spec.md`](design/add-a-simulate-command-spec.md)).
 `report` is contextual too: `report = 5` still binds a scalar.
 
 **Literals.**
@@ -780,6 +781,7 @@ visimark fmt   FILE... [--fix-dates] [--json]
 visimark infer FILE... [--write] [--json]
 visimark eval  FILE [--scenario FILE|-] [--get NAME] [--json]
 visimark explain FILE [#sheet] [--json]
+visimark simulate FILE... [--fail-on-fault] [--progress]
 ```
 
 `--json` emits a deterministic envelope of that command's result (`command`,
@@ -803,6 +805,15 @@ Exit codes: `0` clean, `1` findings, `2` usage or parse failure. `eval` also
 exits `1` if an `assert` statement is false ([§17](#17-assertions)) — the
 computed value is still printed first, so a pipeline reading it is not starved,
 but the non-zero code means the document's stated invariants do not hold.
+
+`simulate` asks every question a document's `lattice` params declare: the
+Cartesian product of their points, plus the defaults. It evaluates each one
+once, in process, as `eval --scenario` would. It then prints the readings the
+document's `report` statements ask for and writes nothing. A false assertion
+is a reading, so it exits `0`. It exits `1` only when no file has a `report`,
+or when a report sheet cannot start under `--fail-on-fault`. It has no `--json`.
+The rules are in
+[`add-a-simulate-command-spec.md`](design/add-a-simulate-command-spec.md).
 
 `explain` exists to recover what the format gives up by scattering rules across
 blocks: a single readable view of a sheet's logic and evaluation order. For an
@@ -1355,7 +1366,8 @@ full specification. The motivating document is
   It narrows nothing: a default or scenario value off the lattice is legal.
   `eval` and `explain` print it beside the domain, and `--json` adds a
   `lattice` object next to `domain`. `report NAME [OPTIONS]` statements name the
-  readings a sweep should print; `check` validates them and never runs them. See
+  readings a sweep should print; `check` validates them and never runs them,
+  and `simulate` ([§11](#11-cli)) asks the sweep and prints them. See
   [`design/lattice-on-param-and-report-statements-spec.md`](design/lattice-on-param-and-report-statements-spec.md).
 
 ## 21. Units

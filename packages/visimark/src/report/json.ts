@@ -6,7 +6,7 @@ import { precisionPhrase, unitSigSlot, unitSigText, type FnEntry } from "../lang
 import { unitJson } from "../lang/unit-expr.js";
 
 export type JsonWriter = (line: string) => void;
-export type CommandName = "check" | "fmt" | "infer" | "eval" | "explain" | "ref";
+export type CommandName = "check" | "fmt" | "infer" | "eval" | "explain" | "ref" | "simulate";
 
 export function emitJson(out: JsonWriter, doc: object): void {
   out(JSON.stringify(doc, null, 2));

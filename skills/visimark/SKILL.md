@@ -129,6 +129,9 @@ npx visimark infer FILE... [--write]      # propose rules for a document with no
 npx visimark eval  FILE [--scenario FILE|-] [--get NAME] [--json]
 npx visimark explain FILE [#sheet]        # rules and evaluation order
 npx visimark ref   [NAME] [--json]        # what a builtin function does; reads no file
+npx visimark simulate FILE... [--fail-on-fault] [--progress]
+                                           # ask every question the lattices declare;
+                                           # print the report readings; writes nothing
 ```
 
 If `visimark` is already a global or project dependency, the bare form works
@@ -170,7 +173,7 @@ means the command could not run at all, and `WARN`/`NOTE` are advice that is
 printed without failing anything.
 
 **If you cannot shell out, there is an MCP server.** `visimark-mcp` serves
-every command above as a tool — `visimark_check`, `visimark_fmt`,
+every command above except `simulate` as a tool — `visimark_check`, `visimark_fmt`,
 `visimark_infer`, `visimark_eval`, `visimark_explain`, `visimark_ref`, plus
 `visimark_fmt_apply` and `visimark_infer_apply` behind an operator-controlled
 write gate. Its read tools take a document as `content` as readily as a
