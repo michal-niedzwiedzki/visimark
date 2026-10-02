@@ -14,11 +14,12 @@ The language is kept simple on purpose, so that it reads the same way for
 everyone.
 
 Every `visimark` output here is a real transcript, captured with
-`visimark 0.1.5`. Nothing is invented.
+`visimark 0.1.5`, except in chapter 21: `simulate` is newer, and its output
+there was captured from the build that introduced it. Nothing is invented.
 
 ## How to read this
 
-There are 26 short chapters in seven parts. Parts 1 and 2 are the whole job:
+There are 30 short chapters in seven parts. Parts 1 and 2 are the whole job:
 read those two and you have a working check. The rest answers the questions that
 turn up afterwards.
 
@@ -28,9 +29,9 @@ turn up afterwards.
 | 2. The five-minute setup | 4–8 | A check that blocks a bad merge |
 | 3. Choosing what to check | 9–12 | Globs, coverage, pinning |
 | 4. Making a failure useful | 13–16 | Logs, annotations, summaries |
-| 5. Patterns that come up | 17–20 | `fmt`, artifacts, reading values |
-| 6. Other runners | 21–23 | Plain `npx`, GitLab, Git hooks |
-| 7. Rolling it out | 24–26 | Adoption, troubleshooting, a checklist |
+| 5. Patterns that come up | 17–21 | `fmt`, artifacts, reading values, simulations |
+| 6. Other runners | 22–27 | Plain `npx`, GitLab, Git hooks, linters, the MCP server |
+| 7. Rolling it out | 28–30 | Adoption, troubleshooting, a checklist |
 
 The Action is published on the GitHub Marketplace as
 [VisiMark check](https://github.com/marketplace/actions/visimark-check). If all
@@ -269,7 +270,7 @@ pins the engine it installs. Chapter 12 goes into why that matters.
 | Input | Default | What it is |
 |---|---|---|
 | `files` | `**/*.md` | Space-separated glob(s) of Markdown files to check |
-| `command` | `check` | `check` or `fmt` |
+| `command` | `check` | `check`, `fmt` or `simulate` (chapter 21) |
 | `args` | *(empty)* | Extra flags for the command; each must be valid for `command`, for example `--fix-dates` for `fmt` |
 | `version` | the release this Action ref ships | npm version or dist-tag of the engine to install |
 
@@ -424,7 +425,7 @@ $ echo $?
 2
 ```
 
-So: quoted in `with: files:`, unquoted in `run:`. Chapter 21 covers the `run:`
+So: quoted in `with: files:`, unquoted in `run:`. Chapter 22 covers the `run:`
 form properly.
 
 ### When nothing matches
@@ -454,7 +455,7 @@ Give it a glob that ends in `*.md`.
 
 The Action splits `files` on whitespace, so a path containing a space cannot be
 expressed. This is rare in a repository, but if you have one, check it from a
-plain `run:` step (chapter 21) where you control the quoting.
+plain `run:` step (chapter 22) where you control the quoting.
 
 ## 10. Documents that have no arithmetic
 
@@ -493,7 +494,7 @@ Two things keep it from being annoying:
 **The document does have arithmetic.** Run `visimark infer docs/roadmap.md`. It
 reads the numbers already in the file and tells you which rules reproduce them —
 including any rule that *nearly* fits, which is how it finds a wrong number in a
-document that has adopted nothing. Chapter 17 of the tutorial covers this in
+document that has adopted nothing. Chapter 20 of the tutorial covers this in
 full.
 
 **The document genuinely has no arithmetic.** Say so, in the document:
@@ -828,7 +829,7 @@ the documents are being corrected by a process nobody is reading.
 client; `fmt` runs as an ordinary formatter, so it behaves like every other
 formatter you have. See chapter 28 of the tutorial.
 
-A local Git hook is the third option, and chapter 23 has one.
+A local Git hook is the third option, and chapter 24 has one.
 
 ## 18. The "you forgot to run `fmt`" gate
 
@@ -993,11 +994,114 @@ Two rules for anything that parses `eval --json`: quantities are decimal
 money is not; and a column comes back as an array while a scalar comes back as a
 single string.
 
+## 21. Running the simulations in CI
+
+A document can declare a sweep: `lattice` clauses on its `param`s say which
+values to try, and `report` statements say which readings to print
+([tutorial chapter 31](tutorial.md)). `visimark simulate` asks every question
+on that grid and prints the readings. It writes nothing.
+
+In CI, that makes it a **published reading, not a gate.** `check` is still the
+gate. `simulate` runs after it and puts the sweep where a reviewer will see
+it.
+
+### Its exit codes are not `check`'s
+
+| Code | `simulate` means | `check` means |
+|---|---|---|
+| `0` | Every report sheet that could start printed its readings, **even where assertions failed** | Nothing to fix |
+| `1` | No file had a `report` statement, or a sheet could not start under `--fail-on-fault` | The document has problems |
+| `2` | A file could not be read, or the command line is wrong | The same |
+
+A false assertion is a reading, not a failure. A sweep exists to find the
+infeasible corners, and a build that went red every time it found one would
+be useless. If you need the job to stop when a report sheet cannot even start,
+pass `--fail-on-fault`. A sheet cannot start when `check` finds a problem in a
+report line or in a value the report reads.
+
+### With the Action
+
+`simulate` first ships in the release after `0.1.11`. Pin that release or a
+later one. The ref below stands for it.
+
+```yaml
+      - uses: michal-niedzwiedzki/visimark@vX.Y.Z   # a release that ships simulate
+        with:
+          files: "docs/**/*.md"
+
+      - uses: michal-niedzwiedzki/visimark@vX.Y.Z
+        with:
+          command: simulate
+          files: "models/*.md"
+          args: --fail-on-fault --progress
+```
+
+The first step is the gate. The second prints every sweep in the job log.
+Point its glob at the documents that declare reports. A file with no `report`
+is only noted on stderr, but a glob in which *no* file has one exits `1`, which
+almost always means the glob is wrong.
+
+### Into the job summary
+
+The readings are plain text, written to be read. A fenced block in the job
+summary keeps their columns aligned:
+
+```yaml
+      - name: publish the sweeps
+        run: |
+          {
+            echo "## Simulations"
+            echo
+            echo '```text'
+            npx --yes visimark@X.Y.Z simulate --fail-on-fault models/*.md
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+```
+
+stdout carries only the readings, so it goes into the summary. stderr carries
+the question counts, any `cannot start` lines and the per-file totals, so it
+stays in the log.
+
+### Progress in a log
+
+A sweep is one evaluation per question, and the count is printed before the
+first one:
+
+```console
+$ visimark simulate --progress runway-sweep.md 2>&1 >/dev/null
+simulate: runway-sweep.md: 29 questions (2 lattice params)
+simulate: runway-sweep.md: question 3 of 29
+simulate: runway-sweep.md: question 6 of 29
+simulate: runway-sweep.md: question 9 of 29
+simulate: runway-sweep.md: question 12 of 29
+simulate: runway-sweep.md: question 15 of 29
+simulate: runway-sweep.md: question 18 of 29
+simulate: runway-sweep.md: question 21 of 29
+simulate: runway-sweep.md: question 24 of 29
+simulate: runway-sweep.md: question 27 of 29
+simulate: runway-sweep.md: question 29 of 29
+simulate: runway-sweep.md: 1 of 1 sheets ran
+```
+
+On a terminal, `--progress` rewrites one line in place. In a CI log, where
+stderr is not a terminal, it prints a line at every tenth of the run, so a
+long job shows that it is still working without flooding the log. There is no
+time estimate, because the tool reads no clock. There is no cap on the grid
+either. The count line is the warning, and the size is the document author's
+decision. [`example-battery-storage.md`](example-battery-storage.md) asks 577
+questions.
+
+### No `--json`
+
+`simulate` has no `--json` mode, and `simulate --json` is refused with exit
+`2`. When a script needs one value from one scenario, `eval --scenario`
+(chapter 20) is the machine interface.
+
 ---
 
 # Part 6 — Other runners
 
-## 21. Without the Action: plain `npx`
+## 22. Without the Action: plain `npx`
 
 Nothing here needs GitHub. The portable core is one command:
 
@@ -1045,7 +1149,7 @@ The same thing in a GitHub workflow, if you prefer not to use the Action:
 VisiMark needs the current Node LTS or newer, or Bun. On Windows the launcher needs `sh` on
 the PATH — Git Bash or WSL provide it, plain PowerShell does not.
 
-## 22. GitLab CI
+## 23. GitLab CI
 
 ```yaml
 visimark:
@@ -1061,7 +1165,7 @@ visimark:
 
 GitLab runs `script` lines through `sh` in some configurations, and `shopt` is a
 bash builtin. If the job fails with `shopt: not found`, either use a `bash -lc`
-wrapper or take the `find` route from chapter 21, which needs no shell options
+wrapper or take the `find` route from chapter 22, which needs no shell options
 at all:
 
 ```yaml
@@ -1077,7 +1181,7 @@ anything else that can run a shell command and read an exit code. There is
 nothing GitHub-specific about the tool — only the annotation and job-summary
 steps in chapter 14 and 15 use GitHub's own protocol.
 
-## 23. Git hooks and pre-commit
+## 24. Git hooks and pre-commit
 
 CI is the gate. A hook is the shorter feedback loop, and the two are not
 alternatives: the hook saves a round trip, the gate is what actually enforces.
@@ -1136,7 +1240,7 @@ CI job.
 
 ---
 
-## 24. The `remark`/`unified` plugin
+## 25. The `remark`/`unified` plugin
 
 A project already running [`remark`](https://remark.js.org)/`remark-lint` —
 Docusaurus, Astro, or any other `unified`-based Markdown toolchain — adds
@@ -1170,7 +1274,7 @@ unavailable through it.
 
 ---
 
-## 25. The `markdownlint` custom rule
+## 26. The `markdownlint` custom rule
 
 A project already running
 [`markdownlint`](https://github.com/DavidAnson/markdownlint) or
@@ -1205,7 +1309,7 @@ There is one rule per finding kind, named after it — `visimark-stale`,
 eighteenth, `visimark-engine-error`, that reports once if `visimark` itself
 fails to analyse the document rather than finding something wrong with it.
 The seventeen finding-kind rules are the same identifiers the `remark` plugin
-in chapter 24 reports as its `ruleId`. That gives three switches, all
+in chapter 25 reports as its `ruleId`. That gives three switches, all
 `markdownlint`'s own rather than anything this package invented:
 
 | `config` entry | Effect |
@@ -1238,7 +1342,7 @@ reports a line but no column, and `fmt`, `infer`, `explain`, `eval` and
 [README](https://github.com/michal-niedzwiedzki/visimark/tree/master/packages/markdownlint-visimark)
 for the full contract.
 
-## 29. The MCP server
+## 27. The MCP server
 
 The other entries in this part put VisiMark in a pipeline. This one puts it in
 front of an agent — one working in a repository that has never heard of the
@@ -1274,7 +1378,7 @@ working through every tool by hand is [`mcp-server.md`](mcp-server.md).
 
 # Part 7 — Rolling it out
 
-## 26. Turning it on in a repository that already has documents
+## 28. Turning it on in a repository that already has documents
 
 Adding a blocking check to a repository full of unchecked documents will produce
 a wall of `COVERAGE` findings on the first run, and a strong urge to delete the
@@ -1324,7 +1428,7 @@ check: point it at the directory you have finished — `files: "quotes/**/*.md"`
 and widen it as you go. A narrow blocking check is worth more than a wide
 advisory one.
 
-## 27. Troubleshooting
+## 29. Troubleshooting
 
 | Symptom | Cause | Fix |
 |---|---|---|
@@ -1338,10 +1442,12 @@ advisory one.
 | The workflow runs twice on every PR commit | `on: [push, pull_request]` | Restrict `push` to your default branch |
 | The annotation step runs but the job is green | The check step has `continue-on-error` and nothing re-fails the job | Add the explicit `exit 1` step from chapter 14 |
 | A step fails with `unknown option` or `is only valid with` | A misspelled option, an option on the wrong command, or one this engine version does not know | Read the message: it names the option and, if misplaced, the command that owns it |
-| `shopt: not found` | The job's shell is `sh`, not bash | Use `bash -lc`, or the `find` form from chapter 21 |
+| `shopt: not found` | The job's shell is `sh`, not bash | Use `bash -lc`, or the `find` form from chapter 22 |
 | `ARTIFACT` or a missing-artifact `STALE` on every run | Chart SVGs are in `.gitignore` | Commit them — chapter 19 |
 | A required check can never be satisfied | The required check only runs on `push` to the default branch | Require the job that runs on `pull_request` |
 | The engine version changed without you asking | `version: latest`, or an unpinned `npx visimark` | Pin both — chapter 12 |
+| `simulate` exits `1` with `no report statement` | No file the glob matched declares a `report` | Point the glob at the documents that do — chapter 21 |
+| `simulate` is green although assertions fail | It treats a false assertion as a reading | Keep `check` as the gate; add `--fail-on-fault` only to stop on sheets that cannot start — chapter 21 |
 
 If a failure is genuinely confusing, reproduce it locally with the same version
 the workflow used:
@@ -1355,7 +1461,7 @@ environment variable, no network call and no clock, so a local run and a CI run
 on the same bytes give the same answer. If they differ, the bytes differ — check
 what your workflow actually checked out.
 
-## 28. The checklist
+## 30. The checklist
 
 The complete workflow, with everything this guide recommends:
 
@@ -1420,6 +1526,7 @@ And the things to have done around it:
 | [`cli-reference.md`](cli-reference.md) | Every command, option, exit code and finding |
 | [`playground.html`](playground.html) | The real engine in your browser, nothing to install |
 | [`example-invoice-drift.md`](example-invoice-drift.md) | One input changed and nothing else — 26 findings, each walked through |
+| [`example-battery-storage.md`](example-battery-storage.md) | A model with a declared sweep: 576 questions, four covenants, every `simulate` report |
 | [`mcp.md`](mcp.md) | The MCP server: every tool, the write gate, the plan/apply split |
 | [`mcp-server.md`](mcp-server.md) | Setting up and running the MCP server, tutorial-style |
 

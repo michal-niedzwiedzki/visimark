@@ -30,9 +30,9 @@ purpose — it grows when one of these gets a real user, not before.
   second tab or a copy of the file — `eval --scenario`, worked through on a
   headcount model in [`docs/tutorial/runway.md`](docs/tutorial/runway.md).
 - **Anyone who already lints Markdown** — the
-  [pre-commit hook](docs/ci.md#23-git-hooks-and-pre-commit),
-  [`remark-lint-visimark`](docs/ci.md#24-the-remarkunified-plugin),
-  [`markdownlint-rule-visimark`](docs/ci.md#25-the-markdownlint-custom-rule),
+  [pre-commit hook](docs/ci.md#24-git-hooks-and-pre-commit),
+  [`remark-lint-visimark`](docs/ci.md#25-the-remarkunified-plugin),
+  [`markdownlint-rule-visimark`](docs/ci.md#26-the-markdownlint-custom-rule),
   and the composite [GitHub Action](action.yml).
 - **Engineers, scientists, anyone with a unit** — declare it in a bracket after
   a name, `Rate [PLN]` or `speed [m/s] = Distance / Duration`, and `check`
@@ -346,12 +346,12 @@ not about a CI run.
 
 A project already on `remark`/`remark-lint` adds the same checks with
 [`remark-lint-visimark`](https://www.npmjs.com/package/remark-lint-visimark)
-instead — see [`docs/ci.md` chapter 24](docs/ci.md#24-the-remarkunified-plugin).
+instead — see [`docs/ci.md` chapter 25](docs/ci.md#25-the-remarkunified-plugin).
 
 A project on [`markdownlint`](https://github.com/DavidAnson/markdownlint) adds
 them with
 [`markdownlint-rule-visimark`](https://www.npmjs.com/package/markdownlint-rule-visimark)
-— see [`docs/ci.md` chapter 25](docs/ci.md#25-the-markdownlint-custom-rule).
+— see [`docs/ci.md` chapter 26](docs/ci.md#26-the-markdownlint-custom-rule).
 
 An agent reaches the same engine over
 [MCP](https://modelcontextprotocol.io) with
@@ -366,7 +366,7 @@ claude mcp add visimark -- npx -y visimark-mcp
 ```
 
 The full surface is [`docs/mcp.md`](docs/mcp.md), and chapter 29 of
-[`docs/ci.md`](docs/ci.md#29-the-mcp-server) covers running it beside a CI
+[`docs/ci.md`](docs/ci.md#27-the-mcp-server) covers running it beside a CI
 check.
 
 ## Diffable by construction

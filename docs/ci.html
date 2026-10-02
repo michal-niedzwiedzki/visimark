@@ -481,21 +481,27 @@
 <a href="#charts-are-committed-artifacts-not-build-output" data-level="3">Charts are committed artifacts, not build output</a>
 <a href="#20-reading-values-out-of-a-document-in-ci" data-level="2">20. Reading values out of a document in CI</a>
 <a href="#why-this-is-worth-doing" data-level="3">Why this is worth doing</a>
+<a href="#21-running-the-simulations-in-ci" data-level="2">21. Running the simulations in CI</a>
+<a href="#its-exit-codes-are-not-checks" data-level="3">Its exit codes are not check's</a>
+<a href="#with-the-action" data-level="3">With the Action</a>
+<a href="#into-the-job-summary" data-level="3">Into the job summary</a>
+<a href="#progress-in-a-log" data-level="3">Progress in a log</a>
+<a href="#no---json" data-level="3">No --json</a>
 <a href="#part-6-other-runners" data-level="1">Part 6 — Other runners</a>
-<a href="#21-without-the-action-plain-npx" data-level="2">21. Without the Action: plain npx</a>
-<a href="#22-gitlab-ci" data-level="2">22. GitLab CI</a>
-<a href="#23-git-hooks-and-pre-commit" data-level="2">23. Git hooks and pre-commit</a>
-<a href="#24-the-remarkunified-plugin" data-level="2">24. The remark/unified plugin</a>
-<a href="#25-the-markdownlint-custom-rule" data-level="2">25. The markdownlint custom rule</a>
-<a href="#29-the-mcp-server" data-level="2">29. The MCP server</a>
+<a href="#22-without-the-action-plain-npx" data-level="2">22. Without the Action: plain npx</a>
+<a href="#23-gitlab-ci" data-level="2">23. GitLab CI</a>
+<a href="#24-git-hooks-and-pre-commit" data-level="2">24. Git hooks and pre-commit</a>
+<a href="#25-the-remarkunified-plugin" data-level="2">25. The remark/unified plugin</a>
+<a href="#26-the-markdownlint-custom-rule" data-level="2">26. The markdownlint custom rule</a>
+<a href="#27-the-mcp-server" data-level="2">27. The MCP server</a>
 <a href="#part-7-rolling-it-out" data-level="1">Part 7 — Rolling it out</a>
-<a href="#26-turning-it-on-in-a-repository-that-already-has-documents" data-level="2">26. Turning it on in a repository that already has documents</a>
+<a href="#28-turning-it-on-in-a-repository-that-already-has-documents" data-level="2">28. Turning it on in a repository that already has documents</a>
 <a href="#stage-1-see-the-size-of-it-without-blocking-anything" data-level="3">Stage 1 — see the size of it, without blocking anything</a>
 <a href="#stage-2-wire-up-the-documents-that-matter" data-level="3">Stage 2 — wire up the documents that matter</a>
 <a href="#stage-3-mark-the-documents-that-have-no-arithmetic" data-level="3">Stage 3 — mark the documents that have no arithmetic</a>
 <a href="#stage-4-remove-continue-on-error-then-require-the-check" data-level="3">Stage 4 — remove continue-on-error, then require the check</a>
-<a href="#27-troubleshooting" data-level="2">27. Troubleshooting</a>
-<a href="#28-the-checklist" data-level="2">28. The checklist</a>
+<a href="#29-troubleshooting" data-level="2">29. Troubleshooting</a>
+<a href="#30-the-checklist" data-level="2">30. The checklist</a>
 <a href="#the-five-things-worth-remembering" data-level="3">The five things worth remembering</a>
 <a href="#where-to-go-next" data-level="3">Where to go next</a>
         </nav>
@@ -514,9 +520,10 @@ language itself.</p>
 <p>The language is kept simple on purpose, so that it reads the same way for
 everyone.</p>
 <p>Every <code>visimark</code> output here is a real transcript, captured with
-<code>visimark 0.1.5</code>. Nothing is invented.</p>
+<code>visimark 0.1.5</code>, except in chapter 21: <code>simulate</code> is newer, and its output
+there was captured from the build that introduced it. Nothing is invented.</p>
 <h2 id="how-to-read-this">How to read this</h2>
-<p>There are 26 short chapters in seven parts. Parts 1 and 2 are the whole job:
+<p>There are 30 short chapters in seven parts. Parts 1 and 2 are the whole job:
 read those two and you have a working check. The rest answers the questions that
 turn up afterwards.</p>
 <table>
@@ -550,17 +557,17 @@ turn up afterwards.</p>
 </tr>
 <tr>
 <td>5. Patterns that come up</td>
-<td>17–20</td>
-<td><code>fmt</code>, artifacts, reading values</td>
+<td>17–21</td>
+<td><code>fmt</code>, artifacts, reading values, simulations</td>
 </tr>
 <tr>
 <td>6. Other runners</td>
-<td>21–23</td>
-<td>Plain <code>npx</code>, GitLab, Git hooks</td>
+<td>22–27</td>
+<td>Plain <code>npx</code>, GitLab, Git hooks, linters, the MCP server</td>
 </tr>
 <tr>
 <td>7. Rolling it out</td>
-<td>24–26</td>
+<td>28–30</td>
 <td>Adoption, troubleshooting, a checklist</td>
 </tr>
 </tbody>
@@ -778,7 +785,7 @@ pins the engine it installs. Chapter 12 goes into why that matters.</p>
 <tr>
 <td><code>command</code></td>
 <td><code>check</code></td>
-<td><code>check</code> or <code>fmt</code></td>
+<td><code>check</code>, <code>fmt</code> or <code>simulate</code> (chapter 21)</td>
 </tr>
 <tr>
 <td><code>args</code></td>
@@ -899,7 +906,7 @@ visimark: cannot read docs/**/*.md
 $ echo $?
 2
 </code></pre>
-<p>So: quoted in <code>with: files:</code>, unquoted in <code>run:</code>. Chapter 21 covers the <code>run:</code>
+<p>So: quoted in <code>with: files:</code>, unquoted in <code>run:</code>. Chapter 22 covers the <code>run:</code>
 form properly.</p>
 <h3 id="when-nothing-matches">When nothing matches</h3>
 <p>An empty glob is an error, not a pass:</p>
@@ -917,7 +924,7 @@ visimark: cannot read docs
 <h3 id="a-file-name-with-a-space-in-it">A file name with a space in it</h3>
 <p>The Action splits <code>files</code> on whitespace, so a path containing a space cannot be
 expressed. This is rare in a repository, but if you have one, check it from a
-plain <code>run:</code> step (chapter 21) where you control the quoting.</p>
+plain <code>run:</code> step (chapter 22) where you control the quoting.</p>
 <h2 id="10-documents-that-have-no-arithmetic">10. Documents that have no arithmetic</h2>
 <p>Point a glob at <code>docs/**/*.md</code> and it will pick up your README, your changelog
 and your architecture notes. Most of them have no arithmetic at all, and they
@@ -948,7 +955,7 @@ input passes, as long as some other table in the file carries a rule.</li>
 <p><strong>The document does have arithmetic.</strong> Run <code>visimark infer docs/roadmap.md</code>. It
 reads the numbers already in the file and tells you which rules reproduce them —
 including any rule that <em>nearly</em> fits, which is how it finds a wrong number in a
-document that has adopted nothing. Chapter 17 of the tutorial covers this in
+document that has adopted nothing. Chapter 20 of the tutorial covers this in
 full.</p>
 <p><strong>The document genuinely has no arithmetic.</strong> Say so, in the document:</p>
 <pre><code class="language-markdown">&#x3C;!--vmark:no-formulas-->
@@ -1271,7 +1278,7 @@ the documents are being corrected by a process nobody is reading.</p>
 <p><strong>Behind format-on-save in an editor.</strong> There is a language server and a VS Code
 client; <code>fmt</code> runs as an ordinary formatter, so it behaves like every other
 formatter you have. See chapter 28 of the tutorial.</p>
-<p>A local Git hook is the third option, and chapter 23 has one.</p>
+<p>A local Git hook is the third option, and chapter 24 has one.</p>
 <h2 id="18-the-you-forgot-to-run-fmt-gate">18. The "you forgot to run <code>fmt</code>" gate</h2>
 <p>There is one reasonable way to involve <code>fmt</code> in CI: run it, and fail if it
 changed anything. That still puts the decision on a person — it just tells them
@@ -1397,9 +1404,110 @@ maintained configuration value. See
 <strong>strings</strong> (<code>"3804.00"</code>, not <code>3804</code>), because JSON numbers are IEEE floats and
 money is not; and a column comes back as an array while a scalar comes back as a
 single string.</p>
+<h2 id="21-running-the-simulations-in-ci">21. Running the simulations in CI</h2>
+<p>A document can declare a sweep: <code>lattice</code> clauses on its <code>param</code>s say which
+values to try, and <code>report</code> statements say which readings to print
+(<a href="tutorial.md">tutorial chapter 31</a>). <code>visimark simulate</code> asks every question
+on that grid and prints the readings. It writes nothing.</p>
+<p>In CI, that makes it a <strong>published reading, not a gate.</strong> <code>check</code> is still the
+gate. <code>simulate</code> runs after it and puts the sweep where a reviewer will see
+it.</p>
+<h3 id="its-exit-codes-are-not-checks">Its exit codes are not <code>check</code>'s</h3>
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th><code>simulate</code> means</th>
+<th><code>check</code> means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0</code></td>
+<td>Every report sheet that could start printed its readings, <strong>even where assertions failed</strong></td>
+<td>Nothing to fix</td>
+</tr>
+<tr>
+<td><code>1</code></td>
+<td>No file had a <code>report</code> statement, or a sheet could not start under <code>--fail-on-fault</code></td>
+<td>The document has problems</td>
+</tr>
+<tr>
+<td><code>2</code></td>
+<td>A file could not be read, or the command line is wrong</td>
+<td>The same</td>
+</tr>
+</tbody>
+</table>
+<p>A false assertion is a reading, not a failure. A sweep exists to find the
+infeasible corners, and a build that went red every time it found one would
+be useless. If you need the job to stop when a report sheet cannot even start,
+pass <code>--fail-on-fault</code>. A sheet cannot start when <code>check</code> finds a problem in a
+report line or in a value the report reads.</p>
+<h3 id="with-the-action">With the Action</h3>
+<p><code>simulate</code> first ships in the release after <code>0.1.11</code>. Pin that release or a
+later one. The ref below stands for it.</p>
+<pre><code class="language-yaml">      - uses: michal-niedzwiedzki/visimark@vX.Y.Z   # a release that ships simulate
+        with:
+          files: "docs/**/*.md"
+
+      - uses: michal-niedzwiedzki/visimark@vX.Y.Z
+        with:
+          command: simulate
+          files: "models/*.md"
+          args: --fail-on-fault --progress
+</code></pre>
+<p>The first step is the gate. The second prints every sweep in the job log.
+Point its glob at the documents that declare reports. A file with no <code>report</code>
+is only noted on stderr, but a glob in which <em>no</em> file has one exits <code>1</code>, which
+almost always means the glob is wrong.</p>
+<h3 id="into-the-job-summary">Into the job summary</h3>
+<p>The readings are plain text, written to be read. A fenced block in the job
+summary keeps their columns aligned:</p>
+<pre><code class="language-yaml">      - name: publish the sweeps
+        run: |
+          {
+            echo "## Simulations"
+            echo
+            echo '```text'
+            npx --yes visimark@X.Y.Z simulate --fail-on-fault models/*.md
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+</code></pre>
+<p>stdout carries only the readings, so it goes into the summary. stderr carries
+the question counts, any <code>cannot start</code> lines and the per-file totals, so it
+stays in the log.</p>
+<h3 id="progress-in-a-log">Progress in a log</h3>
+<p>A sweep is one evaluation per question, and the count is printed before the
+first one:</p>
+<pre><code class="language-console">$ visimark simulate --progress runway-sweep.md 2>&#x26;1 >/dev/null
+simulate: runway-sweep.md: 29 questions (2 lattice params)
+simulate: runway-sweep.md: question 3 of 29
+simulate: runway-sweep.md: question 6 of 29
+simulate: runway-sweep.md: question 9 of 29
+simulate: runway-sweep.md: question 12 of 29
+simulate: runway-sweep.md: question 15 of 29
+simulate: runway-sweep.md: question 18 of 29
+simulate: runway-sweep.md: question 21 of 29
+simulate: runway-sweep.md: question 24 of 29
+simulate: runway-sweep.md: question 27 of 29
+simulate: runway-sweep.md: question 29 of 29
+simulate: runway-sweep.md: 1 of 1 sheets ran
+</code></pre>
+<p>On a terminal, <code>--progress</code> rewrites one line in place. In a CI log, where
+stderr is not a terminal, it prints a line at every tenth of the run, so a
+long job shows that it is still working without flooding the log. There is no
+time estimate, because the tool reads no clock. There is no cap on the grid
+either. The count line is the warning, and the size is the document author's
+decision. <a href="example-battery-storage.md"><code>example-battery-storage.md</code></a> asks 577
+questions.</p>
+<h3 id="no---json">No <code>--json</code></h3>
+<p><code>simulate</code> has no <code>--json</code> mode, and <code>simulate --json</code> is refused with exit
+<code>2</code>. When a script needs one value from one scenario, <code>eval --scenario</code>
+(chapter 20) is the machine interface.</p>
 <hr>
 <h1 id="part-6-other-runners">Part 6 — Other runners</h1>
-<h2 id="21-without-the-action-plain-npx">21. Without the Action: plain <code>npx</code></h2>
+<h2 id="22-without-the-action-plain-npx">22. Without the Action: plain <code>npx</code></h2>
 <p>Nothing here needs GitHub. The portable core is one command:</p>
 <pre><code class="language-bash">npx --yes visimark@0.1.5 check docs/**/*.md
 </code></pre>
@@ -1430,7 +1538,7 @@ engine still.</p>
 </code></pre>
 <p>VisiMark needs the current Node LTS or newer, or Bun. On Windows the launcher needs <code>sh</code> on
 the PATH — Git Bash or WSL provide it, plain PowerShell does not.</p>
-<h2 id="22-gitlab-ci">22. GitLab CI</h2>
+<h2 id="23-gitlab-ci">23. GitLab CI</h2>
 <pre><code class="language-yaml">visimark:
   image: node:20
   stage: test
@@ -1443,7 +1551,7 @@ the PATH — Git Bash or WSL provide it, plain PowerShell does not.</p>
 </code></pre>
 <p>GitLab runs <code>script</code> lines through <code>sh</code> in some configurations, and <code>shopt</code> is a
 bash builtin. If the job fails with <code>shopt: not found</code>, either use a <code>bash -lc</code>
-wrapper or take the <code>find</code> route from chapter 21, which needs no shell options
+wrapper or take the <code>find</code> route from chapter 22, which needs no shell options
 at all:</p>
 <pre><code class="language-yaml">  script:
     - find docs -name '*.md' -print0 | xargs -0 npx --yes visimark@0.1.5 check
@@ -1454,7 +1562,7 @@ without any extra configuration.</p>
 anything else that can run a shell command and read an exit code. There is
 nothing GitHub-specific about the tool — only the annotation and job-summary
 steps in chapter 14 and 15 use GitHub's own protocol.</p>
-<h2 id="23-git-hooks-and-pre-commit">23. Git hooks and pre-commit</h2>
+<h2 id="24-git-hooks-and-pre-commit">24. Git hooks and pre-commit</h2>
 <p>CI is the gate. A hook is the shorter feedback loop, and the two are not
 alternatives: the hook saves a round trip, the gate is what actually enforces.</p>
 <p>A plain <code>.git/hooks/pre-commit</code>:</p>
@@ -1497,7 +1605,7 @@ exactly the shape <code>visimark check</code> wants.</p>
 chapter 19 or the coverage-of-the-whole-repository case from chapter 11. Keep the
 CI job.</p>
 <hr>
-<h2 id="24-the-remarkunified-plugin">24. The <code>remark</code>/<code>unified</code> plugin</h2>
+<h2 id="25-the-remarkunified-plugin">25. The <code>remark</code>/<code>unified</code> plugin</h2>
 <p>A project already running <a href="https://remark.js.org"><code>remark</code></a>/<code>remark-lint</code> —
 Docusaurus, Astro, or any other <code>unified</code>-based Markdown toolchain — adds
 VisiMark findings to that same pipeline with <code>remark-lint-visimark</code>:</p>
@@ -1522,7 +1630,7 @@ for the full contract. Like the other entries in this part, it only ever runs
 <code>check</code>; <code>fmt</code>, <code>infer</code>, <code>explain</code>, <code>eval</code> and <code>--json</code> are unaffected and
 unavailable through it.</p>
 <hr>
-<h2 id="25-the-markdownlint-custom-rule">25. The <code>markdownlint</code> custom rule</h2>
+<h2 id="26-the-markdownlint-custom-rule">26. The <code>markdownlint</code> custom rule</h2>
 <p>A project already running
 <a href="https://github.com/DavidAnson/markdownlint"><code>markdownlint</code></a> or
 <code>markdownlint-cli2</code> gets the same findings in that run with
@@ -1550,7 +1658,7 @@ $ echo $?
 eighteenth, <code>visimark-engine-error</code>, that reports once if <code>visimark</code> itself
 fails to analyse the document rather than finding something wrong with it.
 The seventeen finding-kind rules are the same identifiers the <code>remark</code> plugin
-in chapter 24 reports as its <code>ruleId</code>. That gives three switches, all
+in chapter 25 reports as its <code>ruleId</code>. That gives three switches, all
 <code>markdownlint</code>'s own rather than anything this package invented:</p>
 <table>
 <thead>
@@ -1595,7 +1703,7 @@ reports a line but no column, and <code>fmt</code>, <code>infer</code>, <code>ex
 <code>--json</code> are not reachable through it. See the package's own
 <a href="https://github.com/michal-niedzwiedzki/visimark/tree/master/packages/markdownlint-visimark">README</a>
 for the full contract.</p>
-<h2 id="29-the-mcp-server">29. The MCP server</h2>
+<h2 id="27-the-mcp-server">27. The MCP server</h2>
 <p>The other entries in this part put VisiMark in a pipeline. This one puts it in
 front of an agent — one working in a repository that has never heard of the
 project, with no clone and no reason to look for a CLI.</p>
@@ -1621,7 +1729,7 @@ it carries — is <a href="mcp.md"><code>mcp.md</code></a>. Setting one up, addi
 working through every tool by hand is <a href="mcp-server.md"><code>mcp-server.md</code></a>.</p>
 <hr>
 <h1 id="part-7-rolling-it-out">Part 7 — Rolling it out</h1>
-<h2 id="26-turning-it-on-in-a-repository-that-already-has-documents">26. Turning it on in a repository that already has documents</h2>
+<h2 id="28-turning-it-on-in-a-repository-that-already-has-documents">28. Turning it on in a repository that already has documents</h2>
 <p>Adding a blocking check to a repository full of unchecked documents will produce
 a wall of <code>COVERAGE</code> findings on the first run, and a strong urge to delete the
 workflow file. Do it in four stages instead.</p>
@@ -1655,7 +1763,7 @@ rather than in an exclusion list in the workflow.</p>
 check: point it at the directory you have finished — <code>files: "quotes/**/*.md"</code> —
 and widen it as you go. A narrow blocking check is worth more than a wide
 advisory one.</p>
-<h2 id="27-troubleshooting">27. Troubleshooting</h2>
+<h2 id="29-troubleshooting">29. Troubleshooting</h2>
 <table>
 <thead>
 <tr>
@@ -1718,7 +1826,7 @@ advisory one.</p>
 <tr>
 <td><code>shopt: not found</code></td>
 <td>The job's shell is <code>sh</code>, not bash</td>
-<td>Use <code>bash -lc</code>, or the <code>find</code> form from chapter 21</td>
+<td>Use <code>bash -lc</code>, or the <code>find</code> form from chapter 22</td>
 </tr>
 <tr>
 <td><code>ARTIFACT</code> or a missing-artifact <code>STALE</code> on every run</td>
@@ -1735,6 +1843,16 @@ advisory one.</p>
 <td><code>version: latest</code>, or an unpinned <code>npx visimark</code></td>
 <td>Pin both — chapter 12</td>
 </tr>
+<tr>
+<td><code>simulate</code> exits <code>1</code> with <code>no report statement</code></td>
+<td>No file the glob matched declares a <code>report</code></td>
+<td>Point the glob at the documents that do — chapter 21</td>
+</tr>
+<tr>
+<td><code>simulate</code> is green although assertions fail</td>
+<td>It treats a false assertion as a reading</td>
+<td>Keep <code>check</code> as the gate; add <code>--fail-on-fault</code> only to stop on sheets that cannot start — chapter 21</td>
+</tr>
 </tbody>
 </table>
 <p>If a failure is genuinely confusing, reproduce it locally with the same version
@@ -1745,7 +1863,7 @@ the workflow used:</p>
 environment variable, no network call and no clock, so a local run and a CI run
 on the same bytes give the same answer. If they differ, the bytes differ — check
 what your workflow actually checked out.</p>
-<h2 id="28-the-checklist">28. The checklist</h2>
+<h2 id="30-the-checklist">30. The checklist</h2>
 <p>The complete workflow, with everything this guide recommends:</p>
 <pre><code class="language-yaml">name: visimark
 
@@ -1822,6 +1940,10 @@ next month.</li>
 <tr>
 <td><a href="example-invoice-drift.md"><code>example-invoice-drift.md</code></a></td>
 <td>One input changed and nothing else — 26 findings, each walked through</td>
+</tr>
+<tr>
+<td><a href="example-battery-storage.md"><code>example-battery-storage.md</code></a></td>
+<td>A model with a declared sweep: 576 questions, four covenants, every <code>simulate</code> report</td>
 </tr>
 <tr>
 <td><a href="mcp.md"><code>mcp.md</code></a></td>
