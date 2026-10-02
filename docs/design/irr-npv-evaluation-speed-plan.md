@@ -10,7 +10,7 @@ they were, and `NPV`'s working value becomes the correctly rounded one.
 
 **Architecture:** One file of engine code, `packages/visimark/src/eval/evaluate.ts`:
 the `irr()` and `npv()` functions and a module-level 50-digit `decimal.js`
-clone. One development benchmark, `packages/visimark/bench/finance.ts`. One
+clone cache. One development benchmark, `packages/visimark/bench/finance.ts`. One
 updated spec, `docs/vocab/npv-spec.md`.
 
 **Tech Stack:** TypeScript, `decimal.js` (`Decimal.clone`), `bun:test`.
@@ -36,8 +36,8 @@ updated spec, `docs/vocab/npv-spec.md`.
 **Files:** `packages/visimark/bench/finance.ts` (new),
 `packages/visimark/package.json`, `packages/visimark/tsconfig.json`
 
-- [x] Time `evalExpr` on `IRR(Cash)` and `NPV(rate, Cash)` over 4- to 360-flow
-  series, a high rate, a rate near −1, and an exact root. Use a 500 ms budget
+- [x] Time `evalExpr` on `IRR(Cash)` and `NPV(rate, Cash)` over a 4-flow
+  series and an outlay followed by 10 to 360 inflows, a high rate, a rate near −1, and an exact root. Use a 500 ms budget
   per case.
 - [x] Add `"bench:finance": "bun bench/finance.ts"` and put `bench` in the
   typecheck `include`.
@@ -99,11 +99,11 @@ updated spec, `docs/vocab/npv-spec.md`.
 **Files:** `packages/visimark/src/eval/evaluate.ts`,
 `packages/visimark/test/eval/functions.test.ts`
 
-- [x] Add the module-level clone
-  `Guarded = Decimal.clone({ precision: MAX_SIGNIFICANT_DIGITS + 10, rounding: ROUND_HALF_UP })`.
+- [x] Add a module-level cache of `Decimal.clone({ precision, rounding: ROUND_HALF_UP })`
+  constructors by width (`wider(digits)`).
 - [x] Convert every cell before any arithmetic, so a bad cell is still
   reported first.
-- [x] Compute `Q(b) / b^(n-1)` in `Guarded`, round with
+- [x] Compute `Q(b) / b^(n-1)` at 50 digits, round with
   `toSignificantDigits(40)`, and return it as an engine `Decimal`.
 - [x] Update the two full working values the test pins. Each new value equals
   the 120-digit reference rounded to 40 digits.
@@ -111,20 +111,42 @@ updated spec, `docs/vocab/npv-spec.md`.
   correctly rounded. One disagreement at 0–6 decimal places, a value of
   magnitude 1e82. About 2–22× faster.
 
-### Task 8: Documents
+### Task 8: `NPV` — certify the rounding (from review)
+
+Review on the PR showed that a fixed 50-digit pass can round twice. For
+`NPV(1, Cash)` on `1` and `1e-39 − 1e-60`, the numerator rounds up to
+`2 + 1e-39`, and the quotient then lands exactly on a 40-digit midpoint.
+
+- [x] Write the test first: the case must evaluate to `1`. It fails on the
+  fixed-width version with `1.000000000000000000000000000000000000001`.
+- [x] Sum `|flow_k|` by Horner's rule in the same pass, and derive
+  `err = A / b^(n-1) · (4n + 8) · 10^(1 - digits)`.
+- [x] Return when `value ± err` round to the same 40 digits. Otherwise repeat
+  at 100 and then 200 digits, and take the 200-digit rounding as it stands.
+- [x] Check: the new test passes, 5,000 random series are still all correctly
+  rounded, and the NPV benchmark is about 2× slower than the fixed-width
+  version but still up to about 12× faster than the original.
+
+### Task 9: Documents
 
 **Files:** `docs/vocab/npv-spec.md`, `CHANGELOG.md`, this plan and its spec
 
-- [x] `npv-spec.md`: rewrite the computation paragraph in §3, update the
+- [x] `npv-spec.md`: rewrite the computation paragraph in §3, including the
+  error bound and the wider retries, update the
   three full working values in the cases table and the §6 acceptance list,
   and the rounding notes in §4 and §5.
 - [x] Leave `npv-plan.md` as the record of the previous implementation.
 - [x] `CHANGELOG.md`: add two **Changed** entries under Unreleased. The `NPV`
   entry gives a before-and-after full working value.
 
-### Task 9: Verify and ship
+### Task 10: Verify and ship
 
 - [x] Run `bun test` across the repository, `bun run typecheck` in
   `packages/visimark`, `bun run lint`, and `bun run format:check`.
-- [ ] Open a PR against `master`, answer the review, wait for CI to go green,
-  and merge.
+- [x] Open a PR against `master` (#331).
+- [x] Answer the review. Mark the spec `<!--vmark:no-formulas-->` for the
+  dogfood check. Relabel the benchmark cases as "outlay + N inflows", since
+  `series(n)` returns `n + 1` flows. Qualify the CHANGELOG's declared-width
+  claim at the write-time ceiling. Rebuild `docs/vendor/` with the pinned
+  Bun.
+- [ ] Wait for CI to go green, and merge.

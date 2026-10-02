@@ -78,15 +78,17 @@
   takes 0.1 ms instead of 6 ms, a 360-flow series 11 ms instead of 1 s. Rates
   agree with the previous engine to 30 decimal places and precision verdicts
   are unchanged. `bun run bench:finance` in `packages/visimark` times it.
-- **`NPV` is about 2–25× faster, and its full working value is correctly
-  rounded to 40 digits.** It uses the same Horner form with one power and one division,
-  carried at 50 significant digits and rounded once to 40. A 360-flow series
-  takes 0.2 ms instead of 4–5 ms. The old per-term sum could be off by a few
-  units in the last digits, so an unrounded `eval` can print different
-  trailing digits: `NPV(0.08, Cash)` on `-48000, 20000, 20000, 20000` is now
+- **`NPV` is up to about 12× faster on long series, and its full working
+  value is correctly rounded to 40 digits.** It uses the same Horner form with
+  one power and one division at 50 significant digits, with an error bound
+  that sends a value near a 40-digit rounding midpoint to 100 and then 200
+  digits before rounding once. A 360-flow series takes 0.3–0.5 ms instead of
+  4–5 ms. The old per-term sum could be off by a few units in the last
+  digits, so an unrounded `eval` can print different trailing digits: `NPV(0.08, Cash)` on `-48000, 20000, 20000, 20000` is now
   `3541.939744957577605039882131788853325204` (was
   `3541.9397449575776050398821317888533252`). Values written at a declared
-  width do not change.
+  width do not change, except at the 40-significant-digit write-time ceiling,
+  where the last written digit can.
 
 ### Fixed
 

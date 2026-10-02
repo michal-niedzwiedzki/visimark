@@ -10,9 +10,9 @@ benchmark of the engine's own `evalExpr` path under Bun 1.4.2 measured:
 | Series | `IRR` | `NPV` |
 |---|---|---|
 | 4 flows (the brake-press fixture) | 6.4 ms | 0.007 ms |
-| 36 flows | 54 ms | 0.149 ms |
-| 120 flows | 259 ms | 0.873 ms |
-| 360 flows (30 years monthly) | 999 ms | 3.8–5.5 ms |
+| outlay + 36 inflows | 54 ms | 0.149 ms |
+| outlay + 120 inflows | 259 ms | 0.873 ms |
+| outlay + 360 inflows (30 years monthly) | 999 ms | 3.8–5.5 ms |
 
 Both functions spent their time in one place. Every term of the present-value
 sum called `Decimal.prototype.pow` for `(1 + r)^k` and then divided by it.
@@ -27,9 +27,11 @@ the one user-visible change: `NPV`'s full 40-digit working value moves in its
 last digits, onto the correctly rounded value.
 
 The language is unchanged. [`irr-spec.md`](../vocab/irr-spec.md) does not
-name an algorithm, and its [§3](../vocab/irr-spec.md#3-semantics) still holds. [`npv-spec.md`](../vocab/npv-spec.md)
-[§3](../vocab/npv-spec.md#3-semantics) named `pow` per term and pinned three full working values; it is updated
-by this change ([§6](#6-documents-touched)).
+name an algorithm, and its [§3](../vocab/irr-spec.md#3-semantics) still
+holds. [`npv-spec.md`](../vocab/npv-spec.md)
+[§3](../vocab/npv-spec.md#3-semantics) named `pow` per term and pinned three
+full working values; it is updated by this change
+([§6](#6-documents-touched)).
 
 ## 2. The surface
 
@@ -57,15 +59,38 @@ has the same sign as `NPV(r)` and the same roots for every `r > -1`.
 
 `NPV` evaluates `Q(b)`, raises `b` once to `n - 1`, and divides once. Those
 steps run in a `decimal.js` clone at 50 significant digits, ten guard digits
-above the engine's 40. The quotient is rounded once, half-up, to 40
-significant digits and returned as an ordinary engine decimal. Unless the sum
-cancels by more than ten digits, the result is the exact present value
-rounded to 40 significant digits. The previous per-term sum was not: each
-term was rounded to 40 digits before the sum, and cancellation between the
-outlay and the inflows cost the result its last few digits.
+above the engine's 40.
 
-The guard-digit clone is local to `evaluate.ts`. It does not change
-`Decimal.precision` for anything else, and nothing outside `npv()` uses it.
+The same pass evaluates `A(b)`, Horner's rule over `|flows_k|`, so `A(b) /
+b^(n-1)` is the sum of the absolute discounted terms. Every rounding in the
+pass is bounded relative to that sum, so
+
+```text
+err = A(b) / b^(n-1) · (4n + 8) · 10^(1 - digits)
+```
+
+bounds the distance between the computed quotient and the exact present
+value. The factor covers the `2(n - 1)` roundings of Horner's rule, the
+rounding of `b` raised to every power it reaches, and the power and the
+division, with more than a twofold margin.
+
+If `quotient − err` and `quotient + err` round half-up to the same 40
+significant digits, that rounding is the exact present value's, and it is
+returned. Otherwise the exact value may lie near a 40-digit rounding midpoint,
+where rounding once at 50 digits and again at 40 can disagree with rounding
+the exact value once. The pass then repeats at 100 digits and, if still
+undecided, at 200. The 200-digit rounding is returned as it stands. That last
+step is reached only when the exact value is within about 1e-198 (relative to
+the absolute terms) of a midpoint or of zero, and an exact tie rounds half-up
+correctly at any width.
+
+The previous per-term sum was not correctly rounded: each term was rounded to
+40 digits before the sum, and cancellation between the outlay and the inflows
+cost the result its last few digits.
+
+The wider clones are created once per width and cached in `evaluate.ts`. They
+do not change `Decimal.precision` for anything else, and nothing outside
+`npv()` uses them.
 
 Error order is unchanged. The rate is checked first, then an empty column,
 then each cell's type, all before any arithmetic.
@@ -129,6 +154,12 @@ previous `evaluate.ts`.
   bisection returned 1e50 with a bracket 1.5e11 wide and the new search finds
   the exact root, 1e50. The old result would have been a `PRECISION` finding
   at any declared width.
+- **`NPV`, the double-rounding case from review.** `NPV(1, Cash)` on `1` and
+  `1e-39 − 1e-60` is `1 + 5e-40 − 5e-61`, just below the midpoint between `1`
+  and `1 + 1e-39`. A single 50-digit pass rounds the numerator up to
+  `2 + 1e-39` and then lands exactly on the midpoint, returning `1 + 1e-39`.
+  The bounded pass cannot decide at 50 digits, repeats at 100, and returns
+  `1`. A test in `functions.test.ts` pins it.
 - **`NPV`, 5,000 random series** (up to 200 flows, rates from −0.9 to 0.9,
   checked against a 150-digit reference). The new value equals the reference
   rounded to 40 significant digits in 5,000 cases, the old one in 1,119. The
@@ -141,18 +172,20 @@ previous `evaluate.ts`.
   - Horner in `b` at 40 digits was correctly rounded in 878 cases, with errors
     up to 21 ulp.
   - The guard-digit form was correctly rounded in all 3,000, with 5, 10, or 20
-    guard digits alike. Ten was kept for headroom against cancellation, at
-    about 15% of the speed gained.
+    guard digits alike. Ten was kept for headroom against cancellation. A
+    fixed width cannot guarantee it, though (see the review case above),
+    which is why the error bound and the wider retries were added. They cost
+    about half the speed gained, through the second Horner sum.
 - The full repository suite passes.
 
 Measured after the change, in the same harness as [§1](#1-purpose):
 
 | Series | `IRR` | `NPV` |
 |---|---|---|
-| 4 flows | 0.10–0.15 ms | 0.004 ms |
-| 36 flows | 2.1–2.4 ms | 0.019 ms |
-| 120 flows | 3.8–4.0 ms | 0.063 ms |
-| 360 flows | 10.9–12.4 ms | 0.18–0.24 ms |
+| 4 flows | 0.10–0.15 ms | 0.008 ms |
+| outlay + 36 inflows | 2.0–2.4 ms | 0.035 ms |
+| outlay + 120 inflows | 3.8–4.0 ms | 0.115 ms |
+| outlay + 360 inflows | 10.3–12.4 ms | 0.33–0.46 ms |
 
 ## 6. Documents touched
 
@@ -183,3 +216,5 @@ Measured after the change, in the same harness as [§1](#1-purpose):
   step and a separate fallback to keep a bracket. The Illinois method keeps
   the bracket by construction, which is what `irrBand` depends on.
 - **`PMT`.** It makes a single `pow` call and was not slow.
+
+<!--vmark:no-formulas-->

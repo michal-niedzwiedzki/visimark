@@ -854,6 +854,18 @@ units = NPV(0, Tagged)
   expect(str("tag.units")).toBe("0");
 });
 
+test("NPV rounds a value just below a 40-digit midpoint down, not twice", () => {
+  // 1 + (1e-39 - 1e-60) / 2 is 1 + 5e-40 - 5e-61: just below the midpoint
+  // between 1 and 1 + 1e-39. A single 50-digit pass rounds the numerator up to
+  // 2 + 1e-39 and then lands exactly on the midpoint.
+  const tail = "0." + "0".repeat(39) + "9".repeat(21);
+  const r = run(cashDoc("NPV(1, Cash)", `| 1 |\n| ${tail} |`));
+  expect(r.findings.filter((f) => f.code !== "WARN")).toEqual([]);
+  const v = r.values.get("t.present");
+  if (!v || v.t !== "num") throw new Error("t.present");
+  expect(v.d.toString()).toBe("1");
+});
+
 test("NPV rejects a bad rate before an empty column, a blank, or a non-number", () => {
   const msg = (src: string) => typeFindings(run(src).findings)[0]?.message;
   const series = "| -48000 |\n|  20000 |\n|  20000 |\n|  20000 |";

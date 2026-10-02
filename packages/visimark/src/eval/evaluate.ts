@@ -20,11 +20,16 @@ export interface EvalEnv {
   vector(ref: Ref): Value[];
 }
 
-/** Working precision plus guard digits, for a sum rounded once at the end. */
-const Guarded = Decimal.clone({
-  precision: MAX_SIGNIFICANT_DIGITS + 10,
-  rounding: Decimal.ROUND_HALF_UP,
-});
+/** `decimal.js` constructors at widths above the working precision, by width. */
+const widened = new Map<number, typeof Decimal>();
+function wider(digits: number): typeof Decimal {
+  let W = widened.get(digits);
+  if (!W) {
+    W = Decimal.clone({ precision: digits, rounding: Decimal.ROUND_HALF_UP });
+    widened.set(digits, W);
+  }
+  return W;
+}
 
 const irrBands = new WeakMap<Decimal, { lo: Decimal; hi: Decimal }>();
 
@@ -324,16 +329,35 @@ function npv(rate: Value, vec: Value[]): Value {
   if (vec.length === 0) throw new EvalError("NPV() of an empty column");
   const flows = vec.map((v) => asNum(v, "NPV"));
   // Σ flow_k / b^k = (Σ flow_k · b^(n-1-k)) / b^(n-1) with b = 1 + r: Horner's
-  // rule for the numerator, then one power and one division. The guard digits
-  // absorb the rounding of the n multiply-adds, so the result is the exact
-  // present value rounded once to the working precision.
-  const base = new Guarded(r).plus(1);
-  let s = new Guarded(flows[0]!);
-  for (let k = 1; k < flows.length; k++) s = s.times(base).plus(flows[k]!);
-  const sum = new Decimal(
-    s.div(base.pow(flows.length - 1)).toSignificantDigits(MAX_SIGNIFICANT_DIGITS),
-  );
-  return num(sum.isZero() ? new Decimal(0) : sum);
+  // rule for the numerator, then one power and one division, at ten guard
+  // digits. The same pass sums |flow_k| / b^k, which bounds the rounding error
+  // of every step. When the value minus and plus that bound round to the same
+  // 40 digits, that rounding is the exact present value's. Otherwise the true
+  // value may sit near a rounding midpoint, and the pass repeats at twice the
+  // width. The last width's rounding is taken as it stands.
+  const n = flows.length;
+  for (let digits = MAX_SIGNIFICANT_DIGITS + 10; ; digits *= 2) {
+    const W = wider(digits);
+    const base = new W(r).plus(1);
+    let s = new W(flows[0]!);
+    let a = s.abs();
+    for (let k = 1; k < n; k++) {
+      s = s.times(base).plus(flows[k]!);
+      a = a.times(base).plus(flows[k]!.abs());
+    }
+    const scale = base.pow(n - 1);
+    const value = s.div(scale);
+    const err = a
+      .div(scale)
+      .times(4 * n + 8)
+      .times(new W(10).pow(1 - digits));
+    const low = value.minus(err).toSignificantDigits(MAX_SIGNIFICANT_DIGITS);
+    const high = value.plus(err).toSignificantDigits(MAX_SIGNIFICANT_DIGITS);
+    if (low.eq(high) || digits >= 4 * MAX_SIGNIFICANT_DIGITS) {
+      const sum = new Decimal(value.toSignificantDigits(MAX_SIGNIFICANT_DIGITS));
+      return num(sum.isZero() ? new Decimal(0) : sum);
+    }
+  }
 }
 
 function aggregate(name: string, vec: Value[]): Value {
