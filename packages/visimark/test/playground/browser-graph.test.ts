@@ -102,6 +102,15 @@ test("src/fs/node-reader.ts is not reachable from the browser entry", () => {
   ).not.toContain("src/fs/node-reader.ts");
 });
 
+test("src/fs/node-writer.ts is not reachable from the browser entry", () => {
+  // same guarantee as the reader, on the write side — see src/fs/writer.ts
+  const graph = [...browserGraph().keys()].map(shortName);
+  expect(
+    graph,
+    "the node:fs writer must stay out of the browser bundle — see src/fs/writer.ts",
+  ).not.toContain("src/fs/node-writer.ts");
+});
+
 test("the browser graph contains no dynamic import the static walk could miss", () => {
   const offenders = [...browserGraph()]
     .filter(([, text]) => DYNAMIC_RE.test(text))
@@ -137,19 +146,27 @@ test("the committed bundle contains no node:fs or node:crypto call site", () => 
  * above records why node:path is the one builtin let through. A bump with no
  * reason is indistinguishable from a bundle nobody looked at.
  */
-const BASELINE_BYTES = 299_700;
+const BASELINE_BYTES = 335_697;
+
+/*
+ * 2026-10-01, 299,700 → 335,697 (+35,997). #317, algebraic unit maps: the unit
+ * grammar and map algebra, header-name splitting, the static unit pass,
+ * `fmt --fix-units` and infer's unit proposals all reach the playground through
+ * `check`, `fmt` and `infer`. Master's committed bundle stood at 309,846 that
+ * day, so +25,851 is this feature and the rest is master's growth since 09-23.
+ */
 
 /** 10% over the baseline — a margin, not a byte-exact pin, so an unrelated
  * minifier version bump doesn't fail this check the way a byte-exact pin
  * would (the exact churn `playground-bundle` is pinned to Bun 1.4.2 to avoid). */
-const MAX_BUNDLE_BYTES = Math.ceil(BASELINE_BYTES * 1.1); // 329,670
+const MAX_BUNDLE_BYTES = Math.ceil(BASELINE_BYTES * 1.1); // 369,267
 
 test("the committed bundle stays under a size ceiling with margin over the recorded baseline", () => {
   const actual = statSync(bundle).size;
   expect(
     actual,
     `docs/vendor/visimark-browser.js is ${actual} bytes, over the ${MAX_BUNDLE_BYTES}-byte ` +
-      `ceiling (10% over the ${BASELINE_BYTES}-byte baseline recorded 2026-09-23). If this ` +
+      `ceiling (10% over the ${BASELINE_BYTES}-byte baseline recorded 2026-10-01). If this ` +
       `growth is real and reviewed, bump BASELINE_BYTES above with the date and reason and ` +
       `rebuild; if not, something new was pulled into src/playground/browser-entry.ts's ` +
       `import graph — the source-walk test above names the file.`,

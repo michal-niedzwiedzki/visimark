@@ -30,13 +30,13 @@ describe("the two worked examples are the acceptance suite", () => {
     expect(formatCheck("docs/example-invoice-drift.md", run(drift).findings)).toBe(expected);
   });
 
-  test("example-invoice-drift.md: 26 problems (21 stale, 5 errors) plus one NOTE", () => {
+  test("example-invoice-drift.md: 27 problems (22 stale, 5 errors) plus one NOTE", () => {
     const f = run(drift).findings;
     const stale = f
       .filter((x) => x.code === "STALE")
       .reduce((n, x) => n + (x.anchorGroup ? x.suppressedCount! : 1), 0);
     const errorCodes = new Set(["DATE", "UNDEF", "VECTOR", "CYCLE", "TYPE", "SHEET", "ANCHOR"]);
-    expect(stale).toBe(21);
+    expect(stale).toBe(22);
     expect(f.filter((x) => errorCodes.has(x.code)).length).toBe(5);
     expect(f.filter((x) => x.code === "NOTE").length).toBe(1);
   });
@@ -124,14 +124,14 @@ describe("example-bandwidth.md is the column-aliases acceptance", () => {
     const model = build(locate(bandwidth));
     const sheet = model.sheets.get("network")!;
     expect(sheet.aliases.get("bpu")).toMatchObject({
-      header: "Bandwidth per Unit (TB/s, full-duplex)",
+      header: "Bandwidth per Unit (full-duplex)",
     });
     expect(sheet.aliases.get("gpu_bw")).toMatchObject({
-      header: "GPU-to-GPU Bandwidth (GB/s, full-duplex)",
+      header: "GPU-to-GPU Bandwidth (full-duplex)",
     });
     // gpu_bw is written through its alias, so the rule is keyed by the header,
     // not the alias symbol (see test/model/aliases.test.ts for why).
-    expect(sheet.columns.has("GPU-to-GPU Bandwidth (GB/s, full-duplex)")).toBe(true);
+    expect(sheet.columns.has("GPU-to-GPU Bandwidth (full-duplex)")).toBe(true);
   });
 
   test("peak is the larger of the two rows' GPU-to-GPU bandwidth", () => {

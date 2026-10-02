@@ -28,8 +28,10 @@ import { createContext, runInContext } from "node:vm";
 import { decodeNamedCharacterReference } from "decode-named-character-reference";
 
 import { readVersion } from "../packages/visimark/src/cli/version.js";
-import { explainJson, explainView } from "../packages/visimark/src/report/explain.js";
+import { explainView } from "../packages/visimark/src/report/explain.js";
+import { explainJson } from "../packages/visimark/src/report/envelope.js";
 import {
+  evalUnits,
   evalValues,
   findingSummary,
   publicAssertions,
@@ -54,7 +56,9 @@ type Command = (typeof COMMANDS)[number];
  * `explain --json` field names those are — empirically confirmed by running
  * both hosts' real output side by side (not guessed): `example-invoice-csv-import.md`
  * loses `hasTable`/`inputs`/`import.stampStatus`/each scalar's
- * `precision`/`precisionFrom` when no reader is supplied; every chart-bearing
+ * `precision`/`precisionFrom`/`inputUnits`/`unit` when no reader is supplied (the
+ * imported columns' units arrive from the `labelled` list and the CSV, so
+ * without the file there is nothing to derive a total's unit from); every chart-bearing
  * document (`example-charts.md`, and `example-onboarding-dashboard.md` —
  * `grep -l '^chart ' docs/example-*.md` found both; the issue that motivated
  * this only named the import document and `example-charts.md` as "the two
@@ -73,9 +77,12 @@ const EXPLAIN_ONLY_EXCLUDED_KEYS: Record<string, string[]> = {
     "inputs",
     "precision",
     "precisionFrom",
+    "inputUnits",
+    "unit",
   ],
   "example-charts.md": ["state"],
   "example-onboarding-dashboard.md": ["state"],
+  "example-deal-desk.md": ["state"],
 };
 
 /** every exact JSON path under `envelope` whose last segment is one of `keys` */
@@ -191,6 +198,7 @@ function browserEnvelope(vm: VM, command: Command, file: string, source: string)
       status: statusFromExit(assertExit),
       file: relPath,
       values: evalValues(result as never),
+      units: evalUnits(result as never, evalValues(result as never)),
       assertions: publicAssertions(result.assertions as never),
       charts: publicCharts(result.charts as never),
     };

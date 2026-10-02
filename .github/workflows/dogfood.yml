@@ -46,13 +46,46 @@ jobs:
             exit 1
           fi
 
+      # Every tracked Markdown doc, minus the fixtures below that are known to
+      # fail on purpose (each has its own step proving it still fails) and
+      # docs/WIP/, which holds unfinished scratch notes never meant to satisfy
+      # `check`. A doc lands here by default the moment it's committed — no
+      # enumeration to remember to update, unlike the allowlist this replaced,
+      # which is how docs/example-deal-desk.md went unchecked from #284 to #312.
+      - name: compute the doc set the wildcard step below checks
+        id: docfiles
+        shell: bash
+        run: |
+          exclude=(
+            "docs/example-invoice-drift.md"
+            "docs/example-quote-plain.md"
+            "docs/example-lunch-split-drift.md"
+            "docs/design/presentation-only-percent-display-sigil-plan.md"
+            "docs/design/presentation-only-percent-display-sigil-spec.md"
+          )
+          # A default (non-glob-magic) git pathspec doesn't set FNM_PATHNAME,
+          # so a bare `*` already crosses `/` — `docs/*.md` is already
+          # recursive. `docs/**/*.md` looked more correct but demands a
+          # literal `/` after the `**`, so it silently skipped every file
+          # directly under docs/ (docs/ci.md, docs/distribution.md, and
+          # docs/example-deal-desk.md itself — the file that started this).
+          files=$(git ls-files 'docs/*.md' README.md CHANGELOG.md CONTRIBUTING.md skills/visimark/SKILL.md | grep -v '^docs/WIP/')
+          for f in "${exclude[@]}"; do
+            files=$(echo "$files" | grep -vxF "$f")
+          done
+          {
+            echo "files<<EOF"
+            echo "$files"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
       # Every markdown file this repo asks anyone else to trust, checked by the
       # rule the repo now ships: a table with no rules fails, and a document
       # with no arithmetic says so with `<!--vmark:no-formulas-->`.
-      - name: the clean invoice and this repo's own prose must pass
+      - name: every doc in that set must pass
         uses: ./
         with:
-          files: "docs/example-invoice.md docs/tutorial.md docs/ci.md docs/tutorial/order.md docs/tutorial/capstone.md docs/tutorial/runway.md docs/visimark-design.md docs/visimark-editor-plugins-design.md docs/cli-reference.md docs/releasing.md docs/vocabulary-catalogue.md README.md CHANGELOG.md CONTRIBUTING.md skills/visimark/SKILL.md"
+          files: ${{ steps.docfiles.outputs.files }}
 
       - name: the drift invoice is supposed to fail
         id: drift
@@ -81,6 +114,23 @@ jobs:
         if: steps.plain.outcome != 'failure'
         run: |
           echo "::error::docs/example-quote-plain.md is supposed to fail visimark check with COVERAGE — it passed instead. Either rules were written into it, or the coverage rule regressed."
+          exit 1
+
+      # A small, deliberately-wrong total — the demo fixture for the
+      # homepage's "Scan your repo" widget (docs/index.html#repo-scan): one
+      # glance at the table shows the stored total is wrong, unlike the much
+      # longer invoice-drift example above.
+      - name: the lunch split is supposed to fail
+        id: lunch
+        continue-on-error: true
+        uses: ./
+        with:
+          files: "docs/example-lunch-split-drift.md"
+
+      - name: fail the job if the lunch split stopped failing
+        if: steps.lunch.outcome != 'failure'
+        run: |
+          echo "::error::docs/example-lunch-split-drift.md is supposed to fail visimark check — it passed instead. Either the example was fixed by accident, or check regressed."
           exit 1
 
   precommit-hook-self-check:

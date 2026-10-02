@@ -27,7 +27,11 @@ export function paramLines(bs: Binding[], indent: string): string[] {
     name: b.name,
     prec: b.precision === undefined ? "precision ?" : `precision ${b.precision}`,
     dflt: `default ${b.param!.text}`,
-    domain: b.domain === undefined ? undefined : `domain ${formatDomain(b.domain)}`,
+    domain:
+      b.domain === undefined
+        ? undefined
+        : `domain ${formatDomain(b.domain)}` +
+          (b.lattice === undefined ? "" : `   lattice ${b.lattice.literal.text}`),
   }));
   const nw = Math.max(0, ...rows.map((r) => r.name.length));
   const pw = Math.max(0, ...rows.map((r) => r.prec.length));

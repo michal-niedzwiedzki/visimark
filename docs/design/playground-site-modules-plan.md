@@ -187,3 +187,5 @@ the other two — see
 ruled on that separately and whose conclusion (the repeated values are a
 handful of scalars, guarded by `test/site-tokens.test.ts`) has not changed.
 Closing `style-src` would depend on it, and it is a different piece of work.
+
+<!--vmark:no-formulas-->

@@ -1221,7 +1221,7 @@ git commit -m "feat: infer proposes is aliases for non-identifier headers"
 
 - [ ] **Step 1: Write `docs/example-bandwidth.md`**
 
-```markdown
+````markdown
 # GPU network bandwidth
 
 | GPUs | Bandwidth per Unit (TB/s, full-duplex) | GPU-to-GPU Bandwidth (GB/s, full-duplex) |
@@ -1240,7 +1240,7 @@ peak = MAX(gpu_bw)
 Peak GPU-to-GPU bandwidth: **400**<!--vmark=network.peak-->
 
 <!--vmark:no-formulas-->
-```
+````
 
 Compute `gpu_bw` by hand first and confirm it matches the table's stored `400` in both rows before treating this as done — `ROUND(3.2 / 8 * 1000, 0)` = `400`, `ROUND(3.2 / 16 * 1000, 0)` = `200`. **The two rows do not agree on `400`** — fix the second row's stored `GPU-to-GPU Bandwidth` cell to `200` (or change `GPUs` in row 2 to `8` if two identical rows are wanted instead) before running `check`, or `check` will correctly report a `STALE` finding on that cell. Pick whichever fix keeps the table meaningful as a two-row example (two different `GPUs` counts producing two different bandwidths is more illustrative — use `200` in row 2).
 
@@ -1260,7 +1260,7 @@ Read `packages/visimark/test/acceptance.test.ts` first to see exactly how `examp
 
 - [ ] **Step 4: Write the fixtures and their tests**
 
-```markdown
+````markdown
 <!-- packages/visimark/test/fixtures/column-alias-undef.md -->
 | GPUs | Bandwidth per Unit (TB/s, full-duplex) |
 |-----:|----------------------------------------:|
@@ -1269,7 +1269,7 @@ Read `packages/visimark/test/acceptance.test.ts` first to see exactly how `examp
 ```vmark #network
 "Bandwidth per Unyt (TB/s)" is bpu
 ```
-```
+````
 
 ```typescript
 // packages/visimark/test/model/aliases-fixtures.test.ts — new file

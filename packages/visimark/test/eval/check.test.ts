@@ -3,6 +3,7 @@ import { clean, drift } from "../examples.js";
 import { locate } from "../../src/parse/document.js";
 import { build } from "../../src/model/build.js";
 import { check } from "../../src/eval/check.js";
+import { fmt } from "../../src/write/fmt.js";
 import { evalValues } from "../../src/report/json.js";
 import type { Finding } from "../../src/model/types.js";
 
@@ -28,6 +29,7 @@ test("drift: STALE findings in the transcript's order", () => {
     "STALE lines.Gross · Discovery workshop",
     "STALE lines.net_total",
     "STALE lines.vat_total",
+    "STALE lines.gross_total",
     "STALE lines.gross_total",
     "STALE schedule.Amount · Signature",
     "STALE schedule.Amount · Delivery of backend",
@@ -116,16 +118,16 @@ test("drift: UNDEF, VECTOR and CYCLE contents", () => {
   ]);
 });
 
-test("drift: problem tally reconciles to 26 (21 stale, 5 errors)", () => {
+test("drift: problem tally reconciles to 27 (22 stale, 5 errors)", () => {
   const r = run(drift);
   const stale = r.findings
     .filter((f) => f.code === "STALE")
     .reduce((n, f) => n + (f.anchorGroup ? f.suppressedCount! : 1), 0);
   const errorCodes = new Set(["DATE", "UNDEF", "VECTOR", "CYCLE", "TYPE", "SHEET", "ANCHOR"]);
   const errors = r.findings.filter((f) => errorCodes.has(f.code)).length;
-  expect(stale).toBe(21);
+  expect(stale).toBe(22);
   expect(errors).toBe(5);
-  expect(stale + errors).toBe(26);
+  expect(stale + errors).toBe(27);
 });
 
 test("drift: no double-report of the late_fees cycle members", () => {
@@ -259,10 +261,27 @@ test("a hyphenated sheet id with a wrong anchored value fails loudly instead of 
   );
   const anchor = r.findings.find((f) => f.code === "ANCHOR")!;
   expect(anchor.message).toBe(
-    "malformed anchor comment — expected `<!--vmark=sheet.name-->` or `<!--vmark=sheet.name%-->`",
+    "malformed anchor comment — expected `<!--vmark=sheet.name-->` or `<!--vmark=sheet.name|rule-->`",
   );
   // the sheet still built and evaluated despite the bad id
   expect(r.findings.find((f) => f.code === "WARN")!.name).toBe("total");
+});
+
+test("a delimited anchor placeholder with nested markdown inside it refuses instead of mis-scoping", () => {
+  const src = `Claim: **a **bold** claim**<!--vmark=s.x-->.
+
+\`\`\`vmark #s
+x = "a bold claim"
+\`\`\`
+`;
+  const r = run(src);
+  expect(r.findings.map((f) => f.code)).toEqual(["ANCHOR"]);
+  const anchor = r.findings.find((f) => f.code === "ANCHOR")!;
+  // no explicit message on the raw finding — format.ts supplies the default
+  // "no value to rewrite in front of this anchor" text at render time, the
+  // same as any other a.value === null anchor
+  expect(anchor.message).toBeUndefined();
+  expect(r.exitCode).toBe(1);
 });
 
 // ---- EOMONTH (issue #6) ---------------------------------------------
@@ -617,7 +636,7 @@ test("assert: a sheet with only an assert + a table does not trip COVERAGE", () 
   expect(r.findings).toEqual([]);
 });
 
-const percentDoc = (span: string, extra = "") => `Margin **${span}**<!--vmark=s.margin%-->.
+const percentDoc = (span: string, extra = "") => `Margin **${span}**<!--vmark=s.margin|percent-->.
 Bare **0.4026**<!--vmark=s.margin-->.
 
 \`\`\`vmark #s
@@ -626,13 +645,13 @@ ${extra}
 \`\`\`
 `;
 
-test("a matching % span is not STALE", () => {
+test("a matching |percent span is not STALE", () => {
   const r = run(percentDoc("40.26%"));
   expect(r.findings.filter((f) => f.code === "STALE")).toEqual([]);
   expect(r.exitCode).toBe(0);
 });
 
-test("a wrong % span is STALE with both sides in percent form", () => {
+test("a wrong |percent span is STALE with both sides in percent form", () => {
   const r = run(percentDoc("41.55%"));
   const stale = r.findings.find((f) => f.code === "STALE" && !f.anchorGroup)!;
   expect(stale.stored).toBe("41.55%");
@@ -640,14 +659,14 @@ test("a wrong % span is STALE with both sides in percent form", () => {
   expect(r.exitCode).toBe(1);
 });
 
-test("a decimal span on a % comment is not STALE when the number agrees", () => {
+test("a decimal span on a |percent comment is not STALE when the number agrees", () => {
   const r = run(percentDoc("0.4026"));
   expect(r.findings.filter((f) => f.code === "STALE")).toEqual([]);
   expect(r.exitCode).toBe(0);
 });
 
-test("precision below 2 on a % comment is PRECISION", () => {
-  const src = `X **1**<!--vmark=s.n%-->.
+test("precision below 2 on a |percent comment is PRECISION", () => {
+  const src = `X **1**<!--vmark=s.n|percent-->.
 
 \`\`\`vmark #s
 n precision 1 = 1
@@ -659,8 +678,8 @@ n precision 1 = 1
   expect(r.exitCode).toBe(1);
 });
 
-test("a % sigil on a date scalar is TYPE", () => {
-  const src = `Due **2026-03-31**<!--vmark=s.d%-->.
+test("|percent on a date scalar is TYPE", () => {
+  const src = `Due **2026-03-31**<!--vmark=s.d|percent-->.
 
 \`\`\`vmark #s
 d = 2026-03-31
@@ -668,11 +687,13 @@ d = 2026-03-31
 `;
   const r = run(src);
   const t = r.findings.find((f) => f.code === "TYPE")!;
-  expect(t.message).toBe("a % sigil is only legal on a numeric scalar");
+  expect(t.message).toBe(
+    "a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only; unit: numeric with a unit)",
+  );
 });
 
-test("a unit in the same span as a % sigil is UNIT", () => {
-  const src = `X **$0.4026**<!--vmark=s.margin%-->.
+test("a unit in the same span as |percent is UNIT", () => {
+  const src = `X **$0.4026**<!--vmark=s.margin|percent-->.
 
 \`\`\`vmark #s
 margin precision 4 = 0.4026
@@ -680,10 +701,10 @@ margin precision 4 = 0.4026
 `;
   const r = run(src);
   const u = r.findings.find((f) => f.code === "UNIT")!;
-  expect(u.message).toBe("cannot mix a unit with percent display");
+  expect(u.message).toBe("cannot mix a unit with a display rule");
 });
 
-test("a % sigil on a chart image is TYPE", () => {
+test("|percent on a chart image is TYPE", () => {
   const src = `| Item | Price |
 |------|------:|
 | pen  |  5.00 |
@@ -692,11 +713,103 @@ test("a % sigil on a chart image is TYPE", () => {
 chart cost as pie of Price labelled Item
 \`\`\`
 
-![c](charts/c.svg)<!--vmark=order.cost%-->
+![c](charts/c.svg)<!--vmark=order.cost|percent-->
 `;
   const r = run(src);
   const t = r.findings.find((f) => f.code === "TYPE")!;
-  expect(t.message).toBe("a % sigil is only legal on a numeric scalar");
+  expect(t.message).toBe(
+    "a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only; unit: numeric with a unit)",
+  );
+});
+
+test("an unknown display-rule name on a chart image is ANCHOR, not TYPE", () => {
+  const src = `| Item | Price |
+|------|------:|
+| pen  |  5.00 |
+
+\`\`\`vmark #order
+chart cost as pie of Price labelled Item
+\`\`\`
+
+![c](charts/c.svg)<!--vmark=order.cost|nope-->
+`;
+  const r = run(src);
+  const a = r.findings.find((f) => f.code === "ANCHOR" && f.message?.includes("nope"));
+  expect(a?.message).toBe("unknown display rule `nope`");
+  expect(r.findings.some((f) => f.code === "TYPE")).toBe(false);
+});
+
+test("an inherited Object.prototype name on a chart image is an unknown display rule, not a crash", () => {
+  const src = `| Item | Price |
+|------|------:|
+| pen  |  5.00 |
+
+\`\`\`vmark #order
+chart cost as pie of Price labelled Item
+\`\`\`
+
+![c](charts/c.svg)<!--vmark=order.cost|constructor-->
+`;
+  const r = run(src);
+  const a = r.findings.find((f) => f.code === "ANCHOR" && f.message?.includes("constructor"));
+  expect(a?.message).toBe("unknown display rule `constructor`");
+});
+
+test("an unknown display-rule name is ANCHOR", () => {
+  const src = `X **0.4026**<!--vmark=s.margin|nope-->.
+
+\`\`\`vmark #s
+margin precision 4 = 0.4026
+\`\`\`
+`;
+  const r = run(src);
+  const a = r.findings.find((f) => f.code === "ANCHOR")!;
+  expect(a.message).toBe("unknown display rule `nope`");
+});
+
+test("an inherited Object.prototype name on a scalar anchor is an unknown display rule, not a crash", () => {
+  const src = `X **0.4026**<!--vmark=s.margin|constructor-->.
+
+\`\`\`vmark #s
+margin precision 4 = 0.4026
+\`\`\`
+`;
+  const r = run(src);
+  const a = r.findings.find((f) => f.code === "ANCHOR")!;
+  expect(a.message).toBe("unknown display rule `constructor`");
+});
+
+test("an unknown display-rule anchor does not suppress STALE on a sibling anchor of the same scalar", () => {
+  const src = `Sibling **0.4000**<!--vmark=s.x-->.
+Typo **_**<!--vmark=s.x|nope-->.
+
+\`\`\`vmark #s
+x precision 4 = 0.5
+\`\`\`
+`;
+  const r = run(src);
+  expect(r.findings.some((f) => f.code === "ANCHOR")).toBe(true);
+  const stale = r.findings.find((f) => f.code === "STALE" && !f.anchorGroup);
+  expect(stale).toBeDefined();
+  expect(stale!.stored).toBe("0.4000");
+  const formatted = fmt(src, {});
+  const after = run(formatted.output);
+  expect(after.findings.find((f) => f.code === "STALE")).toBeUndefined();
+});
+
+test("a display-rule anchor with an undelimited seed is ANCHOR, not accepted by shape", () => {
+  const src = `Margin 40.26%<!--vmark=s.margin|percent-->.
+
+\`\`\`vmark #s
+margin precision 4 = 0.4026
+\`\`\`
+`;
+  const r = run(src);
+  const a = r.findings.find((f) => f.code === "ANCHOR")!;
+  expect(a.message).toBe(
+    "a display rule needs a delimited seed — wrap a placeholder instead, such as **_**",
+  );
+  expect(r.exitCode).toBe(1);
 });
 
 test("an anchored PMT at precision 2 matches 888.49", () => {
@@ -995,4 +1108,497 @@ assert rate > 0
   expect(r.findings.find((f) => f.code === "TYPE")?.message).toBe("IRR expects a number");
   expect(r.findings.some((f) => f.code === "NOTE")).toBe(true);
   expect(r.findings.some((f) => f.code === "ASSERT")).toBe(false);
+});
+
+test("a bare non-numeric token in front of a numeric anchor refuses instead of being silently rewritten", () => {
+  const src = `\`\`\`vmark #s
+b precision 2 = 0.25
+\`\`\`
+
+It comes to <!--vmark=s.b--> PLN.
+`;
+  const r = run(src);
+  expect(r.findings.map((f) => f.code)).toEqual(["ANCHOR"]);
+  expect(r.findings.some((f) => f.code === "STALE")).toBe(false);
+  const anchor = r.findings[0]!;
+  expect(anchor.message).toBe(
+    "no number to rewrite in front of this anchor — wrap a placeholder instead, such as **0** or **_**",
+  );
+  expect(r.exitCode).toBe(1);
+});
+
+test("a bare numeric-shaped token in front of a numeric anchor is still accepted, unchanged", () => {
+  const src = `\`\`\`vmark #s
+order precision 2 = 110.00
+\`\`\`
+
+Order total: 110.00<!--vmark=s.order-->.
+`;
+  const r = run(src);
+  expect(r.findings).toEqual([]);
+  expect(r.exitCode).toBe(0);
+});
+
+test("a bare percent-shaped token in front of a |percent anchor is refused, not accepted by shape", () => {
+  const src = `\`\`\`vmark #s
+r precision 4 = 0.125
+\`\`\`
+
+Margin 12.50%<!--vmark=s.r|percent-->.
+`;
+  const r = run(src);
+  const a = r.findings.find((f) => f.code === "ANCHOR")!;
+  expect(a.message).toBe(
+    "a display rule needs a delimited seed — wrap a placeholder instead, such as **_**",
+  );
+});
+
+test("a bare percent-shaped token with no display rule is still accepted as a numeric target", () => {
+  const src = `\`\`\`vmark #s
+tax precision 2 = 0.19
+\`\`\`
+
+Tax is 19%<!--vmark=s.tax-->.
+`;
+  const r = run(src);
+  expect(r.findings).toEqual([]);
+  expect(r.exitCode).toBe(0);
+});
+
+test("fmt does not seed an undelimited |percent anchor, and check still refuses it", () => {
+  const src = `\`\`\`vmark #s
+r precision 4 = 0.125
+\`\`\`
+
+Margin 0<!--vmark=s.r|percent-->.
+`;
+  const formatted = fmt(src, {});
+  expect(formatted.changed).toBe(false);
+  const after = run(formatted.output);
+  expect(after.findings.find((f) => f.code === "ANCHOR")).toBeDefined();
+});
+
+test("fmt writes a fresh percent seed at a delimited placeholder, and the result still passes check (round-trip)", () => {
+  const src = `\`\`\`vmark #s
+r precision 4 = 0.125
+\`\`\`
+
+Margin **_**<!--vmark=s.r|percent-->.
+`;
+  const formatted = fmt(src, {});
+  expect(formatted.changed).toBe(true);
+  const after = run(formatted.output);
+  expect(after.findings).toEqual([]);
+  expect(after.exitCode).toBe(0);
+});
+
+test("a bare non-date token in front of a date anchor refuses", () => {
+  const src = `\`\`\`vmark #s
+due = 2026-02-01
+\`\`\`
+
+Due sometime soon<!--vmark=s.due-->.
+`;
+  const r = run(src);
+  expect(r.findings.map((f) => f.code)).toEqual(["ANCHOR"]);
+  expect(r.findings[0]!.message).toBe(
+    "no date to rewrite in front of this anchor — wrap a placeholder instead, such as **2026-01-01** or **_**",
+  );
+  expect(r.exitCode).toBe(1);
+});
+
+test("a bare ISO-shaped token in front of a date anchor is accepted (acceptance only — still never STALE-checked)", () => {
+  const src = `\`\`\`vmark #s
+due = 2026-01-15
+\`\`\`
+
+Due by 2026-01-15<!--vmark=s.due-->.
+`;
+  const r = run(src);
+  expect(r.findings).toEqual([]);
+  expect(r.exitCode).toBe(0);
+});
+
+test("a bare non-ISO date-shaped token does not qualify as a date anchor's target", () => {
+  const src = `\`\`\`vmark #s
+due = 2026-01-15
+\`\`\`
+
+Due by 01/15/2026<!--vmark=s.due-->.
+`;
+  const r = run(src);
+  expect(r.findings.map((f) => f.code)).toEqual(["ANCHOR"]);
+});
+
+test("a date-shaped tail glued to an unrelated leading digit does not qualify as a date anchor's target", () => {
+  const src = `\`\`\`vmark #s
+due = 2026-01-15
+\`\`\`
+
+Due 12026-01-15<!--vmark=s.due-->.
+`;
+  const r = run(src);
+  expect(r.findings.map((f) => f.code)).toEqual(["ANCHOR"]);
+});
+
+test("a numeric anchor does not read a glued date's -DD tail as a negative number", () => {
+  const src = `\`\`\`vmark #s
+w precision 2 = 7
+\`\`\`
+
+Ref 12026-01-15<!--vmark=s.w-->.
+`;
+  const r = run(src);
+  expect(r.findings.map((f) => f.code)).toEqual(["ANCHOR"]);
+});
+
+test("a bare decorated number with no space before the unit is still accepted, unchanged", () => {
+  const src = `\`\`\`vmark #s
+p precision 2 = 110.00
+\`\`\`
+
+Price: $110.00<!--vmark=s.p-->.
+`;
+  const r = run(src);
+  expect(r.findings).toEqual([]);
+  expect(r.exitCode).toBe(0);
+});
+
+test("fmt does not corrupt a glued date's tail when the anchor is refused (round-trip)", () => {
+  const src = `\`\`\`vmark #s
+w precision 2 = 7
+\`\`\`
+
+Ref 12026-01-15<!--vmark=s.w-->.
+`;
+  const formatted = fmt(src, {});
+  expect(formatted.changed).toBe(false);
+  expect(formatted.output).toBe(src);
+  const after = run(formatted.output);
+  expect(after.findings.map((f) => f.code)).toEqual(["ANCHOR"]);
+});
+
+test("bare prose in front of a string anchor always refuses", () => {
+  const src = `\`\`\`vmark #s
+status = "all clear"
+\`\`\`
+
+The status is no problem<!--vmark=s.status--> today.
+`;
+  const r = run(src);
+  expect(r.findings.map((f) => f.code)).toEqual(["ANCHOR"]);
+  expect(r.findings[0]!.message).toBe(
+    "a string anchor cannot rewrite bare prose — wrap a placeholder instead, such as **_**",
+  );
+  expect(r.exitCode).toBe(1);
+});
+
+test("a delimited placeholder is accepted for a string anchor regardless of content", () => {
+  const src = `\`\`\`vmark #s
+status = "all clear"
+\`\`\`
+
+Status: **all clear**<!--vmark=s.status-->.
+`;
+  const r = run(src);
+  expect(r.findings).toEqual([]);
+  expect(r.exitCode).toBe(0);
+});
+
+test("a refused anchor is suppressed, not doubly reported, when the scalar is unevaluable upstream", () => {
+  const src = `\`\`\`vmark #s
+b precision 2 = missing_name
+\`\`\`
+
+It comes to <!--vmark=s.b--> PLN.
+`;
+  const r = run(src);
+  expect(r.findings.map((f) => f.code)).toEqual(["UNDEF"]);
+});
+
+test("a well-formed but wrong date anchor is still not verified — non-goal, unchanged from today", () => {
+  const src = `\`\`\`vmark #s
+due = 2026-01-15
+\`\`\`
+
+Due by 2026-02-01<!--vmark=s.due-->.
+`;
+  const r = run(src);
+  // 2026-02-01 is a well-formed ISO date, so it's accepted as a target —
+  // but it disagrees with the stored 2026-01-15, and this feature adds no
+  // date STALE verification, so that disagreement is still invisible.
+  expect(r.findings).toEqual([]);
+  expect(r.exitCode).toBe(0);
+});
+
+test("|percent on a refused string-anchor span reports both ANCHOR and the existing TYPE refusal", () => {
+  const src = `\`\`\`vmark #s
+status = "all clear"
+\`\`\`
+
+The status is no problem<!--vmark=s.status|percent--> today.
+`;
+  const r = run(src);
+  expect(r.findings.map((f) => f.code).sort()).toEqual(["ANCHOR", "TYPE"]);
+  const type = r.findings.find((f) => f.code === "TYPE")!;
+  expect(type.message).toBe(
+    "a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only; unit: numeric with a unit)",
+  );
+});
+
+// ---- |nbsp (#305) ----
+
+/** a document with one `s` sheet holding `bindings`, and `prose` below it */
+const nbspDoc = (bindings: string, prose: string) =>
+  `\`\`\`vmark #s\n${bindings}\n\`\`\`\n\n${prose}\n`;
+const nbspRun = (value: string, prose: string) =>
+  run(nbspDoc(`status = ${JSON.stringify(value)}`, prose));
+const stale = (r: ReturnType<typeof run>) =>
+  r.findings
+    .filter((f) => f.code === "STALE" && !f.anchorGroup)
+    .map((f) => `${f.stored} ≠ ${f.computed}`);
+const messages = (r: ReturnType<typeof run>, code: string) =>
+  r.findings.filter((f) => f.code === code).map((f) => f.message);
+
+test("|nbsp: a span holding the rendering is clean", () => {
+  const r = nbspRun("past due", "Status **past&nbsp;due**<!--vmark=s.status|nbsp-->.");
+  expect(r.findings).toEqual([]);
+  expect(r.exitCode).toBe(0);
+});
+
+test("|nbsp: a drifted span is STALE in rendered form", () => {
+  const r = nbspRun("paid in full", "Status **past&nbsp;due**<!--vmark=s.status|nbsp-->.");
+  expect(stale(r)).toEqual(["past&nbsp;due ≠ paid&nbsp;in&nbsp;full"]);
+  expect(r.exitCode).toBe(1);
+});
+
+test("|nbsp: a **_** placeholder is STALE", () => {
+  expect(stale(nbspRun("past due", "Status **_**<!--vmark=s.status|nbsp-->."))).toEqual([
+    "_ ≠ past&nbsp;due",
+  ]);
+});
+
+test("|nbsp: hand-typed spaces, U+00A0 and &#160; are each STALE", () => {
+  for (const typed of ["past due", "past due", "past&#160;due"]) {
+    expect(stale(nbspRun("past due", `Status **${typed}**<!--vmark=s.status|nbsp-->.`))).toEqual([
+      `${typed} ≠ past&nbsp;due`,
+    ]);
+  }
+});
+
+test("|nbsp: a single word, extra whitespace and a stored U+00A0 are clean", () => {
+  expect(nbspRun("settled", "One **settled**<!--vmark=s.status|nbsp-->.").findings).toEqual([]);
+  expect(
+    nbspRun("  past   due ", "Status **past&nbsp;due**<!--vmark=s.status|nbsp-->.").findings,
+  ).toEqual([]);
+  expect(
+    nbspRun("past due", "Status **past&nbsp;due**<!--vmark=s.status|nbsp-->.").findings,
+  ).toEqual([]);
+});
+
+test("|nbsp: user_id in **…** and in _…_ is clean", () => {
+  const r = nbspRun(
+    "user_id",
+    "Key **user_id**<!--vmark=s.status|nbsp--> or _user_id_<!--vmark=s.status|nbsp-->.",
+  );
+  expect(r.findings).toEqual([]);
+});
+
+test("|nbsp: *…* delimiters are clean", () => {
+  expect(nbspRun("past due", "Also *past&nbsp;due*<!--vmark=s.status|nbsp-->.").findings).toEqual(
+    [],
+  );
+});
+
+test("|nbsp: a value that would not read back is ANCHOR, naming its syntax characters", () => {
+  const cases: [string, string][] = [
+    [
+      "a *b* c",
+      "display rule `nbsp` cannot write this value inside **…** and read it back unchanged — it contains Markdown syntax: *",
+    ],
+    [
+      "run `ls` now",
+      "display rule `nbsp` cannot write this value inside **…** and read it back unchanged — it contains Markdown syntax: `",
+    ],
+    [
+      "already&nbsp;joined",
+      "display rule `nbsp` cannot write this value inside **…** and read it back unchanged — it contains Markdown syntax: &",
+    ],
+    ["", "display rule `nbsp` cannot write an empty value inside **…**"],
+    ["   ", "display rule `nbsp` cannot write an empty value inside **…**"],
+    [
+      "www.example.com",
+      "display rule `nbsp` cannot write this value inside **…** and read it back unchanged",
+    ],
+  ];
+  for (const [value, message] of cases) {
+    const r = nbspRun(value, "Seed **_**<!--vmark=s.status|nbsp-->.");
+    expect(messages(r, "ANCHOR")).toEqual([message]);
+    expect(stale(r)).toEqual([]);
+    expect(r.refusedAnchors.size).toBe(1);
+  }
+});
+
+test("|nbsp: the refusal names the seed's own delimiters", () => {
+  expect(messages(nbspRun("a *b* c", "Seed __x__<!--vmark=s.status|nbsp-->."), "ANCHOR")).toEqual([
+    "display rule `nbsp` cannot write this value inside __…__ and read it back unchanged — it contains Markdown syntax: *",
+  ]);
+  expect(messages(nbspRun("", "Seed _x_<!--vmark=s.status|nbsp-->."), "ANCHOR")).toEqual([
+    "display rule `nbsp` cannot write an empty value inside _…_",
+  ]);
+});
+
+test("|nbsp: flanking is judged in context", () => {
+  // a vmark string literal cannot hold `"`, so `(a)` stands in for the spec's
+  // `"a"`: `x**(a)**` is not strong, while `**(a)**` alone is
+  const alone = nbspRun("(a)", "Seed **_**<!--vmark=s.status|nbsp-->.");
+  expect(messages(alone, "ANCHOR")).toEqual([]);
+  expect(stale(alone)).toEqual(["_ ≠ (a)"]);
+  const r = nbspRun("(a)", "x**_**<!--vmark=s.status|nbsp-->y");
+  expect(messages(r, "ANCHOR")).toEqual([
+    "display rule `nbsp` cannot write this value inside **…** and read it back unchanged",
+  ]);
+});
+
+test("|nbsp: a code span on a string is one ANCHOR", () => {
+  const r = nbspRun("past due", "Code `past due`<!--vmark=s.status|nbsp-->.");
+  expect(r.findings.map((f) => `${f.code} ${f.message}`)).toEqual([
+    "ANCHOR display rule `nbsp` cannot render inside a code span — wrap the seed in **…** or *…* instead",
+  ]);
+});
+
+test("|nbsp: a code span on a number is TYPE and ANCHOR", () => {
+  const r = run(nbspDoc("n precision 2 = 3", "Number `3.00`<!--vmark=s.n|nbsp-->."));
+  expect(r.findings.map((f) => f.code).sort()).toEqual(["ANCHOR", "TYPE"]);
+  expect(messages(r, "TYPE")).toEqual([
+    "a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only; unit: numeric with a unit)",
+  ]);
+});
+
+test("|nbsp on a date is TYPE", () => {
+  const r = run(nbspDoc("d = 2026-03-31", "Due **2026-03-31**<!--vmark=s.d|nbsp-->."));
+  expect(r.findings.map((f) => f.code)).toEqual(["TYPE"]);
+});
+
+test("an unknown rule in a code span is only the unknown-rule ANCHOR", () => {
+  const r = nbspRun("past due", "Code `past due`<!--vmark=s.status|nope-->.");
+  expect(r.findings.map((f) => `${f.code} ${f.message}`)).toEqual([
+    "ANCHOR unknown display rule `nope`",
+  ]);
+});
+
+test("a plain string anchor is still never compared with its prose", () => {
+  expect(nbspRun("paid in full", "Status **past due**<!--vmark=s.status-->.").findings).toEqual([]);
+});
+
+test("|nbsp on an unevaluable string binding gets no finding of its own", () => {
+  const r = run(nbspDoc("status = missing", "Status **_**<!--vmark=s.status|nbsp-->."));
+  expect(r.findings.length).toBeGreaterThan(0);
+  expect(r.findings.some((f) => f.code === "STALE" || f.code === "TYPE")).toBe(false);
+  expect(messages(r, "ANCHOR").some((m) => m?.includes("nbsp"))).toBe(false);
+});
+
+test("|nbsp: of two anchors on one scalar, only the stale one is STALE", () => {
+  const r = nbspRun(
+    "past due",
+    "Status **past&nbsp;due**<!--vmark=s.status|nbsp--> and *past due*<!--vmark=s.status|nbsp-->.",
+  );
+  expect(stale(r)).toEqual(["past due ≠ past&nbsp;due"]);
+});
+
+test("|nbsp: a &nbsp;&nbsp; separator beside the anchor is clean", () => {
+  const r = nbspRun(
+    "past due",
+    "**Status:** **past&nbsp;due**<!--vmark=s.status|nbsp--> &nbsp;&nbsp; **Also:** *past&nbsp;due*<!--vmark=s.status|nbsp-->",
+  );
+  expect(r.findings).toEqual([]);
+});
+
+// ── |unit (#323) ────────────────────────────────────────────────────────────
+
+const TYPE_MSG =
+  "a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only; unit: numeric with a unit)";
+
+const unitDoc = (seed: string, decl = "total [PLN] precision 2 = 23300 [PLN]") => `X ${seed}.
+
+\`\`\`vmark #s
+${decl}
+\`\`\`
+`;
+
+test("|unit on a value without a unit, a string or a date is TYPE", () => {
+  for (const decl of [
+    "total precision 2 = 3",
+    "total precision 2 = 6 [PLN] / 2 [PLN]",
+    'total = "past due"',
+    "total = 2026-03-31",
+  ]) {
+    const r = run(unitDoc("**_**<!--vmark=s.total|unit-->", decl));
+    const types = r.findings.filter((f) => f.code === "TYPE");
+    expect(types.map((f) => f.message)).toEqual([TYPE_MSG]);
+    expect(r.findings.some((f) => f.code === "STALE")).toBe(false);
+    expect(r.exitCode).toBe(1);
+  }
+});
+
+test("|percent on a unit-bearing value is still TYPE naming the unit", () => {
+  const r = run(unitDoc("**_**<!--vmark=s.total|percent-->"));
+  expect(r.findings.filter((f) => f.code === "TYPE").map((f) => f.message)).toEqual([
+    "|percent cannot render a value with a unit (PLN)",
+  ]);
+});
+
+test("a |unit span equal to the rendering is clean", () => {
+  const r = run(unitDoc("**23300.00 PLN**<!--vmark=s.total|unit-->"));
+  expect(r.findings.filter((f) => f.code !== "WARN")).toEqual([]);
+  expect(r.exitCode).toBe(0);
+});
+
+test("any other |unit span is STALE, never UNIT, compared byte for byte", () => {
+  for (const seed of [
+    "23300",
+    "23300.00",
+    "23300.00  PLN",
+    "$23300.00",
+    "[PLN] 23300.00",
+    "23300.00 EUR",
+    "23300.00 pln",
+    "_",
+    "0",
+  ]) {
+    const r = run(unitDoc(`**${seed}**<!--vmark=s.total|unit-->`));
+    // the scalar's own findings; the unnamed STALE is the prose-anchor summary
+    const codes = r.findings.filter((f) => f.name === "total").map((f) => f.code);
+    expect({ seed, codes }).toEqual({ seed, codes: ["STALE"] });
+    expect(r.findings.some((f) => f.code === "UNIT")).toBe(false);
+    const stale = r.findings.find((f) => f.code === "STALE")!;
+    expect(stale.stored).toBe(seed);
+    expect(stale.computed).toBe("23300.00 PLN");
+  }
+});
+
+test("the same wrong text on a plain anchor stays UNIT", () => {
+  for (const seed of ["$23300.00", "23300.00 EUR"]) {
+    const r = run(unitDoc(`**${seed}**<!--vmark=s.total-->`));
+    expect(r.findings.some((f) => f.code === "UNIT")).toBe(true);
+    expect(r.findings.some((f) => f.code === "STALE")).toBe(false);
+  }
+});
+
+test("a |unit anchor does not lend its decoration to a plain sibling", () => {
+  const r = run(
+    unitDoc("**$3.50**<!--vmark=s.total|unit--> and **23300.00 PLN**<!--vmark=s.total-->"),
+  );
+  const mine = r.findings.filter((f) => f.name === "total");
+  expect(mine.map((f) => [f.code, f.stored])).toEqual([["STALE", "$3.50"]]);
+  expect(r.findings.some((f) => f.code === "UNIT")).toBe(false);
+  expect(r.scalarUnits.get("s.total")).toEqual({ text: "PLN", side: "suffix" });
+});
+
+test("a |unit anchor on a value that fails upstream is left alone", () => {
+  const r = run(
+    unitDoc("**_**<!--vmark=s.total|unit-->", "total [PLN] precision 2 = nope + 1 [PLN]"),
+  );
+  expect(r.findings.some((f) => f.code === "STALE")).toBe(false);
+  expect(r.findings.some((f) => f.code === "TYPE")).toBe(false);
 });

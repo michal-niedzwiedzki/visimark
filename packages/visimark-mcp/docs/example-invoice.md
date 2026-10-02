@@ -6,77 +6,77 @@
 **Issued:** 2026-09-03 &nbsp;&nbsp; **Delivered:** 2026-08-31 &nbsp;&nbsp; **Payment due:** 2026-09-17
 
 ```vmark
-vat            = 23%
-early_pay_disc = 2%
-fx_eur         = 4.2650
+vat              = 23%
+early_pay_disc   = 2%
+fx_eur [PLN/EUR] = 4.2650
 ```
 
 ## Services rendered
 
-| Item                       | Unit  | Qty |    Rate |      Net |     VAT |    Gross |
-|----------------------------|-------|----:|--------:|---------:|--------:|---------:|
-| Discovery workshop         | day   |   2 | 1800.00 |  3600.00 |  828.00 |  4428.00 |
-| **Backend implementation** | hour  |  64 |  220.00 | 14080.00 | 3238.40 | 17318.40 |
-| Code review retainer       | month |   1 | 2500.00 |  2500.00 |  575.00 |  3075.00 |
-| On-call support            | hour  |  12 |  260.00 |  3120.00 |  717.60 |  3837.60 |
+| Item                       | Unit  | Qty | Rate [PLN] | Net [PLN] | VAT [PLN] | Gross [PLN] |
+|----------------------------|-------|----:|-----------:|----------:|----------:|------------:|
+| Discovery workshop         | day   |   2 |    1800.00 |   3600.00 |    828.00 |     4428.00 |
+| **Backend implementation** | hour  |  64 |     220.00 |  14080.00 |   3238.40 |    17318.40 |
+| Code review retainer       | month |   1 |    2500.00 |   2500.00 |    575.00 |     3075.00 |
+| On-call support            | hour  |  12 |     260.00 |   3120.00 |    717.60 |     3837.60 |
 
 ```vmark #lines
 Net               = Qty * Rate
 VAT   precision 2 = Net * vat
 Gross             = Net + VAT
 
-net_total   = SUM(Net)
-vat_total   = SUM(VAT)
-gross_total = SUM(Gross)
+net_total   [PLN] = SUM(Net)
+vat_total   [PLN] = SUM(VAT)
+gross_total [PLN] = SUM(Gross)
 ```
 
-Net of tax the engagement comes to **23300.00**<!--vmark=lines.net_total--> PLN.
-VAT at 23% adds **5359.00**<!--vmark=lines.vat_total--> PLN, giving a total due of
-**28659.00**<!--vmark=lines.gross_total--> PLN.
+Net of tax the engagement comes to **23300.00 PLN**<!--vmark=lines.net_total|unit-->.
+VAT at 23% adds **5359.00 PLN**<!--vmark=lines.vat_total|unit-->, giving a total due of
+**28659.00 PLN**<!--vmark=lines.gross_total|unit-->.
 
 ## Payment schedule
 
-| Milestone           | Share |   Amount | Due        |
-|---------------------|------:|---------:|------------|
-| Signature           |   30% |  8597.70 | 2026-09-10 |
-| Delivery of backend |   40% | 11463.60 | 2026-10-15 |
-| Acceptance          |   30% |  8597.70 | 2026-11-30 |
+| Milestone           | Share | Amount [PLN] | Due        |
+|---------------------|------:|-------------:|------------|
+| Signature           |   30% |      8597.70 | 2026-09-10 |
+| Delivery of backend |   40% |     11463.60 | 2026-10-15 |
+| Acceptance          |   30% |      8597.70 | 2026-11-30 |
 
 ```vmark #schedule
 Amount precision 2 = Share * lines.gross_total
 
-covered = SUM(Amount)
+covered [PLN] = SUM(Amount)
 ```
 
-The three milestones account for **28659.00**<!--vmark=schedule.covered--> PLN.
+The three milestones account for **28659.00 PLN**<!--vmark=schedule.covered|unit-->.
 
 ## Payment terms
 
 ```vmark #terms
-early_pay_total precision 2 = lines.gross_total * (1 - early_pay_disc)
-early_pay_saved             = lines.gross_total - early_pay_total
-eur_total       precision 2 = lines.gross_total / fx_eur
+early_pay_total [PLN] precision 2 = lines.gross_total * (1 - early_pay_disc)
+early_pay_saved [PLN]             = lines.gross_total - early_pay_total
+eur_total       [EUR] precision 2 = lines.gross_total / fx_eur
 ```
 
 Settlement within 7 days qualifies for a 2% early-payment discount, reducing the
-amount due to **28085.82**<!--vmark=terms.early_pay_total--> PLN — a saving of
-**573.18**<!--vmark=terms.early_pay_saved--> PLN.
+amount due to **28085.82 PLN**<!--vmark=terms.early_pay_total|unit--> — a saving of
+**573.18 PLN**<!--vmark=terms.early_pay_saved|unit-->.
 
 For reference, the gross total is approximately
-**6719.58**<!--vmark=terms.eur_total--> EUR at the ECB reference rate of
+**6719.58 EUR**<!--vmark=terms.eur_total|unit--> at the ECB reference rate of
 4.2650 PLN/EUR recorded on the delivery date.
 
 ## Reconciliation
 
 ```vmark #recon
-scheduled = SUM(schedule.Amount)
-variance  = lines.gross_total - scheduled
+scheduled [PLN] = SUM(schedule.Amount)
+variance  [PLN] = lines.gross_total - scheduled
 assert variance == 0
 ```
 
-Scheduled instalments total **28659.00**<!--vmark=recon.scheduled--> PLN against a
-gross invoice value of **28659.00**<!--vmark=lines.gross_total--> PLN, leaving a
-variance of **0.00**<!--vmark=recon.variance--> PLN.
+Scheduled instalments total **28659.00 PLN**<!--vmark=recon.scheduled|unit--> against a
+gross invoice value of **28659.00 PLN**<!--vmark=lines.gross_total|unit-->, leaving a
+variance of **0.00 PLN**<!--vmark=recon.variance|unit-->.
 
 ---
 
@@ -117,6 +117,18 @@ summing to the invoice total would leave a non-zero `variance`, and `check`
 would still pass: every number would agree with its own formula. The assertion
 is what turns "the reconciliation is computed" into "the reconciliation is
 enforced".
+
+**A unit is declared in a bracket after a name, and checked.** `Rate [PLN]` says
+each rate is złoty per item, `fx_eur [PLN/EUR]` says what the exchange rate
+converts, and `eur_total [EUR]` says what the conversion must produce. The other
+units — `Net [PLN]`, `net_total [PLN]` and the rest — were written by
+`visimark infer --write`, which records the unit each formula derives; from then
+on each one is checked like any other declaration. Dividing `PLN` by `PLN/EUR`
+derives the `EUR` that `eur_total` declares, so multiplying by the rate instead,
+or adding a euro amount to a złoty one, fails `check`. Every anchored figure
+carries the `|unit` display rule, so `fmt` writes the unit from the declaration
+along with the number, and a changed declaration rewrites the unit in the
+sentence too.
 
 The payoff is the last section. `visimark check` recomputes every formula and
 exits non-zero if any stored number disagrees, so an arithmetic error in this

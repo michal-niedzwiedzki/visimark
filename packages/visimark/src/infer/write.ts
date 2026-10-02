@@ -8,8 +8,9 @@ import { infer, type Proposal } from "./propose.js";
 export type PlannedInsert = Edit &
   (
     | {
-        /** a `vmark` block, or the comment anchor that binds a scalar into prose */
-        kind: "block" | "anchor";
+        /** a `vmark` block, the comment anchor that binds a scalar into prose,
+         *  or a ` [unit]` suffix on a header or a binding head */
+        kind: "block" | "anchor" | "unit";
         /** the proposal this insert carries; the first of `proposals` for a block */
         proposal: Proposal;
         /** every proposal this insert carries — a block holds a sheet's whole set */
@@ -88,6 +89,20 @@ export function planInfer(source: string, only?: Proposal[]): PlannedInsert[] {
       end: figure.anchorAt,
       text: `<!--vmark=${sheet.id}.${p.name}-->`,
       kind: "anchor",
+      proposal: p,
+      proposals: [p],
+    });
+  }
+
+  // a missing derived unit is an insertion too: ` [m/s]` after the header's
+  // text or the binding's name, and nothing else on the line
+  for (const p of proposals) {
+    if (p.kind !== "unit" || !p.unit) continue;
+    out.push({
+      start: p.unit.at,
+      end: p.unit.at,
+      text: ` [${p.unit.text}]`,
+      kind: "unit",
       proposal: p,
       proposals: [p],
     });

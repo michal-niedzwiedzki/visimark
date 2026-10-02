@@ -1,4 +1,5 @@
 import { Decimal } from "decimal.js";
+import { formatUnit, parseUnit, sameUnit, type UnitDefs, type UnitMap } from "../lang/unit-expr.js";
 
 /**
  * A unit is a display decoration on a number: `$` in `$5.50`, `N` in `12 N`.
@@ -27,11 +28,18 @@ const DECORATED = new RegExp(
     `(?<num>\\d+(?:\\.\\d+)?)\\s*(?<post>${DECOR}*)$`,
 );
 
+/**
+ * The second chance: a number, whitespace, and a suffix the unit grammar
+ * accepts. It reaches the units `DECOR` cannot, because they hold a digit —
+ * `5 m^2`, `50 1/s`, `6.0 N⋅m/s²`. The author's spelling is kept.
+ */
+const UNIT_SUFFIXED = /^(?<sign>-?)(?<num>\d+(?:\.\d+)?)\s+(?<rest>\S.*)$/;
+
 export function parseDecorated(text: string): Decorated {
   const t = text.trim();
   if (t === "") return { kind: "not-a-number" };
   const m = DECORATED.exec(t);
-  if (!m?.groups) return { kind: "not-a-number" };
+  if (!m?.groups) return parseUnitSuffixed(t);
   const { sign1, pre, sign2, num, post } = m.groups as Record<string, string>;
   if (sign1 && sign2) return { kind: "not-a-number" };
   if (pre && post) return { kind: "both-sides", pre, post };
@@ -44,8 +52,31 @@ export function parseDecorated(text: string): Decorated {
   return { kind: "number", num: sign + num, unit };
 }
 
+function parseUnitSuffixed(t: string): Decorated {
+  const m = UNIT_SUFFIXED.exec(t);
+  if (!m?.groups) return { kind: "not-a-number" };
+  const rest = m.groups.rest!;
+  if (!parseUnit(rest).ok) return { kind: "not-a-number" };
+  return {
+    kind: "number",
+    num: m.groups.sign! + m.groups.num!,
+    unit: { text: rest, side: "suffix" },
+  };
+}
+
+/**
+ * Two decorations are the same when their keys are. A suffix the unit grammar
+ * reads keys by its normalised map, so `m^2` and `m²` agree; definitions are
+ * not expanded, so `J` and `N⋅m` stay two decorations. Anything else keys by
+ * its text.
+ */
 export function unitKey(u: Unit | null): string {
-  return u ? `${u.side}:${u.text}` : "(none)";
+  if (!u) return "(none)";
+  if (u.side === "suffix") {
+    const parsed = parseUnit(u.text);
+    if (parsed.ok) return `suffix~${formatUnit(parsed.map)}`;
+  }
+  return `${u.side}:${u.text}`;
 }
 
 export function showUnit(u: Unit | null): string {
@@ -99,10 +130,13 @@ export function inferColumnUnit(cellTexts: (string | undefined)[]): ColumnUnit {
     };
   }
 
+  // one form per distinct decoration, in the spelling first seen
   const forms: string[] = [];
+  const keys = new Set<string>();
   for (const s of seen) {
-    const label = showUnit(s.unit);
-    if (!forms.includes(label)) forms.push(label);
+    if (keys.has(s.key)) continue;
+    keys.add(s.key);
+    forms.push(showUnit(s.unit));
   }
   return { unit: null, conflict: true, forms, firstDeviantRow: deviant.row };
 }
@@ -152,4 +186,32 @@ export function decimalPlaces(text: string, fallback: number): number {
   if (m) return m[1]!.length;
   if (/^-?\d+$/.test(t)) return 0;
   return fallback;
+}
+
+/**
+ * A decoration read against a declared unit — a header's or a binding head's.
+ * A prefix is presentation and a column with a unit forbids it; a suffix must
+ * parse as a unit and equal the declared one after expansion; a percent is a
+ * ratio and never sits under a unit. `null` when the text is fine. `noun` and
+ * `owner` word the message: `cell … the column`, `anchor … total`. See
+ * docs/design/algebraic-unit-maps-on-names-spec.md §3, "Cell decorations".
+ */
+export function decorationProblem(
+  text: string,
+  declared: UnitMap,
+  defs: UnitDefs,
+  noun: "cell" | "anchor",
+  owner: string,
+): string | null {
+  const t = text.trim();
+  if (/^-?\d+(?:\.\d+)?%$/.test(t)) return `${t} is a ratio and cannot carry a unit`;
+  const d = parseDecorated(t);
+  if (d.kind !== "number" || !d.unit) return null;
+  if (d.unit.side === "prefix") {
+    return `${noun} "${t}" has a prefix, which a ${noun === "cell" ? "column" : "binding"} with a unit forbids`;
+  }
+  const parsed = parseUnit(d.unit.text);
+  if (!parsed.ok) return `${noun} "${t}" carries "${d.unit.text}", which is not a unit`;
+  if (sameUnit(parsed.map, declared, defs)) return null;
+  return `${noun} "${t}" carries ${d.unit.text}, but ${owner} declares ${formatUnit(declared)}`;
 }

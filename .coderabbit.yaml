@@ -9,3 +9,15 @@ reviews:
       - "dependabot[bot]"
     ignore_title_keywords:
       - "WIP"
+  # Generated pages and binary assets aren't reviewable — they're derived
+  # from docs/articles/articles.json (see scripts/gen-articles.ts) or are
+  # opaque images. A PR whose whole diff is these paths still gets a
+  # review; CodeRabbit just has nothing left in it to comment on.
+  path_filters:
+    - "!docs/articles.html"
+    - "!docs/articles/**/index.html"
+    - "!docs/examples.html"
+    - "!docs/examples/**/index.html"
+    - "!**/*.webp"
+    - "!**/*.png"
+    - "!**/*.svg"

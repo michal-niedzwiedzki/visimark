@@ -1,0 +1,1218 @@
+/**
+ * The pure half of `gen-docs.ts`: no filesystem access, so it is unit-testable
+ * directly. Markdown rendering uses the same remark-parse/remark-gfm/remark-rehype
+ * pipeline as the site pages for consistency.
+ */
+
+import rehypeStringify from "rehype-stringify";
+import remarkGfm from "remark-gfm";
+import remarkParse from "remark-parse";
+import remarkRehype from "remark-rehype";
+import { unified } from "unified";
+import { escapeHtml, slugify } from "../packages/visimark/src/site/dom.js";
+
+export interface TocEntry {
+  text: string;
+  id: string;
+  level: number;
+}
+
+/** A slug unique among every id `seen` so far, tracking full ids rather than
+ *  per-base counts — a `-1` suffix can itself collide with an earlier base
+ *  that happened to end the same way. */
+function uniqueSlug(seen: Set<string>, text: string): string {
+  const base = slugify(text);
+  let id = base;
+  for (let n = 1; seen.has(id); n++) id = `${base}-${n}`;
+  seen.add(id);
+  return id;
+}
+
+/** Renders Markdown to safely escaped HTML using the unified pipeline.
+ *  rehypeStringify ensures all special characters including < and > are escaped.
+ *  Input is Markdown from local .md files (trusted source, not user-supplied). */
+export function renderMarkdown(markdown: string): string {
+  const renderedAndSafeHtml = String(
+    unified()
+      .use(remarkParse)
+      .use(remarkGfm)
+      .use(remarkRehype)
+      .use(rehypeStringify)
+      .processSync(markdown),
+  );
+  return renderedAndSafeHtml;
+}
+
+/** Extracts plain text from HTML by stripping all tags.
+ *  Input must be from renderMarkdown() which properly escapes &lt;script&gt;.
+ *  After tag removal, only entity-encoded special chars remain (&lt; etc). */
+function getPlainTextFromHtml(htmlText: string): string {
+  let result = htmlText;
+  let openIdx = result.indexOf("<");
+  while (openIdx !== -1) {
+    const closeIdx = result.indexOf(">", openIdx);
+    if (closeIdx === -1) break;
+    // Remove tag from openIdx to closeIdx inclusive
+    result = result.slice(0, openIdx) + result.slice(closeIdx + 1);
+    openIdx = result.indexOf("<", openIdx);
+  }
+  return result;
+}
+
+/** Splits Markdown into top-level blocks for tutorial display. */
+function splitBlocks(md: string): string[] {
+  const lines = md.replace(/\r\n?/g, "\n").split("\n");
+  const blocks: string[] = [];
+  let cur: string[] = [];
+  let fence: { char: string; len: number } | null = null;
+
+  const flush = (): void => {
+    if (cur.join("").trim() !== "") blocks.push(cur.join("\n"));
+    cur = [];
+  };
+
+  for (const line of lines) {
+    const m = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
+
+    if (fence) {
+      cur.push(line);
+      if (m && m[1]![0] === fence.char && m[1]!.length >= fence.len && m[2]!.trim() === "") {
+        fence = null;
+        flush();
+      }
+      continue;
+    }
+    if (m) {
+      flush();
+      fence = { char: m[1]![0]!, len: m[1]!.length };
+      cur.push(line);
+      continue;
+    }
+    if (line.trim() === "") {
+      flush();
+      continue;
+    }
+    if (/^#{1,6}\s/.test(line)) {
+      flush();
+      cur.push(line);
+      flush();
+      continue;
+    }
+    cur.push(line);
+  }
+  flush();
+  return blocks;
+}
+
+/** Re-points every relative `src` and `href` in rendered HTML (a chart SVG, say) so a
+ *  Markdown file written to be read from docs/ still resolves from a page
+ *  nested `base` below it. */
+export function withBase(html: string, base: string): string {
+  if (base === "") return html;
+  return html.replace(/(\s(?:src|href)=")(?![a-z][a-z0-9+.-]*:|\/|#)/gi, `$1${base}`);
+}
+
+const TUTORIAL_PAGE: SplitPageOptions = {
+  title: "The VisiMark tutorial",
+  description:
+    "From a plain Markdown table to a checked document and back out to CI, one concept at a time — tables, inference, anchors, aggregates, assertions, charts and imports.",
+  ogTitle: "The VisiMark tutorial",
+  navLabel: "tutorial",
+  ogPath: "tutorial.html",
+  base: "",
+};
+
+/** The side-by-side page: each Markdown block beside what it renders to.
+ *  Without `options` it is docs/tutorial.html; an example passes its own. */
+export function renderTutorialPage(
+  markdown: string,
+  options: SplitPageOptions = TUTORIAL_PAGE,
+): string {
+  const blocks = splitBlocks(markdown);
+  const tocEntries: TocEntry[] = [];
+  const seen = new Set<string>();
+
+  let mainHtml = "";
+  for (const block of blocks) {
+    const head = /^(#{1,6})\s+(.*)$/.exec(block);
+    const rendered = renderMarkdown(block);
+    let out = rendered;
+
+    if (head) {
+      const id = uniqueSlug(seen, head[2]!);
+      tocEntries.push({ text: head[2]!, id, level: head[1]!.length });
+      out = rendered.replace(/^<h([1-6])>/, `<h$1 id="${escapeHtml(id)}">`);
+    }
+
+    const srcHtml = `<pre class="src">${escapeHtml(block)}</pre>`;
+    mainHtml += `${srcHtml}<div class="out">${withBase(out, options.base)}</div>`;
+  }
+
+  return createTutorialHtml(mainHtml, tocEntries, options);
+}
+
+function createTutorialHtml(mainHtml: string, toc: TocEntry[], options: SplitPageOptions): string {
+  const { base } = options;
+  const tocLinksHtml = toc
+    .map((e) => `<a href="#${escapeHtml(e.id)}" data-level="${e.level}">${escapeHtml(e.text)}</a>`)
+    .join("\n");
+
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+
+    <!--
+      Generated by \`bun run gen:docs\` — do not hand-edit.
+
+      Follow-up review §2.3. The playground carried a \`default-src 'none'\`
+      allowlist and its neighbours carried nothing at all, on a site
+      served verbatim by GitHub Pages — which cannot send headers, so a
+      <meta> policy is the only content-security control available, and it
+      has to come before the first subresource.
+
+      \`style-src\` carries 'unsafe-inline' for the same reason playground.html's
+      does: this page's CSS is inline. An inline-style injection is a defacement, not code
+      execution, so the trade is a different order of magnitude.
+
+      \`script-src 'self'\` covers this page's own bundled script
+      (vendor/visimark-site-tutorial.js), which the example pages reach through
+      their base path.
+
+      \`img-src 'self'\` covers charts rendered in the tutorial
+      (charts/c-trend.svg), which is a sibling.
+
+      \`frame-ancestors\` is absent because a <meta> policy cannot carry it; on
+      Pages there is nowhere to put it.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none';
+               script-src 'self';
+               style-src 'self' 'unsafe-inline';
+               img-src 'self';
+               base-uri 'none';
+               form-action 'none'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <meta
+      name="description"
+      content="${escapeHtml(options.description)}"
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="VisiMark" />
+    <meta property="og:title" content="${escapeHtml(options.ogTitle)}" />
+    <meta
+      property="og:description"
+      content="${escapeHtml(options.description)}"
+    />
+    <meta
+      property="og:url"
+      content="https://visimark.dev/${options.ogPath}"
+    />
+    <meta
+      property="og:image"
+      content="https://visimark.dev/og-card.png"
+    />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="VisiMark: a vmark block computing grand_total = SUM(Total), and the prose value it keeps in step"
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <title>${escapeHtml(options.title)}</title>
+    <link rel="icon" type="image/webp" href="${base}assets/visimark.webp" />
+
+    <style>
+      :root {
+        --bg: #fdfdfc;
+        --fg: #1c1b19;
+        --muted: #6b6862;
+        --rule: #e0ddd6;
+        --src-bg: #f5f3ee;
+        --src-fg: #3a372f;
+        --accent: #2f6f4f;
+        --bar: #ffffff;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #16161a;
+          --fg: #e6e4de;
+          --muted: #9a968d;
+          --rule: #33333a;
+          --src-bg: #1e1e24;
+          --src-fg: #c9c5ba;
+          --accent: #7fc4a0;
+          --bar: #1b1b20;
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-padding-top: 4.5rem;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font:
+          16px/1.6 -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          Helvetica,
+          Arial,
+          sans-serif;
+      }
+
+      /* ---- top bar ---- */
+      .bar {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: center;
+        padding: 0.6rem 1rem;
+        background: var(--bar);
+        border-bottom: 1px solid var(--rule);
+      }
+      .bar-side {
+        flex: 1 1 0;
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.9rem;
+      }
+      .bar-side-end {
+        justify-content: flex-end;
+      }
+      .bar .title {
+        font-weight: 600;
+        margin-right: 1.25rem;
+      }
+      .bar .title a {
+        color: inherit;
+        text-decoration: none;
+      }
+      .nav {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      .nav a {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--muted);
+        text-decoration: none;
+        white-space: nowrap;
+        padding: 2px 0;
+        border-bottom: 2px solid transparent;
+      }
+      .nav a:hover,
+      .nav a:focus-visible {
+        color: var(--fg);
+        border-bottom-color: var(--accent);
+      }
+      .modes button {
+        font: inherit;
+        font-size: 0.85rem;
+        padding: 0.25rem 0.7rem;
+        border: 1px solid var(--rule);
+        background: transparent;
+        color: var(--muted);
+        cursor: pointer;
+      }
+      .modes button:first-child {
+        border-radius: 4px 0 0 4px;
+      }
+      .modes button:last-child {
+        border-radius: 0 4px 4px 0;
+      }
+      .modes button + button {
+        border-left: 0;
+      }
+      .modes button[aria-pressed="true"] {
+        color: var(--bg);
+        background: var(--accent);
+        border-color: var(--accent);
+      }
+      /* ---- table of contents ---- */
+      .toc-btn {
+        font: inherit;
+        font-size: 0.85rem;
+        font-weight: 600;
+        white-space: nowrap;
+        padding: 0.3rem 1rem;
+        color: var(--fg);
+        background: var(--bg);
+        border: 1px solid var(--rule);
+        border-radius: 999px;
+        cursor: pointer;
+      }
+      .toc-btn:hover,
+      .toc-btn:focus-visible {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      .toc-hint {
+        margin-left: 0.4rem;
+        font: 0.75em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        padding: 0.05rem 0.4rem;
+        border: 1px solid var(--rule);
+        border-radius: 4px;
+        color: var(--muted);
+        background: var(--src-bg);
+      }
+
+      .toc {
+        width: 66%;
+        height: 75%;
+        max-width: none;
+        max-height: none;
+        padding: 0;
+        color: var(--fg);
+        background: var(--bg);
+        border: 1px solid var(--rule);
+        border-radius: 8px;
+        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.18);
+        overflow: hidden;
+      }
+      @media (prefers-color-scheme: dark) {
+        .toc {
+          box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
+        }
+      }
+      .toc::backdrop {
+        background: rgba(0, 0, 0, 0.35);
+      }
+      .toc-inner {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+      }
+      .toc-head {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.9rem 1.25rem;
+        border-bottom: 1px solid var(--rule);
+      }
+      .toc-head strong {
+        font-size: 1rem;
+      }
+      .toc-search {
+        flex: 1;
+        min-width: 0;
+        font: inherit;
+        font-size: 0.9rem;
+        padding: 0.35rem 0.8rem;
+        color: var(--fg);
+        background: var(--src-bg);
+        border: 1px solid var(--rule);
+        border-radius: 999px;
+        outline: none;
+      }
+      .toc-search:focus-visible {
+        border-color: var(--accent);
+      }
+      .toc-close {
+        margin-left: auto;
+        font: inherit;
+        font-size: 1.3rem;
+        line-height: 1;
+        padding: 0.1rem 0.5rem;
+        color: var(--muted);
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .toc-close:hover,
+      .toc-close:focus-visible {
+        color: var(--fg);
+        border-color: var(--rule);
+      }
+      .toc-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 0.75rem 0;
+      }
+      .toc-list a {
+        display: block;
+        padding: 0.3rem 1.25rem;
+        color: var(--fg);
+        text-decoration: none;
+        border-left: 3px solid transparent;
+      }
+      .toc-list a[hidden] {
+        display: none;
+      }
+      .toc-list a:hover,
+      .toc-list a:focus-visible {
+        background: var(--src-bg);
+        border-left-color: var(--accent);
+      }
+      .toc-list a[data-level="1"] {
+        font-weight: 700;
+        font-size: 1.02rem;
+        margin-top: 0.7rem;
+      }
+      .toc-list a[data-level="2"] {
+        padding-left: 2.5rem;
+      }
+      .toc-list a[data-level="3"] {
+        padding-left: 3.9rem;
+        font-size: 0.9rem;
+        color: var(--muted);
+      }
+      .toc-list a[data-level="4"] {
+        padding-left: 5.3rem;
+        font-size: 0.9rem;
+        color: var(--muted);
+      }
+      .toc-list a[data-level="5"],
+      .toc-list a[data-level="6"] {
+        padding-left: 6.7rem;
+        font-size: 0.9rem;
+        color: var(--muted);
+      }
+
+      /* ---- the lockstep grid ---- */
+      main {
+        max-width: 1600px;
+        margin: 0 auto;
+        padding: 1.5rem 1rem 6rem;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        column-gap: 1.5rem;
+        row-gap: 0.2rem;
+        align-items: start;
+      }
+      body[data-mode="rendered"] main,
+      body[data-mode="source"] main {
+        grid-template-columns: minmax(0, 1fr);
+        max-width: 900px;
+      }
+      body[data-mode="rendered"] .src,
+      body[data-mode="source"] .out {
+        display: none;
+      }
+
+      .src {
+        margin: 0;
+        padding: 0.5rem 0.75rem;
+        overflow-x: auto;
+        background: var(--src-bg);
+        color: var(--src-fg);
+        border-left: 2px solid var(--rule);
+        font:
+          12px/1.55 ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          Consolas,
+          monospace;
+        white-space: pre;
+        tab-size: 2;
+      }
+      .out {
+        min-width: 0;
+        padding: 0 0.25rem;
+      }
+      .out > :first-child {
+        margin-top: 0;
+      }
+      .out > :last-child {
+        margin-bottom: 0;
+      }
+
+      /* ---- rendered markdown ---- */
+      .out h1,
+      .out h2,
+      .out h3 {
+        line-height: 1.25;
+        margin: 1.6rem 0 0.6rem;
+      }
+      .out h1 {
+        font-size: 1.7rem;
+        border-bottom: 2px solid var(--accent);
+        padding-bottom: 0.3rem;
+      }
+      .out h2 {
+        font-size: 1.3rem;
+      }
+      .out h3 {
+        font-size: 1.05rem;
+      }
+      .out p,
+      .out ul,
+      .out ol {
+        margin: 0.6rem 0;
+      }
+      .out a {
+        color: var(--accent);
+      }
+      .out code {
+        font:
+          0.87em ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          Consolas,
+          monospace;
+        background: var(--src-bg);
+        padding: 0.1em 0.35em;
+        border-radius: 3px;
+      }
+      .out pre {
+        background: var(--src-bg);
+        padding: 0.7rem 0.85rem;
+        overflow-x: auto;
+        border-radius: 4px;
+        border-left: 2px solid var(--accent);
+      }
+      .out pre code {
+        background: none;
+        padding: 0;
+        font-size: 0.8rem;
+        line-height: 1.5;
+      }
+      .out table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 0.9rem;
+        margin: 0.8rem 0;
+      }
+      .out th,
+      .out td {
+        border: 1px solid var(--rule);
+        padding: 0.3rem 0.5rem;
+        text-align: left;
+      }
+      .out th {
+        background: var(--src-bg);
+      }
+      .out blockquote {
+        margin: 0.8rem 0;
+        padding-left: 0.9rem;
+        border-left: 3px solid var(--rule);
+        color: var(--muted);
+      }
+      .out hr {
+        border: 0;
+        border-top: 1px solid var(--rule);
+        margin: 2rem 0;
+      }
+
+      .note {
+        grid-column: 1 / -1;
+        padding: 2rem;
+        color: var(--muted);
+      }
+
+      @media (max-width: 700px) {
+        .toc {
+          width: 92%;
+          height: 85%;
+        }
+      }
+
+      @media (max-width: 900px) {
+        main {
+          grid-template-columns: minmax(0, 1fr);
+          max-width: 900px;
+        }
+        body[data-mode="split"] .src {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+
+  <body data-mode="split">
+    <header class="bar">
+      <div class="bar-side">
+        <span class="title"><a href="${base}index.html">VisiMark</a> — ${escapeHtml(options.navLabel)}</span>
+        <nav class="nav" aria-label="Site">
+          <a href="${base}index.html">Home</a>
+          <a href="${base}playground.html">Playground</a>
+          <a href="${base}ci.html">Continuous integration</a>
+          <a href="${base}mcp-server.html">MCP server</a>
+          <a href="${base}examples.html">Examples</a>
+          <a href="https://github.com/michal-niedzwiedzki/visimark" rel="noopener">GitHub</a>
+        </nav>
+      </div>
+
+      <button class="toc-btn" id="toc-btn" type="button" aria-haspopup="dialog">
+        Table of Contents <kbd class="toc-hint">/</kbd>
+      </button>
+
+      <div class="bar-side bar-side-end">
+        <span class="modes" role="group" aria-label="View mode">
+          <button type="button" data-set="split" aria-pressed="true">Side by side</button>
+          <button type="button" data-set="rendered" aria-pressed="false">Rendered</button>
+          <button type="button" data-set="source" aria-pressed="false">Source</button>
+        </span>
+      </div>
+    </header>
+
+    <dialog class="toc" id="toc" aria-label="Table of contents">
+      <div class="toc-inner">
+        <div class="toc-head">
+          <strong>Table of Contents</strong>
+          <input
+            type="search"
+            id="toc-search"
+            class="toc-search"
+            placeholder="Search"
+            aria-label="Search table of contents"
+            autocomplete="off"
+          />
+          <button class="toc-close" id="toc-close" type="button" aria-label="Close">&times;</button>
+        </div>
+        <nav class="toc-list" id="toc-list">
+${tocLinksHtml}
+        </nav>
+      </div>
+    </dialog>
+
+    <main id="doc">
+${mainHtml}
+    </main>
+
+    <script src="${base}vendor/visimark-site-tutorial.js"></script>
+  </body>
+</html>`;
+}
+
+export interface SplitPageOptions {
+  title: string;
+  description: string;
+  ogTitle: string;
+  navLabel: string;
+  /** The page's path under docs/, for `og:url`. */
+  ogPath: string;
+  /** Path from the page back to docs/, as in {@link DocPageOptions}. */
+  base: string;
+}
+
+export interface DocPageOptions {
+  title: string;
+  description: string;
+  ogTitle: string;
+  navLabel: string;
+  scriptName: string;
+  /** Path from this page back to docs/ — `""` for a page in docs/ itself,
+   *  `"../../"` for one at docs/examples/<slug>/. Prefixes every site link,
+   *  the icon, the bundle and any relative image in the Markdown. */
+  base?: string;
+  /** The page's path under docs/, for `og:url`. Defaults to
+   *  `<scriptName>.html`. */
+  ogPath?: string;
+}
+
+export function renderDocPage(markdown: string, options: DocPageOptions): string {
+  const base = options.base ?? "";
+  const html = withBase(renderMarkdown(markdown), base);
+  const seen = new Set<string>();
+  const toc: TocEntry[] = [];
+
+  // Process headings to add IDs and build TOC
+  let processedHtml = html;
+  const regex = /<h([1-6])>(.*?)<\/h[1-6]>/g;
+  const headings: Array<{ level: string; text: string; originalMatch: string }> = [];
+  let match: RegExpExecArray | null;
+
+  while ((match = regex.exec(html)) !== null) {
+    headings.push({
+      level: match[1]!,
+      text: match[2]!,
+      originalMatch: match[0]!,
+    });
+  }
+
+  for (const heading of headings) {
+    // Extract plain text content safely by removing HTML tags completely
+    const plainText = getPlainTextFromHtml(heading.text);
+    const id = uniqueSlug(seen, plainText);
+
+    toc.push({
+      text: plainText,
+      id,
+      level: parseInt(heading.level),
+    });
+
+    // heading.text already contains properly escaped HTML from renderMarkdown()
+    // We only need to escape the id attribute
+    const newHeading = `<h${heading.level} id="${escapeHtml(id)}">${heading.text}</h${heading.level}>`;
+    processedHtml = processedHtml.replace(heading.originalMatch, newHeading);
+  }
+
+  // Disable checkboxes
+  processedHtml = processedHtml.replace(
+    /<input type="checkbox"(?!\s+disabled)/g,
+    '<input type="checkbox" disabled',
+  );
+
+  const tocLinksHtml = toc
+    .map((e) => `<a href="#${escapeHtml(e.id)}" data-level="${e.level}">${escapeHtml(e.text)}</a>`)
+    .join("\n");
+
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+
+    <!--
+      Generated by \`bun run gen:docs\` — do not hand-edit.
+
+      Follow-up review §2.3. The playground carried a \`default-src 'none'\`
+      allowlist and its neighbours carried nothing at all, on a site
+      served verbatim by GitHub Pages — which cannot send headers, so a
+      <meta> policy is the only content-security control available, and it
+      has to come before the first subresource.
+
+      \`style-src\` carries 'unsafe-inline' for the same reason playground.html's
+      does: this page's CSS is inline. An inline-style injection is a defacement, not code
+      execution, so the trade is a different order of magnitude.
+
+      \`script-src 'self'\` covers this page's own bundled script under
+      vendor/, which is a sibling.
+
+      \`img-src 'self'\` covers charts rendered in documentation.
+
+      \`frame-ancestors\` is absent because a <meta> policy cannot carry it; on
+      Pages there is nowhere to put it.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none';
+               script-src 'self';
+               style-src 'self' 'unsafe-inline';
+               img-src 'self';
+               base-uri 'none';
+               form-action 'none'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <meta
+      name="description"
+      content="${escapeHtml(options.description)}"
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="VisiMark" />
+    <meta property="og:title" content="${escapeHtml(options.ogTitle)}" />
+    <meta
+      property="og:description"
+      content="${escapeHtml(options.description)}"
+    />
+    <meta
+      property="og:url"
+      content="https://visimark.dev/${options.ogPath ?? `${options.scriptName}.html`}"
+    />
+    <meta
+      property="og:image"
+      content="https://visimark.dev/og-card.png"
+    />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="VisiMark: a vmark block computing grand_total = SUM(Total), and the prose value it keeps in step"
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <title>${escapeHtml(options.title)}</title>
+    <link rel="icon" type="image/webp" href="${base}assets/visimark.webp" />
+
+    <style>
+      :root {
+        --bg: #fdfdfc;
+        --fg: #1c1b19;
+        --muted: #6b6862;
+        --rule: #e0ddd6;
+        --src-bg: #f5f3ee;
+        --src-fg: #3a372f;
+        --accent: #2f6f4f;
+        --bar: #ffffff;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #16161a;
+          --fg: #e6e4de;
+          --muted: #9a968d;
+          --rule: #33333a;
+          --src-bg: #1e1e24;
+          --src-fg: #c9c5ba;
+          --accent: #7fc4a0;
+          --bar: #1b1b20;
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-padding-top: 4.5rem;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font:
+          16px/1.6 -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          Helvetica,
+          Arial,
+          sans-serif;
+      }
+
+      /* ---- top bar ---- */
+      .bar {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: center;
+        padding: 0.6rem 1rem;
+        background: var(--bar);
+        border-bottom: 1px solid var(--rule);
+      }
+      .bar-side {
+        flex: 1 1 0;
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.9rem;
+      }
+      .bar-side-end {
+        justify-content: flex-end;
+      }
+      .bar .title {
+        font-weight: 600;
+        margin-right: 1.25rem;
+      }
+      .bar .title a {
+        color: inherit;
+        text-decoration: none;
+      }
+      .nav {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      .nav a {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--muted);
+        text-decoration: none;
+        white-space: nowrap;
+        padding: 2px 0;
+        border-bottom: 2px solid transparent;
+      }
+      .nav a:hover,
+      .nav a:focus-visible {
+        color: var(--fg);
+        border-bottom-color: var(--accent);
+      }
+
+      /* ---- table of contents ---- */
+      .toc-btn {
+        font: inherit;
+        font-size: 0.85rem;
+        font-weight: 600;
+        white-space: nowrap;
+        padding: 0.3rem 1rem;
+        color: var(--fg);
+        background: var(--bg);
+        border: 1px solid var(--rule);
+        border-radius: 999px;
+        cursor: pointer;
+      }
+      .toc-btn:hover,
+      .toc-btn:focus-visible {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      .toc-hint {
+        margin-left: 0.4rem;
+        font: 0.75em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        padding: 0.05rem 0.4rem;
+        border: 1px solid var(--rule);
+        border-radius: 4px;
+        color: var(--muted);
+        background: var(--src-bg);
+      }
+
+      .toc {
+        width: 66%;
+        height: 75%;
+        max-width: none;
+        max-height: none;
+        padding: 0;
+        color: var(--fg);
+        background: var(--bg);
+        border: 1px solid var(--rule);
+        border-radius: 8px;
+        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.18);
+        overflow: hidden;
+      }
+      @media (prefers-color-scheme: dark) {
+        .toc {
+          box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
+        }
+      }
+      .toc::backdrop {
+        background: rgba(0, 0, 0, 0.35);
+      }
+      .toc-inner {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+      }
+      .toc-head {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.9rem 1.25rem;
+        border-bottom: 1px solid var(--rule);
+      }
+      .toc-head strong {
+        font-size: 1rem;
+      }
+      .toc-search {
+        flex: 1;
+        min-width: 0;
+        font: inherit;
+        font-size: 0.9rem;
+        padding: 0.35rem 0.8rem;
+        color: var(--fg);
+        background: var(--src-bg);
+        border: 1px solid var(--rule);
+        border-radius: 999px;
+        outline: none;
+      }
+      .toc-search:focus-visible {
+        border-color: var(--accent);
+      }
+      .toc-close {
+        margin-left: auto;
+        font: inherit;
+        font-size: 1.3rem;
+        line-height: 1;
+        padding: 0.1rem 0.5rem;
+        color: var(--muted);
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .toc-close:hover,
+      .toc-close:focus-visible {
+        color: var(--fg);
+        border-color: var(--rule);
+      }
+      .toc-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 0.75rem 0;
+      }
+      .toc-list a {
+        display: block;
+        padding: 0.3rem 1.25rem;
+        color: var(--fg);
+        text-decoration: none;
+        border-left: 3px solid transparent;
+      }
+      .toc-list a[hidden] {
+        display: none;
+      }
+      .toc-list a:hover,
+      .toc-list a:focus-visible {
+        background: var(--src-bg);
+        border-left-color: var(--accent);
+      }
+      .toc-list a[data-level="1"] {
+        font-weight: 700;
+        font-size: 1.02rem;
+        margin-top: 0.7rem;
+      }
+      .toc-list a[data-level="2"] {
+        padding-left: 2.5rem;
+      }
+      .toc-list a[data-level="3"] {
+        padding-left: 3.9rem;
+        font-size: 0.9rem;
+        color: var(--muted);
+      }
+      .toc-list a[data-level="4"],
+      .toc-list a[data-level="5"],
+      .toc-list a[data-level="6"] {
+        padding-left: 5.3rem;
+        font-size: 0.9rem;
+        color: var(--muted);
+      }
+
+      /* ---- the document ---- */
+      main {
+        max-width: 880px;
+        margin: 0 auto;
+        padding: 1.5rem 1rem 6rem;
+      }
+      main h1,
+      main h2,
+      main h3,
+      main h4 {
+        line-height: 1.25;
+        margin: 1.8rem 0 0.6rem;
+      }
+      main h1 {
+        font-size: 1.7rem;
+        border-bottom: 2px solid var(--accent);
+        padding-bottom: 0.3rem;
+        margin-top: 2.6rem;
+      }
+      main h2 {
+        font-size: 1.3rem;
+      }
+      main h3 {
+        font-size: 1.05rem;
+      }
+      main p,
+      main ul,
+      main ol {
+        margin: 0.7rem 0;
+      }
+      main a {
+        color: var(--accent);
+      }
+      main code {
+        font:
+          0.87em ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          Consolas,
+          monospace;
+        background: var(--src-bg);
+        padding: 0.1em 0.35em;
+        border-radius: 3px;
+      }
+      main pre {
+        background: var(--src-bg);
+        padding: 0.7rem 0.85rem;
+        overflow-x: auto;
+        border-radius: 4px;
+        border-left: 2px solid var(--accent);
+      }
+      main pre code {
+        background: none;
+        padding: 0;
+        font-size: 0.8rem;
+        line-height: 1.5;
+      }
+      main table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 0.9rem;
+        margin: 0.9rem 0;
+      }
+      main th,
+      main td {
+        border: 1px solid var(--rule);
+        padding: 0.35rem 0.55rem;
+        text-align: left;
+        vertical-align: top;
+      }
+      main th {
+        background: var(--src-bg);
+      }
+      main blockquote {
+        margin: 0.8rem 0;
+        padding-left: 0.9rem;
+        border-left: 3px solid var(--rule);
+        color: var(--muted);
+      }
+      main hr {
+        border: 0;
+        border-top: 1px solid var(--rule);
+        margin: 2.5rem 0;
+      }
+      main li:has(> input[type="checkbox"]) {
+        list-style: none;
+        margin-left: -1.2rem;
+      }
+
+      .note {
+        padding: 2rem 0;
+        color: var(--muted);
+      }
+      .note code {
+        color: var(--fg);
+      }
+
+      @media (max-width: 700px) {
+        .toc {
+          width: 92%;
+          height: 85%;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <header class="bar">
+      <div class="bar-side">
+        <span class="title"><a href="${base}index.html">VisiMark</a> — ${escapeHtml(options.navLabel)}</span>
+        <nav class="nav" aria-label="Site">
+          <a href="${base}index.html">Home</a>
+          <a href="${base}playground.html">Playground</a>
+          <a href="${base}tutorial.html">Tutorial</a>
+          <a href="${base}ci.html">Continuous integration</a>
+          <a href="${base}mcp-server.html">MCP server</a>
+          <a href="${base}examples.html">Examples</a>
+          <a href="https://github.com/michal-niedzwiedzki/visimark" rel="noopener">GitHub</a>
+        </nav>
+      </div>
+
+      <button class="toc-btn" id="toc-btn" type="button" aria-haspopup="dialog">
+        Table of Contents <kbd class="toc-hint">/</kbd>
+      </button>
+
+      <div class="bar-side bar-side-end"></div>
+    </header>
+
+    <dialog class="toc" id="toc" aria-label="Table of contents">
+      <div class="toc-inner">
+        <div class="toc-head">
+          <strong>Table of Contents</strong>
+          <input
+            type="search"
+            id="toc-search"
+            class="toc-search"
+            placeholder="Search"
+            aria-label="Search table of contents"
+            autocomplete="off"
+          />
+          <button class="toc-close" id="toc-close" type="button" aria-label="Close">&times;</button>
+        </div>
+        <nav class="toc-list" id="toc-list">
+${tocLinksHtml}
+        </nav>
+      </div>
+    </dialog>
+
+    <main id="doc">
+${processedHtml}
+    </main>
+
+    <script src="${base}vendor/visimark-site-${escapeHtml(options.scriptName)}.js"></script>
+  </body>
+</html>`;
+}

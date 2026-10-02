@@ -2,6 +2,28 @@
 
 ## Unreleased
 
+- A `lattice` clause on a `param` and a `report` statement are now understood: an impossible lattice, an unknown report name or a report option that does not match its grammar gets a diagnostic.
+- A `|unit` anchor (`**23300.00 PLN**<!--vmark=lines.net_total|unit-->`) is no longer flagged as an unknown display rule; a missing or wrong unit in it is a `STALE` that formatting repairs, and `|unit` on a value without a unit is a `TYPE` diagnostic. A plain anchor written `5 m^2` or `50 1/s` keeps its unit when formatted.
+- Hovering a binding or a column now shows its unit and whether it was declared or derived (`unit: [PLN] (declared)`); hovering a builtin shows its unit signature (`SUM(col: U) → U`). Units that disagree — a declared unit the formula does not derive, two different units added together, a malformed unit bracket — get a `UNIT` diagnostic.
+
+## 0.1.11 - 2026-09-30
+
+- A `|nbsp` anchor on a string value (`**past&nbsp;due**<!--vmark=s.status|nbsp-->`) now gets a `STALE` diagnostic when its prose drifts, with a formatting fix, and `ANCHOR` when the value cannot be written there.
+- A bare, unwrapped word in front of an anchor comment that does not already denote a value of the anchor's own type now gets an `ANCHOR` diagnostic instead of being silently rewritten. A delimited placeholder (`**0**`, `` `0` ``) is unaffected.
+- Anchor comments can now name a display rule (`<!--vmark=x.y|name-->`); `percent` replaces the old `%` sigil, which is now reported as `ANCHOR`. An unrecognised name, an undelimited seed, or a display rule applied to a value of a type it doesn't accept gets `ANCHOR`/`TYPE`.
+
+## 0.1.10 - 2026-09-28
+
+No editor-visible changes. Bundles engine 0.1.10.
+
+## 0.1.9 - 2026-09-28
+
+- A scalar bound into prose at more than one place (`<!--vmark=…-->`) that has
+  drifted at several of them now gets a `STALE` diagnostic on each drifted
+  site, not just the first.
+
+## 0.1.8 - 2026-09-25
+
 - A `param` may declare the set of values it accepts. A default outside the
   domain, or an empty domain, is now reported as a `DOMAIN` diagnostic (error
   severity), the same way a `PRECISION` or `TYPE` finding already is.

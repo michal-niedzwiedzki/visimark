@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { charts, clean, drift } from "../examples.js";
 import { onDisk } from "../../src/fs/node-reader.js";
-import { fmt } from "../../src/write/fmt.js";
+import { artifactsFor, fmt } from "../../src/write/fmt.js";
 import { locate } from "../../src/parse/document.js";
 import { build } from "../../src/model/build.js";
 import { check } from "../../src/eval/check.js";
@@ -116,8 +116,8 @@ Gap precision 2 = ${prose}
   }
 });
 
-test("fmt writes percent form on a % comment and is idempotent", () => {
-  const src = `Margin **0.4155**<!--vmark=s.margin%-->.
+test("fmt writes percent form on a |percent comment and is idempotent", () => {
+  const src = `Margin **0.4155**<!--vmark=s.margin|percent-->.
 
 \`\`\`vmark #s
 margin precision 4 = 0.4026
@@ -125,12 +125,12 @@ margin precision 4 = 0.4026
 `;
   const once = fmt(src, {});
   expect(once.changed).toBe(true);
-  expect(once.output).toContain("**40.26%**<!--vmark=s.margin%-->");
+  expect(once.output).toContain("**40.26%**<!--vmark=s.margin|percent-->");
   expect(fmt(once.output, {}).output).toBe(once.output);
   expect(check(build(locate(once.output))).exitCode).toBe(0);
 });
 
-test("fmt without % rewrites a percent-shaped span to toFixed", () => {
+test("fmt without a display rule rewrites a percent-shaped span to toFixed", () => {
   const src = `Reserved **20.00%**<!--vmark=s.x-->.
 
 \`\`\`vmark #s
@@ -142,8 +142,8 @@ x precision 2 = 20%
   expect(once.output).not.toContain("20.00%");
 });
 
-test("fmt does not rewrite a % span that is PRECISION", () => {
-  const src = `X **1**<!--vmark=s.n%-->.
+test("fmt does not rewrite a |percent span that is PRECISION", () => {
+  const src = `X **1**<!--vmark=s.n|percent-->.
 
 \`\`\`vmark #s
 n precision 1 = 1
@@ -151,6 +151,45 @@ n precision 1 = 1
 `;
   const once = fmt(src, {});
   expect(once.output).toBe(src);
+});
+
+// ── |unit (#323) ────────────────────────────────────────────────────────────
+
+const unitSrc = (seed: string, decl = "total [PLN] precision 2 = 3.5 [PLN]") => `X ${seed}.
+
+\`\`\`vmark #s
+${decl}
+\`\`\`
+`;
+
+test("fmt writes a |unit span exactly and is idempotent", () => {
+  for (const seed of ["_", "$3.50", "3.50 EUR", "3.50  PLN", "3.5", "24000.00 PLN"]) {
+    const once = fmt(unitSrc(`**${seed}**<!--vmark=s.total|unit-->`), {});
+    expect(once.output).toContain("X **3.50 PLN**<!--vmark=s.total|unit-->.");
+    expect(fmt(once.output, {}).changed).toBe(false);
+    expect(check(build(locate(once.output))).exitCode).toBe(0);
+  }
+});
+
+test("fmt normalises a |unit spelling but keeps a plain anchor's", () => {
+  const src = unitSrc(
+    "**5 m^2**<!--vmark=s.area|unit--> and **5 m^2**<!--vmark=s.area-->",
+    "area [m²] precision 0 = 6 [m²]",
+  );
+  const once = fmt(src, {});
+  expect(once.output).toContain(
+    "**6 m²**<!--vmark=s.area|unit--> and **6 m^2**<!--vmark=s.area-->",
+  );
+});
+
+test("fmt leaves a |unit anchor on a dimensionless value untouched", () => {
+  const src = unitSrc("**_**<!--vmark=s.n|unit-->", "n precision 2 = 3");
+  expect(fmt(src, {}).output).toBe(src);
+});
+
+test("fmt keeps a digit-bearing unit on a plain anchor instead of stripping it", () => {
+  const src = unitSrc("**50 1/s**<!--vmark=s.rate-->", "rate [1/s] precision 0 = 51 [1/s]");
+  expect(fmt(src, {}).output).toContain("**51 1/s**<!--vmark=s.rate-->");
 });
 
 function diffLines(a: string, b: string): number {
@@ -187,6 +226,25 @@ test("noArtifacts withholds the artifacts and counts them, changing nothing else
   expect(declined.anchorsUpdated).toBe(plain.anchorsUpdated);
   expect(declined.datesFixed).toBe(plain.datesFixed);
   expect(declined.stampsUpdated).toBe(plain.stampsUpdated);
+
+  rmSync(dir, { recursive: true, force: true });
+});
+
+// v1.1 row 14 — a caller (the Obsidian plugin) that already has a
+// `CheckResult` reads the same artifact set off it directly, with no second
+// `fmt`/`check` run, and it agrees with what `fmt` itself would write.
+test("artifactsFor reads the same artifact set fmt() computes from an already-run check()", () => {
+  const dir = mkdtempSync(join(tmpdir(), "vm-fmt-af-"));
+  const p = join(dir, "example-charts.md");
+  writeFileSync(p, charts);
+  const doc = onDisk(p);
+
+  const result = check(build(locate(charts)), { doc });
+  const direct = artifactsFor(result);
+  const viaFmt = fmt(charts, { doc }).artifacts;
+
+  expect(direct).toHaveLength(5);
+  expect(direct).toEqual(viaFmt);
 
   rmSync(dir, { recursive: true, force: true });
 });
@@ -237,4 +295,75 @@ test("fmt leaves a param's domain clause untouched, in every spelling", () => {
   const twice = fmt(once.output, {});
   expect(twice.changed).toBe(false);
   expect(twice.output).toBe(doc);
+});
+
+test("fmt never writes a span this feature's ANCHOR check refuses", () => {
+  const doc =
+    "```vmark #s\n" +
+    "b precision 2 = 0.25\n" +
+    "```\n" +
+    "\n" +
+    "It comes to <!--vmark=s.b--> PLN.\n";
+  const r = fmt(doc, {});
+  expect(r.changed).toBe(false);
+  expect(r.output).toBe(doc);
+  const after = check(build(locate(r.output)));
+  expect(after.findings.map((f) => f.code)).toEqual(["ANCHOR"]);
+});
+
+// ---- |nbsp (#305) ----
+
+const nbspDoc = (value: string, prose: string) =>
+  `\`\`\`vmark #s\nstatus = ${JSON.stringify(value)}\n\`\`\`\n\n${prose}\n`;
+
+test("fmt rewrites a drifted |nbsp span and is idempotent", () => {
+  const src = nbspDoc("paid in full", "Status **past&nbsp;due**<!--vmark=s.status|nbsp-->.");
+  const once = fmt(src, {});
+  expect(once.changed).toBe(true);
+  expect(once.output).toContain("**paid&nbsp;in&nbsp;full**<!--vmark=s.status|nbsp-->");
+  const twice = fmt(once.output, {});
+  expect(twice.changed).toBe(false);
+  expect(twice.output).toBe(once.output);
+});
+
+test("fmt seeds a **_** placeholder under |nbsp", () => {
+  const r = fmt(nbspDoc("past due", "Status **_**<!--vmark=s.status|nbsp-->."), {});
+  expect(r.output).toContain("**past&nbsp;due**<!--vmark=s.status|nbsp-->");
+});
+
+test("fmt normalises a hand-typed &#160; to &nbsp;", () => {
+  const r = fmt(nbspDoc("past due", "Status **past&#160;due**<!--vmark=s.status|nbsp-->."), {});
+  expect(r.output).toContain("**past&nbsp;due**<!--vmark=s.status|nbsp-->");
+});
+
+test("fmt never writes a |nbsp anchor check refused", () => {
+  for (const prose of [
+    "Star **_**<!--vmark=s.status|nbsp-->.",
+    "Code `past due`<!--vmark=s.status|nbsp-->.",
+  ]) {
+    const value = prose.startsWith("Star") ? "a *b* c" : "past due";
+    const src = nbspDoc(value, prose);
+    const r = fmt(src, {});
+    expect(r.changed).toBe(false);
+    expect(r.output).toBe(src);
+  }
+});
+
+test("fmt never writes a plain string anchor", () => {
+  const src = nbspDoc("paid in full", "Status **past due**<!--vmark=s.status-->.");
+  expect(fmt(src, {}).output).toBe(src);
+});
+
+test("fmt writes every |nbsp anchor of a drifted scalar in one run", () => {
+  const src = nbspDoc(
+    "paid in full",
+    "**Status:** **past&nbsp;due**<!--vmark=s.status|nbsp--> &nbsp;&nbsp; **Also:** *past&nbsp;due*<!--vmark=s.status|nbsp-->\n\nPlain **past due**<!--vmark=s.status-->.",
+  );
+  const r = fmt(src, {});
+  expect(r.output).toContain(
+    "**Status:** **paid&nbsp;in&nbsp;full**<!--vmark=s.status|nbsp--> &nbsp;&nbsp; **Also:** *paid&nbsp;in&nbsp;full*<!--vmark=s.status|nbsp-->",
+  );
+  // the separator and the plain anchor are prose fmt never reads
+  expect(r.output).toContain("Plain **past due**<!--vmark=s.status-->.");
+  expect(check(build(locate(r.output))).exitCode).toBe(0);
 });

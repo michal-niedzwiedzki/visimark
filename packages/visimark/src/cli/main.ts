@@ -10,7 +10,7 @@ import {
 } from "./commands.js";
 import { readVersion } from "./version.js";
 
-const USAGE = `visimark — spreadsheet mechanics for Markdown
+const USAGE = `visimark — a document integrity layer for Markdown
 
 usage:
   visimark check FILE... [--json]      read-only; exit 1 if any finding.
@@ -18,7 +18,7 @@ usage:
                                         finding: run \`visimark infer\`, or mark
                                         the document \`<!--vmark:no-formulas-->\`
                                         if it has nothing to derive.
-  visimark fmt   FILE... [--fix-dates] [--json]
+  visimark fmt   FILE... [--fix-dates] [--fix-units] [--json]
   visimark infer FILE... [--write] [--json]
   visimark eval  FILE [--get NAME] [--json]
   visimark explain FILE [#sheet] [--json]

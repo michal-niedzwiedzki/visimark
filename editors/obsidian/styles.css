@@ -1,0 +1,514 @@
+/*
+ * Everything here is Obsidian's own CSS variables, so the plugin matches every
+ * theme without knowing about any of them, and nothing is set from JavaScript.
+ *
+ * **No colour says "error".** v1 constraint 6 of #176 is that audience B does
+ * not read exit codes, and red is the same sentence in another alphabet. A
+ * finding is distinguished by being a row with words in it, not by being red;
+ * the only accent used is the theme's own, on focus, where it means "this is
+ * where your keyboard is" and nothing else.
+ */
+
+/* --- the status bar witness (v1 row 1) ------------------------------------ */
+
+/*
+ * `display: none` rather than `visibility: hidden` or an opacity: the status
+ * bar lays its children out in a row, and a hidden-but-present item would
+ * leave a gap — a gap is a thing a person can see, and the pass condition of
+ * the manual test's §2.1 is that a vault of ordinary notes looks exactly like
+ * one without the plugin installed.
+ */
+.visimark-status.visimark-hidden {
+  display: none;
+}
+
+/*
+ * The item is the way into the findings view, so it has to look and behave
+ * like something you can press. `mod-clickable` is Obsidian's own class for
+ * exactly that, which is why nothing here sets a cursor or a hover colour.
+ */
+.visimark-status:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
+}
+
+/* --- the findings view (v1 row 6) ----------------------------------------- */
+
+.visimark-findings {
+  padding: var(--size-4-2);
+}
+
+.visimark-note-state {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  line-height: var(--line-height-tight);
+  margin: 0;
+  padding: var(--size-4-2);
+}
+
+.visimark-section + .visimark-section {
+  margin-top: var(--size-4-4);
+}
+
+/*
+ * A button, not a heading element: it folds the list below it, the way
+ * Outline and Backlinks fold their own sections — `nav-heading` grammar
+ * rather than a plugin-invented control.
+ *
+ * Scoped under `.visimark-findings` (two classes, not one) rather than
+ * `.visimark-section-heading` alone: Obsidian's own base theme styles a bare
+ * `button` with a border and a shadow, at a specificity a lone plugin class
+ * does not beat. Every reset in this file that has to fight that chrome away
+ * — this heading, the row button, the repair icon — is scoped the same way.
+ */
+/*
+ * `justify-content: flex-start` is explicit, not the default left as a
+ * no-op: Obsidian's base theme sets `justify-content: center` on a bare
+ * `button`, and `text-align` (which was here instead) does nothing to a flex
+ * container's own children — only `justify-content` positions them. Without
+ * this the chevron and the heading text centred instead of sitting flush
+ * left, the way every node below it does.
+ */
+.visimark-findings .visimark-section-heading {
+  align-items: center;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-medium);
+  gap: var(--size-2-1);
+  justify-content: flex-start;
+  letter-spacing: 0.04em;
+  margin: 0 0 var(--size-4-1);
+  min-height: 44px;
+  padding: 0 var(--size-4-2);
+  text-transform: uppercase;
+  width: 100%;
+}
+
+.visimark-findings .visimark-section-heading:hover {
+  background: var(--background-modifier-hover);
+}
+
+.visimark-findings .visimark-section-heading:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
+}
+
+/* points right when collapsed, down when the section is open */
+.visimark-section-chevron {
+  display: inline-flex;
+  transform: rotate(90deg);
+  transition: transform 120ms ease;
+}
+
+.visimark-section-heading.is-collapsed .visimark-section-chevron {
+  transform: rotate(0deg);
+}
+
+.visimark-list-collapsed {
+  display: none;
+}
+
+.visimark-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/*
+ * A tree, like Outline: `visimark-node` is one entry (a leaf, or a value
+ * with its two detail children below it), `visimark-node-children` is the
+ * nested list, and `visimark-node-row` is the one flex line each node's own
+ * self/action pair sits on. No border, no rule anywhere — a node's own hover
+ * background is what separates it from the next while the pointer is over
+ * it, the same as the list it replaces.
+ */
+.visimark-node {
+  padding: 0 var(--size-4-2);
+}
+
+.visimark-node-row {
+  align-items: center;
+  display: flex;
+  gap: var(--size-2-1);
+  justify-content: flex-start;
+}
+
+/*
+ * A button rather than a div so it is in the tab order and answers Enter and
+ * Space, with the chrome taken off so it reads as a line of text. `min-height`
+ * is the 44px touch target the mobile accessibility rule asks for — this is a
+ * client for someone reading on a phone, so that is not a nicety here.
+ *
+ * One line, like a Backlinks row: `row-text` truncates with an ellipsis
+ * rather than wrapping, and `row-where` never shrinks, so the location stays
+ * readable even on a narrow sidebar. What used to be a second visible line —
+ * the did-you-mean / cycle-path hint — is in the row's own tooltip
+ * (`aria-label`, via `detail()`) instead, the same place the finding code
+ * already lived.
+ *
+ * `justify-content: flex-start`, not `text-align`, for the same reason as
+ * the section heading above — this is a flex container, and `text-align`
+ * does not position flex children.
+ */
+.visimark-findings .visimark-node-self {
+  align-items: baseline;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  color: var(--text-normal);
+  cursor: pointer;
+  display: flex;
+  flex: 1 1 12rem;
+  font-size: var(--font-ui-small);
+  gap: var(--size-4-1);
+  justify-content: flex-start;
+  line-height: var(--line-height-tight);
+  min-height: 44px;
+  padding: var(--size-2-2) 0;
+}
+
+.visimark-findings .visimark-node-self:hover {
+  background: var(--background-modifier-hover);
+}
+
+.visimark-row-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.visimark-row-where {
+  color: var(--text-muted);
+  flex: 0 0 auto;
+  font-size: var(--font-ui-smaller);
+}
+
+/*
+ * A value node has no separate header row — both lines are
+ * `visimark-node-detail` children of this one list, so both get the same
+ * hairline and indent (the vertical guide Outline uses for a nested
+ * heading, on the list rather than on either line). There is nothing above
+ * this list to give the node its own top spacing, so this carries that too.
+ */
+.visimark-node-children {
+  border-inline-start: 1px solid
+    var(--nav-indentation-guide-color, var(--background-modifier-border));
+  list-style: none;
+  margin: var(--size-2-2) 0 var(--size-4-4) var(--size-2-1);
+  padding: 0 0 0 var(--size-4-3);
+}
+
+/*
+ * Top padding only, not top-and-bottom: the gap between this line and the
+ * next used to be two paddings stacked (this one's bottom, the next one's
+ * top). One line's own top padding is enough on its own; the gap before the
+ * *next finding* comes from `visimark-node-children`'s bottom margin above,
+ * which is deliberately larger, so the pair still reads as one unit and the
+ * next finding still reads as a new one.
+ */
+.visimark-node-detail {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  line-height: var(--line-height-tight);
+  padding: var(--size-2-1) 0 0;
+}
+
+/*
+ * The one interactive detail line — jumps to the value and selects it,
+ * previews on hover, same behaviour as `visimark-node-self` elsewhere, but
+ * reading as plain text, not a link or a boxed control: same colour as its
+ * `visimark-node-detail` sibling (`color: inherit`), no underline, no
+ * touch-target min-height. A hover background is the only sign it does
+ * anything. `display: block`, not flex, so `text-align` (unlike the flex
+ * containers above) is the correct way to left-align it, and nothing here
+ * disturbs the hairline or indent, which belong to `visimark-node-children`,
+ * not this element.
+ */
+.visimark-findings .visimark-node-detail-action {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  color: inherit;
+  cursor: pointer;
+  display: block;
+  font: inherit;
+  padding: 0;
+  text-align: left;
+  text-decoration: none;
+  width: 100%;
+}
+
+.visimark-findings .visimark-node-detail-action:hover {
+  background: var(--background-modifier-hover);
+}
+
+/*
+ * No top padding of its own: `visimark-node-detail`'s shared top padding is
+ * for the space above the *first* line, and this is always the second —
+ * zeroing it here is what keeps the two lines of one finding close together.
+ */
+.visimark-node-fact {
+  align-items: center;
+  display: flex;
+  gap: var(--size-2-1);
+  justify-content: flex-start;
+  padding-top: 0;
+}
+
+/*
+ * The repair action. Deliberately *not* the 44px touch box every other
+ * control in this plugin gets: it sits inline in a sentence rather than in
+ * its own row, and at that size the box read as a gap around the icon
+ * rather than a target — `--icon-size` shrinks the glyph, and no min-height
+ * or min-width claims space beyond it.
+ */
+.visimark-findings .visimark-fix {
+  --icon-size: var(--icon-s);
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+/*
+ * `:focus-visible`, not `:focus`: a pointer press should not leave a ring
+ * behind, and a keyboard user must never lose track of where they are.
+ */
+.visimark-findings .visimark-node-self:focus-visible,
+.visimark-findings .visimark-node-detail-action:focus-visible,
+.visimark-findings .visimark-fix:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
+}
+
+/* --- the vault sweep (v1 row 8) ------------------------------------------- */
+
+.visimark-sweep {
+  padding: var(--size-4-2);
+}
+
+.visimark-sweep-status {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-4-2);
+  justify-content: space-between;
+  padding-bottom: var(--size-4-2);
+}
+
+/*
+ * 44px, like every other target in this plugin: the sweep is the one feature
+ * VS Code cannot have, and the reason is that it is used on a phone.
+ */
+.visimark-sweep-cancel,
+.visimark-sweep-again {
+  flex: 0 0 auto;
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.visimark-sweep-cancel:focus-visible,
+.visimark-sweep-again:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
+}
+
+/* --- the incremental vault index's ribbon badge (v1.1 row 13) ------------- */
+
+/*
+ * The ribbon icon is `position: relative` by default in Obsidian's own CSS,
+ * so this only needs to place itself, not ask for that. A count, not a dot —
+ * row 13's own line is "a badge that is simply true at all times", and a dot
+ * cannot say how many.
+ */
+.visimark-ribbon-badge {
+  background: var(--interactive-accent);
+  border-radius: var(--radius-l);
+  bottom: -2px;
+  color: var(--text-on-accent);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-medium);
+  line-height: 1;
+  min-width: 14px;
+  padding: 1px 4px;
+  position: absolute;
+  right: -4px;
+  text-align: center;
+}
+
+/* --- the infer preview (v1 row 5) ----------------------------------------- */
+
+.visimark-infer-lead {
+  margin-top: 0;
+}
+
+/*
+ * The block is shown as it will appear, so it is typeset as code and allowed
+ * to scroll rather than wrap: a rule that wrapped would read as two rules.
+ */
+.visimark-infer-block {
+  background: var(--code-background);
+  border-radius: var(--radius-s);
+  font-size: var(--font-smaller);
+  margin: var(--size-4-2) 0;
+  overflow-x: auto;
+  padding: var(--size-4-2);
+}
+
+.visimark-infer-note {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.visimark-infer-buttons {
+  display: flex;
+  gap: var(--size-4-2);
+  justify-content: flex-end;
+  margin-top: var(--size-4-4);
+}
+
+.visimark-infer-buttons button {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.visimark-infer-buttons button:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
+}
+
+/* --- Explain and Evaluate (v1 row 4) -------------------------------------- */
+
+.visimark-explain-rule {
+  background: var(--code-background);
+  border-radius: var(--radius-s);
+  font-size: var(--font-smaller);
+  margin: 0 0 var(--size-4-3);
+  overflow-x: auto;
+  padding: var(--size-4-2);
+}
+
+.visimark-explain-value {
+  font-size: var(--font-ui-medium);
+  margin: 0 0 var(--size-4-2);
+}
+
+.visimark-explain-inputs {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  margin: 0 0 var(--size-4-1);
+}
+
+/*
+ * A description list, so a screen reader reads each name with its value rather
+ * than as two unrelated columns.
+ */
+.visimark-values {
+  display: grid;
+  gap: var(--size-2-2) var(--size-4-3);
+  grid-template-columns: auto 1fr;
+  margin: 0;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.visimark-value-name {
+  color: var(--text-muted);
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-small);
+  margin: 0;
+}
+
+.visimark-value-value {
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-small);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.visimark-values-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--size-4-4);
+}
+
+.visimark-values-actions button {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.visimark-values-actions button:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
+}
+
+/* --- provenance and staleness (v1 row 2) ---------------------------------- */
+
+/*
+ * **A computed value is marked, not coloured.** v1 constraint 6 of #176 is
+ * that audience B does not read exit codes, and a red number is the same
+ * sentence in another alphabet — it says "error" to someone who has been
+ * trained by build logs and says "something is wrong with my document" to
+ * someone who has not. A number that VisiMark works out is not wrong; it is
+ * *derived*, which is a fact about where it came from.
+ *
+ * So the mark is a hairline under the value, in the theme's own muted colour:
+ * enough to see when looking, invisible when reading. The same treatment a
+ * dictionary gives a cross-reference.
+ */
+.visimark-computed {
+  border-bottom: 1px solid var(--text-faint);
+  text-decoration: none;
+}
+
+/*
+ * A value that disagrees with its formula gets a *second* line rather than a
+ * different colour — it is more of the same signal, which is what it is: the
+ * value is derived, and the derivation no longer matches. The findings view
+ * is where the sentence explaining it lives.
+ */
+.visimark-disagrees {
+  border-bottom-style: double;
+  border-bottom-width: 3px;
+  border-bottom-color: var(--text-muted);
+}
+
+/*
+ * A marked value answers when asked — a hover on the desktop, a tap anywhere,
+ * because a phone has no hover (v1 row 3). `cursor: help` is the one hint
+ * that it will, since the mark itself is quiet by design.
+ */
+.visimark-computed[data-vmark] {
+  cursor: help;
+}
+
+/*
+ * A tap target inside a sentence cannot be 44px tall without moving the line
+ * it is in, so the padding goes sideways and the height comes from the line
+ * itself. This is the one place in the plugin where the 44px rule is met by
+ * the surrounding text rather than by the element.
+ */
+.visimark-computed[data-vmark] {
+  padding-inline: var(--size-2-1);
+}
+
+.visimark-computed[data-vmark]:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
+}
+
+/*
+ * The findings panel's hover preview (v1.1's right-bar pass) — the same
+ * `--text-highlight-bg` `==highlight==` syntax already uses, so this reads as
+ * "attention here", not a second flavour of error colour. Toggled from
+ * `findings-view.ts`'s `peek()` and nowhere else; nothing here fires on its
+ * own hover, since `.visimark-computed` already answers that with a tooltip.
+ */
+.visimark-peek {
+  background: var(--text-highlight-bg);
+}

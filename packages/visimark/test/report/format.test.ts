@@ -101,11 +101,11 @@ test("ANCHOR renders a malformed anchor comment with no id prefix", () => {
   const f: Finding = {
     code: "ANCHOR",
     message:
-      "malformed anchor comment — expected `<!--vmark=sheet.name-->` or `<!--vmark=sheet.name%-->`",
+      "malformed anchor comment — expected `<!--vmark=sheet.name-->` or `<!--vmark=sheet.name|rule-->`",
   };
   const lines = formatCheck("x.md", [f]).split("\n");
   expect(lines[2]).toBe(
-    "  ANCHOR  .                 malformed anchor comment — expected `<!--vmark=sheet.name-->` or `<!--vmark=sheet.name%-->`",
+    "  ANCHOR  .                 malformed anchor comment — expected `<!--vmark=sheet.name-->` or `<!--vmark=sheet.name|rule-->`",
   );
 });
 

@@ -72,7 +72,7 @@ New finding **`ASSERT`** ([§10](../visimark-design.md#10-error-taxonomy)): *cla
 | `assert` in a document-scope (`#id`-less) block | `SHEET` | static — "`assert` must be in a `#id` sheet block" |
 | Assertion depends on an **unevaluable** binding (`UNDEF` / `VECTOR` / `TYPE` / `CYCLE` / `DATE`) | `NOTE` | one per sheet, not one per assertion. A merely-`STALE` dependency is not suppressed — the assertion runs against the computed value. |
 
-`ASSERT` is counted in the `N problems` line and makes `check` fail. It joins the `errors` tally in the summary line (`26 problems (21 stale, 5 errors)` → the error count rises). It is never auto-fixed — a false invariant is a question for a human, like `DATE`-undecidable or `CYCLE`.
+`ASSERT` is counted in the `N problems` line and makes `check` fail. It joins the `errors` tally in the summary line (`27 problems (22 stale, 5 errors)` → the error count rises). It is never auto-fixed — a false invariant is a question for a human, like `DATE`-undecidable or `CYCLE`.
 
 The `ASSERT` report line (transcript-exact, tested) follows the existing column grid: `ASSERT` in the code field, the sheet id (`#recon`) in the 16-wide id field, then the assertion's source verbatim as the payload. The continuation line, at the content column, is the source with **every named operand substituted by its evaluated value** at its binding precision, followed by `is false`:
 

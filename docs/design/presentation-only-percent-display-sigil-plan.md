@@ -1,5 +1,10 @@
 # Percent display sigil on prose anchors — implementation plan
 
+**Superseded.** The `%` sigil this plan implemented was removed on
+[#297](https://github.com/michal-niedzwiedzki/visimark/issues/297) in favour
+of `|percent`, a display rule. Kept as the historical record of #140's own
+implementation and not updated further.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: use `superpowers:subagent-driven-development` or `superpowers:executing-plans` to work this plan task-by-task. Steps are checkboxes for tracking.
 
 **Goal:** Per [`presentation-only-percent-display-sigil-spec.md`](presentation-only-percent-display-sigil-spec.md), let `<!--vmark=sheet.scalar%-->` tell `fmt` to print that scalar as a percent (stored × 100 at precision − 2) without changing the stored value.
@@ -154,14 +159,14 @@ test("matchesStored accepts a signed percent as the stored ratio", () => {
 
 - [ ] **Step 1: tests (RED).** A helper document:
 
-```markdown
+````markdown
 Margin **40.26%**<!--vmark=s.margin%-->.
 Bare **0.4026**<!--vmark=s.margin-->.
 
 ```vmark #s
 margin precision 4 = 0.4026
 ```
-```
+````
 
 `check` exit 0. Change the percent span to `41.55%`: one `STALE` with `stored: "41.55%"`, `computed: "40.26%"`. `precision 1` + `%` → `PRECISION`. A date scalar with `%` → `TYPE`. `**$0.40**<!--vmark=s.margin%-->` → `UNIT`. `![c](x.svg)<!--vmark=s.ch%-->` plus `chart ch as bar of …` → `TYPE`. Two anchors, one `%` and one bare, both matching → exit 0.
 

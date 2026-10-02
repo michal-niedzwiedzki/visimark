@@ -214,7 +214,16 @@ test("`precision` is a statement keyword, case-sensitively", () => {
 });
 
 test("bracket and brace punctuation for param domain clauses", () => {
-  expect(kinds("[0, 80]")).toEqual(["lbracket", "number", "comma", "number", "rbracket", "eof"]);
+  // a domain interval follows `in`; a bare bracket is a unit (#317)
+  expect(kinds("in [0, 80]")).toEqual([
+    "ident",
+    "lbracket",
+    "number",
+    "comma",
+    "number",
+    "rbracket",
+    "eof",
+  ]);
   expect(kinds("{ 30%, 40% }")).toEqual(["lbrace", "percent", "comma", "percent", "rbrace", "eof"]);
 });
 

@@ -247,3 +247,5 @@ four writers that must persist.
 
 §2.10's main-thread measurement and §2.13's shared chrome — both independent
 of how a file becomes current.
+
+<!--vmark:no-formulas-->

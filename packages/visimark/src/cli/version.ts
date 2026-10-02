@@ -8,9 +8,18 @@ import { createRequire } from "node:module";
 // The candidate list is the set of depths this module gets bundled to:
 // `../../` resolves from `src/cli/` in dev and from the bundled `dist/cli/`
 // once installed, and `../` from the bundled `dist/index.js` — the library
-// entry point, which reaches here through `report/json.ts` and
-// `report/explain.ts`. Before the second candidate, any library consumer that
-// asked for an envelope got `Cannot find module '../../package.json'`.
+// entry point, which reaches here through `report/envelope.ts` and because it
+// exports `readVersion` itself. Before the second candidate, any library
+// consumer that asked for an envelope got
+// `Cannot find module '../../package.json'`.
+//
+// It used to be reached from `report/json.ts` and `report/explain.ts` too, and
+// that was a problem rather than a detail: the `node:module` import above is
+// at module scope, a bundler resolves before it shakes, and so two calls put
+// every shape in those two files — `explainView` included, which wants no
+// version at all — beyond any browser build. Issue #204 moved the two stamped
+// builders into `report/envelope.ts`; `test/report/version-reach.test.ts`
+// fails if a third module starts reaching here.
 const CANDIDATES = ["../../package.json", "../package.json"];
 
 export function readVersion(): string {

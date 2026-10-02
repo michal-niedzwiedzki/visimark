@@ -1,5 +1,7 @@
-import type { Expr } from "../lang/ast.js";
+import type { Expr, Ref, ReportName, UnitText } from "../lang/ast.js";
+import type { UnitDefs, UnitMap } from "../lang/unit-expr.js";
 import type { Domain } from "../lang/domain.js";
+import type { Lattice } from "../lang/lattice.js";
 import type { LangError } from "../lang/token.js";
 import type {
   ImportDecl,
@@ -88,6 +90,8 @@ export interface Finding {
   span?: Span;
   /** a second, related site — the first binding of a DUP pair. */
   relatedSpan?: Span;
+  /** a specific explanation printed where a did-you-mean would be */
+  hint?: string;
   /** the offending literal (e.g. a non-ISO date) */
   raw?: string;
   isoFix?: string;
@@ -116,9 +120,24 @@ export interface Binding {
   /** a `param`'s optional domain clause. See
    *  docs/design/a-param-declares-the-set-of-values-it-ac-spec.md §2. */
   domain?: Domain;
+  /** a `param`'s optional `lattice STEP` clause. See
+   *  docs/design/lattice-on-param-and-report-statements-spec.md §2.1. */
+  lattice?: Lattice;
+  /** the `[unit]` bracket on the head, as written, with an absolute span. See
+   *  docs/design/algebraic-unit-maps-on-names-spec.md §2.2. */
+  unitText?: UnitText;
+  /** the declared unit, parsed — set only when `unitText` parses and the
+   *  binding may carry one (a scalar or a param, never a column rule) */
+  unit?: DeclaredUnit;
   /** absolute source span of the binding line */
   span: { start: number; end: number };
   parseError?: LangError;
+}
+
+/** a unit as declared in a bracket: its map, and the bracket as written */
+export interface DeclaredUnit {
+  map: UnitMap;
+  text: UnitText;
 }
 
 export interface Assertion {
@@ -143,6 +162,9 @@ export interface Sheet {
   columnIndex: Map<string, number>;
   /** header names with no rule — human-owned inputs */
   inputColumns: Set<string>;
+  /** the unit each column's header declares, keyed by column name. See
+   *  docs/design/algebraic-unit-maps-on-names-spec.md §2.3. */
+  headerUnits: Map<string, DeclaredUnit>;
   /** `"<header>" is <symbol>` declarations, keyed by `symbol`. An alias is
    *  never a second binding or a second column — `resolve()` in eval/graph.ts
    *  translates a reference to `symbol` into a reference to `header` before
@@ -154,6 +176,8 @@ export interface Sheet {
   assertions: Assertion[];
   /** `chart` declarations, in block-declaration order */
   charts: Chart[];
+  /** `report` statements, in block-declaration order */
+  reports: Report[];
   /** a `from <path> ...` declaration — non-null marks this sheet as a
    *  **declared input**: read-only, its table sourced from a local CSV file
    *  rather than an inline GFM table. See visimark-design.md §3/§9. */
@@ -191,6 +215,32 @@ export interface Chart {
   source: string;
 }
 
+/**
+ * A `report` statement: a request that a named, shipped reading of a simulation
+ * be printed under the sheet's heading. Not a graph node and never evaluated by
+ * `check`; its refs are resolved and counted as reads. See
+ * docs/design/lattice-on-param-and-report-statements-spec.md.
+ */
+export interface Report {
+  /** `<sheetId>::report@<offset>` */
+  id: string;
+  sheetId: string;
+  name: ReportName;
+  /** the `REF`s in the options, source order, absolute spans */
+  refs: Ref[];
+  /** whitespace-normalised statement; the duplicate key */
+  text: string;
+  span: Span;
+  source: string;
+}
+
+/** a `[atom] = [unit]` line from a document-scope block, as written */
+export interface UnitDefinition {
+  atom: UnitText;
+  unit: UnitText;
+  span: Span;
+}
+
 export interface DocModel {
   sheets: Map<string, Sheet>;
   docScope: Map<string, Binding>;
@@ -199,4 +249,9 @@ export interface DocModel {
   source: string;
   located: LocatedDoc;
   blockOfSheet: Map<string, RawBlock>;
+  /** document-scope unit definitions, in source order. See
+   *  docs/design/algebraic-unit-maps-on-names-spec.md §2.5. */
+  unitDefinitions: UnitDefinition[];
+  /** the definitions that parsed and stand outside any cycle, by atom */
+  unitDefs: UnitDefs;
 }

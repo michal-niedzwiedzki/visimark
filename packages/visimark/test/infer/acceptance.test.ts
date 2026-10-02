@@ -31,9 +31,9 @@ describe("what inference recovers from the stripped worked invoice", () => {
 
   test("#unnamed1 — the three totals, anchored in the prose that states them", () => {
     for (const [name, value] of [
-      ["net_total", "23300.00"],
-      ["vat_total", "5359.00"],
-      ["gross_total", "28659.00"],
+      ["net_total", "23300.00 PLN"],
+      ["vat_total", "5359.00 PLN"],
+      ["gross_total", "28659.00 PLN"],
     ]) {
       const s = scalar(name!)!;
       expect(s.sheetId).toBe("unnamed1");
@@ -46,7 +46,7 @@ describe("what inference recovers from the stripped worked invoice", () => {
     const amount = proposals.find((p) => p.kind === "column" && p.name === "Amount")!;
     expect(amount.rule).toBe("Amount = Share * unnamed1.gross_total");
     expect(amount.stage).toBe(4);
-    expect(scalar("amount_total")?.rule).toBe("amount_total = SUM(Amount)");
+    expect(scalar("amount_total")?.rule).toBe("amount_total [PLN] = SUM(Amount)");
   });
 
   test("infer proposes code notation only, never a prose spelling", () => {
@@ -81,16 +81,16 @@ describe("what inference must not recover — the more valuable half", () => {
     const loose = proposals.filter((p) => p.kind === "ambiguous" && p.sheetId === "");
     expect(loose).toHaveLength(2);
     for (const p of loose) {
-      expect(p.name).toBe("28659.00");
+      expect(p.name).toBe("28659.00 PLN");
       expect(p.alternatives).toEqual([
         "unnamed1.gross_total = SUM(Gross)",
         "unnamed2.amount_total = SUM(Amount)",
       ]);
     }
     expect(recovered).toContain(
-      "Scheduled instalments total **28659.00** PLN against a\n" +
-        "gross invoice value of **28659.00** PLN, leaving a\n" +
-        "variance of **0.00** PLN.",
+      "Scheduled instalments total **28659.00 PLN** against a\n" +
+        "gross invoice value of **28659.00 PLN**, leaving a\n" +
+        "variance of **0.00 PLN**.",
     );
   });
 });
@@ -108,7 +108,7 @@ describe("check on the written result", () => {
   test("and does so while six prose figures remain underived", () => {
     // Nothing in the document claims them: this is the green-check hole, not a
     // bug in inference, and widening the search is not the fix. See section 15.
-    const underived = ["28085.82", "573.18", "6719.58", "28659.00", "0.00"];
+    const underived = ["28085.82 PLN", "573.18 PLN", "6719.58 EUR", "28659.00 PLN", "0.00 PLN"];
     const doc = locate(recovered);
     const orphans = doc.figures.filter(
       (f) => !f.anchored && underived.includes(f.text) && f.value.kind === "strong",
@@ -117,7 +117,7 @@ describe("check on the written result", () => {
   });
 
   test("changing an input makes check complain", () => {
-    const broken = recovered.replace("|   2 | 1800.00 |", "|   3 | 1800.00 |");
+    const broken = recovered.replace("|   2 |    1800.00 |", "|   3 |    1800.00 |");
     expect(check(build(locate(broken))).findings.length).toBeGreaterThan(0);
   });
 

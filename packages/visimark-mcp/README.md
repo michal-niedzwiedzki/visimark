@@ -3,7 +3,9 @@
 A stdio [MCP](https://modelcontextprotocol.io) server exposing the
 [VisiMark](https://github.com/michal-niedzwiedzki/visimark) engine to agents:
 every `visimark` command as a tool, the authoring discipline as resources, and
-the two orderings an agent gets wrong unsupplied as prompts.
+the two orderings an agent gets wrong unsupplied as prompts. It is the document
+integrity layer for machine-written Markdown: an agent's correct formula can't
+ship with a wrong total.
 
 Read-only unless an operator deliberately opens the write gate.
 

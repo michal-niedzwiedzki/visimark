@@ -591,6 +591,54 @@ body {
   padding: 34px 32px 40px;
   box-shadow: 0 16px 50px rgba(0, 0, 0, 0.45);
 }
+/* Installation wears the same green as the articles panel. */
+#installation {
+  background: linear-gradient(180deg, #e4fee5 0%, #f4fde2 100%);
+}
+#installation {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 32px;
+  align-items: start;
+}
+.runtimes {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 20px 22px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+}
+.runtimes h3 {
+  margin: 0 0 8px;
+  font-size: 1.15rem;
+}
+.runtimes p {
+  margin: 0 0 14px;
+  font-size: 0.92rem;
+}
+.runtimes ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.runtimes li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.9rem;
+}
+.runtimes img {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+@media (max-width: 880px) {
+  #installation {
+    grid-template-columns: 1fr;
+  }
+}
 .features > .lede {
   margin: 0 0 26px;
   font-size: 0.98rem;
@@ -1011,7 +1059,7 @@ body {
 /* Renderer interop row (section 8) */
 .renderer-row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 14px;
   margin-top: 16px;
 }
@@ -1139,18 +1187,26 @@ body {
 .tryout-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
   margin-top: 20px;
+  background: linear-gradient(180deg, #e4fee5 0%, #f4fde2 100%);
+  color: #1b1b1b;
+  border-radius: 16px;
+  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.45);
 }
 .tryout-item {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  background: #ffffff;
-  color: #1b1b1b;
-  border-radius: 16px;
   padding: 30px 28px;
-  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.45);
+}
+.tryout-item:first-child {
+  grid-column: 1 / -1;
+}
+.tryout-item:nth-child(n + 2) {
+  border-top: 1px solid rgba(27, 27, 27, 0.12);
+}
+.tryout-item:nth-child(3) {
+  border-left: 1px solid rgba(27, 27, 27, 0.12);
 }
 .tryout-top {
   display: flex;
@@ -1158,12 +1214,12 @@ body {
   gap: 20px;
 }
 .tryout-image {
-  flex: 0 0 33.333%;
+  flex: 0 0 170px;
   aspect-ratio: 1 / 1;
   border-radius: 10px;
   background: #f0f0f0;
   object-fit: cover;
-  width: 100%;
+  width: 170px;
   height: auto;
 }
 .tryout-body {
@@ -1210,6 +1266,161 @@ body {
 }
 .tryout-btn:hover {
   background: #6cd977;
+}
+.tryout-btn:disabled {
+  background: #d0d0d0;
+  color: #7a7a7a;
+  cursor: not-allowed;
+}
+
+/* "Scan your repo" widget: same white-card-on-dark-page treatment as
+   .features/.tryout-grid, so it reads as one more panel in the sequence
+   rather than a bolted-on tool. */
+.repo-scan {
+  margin-top: 20px;
+  background: #ffffff;
+  color: #1b1b1b;
+  border-radius: 16px;
+  padding: 30px 32px;
+  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.45);
+}
+.repo-scan-form {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.repo-scan-input {
+  flex: 1 1 320px;
+  min-width: 0;
+  padding: 11px 18px;
+  border: 1px solid #d5d5d5;
+  border-radius: 999px;
+  font-size: 0.98rem;
+  font-family: "SF Mono", "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  background: #f7f7f7;
+  color: #1b1b1b;
+}
+.repo-scan-input:focus {
+  outline: 2px solid #1a7f37;
+  outline-offset: 1px;
+  background: #ffffff;
+}
+.repo-scan-submit {
+  margin-top: 0;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+.repo-scan-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 20px 0 0;
+  font-size: 0.92rem;
+  color: #4a4a4a;
+}
+.repo-scan-status.is-error {
+  color: #b42318;
+  font-weight: 600;
+}
+.repo-scan-spinner {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid #d5d5d5;
+  border-top-color: #1a7f37;
+  animation: repo-scan-spin 0.8s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .repo-scan-spinner {
+    animation: none;
+  }
+}
+@keyframes repo-scan-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.repo-scan-bar {
+  flex: 1 1 160px;
+  max-width: 240px;
+  height: 6px;
+  border-radius: 999px;
+  background: #e6e6e6;
+  overflow: hidden;
+}
+.repo-scan-bar-fill {
+  /* Both elements are `<span>`s in the markup; without this, the fill stays
+     `display: inline`, and `width`/`height` do nothing on an inline element —
+     it rendered as whatever a near-empty inline span happens to take up,
+     never actually growing with progress. `.repo-scan-bar` itself doesn't
+     need this: it's a flex item, and flex items are blockified regardless of
+     their own `display`, which is why the *track* sized correctly while the
+     *fill* inside it did not. */
+  display: block;
+  height: 100%;
+  background: #1a7f37;
+  border-radius: inherit;
+  transition: width 0.2s ease;
+}
+.repo-scan-report {
+  margin-top: 22px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(27, 27, 27, 0.12);
+}
+.repo-scan-report h3 {
+  margin: 0 0 6px;
+  font-size: 1.1rem;
+  font-weight: 750;
+}
+.repo-scan-summary {
+  margin: 0 0 14px;
+  color: #363636;
+}
+.repo-scan-files {
+  list-style: none;
+  margin: 0 0 18px;
+  padding: 0;
+}
+.repo-scan-files li {
+  padding: 8px 0;
+  border-top: 1px solid rgba(27, 27, 27, 0.08);
+  font-size: 0.94rem;
+}
+.repo-scan-files li:first-child {
+  border-top: none;
+}
+.repo-scan-files code {
+  background: #f0f0f0;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 0.9em;
+}
+/* Links to the file on GitHub, styled as the same code pill above rather
+   than as an ordinary link — color and font stay `code`'s, and the only
+   link affordance is an underline that appears on hover. */
+.repo-scan-file-link {
+  color: inherit;
+  text-decoration: none;
+}
+.repo-scan-file-link:hover {
+  text-decoration: underline;
+}
+.repo-scan-files summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.repo-scan-files pre {
+  margin: 10px 0 0;
+  padding: 12px 14px;
+  background: #1b1b1b;
+  color: #eaeaea;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 /* Featured: a two-column showcase, reusing the .feature-head bar look
@@ -1263,7 +1474,7 @@ body {
     grid-template-columns: 1fr;
   }
   .renderer-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
   }
   .power-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -1274,6 +1485,9 @@ body {
   .tryout-grid {
     grid-template-columns: 1fr;
   }
+  .tryout-item:nth-child(3) {
+    border-left: 0;
+  }
   .usecase-grid {
     grid-template-columns: 1fr;
   }
@@ -1282,6 +1496,9 @@ body {
   }
 }
 @media (max-width: 640px) {
+  .renderer-row {
+    grid-template-columns: 1fr;
+  }
   .tryout-top {
     flex-direction: column;
   }
@@ -1353,6 +1570,13 @@ body {
 .reader-links a,
 .reader-body a {
   color: #0b5cad;
+}
+.reader-banner {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  margin: 0 0 24px;
 }
 .reader-head {
   padding-bottom: 20px;
@@ -1429,8 +1653,34 @@ body {
   border-top: 1px solid #e6e6e6;
   margin: 2.2rem 0;
 }
+/* article pages: the "More to read" section, two cards side by side at full
+   panel width (unlike .reader-inner's narrow reading column). */
+.reader-more {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid #e6e6e6;
+}
+.reader-more h2 {
+  margin: 0 0 16px;
+  font-size: 1.2rem;
+  font-weight: 750;
+}
+.reader-more-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+}
+.reader-more-grid .article-card {
+  padding: 0;
+}
+.reader-more-grid .article-card + .article-card {
+  border-top: 0;
+}
 @media (max-width: 560px) {
   .reader {
     padding: 28px 18px 40px;
+  }
+  .reader-more-grid {
+    grid-template-columns: 1fr;
   }
 }

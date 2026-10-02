@@ -146,3 +146,24 @@ test("hovering a named SUM call is unchanged", async () => {
   expect((await at(10))!.contents.value).toContain("Total of a column");
   expect((await at(12))!.contents.value).not.toContain("Total of a column");
 });
+
+test("hover shows a binding's unit and a builtin's unit signature", async () => {
+  const unitDoc = `| Weight [kg] | Count |
+|---:|---:|
+| 2 | 4 |
+
+\`\`\`vmark #s
+total = SUM(Weight)
+\`\`\`
+`;
+  const uri = "file:///units-hover.md";
+  await h.open(uri, unitDoc);
+  await h.nextDiagnostics(uri);
+  const at = (line: number, character: number) =>
+    h.request<Hover | null>("textDocument/hover", {
+      textDocument: { uri },
+      position: { line, character },
+    });
+  expect((await at(5, 1))!.contents.value).toContain("unit: `[kg]` (derived)");
+  expect((await at(5, 9))!.contents.value).toContain("units: `SUM(col: U) → U`");
+});

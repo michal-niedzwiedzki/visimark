@@ -1,6 +1,8 @@
 import { expect, test } from "bun:test";
+import { parseUnit } from "../../src/lang/unit-expr.js";
 import {
   applyUnit,
+  decorationProblem,
   inferColumnUnit,
   parseDecorated,
   showUnit,
@@ -122,4 +124,65 @@ test("empty cells and non-numeric cells are ignored", () => {
   const r = inferColumnUnit(["$5.50", "", undefined, "n/a", "$4.00"]);
   expect(r.conflict).toBe(false);
   expect(r.unit).toEqual({ text: "$", side: "prefix" });
+});
+
+test("a suffix holding a digit is read through the unit grammar (#323)", () => {
+  expect(parseDecorated("5 m^2")).toEqual({
+    kind: "number",
+    num: "5",
+    unit: { text: "m^2", side: "suffix" },
+  });
+  expect(num("50 1/s").unit).toEqual({ text: "1/s", side: "suffix" });
+  expect(num("-3.50 kg")).toEqual({
+    kind: "number",
+    num: "-3.50",
+    unit: { text: "kg", side: "suffix" },
+  });
+  expect(num("6.0 N⋅m/s²")).toEqual({
+    kind: "number",
+    num: "6.0",
+    unit: { text: "N⋅m/s²", side: "suffix" },
+  });
+  expect(num("-2 m^2").num).toBe("-2");
+});
+
+test("the unit-grammar chance needs whitespace and a whole unit", () => {
+  for (const t of ["2026-09-10", "5 1/2", "3 x 4", "5m^2", "items sold", "5 m^2 extra"]) {
+    expect(parseDecorated(t).kind).toBe("not-a-number");
+  }
+});
+
+test("every text that parsed before parses the same way", () => {
+  expect(num("$5.50").unit).toEqual({ text: "$", side: "prefix" });
+  expect(num("12 N").unit).toEqual({ text: "N", side: "suffix" });
+  expect(num("23300.00 PLN")).toEqual({
+    kind: "number",
+    num: "23300.00",
+    unit: { text: "PLN", side: "suffix" },
+  });
+  expect(num("-$3").num).toBe("-3");
+  expect(parseDecorated("$5 USD").kind).toBe("both-sides");
+  expect(parseDecorated("40%").kind).toBe("not-a-number");
+});
+
+test("unitKey compares a unit suffix by its map, not its spelling", () => {
+  const key = (text: string) => unitKey({ text, side: "suffix" });
+  expect(key("m^2")).toBe(key("m²"));
+  expect(key("m²")).not.toBe(key("kg"));
+  expect(key("J")).not.toBe(key("N⋅m"));
+  expect(unitKey({ text: "$", side: "prefix" })).toBe("prefix:$");
+  expect(key("€")).toBe("suffix:€");
+});
+
+test("a column mixing m^2 and m² agrees; adding kg conflicts, in first spellings", () => {
+  expect(inferColumnUnit(["12 m^2", "30 m²"]).conflict).toBe(false);
+  const r = inferColumnUnit(["12 m^2", "30 m²", "4 kg"]);
+  expect(r.conflict).toBe(true);
+  expect(r.forms).toEqual(["m^2", "kg"]);
+});
+
+test("a decoration spelt m^2 answers a declared m²", () => {
+  const declared = parseUnit("m²");
+  if (!declared.ok) throw new Error("m² did not parse");
+  expect(decorationProblem("5 m^2", declared.map, new Map(), "anchor", "area")).toBeNull();
 });

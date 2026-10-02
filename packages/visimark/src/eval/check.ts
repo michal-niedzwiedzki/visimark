@@ -16,9 +16,12 @@ import { dependencies, refText, resolve, topoOrder } from "./graph.js";
 import { resolveImports } from "../import/resolve.js";
 import type { ImportStatus } from "../model/types.js";
 import { domainLiterals, formatDomain, isEmptyDomain, testDomain } from "../lang/domain.js";
+import { analyzeLattice } from "../lang/lattice.js";
 import { derivePrecision, type Width } from "./precision.js";
-import { percentDisplay } from "./percent-display.js";
-import { applyUnit, cellPrecision, parseDecorated, type Unit } from "./units.js";
+import { DISPLAY_RULES, displayRuleTypeMessage, markdownSyntaxIn } from "./display-rules.js";
+import { roundTrips } from "./display-round-trip.js";
+import { applyUnit, cellPrecision, decorationProblem, parseDecorated, type Unit } from "./units.js";
+import { parseIsoDate } from "./dates.js";
 import {
   EvalError,
   exceedsWorkingPrecision,
@@ -29,7 +32,10 @@ import {
 } from "./value.js";
 import { coerceInput, lookupVector, rowLabel, Unevaluable } from "./check-lookup.js";
 import { checkCharts } from "./check-charts.js";
+import { checkReports } from "./check-reports.js";
 import { inferDecoration } from "./check-decoration.js";
+import { DimensionChecker, type UnitInfo } from "./dimensions.js";
+import { formatUnit, isDimensionless } from "../lang/unit-expr.js";
 import {
   reportAnchors,
   reportCycles,
@@ -64,6 +70,10 @@ const BOOLEAN_BINDING_MESSAGE =
   "a boolean cannot be stored; wrap it in `IF()` to produce a number or a string";
 
 export interface CheckResult {
+  /** every name with a non-empty unit map — computed bindings by id, declared
+   *  input columns by `sheet.Column` — and whether it was declared or derived.
+   *  See docs/design/algebraic-unit-maps-on-names-spec.md §5.9. */
+  unitMaps: Map<string, UnitInfo>;
   findings: Finding[];
   values: Map<string, Value>;
   cells: Map<string, (Value | null)[]>;
@@ -81,6 +91,10 @@ export interface CheckResult {
   charts: ChartResult[];
   /** resolution outcome of every imported (`from`) sheet, keyed by sheet id */
   imports: Map<string, ImportStatus>;
+  /** anchor comments whose preceding span was refused as a rewrite target
+   *  (ANCHOR, type-aware placeholder acceptance), keyed by the comment's own
+   *  source offset — `fmt` must not write a span in this set */
+  refusedAnchors: Set<number>;
   exitCode: 0 | 1;
 }
 
@@ -115,6 +129,12 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
   } = st;
   const emit = st.emit;
 
+  // anchors this pass refuses as a rewrite target — keyed by the comment's
+  // own source offset, which is unique per anchor. Consulted by the numeric
+  // STALE loop in evalScalar below so a refused span is reported ANCHOR
+  // only, never STALE too.
+  const refusedAnchors = new Set<number>();
+
   // structural findings carried from the model (SHEET, binding parse errors)
   for (const f of model.findings) emit(f);
   for (const f of imported.findings) emit(f, { sheetId: f.sheetId });
@@ -122,6 +142,8 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
   emitCoverage(model, emit);
 
   inferDecoration(st);
+  const dimensions = new DimensionChecker(model, (f) => emit(f, { sheetId: f.sheetId }));
+  dimensions.checkInputColumns();
   // An input column's precision is its cells' — they are the visible values, so
   // the inference is exact. It has to land before the dependency walk, since a
   // rule reading the column derives its own width from this.
@@ -216,7 +238,15 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
     // synthetic expression is never evaluated — the artifact is built on its
     // own branch, after this loop.
     if (chartIds.has(binding.id)) {
-      buildableCharts.add(binding.id);
+      const chart = sheet?.charts.find((c) => c.id === binding.id);
+      if (!chart || dimensions.checkChart(chart)) buildableCharts.add(binding.id);
+      continue;
+    }
+
+    // the static unit pass: a binding whose units disagree gets no value, and
+    // its readers fold into the suppression above (units spec §4)
+    if (!dimensions.checkBinding(binding)) {
+      unevaluable.add(binding.id);
       continue;
     }
 
@@ -240,11 +270,13 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
 
   reportCycles(st, cycles);
   reportUnreachableAssertions(st, ledger, assertionIds);
+  dimensions.reportUnusedDefinitions();
 
   // ---- generated artifacts -------------------------------------------------
   // Emits findings, so it runs here and not later: orderFindings sorts on the
   // order phases emitted in.
   const charts = checkCharts(st);
+  checkReports(st);
 
   reportAnchors(st);
   reportUnused(st, entries);
@@ -302,6 +334,8 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
     assertions,
     charts,
     imports: imported.statuses,
+    refusedAnchors,
+    unitMaps: dimensions.unitMaps,
     exitCode: findings.some(isProblem) ? 1 : 0,
   };
 
@@ -383,7 +417,52 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
       return false;
     }
     if (binding.domain !== undefined && !paramDomainOk(binding)) return false;
+    // a lattice finding is about the declaration only: the default and the
+    // domain are fine, so the param stays evaluable and its readers are not
+    // suppressed (spec §4.1)
+    if (binding.lattice !== undefined) paramLatticeOk(binding);
     return true;
+  }
+
+  /**
+   * A `param`'s lattice: percent-ness and width of the step, then the facts
+   * `analyzeLattice` decides. Emits at most one finding, the first that fires,
+   * and never marks the binding unevaluable. See
+   * docs/design/lattice-on-param-and-report-statements-spec.md §4.1.
+   */
+  function paramLatticeOk(binding: Binding): void {
+    const lattice = binding.lattice!;
+    const param = binding.param!;
+    const finding = (code: "TYPE" | "PRECISION", message: string): void =>
+      emit(
+        { code, sheetId: binding.sheetId, name: binding.name, message, span: binding.span },
+        { sheetId: binding.sheetId },
+      );
+    const text = lattice.literal.text;
+    if (param.percent && !lattice.literal.percent) {
+      return finding("TYPE", `${binding.name} is a percent; lattice step ${text} must be too`);
+    }
+    if (!param.percent && lattice.literal.percent) {
+      return finding(
+        "TYPE",
+        `${binding.name} is not a percent; lattice step ${text} must not be one`,
+      );
+    }
+    const places = new Decimal(lattice.step).decimalPlaces();
+    if (places > binding.precision!) {
+      return finding(
+        "PRECISION",
+        `lattice step ${text} has ${places} decimal${places === 1 ? "" : "s"}; param ${binding.name} declares ${binding.precision}`,
+      );
+    }
+    const analysis = analyzeLattice({
+      name: binding.name,
+      ...(binding.domain === undefined ? {} : { domain: binding.domain }),
+      step: lattice.step,
+      stepText: text,
+      percent: param.percent,
+    });
+    if (!analysis.ok) finding("TYPE", analysis.message);
   }
 
   /**
@@ -645,15 +724,134 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
         unevaluable.add(binding.id);
         return;
       }
+      for (const a of valueAnchorsOf(model, binding.id)) {
+        if (a.value!.kind === "inlineCode") {
+          // a rule whose rendering is illegible in a code span (`&nbsp;` shows
+          // literally there) is refused whatever the value's type — a
+          // wrong-type value also gets its own TYPE, both being true
+          const rule = a.displayRule !== undefined ? DISPLAY_RULES[a.displayRule] : undefined;
+          if (rule && !rule.inlineCode) {
+            refusedAnchors.add(a.commentSpan.start);
+            emit(
+              {
+                code: "ANCHOR",
+                sheetId: binding.sheetId,
+                name: binding.name,
+                sourceOffset: a.commentSpan.start,
+                span: a.commentSpan,
+                message: `display rule \`${a.displayRule}\` cannot render inside a code span — wrap the seed in **…** or *…* instead`,
+              },
+              { sheetId: binding.sheetId },
+            );
+          }
+          continue;
+        }
+        if (a.value!.kind !== "text") continue;
+        const text = model.source.slice(a.value!.start, a.value!.end);
+        if (a.displayRule !== undefined) {
+          // a display rule renders the stored value differently from its
+          // own shape (`0.4026` → `40.26%`), so a bare trailing token can
+          // never unambiguously seed it — unlike a plain numeric/date
+          // anchor, no shape check applies here at all.
+          refusedAnchors.add(a.commentSpan.start);
+          emit(
+            {
+              code: "ANCHOR",
+              sheetId: binding.sheetId,
+              name: binding.name,
+              sourceOffset: a.commentSpan.start,
+              span: a.commentSpan,
+              message:
+                "a display rule needs a delimited seed — wrap a placeholder instead, such as **_**",
+            },
+            { sheetId: binding.sheetId },
+          );
+          continue;
+        }
+        if (v0.t === "num") {
+          // numeric-shaped includes a percent form (`12.50%`, `-5%`) — the
+          // same "is this numeric" test matchesStored already applies, so a
+          // bare percent-shaped placeholder isn't refused as non-numeric.
+          if (parseDecorated(text).kind === "number" || PERCENT_RE.test(text)) continue;
+          refusedAnchors.add(a.commentSpan.start);
+          emit(
+            {
+              code: "ANCHOR",
+              sheetId: binding.sheetId,
+              name: binding.name,
+              sourceOffset: a.commentSpan.start,
+              span: a.commentSpan,
+              message:
+                "no number to rewrite in front of this anchor — wrap a placeholder instead, such as **0** or **_**",
+            },
+            { sheetId: binding.sheetId },
+          );
+        } else if (v0.t === "date") {
+          if (parseIsoDate(text).ok) continue;
+          refusedAnchors.add(a.commentSpan.start);
+          emit(
+            {
+              code: "ANCHOR",
+              sheetId: binding.sheetId,
+              name: binding.name,
+              sourceOffset: a.commentSpan.start,
+              span: a.commentSpan,
+              message:
+                "no date to rewrite in front of this anchor — wrap a placeholder instead, such as **2026-01-01** or **_**",
+            },
+            { sheetId: binding.sheetId },
+          );
+        } else {
+          refusedAnchors.add(a.commentSpan.start);
+          emit(
+            {
+              code: "ANCHOR",
+              sheetId: binding.sheetId,
+              name: binding.name,
+              sourceOffset: a.commentSpan.start,
+              span: a.commentSpan,
+              message:
+                "a string anchor cannot rewrite bare prose — wrap a placeholder instead, such as **_**",
+            },
+            { sheetId: binding.sheetId },
+          );
+        }
+      }
       const anchorText = anchorValueText(model, binding.id);
+      // the decoration is read from a plain anchor only: a display rule owns
+      // its whole span, so a `|unit` seed such as `$3.50` is that rule's
+      // STALE, not the scalar's decoration (#323)
+      const plainText = plainAnchorValueText(model, binding.id);
       const anchorUnit =
-        anchorText !== undefined
+        plainText !== undefined
           ? (() => {
-              const d = parseDecorated(anchorText);
+              const d = parseDecorated(plainText);
               return d.kind === "number" ? d.unit : null;
             })()
           : null;
       scalarUnits.set(binding.id, anchorUnit);
+      if (plainText !== undefined && binding.unit) {
+        const problem = decorationProblem(
+          plainText,
+          binding.unit.map,
+          model.unitDefs,
+          "anchor",
+          binding.name,
+        );
+        if (problem) {
+          emit(
+            {
+              code: "UNIT",
+              sheetId: binding.sheetId,
+              name: binding.name,
+              raw: plainText,
+              message: problem,
+            },
+            { sheetId: binding.sheetId },
+          );
+          unitConflicts.add(binding.id);
+        }
+      }
       // The anchor supplies the *unit* and nothing else. Its text used to supply
       // the precision too, which made a `0` placeholder in prose round the
       // stored value and move every figure downstream of it.
@@ -679,16 +877,64 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
       values.set(binding.id, v);
 
       const mine = valueAnchorsOf(model, binding.id);
-      const percentMine = mine.filter((a) => a.percent);
+      const displayRuleMine = mine.filter((a) => a.displayRule !== undefined);
+      const unknownMine = displayRuleMine.filter((a) => !DISPLAY_RULES[a.displayRule!]);
+      const registeredMine = displayRuleMine.filter((a) => DISPLAY_RULES[a.displayRule!]);
+      const unitMap = dimensions.unitOf(binding.id);
+      // a rule that prints the unit refuses a value without one, by the same
+      // TYPE as any other value it does not accept
+      const wrongTypeMine = registeredMine.filter((a) => {
+        const rule = DISPLAY_RULES[a.displayRule!]!;
+        return !rule.accepts(v) || (rule.needsUnit && isDimensionless(unitMap));
+      });
+      const percentMine = registeredMine.filter((a) => a.displayRule === "percent");
       let sigilBlocked = false;
-      if (percentMine.length > 0 && v.t !== "num") {
+      for (const a of unknownMine) {
+        // no `sigilBlocked = true` here: the unknown-named anchor is already
+        // in `refusedAnchors` and so already excluded from the STALE loop
+        // below — blocking the whole scalar would silence a genuinely stale
+        // *sibling* anchor's own finding for no reason tied to this anchor.
+        refusedAnchors.add(a.commentSpan.start);
+        emit(
+          {
+            code: "ANCHOR",
+            sheetId: binding.sheetId,
+            name: binding.name,
+            sourceOffset: a.commentSpan.start,
+            span: a.commentSpan,
+            message: `unknown display rule \`${a.displayRule}\``,
+          },
+          { sheetId: binding.sheetId },
+        );
+      }
+      if (wrongTypeMine.length > 0) {
         emit(
           {
             code: "TYPE",
             sheetId: binding.sheetId,
             name: binding.name,
-            message: "a % sigil is only legal on a numeric scalar",
-            span: percentMine[0]!.commentSpan,
+            message: displayRuleTypeMessage(),
+            span: wrongTypeMine[0]!.commentSpan,
+          },
+          { sheetId: binding.sheetId },
+        );
+        sigilBlocked = true;
+      }
+      // every other display rule receives the value's unit and renders none
+      // (units spec §5.4) — `|percent` of a PLN amount is a category error
+      const unitBlocked = isDimensionless(unitMap)
+        ? []
+        : registeredMine.filter(
+            (a) => !wrongTypeMine.includes(a) && !DISPLAY_RULES[a.displayRule!]!.needsUnit,
+          );
+      if (unitBlocked.length > 0) {
+        emit(
+          {
+            code: "TYPE",
+            sheetId: binding.sheetId,
+            name: binding.name,
+            message: `|${unitBlocked[0]!.displayRule} cannot render a value with a unit (${formatUnit(unitMap)})`,
+            span: unitBlocked[0]!.commentSpan,
           },
           { sheetId: binding.sheetId },
         );
@@ -716,7 +962,7 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
               code: "UNIT",
               sheetId: binding.sheetId,
               name: binding.name,
-              message: "cannot mix a unit with percent display",
+              message: "cannot mix a unit with a display rule",
               span: a.value ?? a.commentSpan,
             },
             { sheetId: binding.sheetId },
@@ -726,9 +972,22 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
       }
 
       if (!sigilBlocked && prec !== null && v.t === "num" && mine.length > 0) {
+        // every drifted anchor of this scalar gets its own spanned finding —
+        // not just the first. A second anchor whose stored text is equally
+        // wrong is a second site a reader can be looking at, and a consumer
+        // that marks a value by matching a STALE finding's own span
+        // (editors/obsidian/src/decorations.ts) would otherwise call that
+        // site "computed" — agreeing — because no finding ever named its span.
         for (const a of mine) {
+          if (refusedAnchors.has(a.commentSpan.start)) continue;
           const text = model.source.slice(a.value!.start, a.value!.end);
-          if (matchesStored(v, text, prec)) continue;
+          const rule = a.displayRule !== undefined ? DISPLAY_RULES[a.displayRule] : undefined;
+          const rendered = rule
+            ? rule.render(v, prec, unitMap)
+            : applyUnit(showValue(v, prec), anchorUnit);
+          // a rule that prints the unit owns the span's every byte, like
+          // `nbsp`; the others compare the number, as they always have
+          if (rule?.needsUnit ? text === rendered : matchesStored(v, text, prec)) continue;
           staleScalars.add(binding.id);
           if (!isCrossSheetAggregate(model, binding)) {
             emit(
@@ -737,16 +996,66 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
                 sheetId: binding.sheetId,
                 name: binding.name,
                 stored: text,
-                computed: a.percent
-                  ? percentDisplay(v, prec)
-                  : applyUnit(showValue(v, prec), anchorUnit),
+                computed: rendered,
                 formula: formulaText(model, binding),
                 span: { start: a.value!.start, end: a.value!.end },
               },
               { sheetId: binding.sheetId },
             );
           }
-          break;
+        }
+      }
+
+      if (!sigilBlocked && v.t === "str") {
+        // a string rule's rendering is compared byte-for-byte, never through
+        // matchesStored — but only after an in-place re-parse proves that
+        // what fmt would write reads back as the stored text (spec §3)
+        // what a reader sees: the words joined by the U+00A0 `&nbsp;` decodes to
+        const expected = v.s.trim().split(/\s+/).join("\u00a0");
+        for (const a of registeredMine) {
+          if (refusedAnchors.has(a.commentSpan.start)) continue;
+          const rendered = DISPLAY_RULES[a.displayRule!]!.render(v, 0);
+          if (!roundTrips(model.source, a, rendered, expected)) {
+            refusedAnchors.add(a.commentSpan.start);
+            const d = a.delimiters!;
+            const inside = `${d.open}…${d.close}`;
+            const chars = markdownSyntaxIn(v.s);
+            emit(
+              {
+                code: "ANCHOR",
+                sheetId: binding.sheetId,
+                name: binding.name,
+                sourceOffset: a.commentSpan.start,
+                span: a.commentSpan,
+                message:
+                  rendered === ""
+                    ? `display rule \`${a.displayRule}\` cannot write an empty value inside ${inside}`
+                    : `display rule \`${a.displayRule}\` cannot write this value inside ${inside} and read it back unchanged` +
+                      (chars.length > 0
+                        ? ` — it contains Markdown syntax: ${chars.join(" ")}`
+                        : ""),
+              },
+              { sheetId: binding.sheetId },
+            );
+            continue;
+          }
+          const text = model.source.slice(a.value!.start, a.value!.end);
+          if (text === rendered) continue;
+          staleScalars.add(binding.id);
+          if (!isCrossSheetAggregate(model, binding)) {
+            emit(
+              {
+                code: "STALE",
+                sheetId: binding.sheetId,
+                name: binding.name,
+                stored: text,
+                computed: rendered,
+                formula: formulaText(model, binding),
+                span: { start: a.value!.start, end: a.value!.end },
+              },
+              { sheetId: binding.sheetId },
+            );
+          }
         }
       }
     } catch (e) {
@@ -837,6 +1146,10 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
     if ([...dep.deps].some((d) => unevaluable.has(d))) {
       record(null);
       ledger.bumpSuppressed(a.sheetId);
+      return;
+    }
+    if (!dimensions.checkAssertion(node)) {
+      record(null);
       return;
     }
 
@@ -1191,6 +1504,16 @@ function valueAnchorsOf(model: DocModel, id: string) {
 function anchorValueText(model: DocModel, id: string): string | undefined {
   for (const a of model.anchors) {
     if (`${a.sheetId}.${a.name}` === id && a.value) {
+      return model.source.slice(a.value.start, a.value.end);
+    }
+  }
+  return undefined;
+}
+
+/** `anchorValueText`, skipping every anchor that carries a display rule */
+function plainAnchorValueText(model: DocModel, id: string): string | undefined {
+  for (const a of model.anchors) {
+    if (`${a.sheetId}.${a.name}` === id && a.value && a.displayRule === undefined) {
       return model.source.slice(a.value.start, a.value.end);
     }
   }

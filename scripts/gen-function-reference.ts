@@ -15,6 +15,7 @@ import {
   describeFunction,
   functionNames,
   precisionPhrase,
+  unitSigText,
   type FnEntry,
 } from "../packages/visimark/src/lang/reference.js";
 
@@ -48,16 +49,17 @@ export function renderTable(): string {
     return e.precision.from === "declared" ? `**${phrase}**` : phrase;
   };
   const rows = entries().map(
-    (e) => `| ${signature(e)} | ${e.kind} | ${e.arity} | ${cell(e)} | ${meaning(e)} |`,
+    (e) =>
+      `| ${signature(e)} | ${e.kind} | ${e.arity} | ${cell(e)} | \`${unitSigText(e.name, e)}\` | ${meaning(e)} |`,
   );
   return [
     BEGIN,
     "",
-    "| Function | Kind | Arity | Precision | Meaning |",
-    "|----------|------|------:|-----------|---------|",
+    "| Function | Kind | Arity | Precision | Units | Meaning |",
+    "|----------|------|------:|-----------|-------|---------|",
     ...rows,
     "",
-    "Parameters, precision and worked examples for each are in",
+    "Parameters, precision, units and worked examples for each are in",
     "[`function-reference.md`](function-reference.md), or `visimark ref NAME`.",
     "",
     END,
@@ -74,6 +76,7 @@ function section(e: FnEntry): string {
   for (const p of e.params) lines.push(`| \`${p.name}\` | ${p.type} | ${p.note} |`);
   lines.push("", `**Returns:** ${e.returns}.`, "");
   lines.push(`**Precision:** ${precisionPhrase(e.precision)}.`, "");
+  lines.push(`**Units:** \`${unitSigText(e.name, e)}\``, "");
   if (e.rounding) lines.push(`**Rounding:** ${e.rounding}`, "");
   if (e.errors.length > 0) {
     lines.push("**Errors**", "");

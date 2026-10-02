@@ -214,7 +214,7 @@ Everywhere below, `visimark` means "the command you just installed", or
 
 ```console
 $ visimark --help
-visimark — spreadsheet mechanics for Markdown
+visimark — a document integrity layer for Markdown
 
 usage:
   visimark check FILE... [--json]      read-only; exit 1 if any finding.
@@ -696,29 +696,49 @@ type is replaced at the binding's own width.
 
 ### Always give an anchor a placeholder
 
-The anchor rewrites the element directly in front of it. With `**0**` in front,
-that element is the bold text, which is what you want. With plain prose in
-front, it is the last word of that prose:
+The anchor rewrites the element directly in front of it. With `**0**` in
+front, that element is the bold text, which is what you want. A bare,
+unwrapped word only counts as a placeholder when it already looks like a
+value of the anchor's own type — a numeric anchor accepts a bare
+numeric-shaped token, a date anchor accepts a bare ISO-shaped token, and a
+string anchor never accepts bare prose at all. Anything else bare in front of
+an anchor refuses instead of guessing:
 
 ```console
 $ tail -1 seed.md
 Net of tax it comes to <!--vmark=order.net_total--> PLN.
+$ visimark check seed.md
+seed.md
+
+  ANCHOR  order.net_total   no number to rewrite in front of this anchor — wrap a placeholder instead, such as **0** or **_**
+
+  1 problem (0 stale, 1 error)
 $ visimark fmt seed.md
-seed.md: updated 1 anchor
-$ tail -1 seed.md
-Net of tax it comes 158.00 <!--vmark=order.net_total--> PLN.
+seed.md: unchanged
+seed.md
+
+  ANCHOR  order.net_total   no number to rewrite in front of this anchor — wrap a placeholder instead, such as **0** or **_**
+
+  1 problem (0 stale, 1 error)
 ```
 
-The word `to` was replaced by the number. So write a placeholder, and make it
-bold: `**0**<!--vmark=order.net_total-->`. The placeholder's digits do not
-matter. What `fmt` never does is *invent* an anchor — you decide where a value
-appears in your prose.
+`fmt` still reports the finding it can't fix and exits `1` — "unchanged" means the file, not the outcome.
+
+`fmt` leaves the word `to` alone — it is not a number, so it does not qualify
+as a placeholder, and `fmt` never writes what it doesn't own. Wrap a
+placeholder instead, and make it bold: `**0**<!--vmark=order.net_total-->` or
+`**_**<!--vmark=order.net_total-->`. `_` is the recommended seed when the
+value has no natural placeholder of its own — it reads as "fill me in"
+without implying a specific number. The placeholder's content does not
+matter, digits or `_` alike: it is replaced at the binding's own width. What
+`fmt` never does is *invent* an anchor — you decide where a value appears in
+your prose.
 
 ### Print a ratio as a percent
 
-A stored ratio such as `0.3988` reads better in a sentence as `39.88%`. Add `%`
-to the end of the anchor name, `<!--vmark=lines.margin%-->`, and `fmt` writes
-the percent. The stored value does not change. Chapter 15 covers it.
+A stored ratio such as `0.3988` reads better in a sentence as `39.88%`. Add
+`|percent` to the anchor name, `<!--vmark=lines.margin|percent-->`, and `fmt`
+writes the percent. The stored value does not change. Chapter 15 covers it.
 
 ### Put the currency outside the anchor
 
@@ -732,11 +752,12 @@ rewrite the whole thing.
 
 ### One current limit
 
-Today only **numeric** anchored values are rewritten and checked. If a value is
-a string or a date, the anchor is left alone and no `STALE` is reported for it.
-Until that changes, keep strings and dates out of prose anchors, or accept that
-they are documentation rather than verified figures. Numbers — which is almost
-everything you want to anchor — are fully checked.
+**Numeric** anchored values are rewritten and checked. A string anchor that
+carries `|nbsp` is checked too (chapter 15). A plain string anchor, and any date
+anchor, is still left alone, and no `STALE` is reported for it. Keep those out
+of prose anchors, or accept that they are documentation rather than verified
+figures. Numbers — which is almost everything you want to anchor — are fully
+checked.
 
 ## 10. More than one table: sheets
 
@@ -845,8 +866,9 @@ row. This is legal and useful.
 ### Operators
 
 `+` `-` `*` `/` `^`, the comparisons `==` `!=` `<` `<=` `>` `>=`, and the words
-`and`, `or`, `not`. Division by zero is a `TYPE` error, not a value: `fmt` never
-writes `Infinity` into your document.
+`and`, `or`, `not`. `⋅` is a second spelling of `*`. Division by zero is a
+`TYPE` error, not a value: `fmt` never writes `Infinity` into your document.
+Each operator also has a rule for units, which chapter 16 covers.
 
 `%` is not an operator. It is postfix only and belongs to a number, so that
 `23%` can never be ambiguous. Use `MOD()` for a remainder.
@@ -1307,14 +1329,16 @@ margin precision 4 = (net_total - cost_total) / net_total
 `fmt` writes `0.3121` and `0.6879` into `Share`. A computed cell is always a
 plain decimal. Percent display exists only in prose.
 
-### In a sentence: add `%` to the anchor
+### In a sentence: add `|percent` to the anchor
 
 *New after 0.1.6: this ships in the next release.*
 
-Put `%` directly after the name inside the anchor comment:
+Put `|percent` directly after the name inside the anchor comment — a
+**display rule**, one of a small closed set of named prose transforms
+(chapter 15 covers the three that ship, `percent`, `nbsp` and `unit`):
 
 ```markdown
-The engagement clears a margin of **0**<!--vmark=lines.margin%-->, or
+The engagement clears a margin of **0**<!--vmark=lines.margin|percent-->, or
 **0**<!--vmark=lines.margin--> as a ratio.
 ```
 
@@ -1324,18 +1348,18 @@ margin.md: updated 2 cells, 2 anchors
 ```
 
 ```markdown
-The engagement clears a margin of **39.88%**<!--vmark=lines.margin%-->, or
+The engagement clears a margin of **39.88%**<!--vmark=lines.margin|percent-->, or
 **0.3988**<!--vmark=lines.margin--> as a ratio.
 ```
 
-Both anchors show the same stored value, `0.3988`. The `%` is a request for
+Both anchors show the same stored value, `0.3988`. `|percent` is a request for
 one span only: *print this one as a percent*. Nothing else changes — not the
 stored value, not any formula, not what `eval` reports.
 
 The rule is simple. `fmt` multiplies the stored value by 100, writes it with
 **two fewer decimals than the binding's width**, and adds `%`:
 
-| Binding | Stored | Written with `%` |
+| Binding | Stored | Written with `\|percent` |
 |---|---|---|
 | `margin precision 4 = …` | `0.3988` | `39.88%` |
 | `rate precision 3 = 12.5%` | `0.125` | `12.5%` |
@@ -1350,7 +1374,7 @@ anchor.
 ### How `check` reads it
 
 `check` compares numbers, not spellings. `39.88%` and `0.3988` are the same
-number, so either text is clean, with or without `%` on the anchor.
+number, so either text is clean, with or without `|percent` on the anchor.
 
 `fmt` is stricter: it always writes the anchor's own form. Here both spans
 agree with the stored `0.3988`, and `check` reports nothing, but `fmt` still
@@ -1358,16 +1382,16 @@ rewrites them:
 
 ```console
 $ tail -1 c.md
-A **0.3988**<!--vmark=s.m%-->. B **39.88%**<!--vmark=s.m-->.
+A **0.3988**<!--vmark=s.m|percent-->. B **39.88%**<!--vmark=s.m-->.
 $ visimark fmt c.md
 c.md: updated 2 anchors
 $ tail -1 c.md
-A **39.88%**<!--vmark=s.m%-->. B **0.3988**<!--vmark=s.m-->.
+A **39.88%**<!--vmark=s.m|percent-->. B **0.3988**<!--vmark=s.m-->.
 ```
 
-So if you type a percent by hand in front of an anchor without `%`, the next
-`fmt` turns it back into a decimal. The `%` belongs on the anchor, not in the
-text.
+So if you type a percent by hand in front of an anchor without `|percent`, the
+next `fmt` turns it back into a decimal. `|percent` belongs on the anchor,
+not in the text.
 
 A wrong number is `STALE` as usual, and the report shows the percent form:
 
@@ -1375,38 +1399,129 @@ A wrong number is `STALE` as usual, and the report shows the percent form:
   STALE   s.rate                                      13.5% ≠ 12.5%
 ```
 
-### What the `%` refuses
+### What `|percent` refuses
 
 | You wrote | Finding |
 |---|---|
-| `%` on a binding narrower than 2 decimals | `PRECISION` — `percent display needs precision 2 or more; a has 1` |
-| `%` on a date or a string | `TYPE` — `a % sigil is only legal on a numeric scalar` |
-| `%` on a chart image | `TYPE`, the same message |
-| `%` with a currency in the same span, such as `**$0.25**` | `UNIT` — `cannot mix a unit with percent display` |
-| a space before the `%`, as in `lines.margin %` | `ANCHOR` — the comment is malformed |
+| `\|percent` on a binding narrower than 2 decimals | `PRECISION` — `percent display needs precision 2 or more; a has 1` |
+| `\|percent` on a date or a string | `TYPE` — `a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only; unit: numeric with a unit)` |
+| `\|percent` on a chart image | `TYPE`, the same message |
+| `\|percent` with a currency in the same span, such as `**$0.25**` | `UNIT` — `cannot mix a unit with a display rule` |
+| `\|percent` with a bare, undelimited seed, as in `40.26%<!--vmark=s.m\|percent-->` | `ANCHOR` — `a display rule needs a delimited seed` |
+| an unrecognised name, such as `\|nope` | `ANCHOR` — `` unknown display rule `nope` `` |
+| the old `%` sigil, as in `lines.margin%` | `ANCHOR` — the comment is malformed |
 
 `fmt` leaves a span alone while any of these is reported.
 
-Two things the tools never do: `fmt` never adds `%` to an anchor you wrote
-without one, and `infer --write` never proposes one. Whether a ratio reads
-better as a percent is your call.
+Two things the tools never do: `fmt` never adds `|percent` to an anchor you
+wrote without one, and `infer --write` never proposes one. Whether a ratio
+reads better as a percent is your call.
 
 ### A percent in a what-if
 
 A percent value also matters in Part 8. A `param` whose default is written as a
 percent, such as `param vat_rate precision 2 = default 23%`, only accepts a
 percent from a scenario. The capstone (chapter 31) uses such a `param` and
-prints it with a `%` anchor.
+prints it with a `|percent` anchor.
+
+### A multi-word string: add `|nbsp`
+
+*New after 0.1.10: this ships in the next release.*
+
+A plain string anchor is never compared with its prose. Change the value and
+`check` still reports nothing:
+
+````markdown
+```vmark #s
+status = "past due"
+```
+
+Account status: **past due**<!--vmark=s.status--> as of today.
+````
+
+Add `|nbsp` and the anchor becomes an output. `fmt` writes the words joined
+with the `&nbsp;` entity, which every renderer shows as the plain words, kept
+on one line:
+
+```markdown
+Account status: **past&nbsp;due**<!--vmark=s.status|nbsp--> as of today.
+```
+
+Change `status` to `"paid in full"` and `check` reports the span:
+
+```console
+  STALE   s.status                            past&nbsp;due ≠ paid&nbsp;in&nbsp;full
+```
+
+`fmt` rewrites it to `**paid&nbsp;in&nbsp;full**`. Before it writes, it
+re-reads the document with the new text in place, and writes only if the
+anchor still wraps exactly the stored words.
+
+| You wrote | Finding |
+|---|---|
+| `\|nbsp` in a code span, as in `` `past due` `` | `ANCHOR` — `` display rule `nbsp` cannot render inside a code span `` |
+| `\|nbsp` on a value holding Markdown syntax, such as `a *b* c` | `ANCHOR` — `` display rule `nbsp` cannot write this value inside **…** and read it back unchanged — it contains Markdown syntax: * `` |
+| `\|nbsp` on an empty value | `ANCHOR` — `` display rule `nbsp` cannot write an empty value inside **…** `` |
+| `\|nbsp` on a number or a date | `TYPE` — `a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only; unit: numeric with a unit)` |
+
+As with `|percent`, `fmt` never adds `|nbsp` to an anchor you wrote without
+one, and `infer --write` never proposes it.
+
+### A figure with its unit: add `|unit`
+
+*New after 0.1.11: this ships in the next release.*
+
+When a binding carries a unit (chapter 16), a plain anchor writes only the
+number, and the unit stays in the prose where `fmt` cannot see it:
+
+```markdown
+Net of tax the engagement comes to **23300.00**<!--vmark=lines.net_total--> PLN.
+```
+
+Change the declaration to `[EUR]` and the sentence still says `PLN`. Move the
+unit inside the bold and add `|unit`, and the anchor writes both:
+
+```markdown
+Net of tax the engagement comes to **23300.00 PLN**<!--vmark=lines.net_total|unit-->.
+```
+
+`fmt` writes the number at its write precision, one space, and the unit as
+the binding declares or derives it, in its normal spelling: `5 m²`, `50 1/s`,
+`6.0 N⋅m/s²`. You may seed the span with a placeholder such as `**_**`. When
+the total moves to `24000`, `check` reports the whole span:
+
+```console
+  STALE   lines.net_total                      23300.00 PLN ≠ 24000.00 PLN
+```
+
+`fmt` rewrites it to `**24000.00 PLN**`. Changing the declaration to `[EUR]`
+rewrites the unit the same way. The space is an ordinary one, so the number
+and its unit may land on two lines when the paragraph wraps.
+
+| You wrote | Finding |
+|---|---|
+| `\|unit` on a number with no unit, or one whose units cancel (`PLN / PLN`) | `TYPE` — `a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only; unit: numeric with a unit)` |
+| `\|unit` on a string or a date | `TYPE`, the same message |
+| `\|unit` over a bare number, a wrong unit, `m^2` for `m²`, or `$23300.00` | `STALE`, and `fmt` writes the right span |
+| the same `$23300.00` or `23300.00 EUR` on an anchor **without** `\|unit` | `UNIT` — fix it by hand |
+| `\|percent` on a value with a unit | `TYPE` — `\|percent cannot render a value with a unit (PLN)` |
+
+A plain anchor keeps the unit you typed, in your spelling: `**5 m^2**`
+stays `m^2` when `fmt` updates the number. Only `|unit` writes the unit for
+you. `fmt` never adds `|unit` to an anchor, and `infer --write` never proposes
+it.
 
 ## 16. Currency and units
 
-A currency or unit is decoration around a number. It is not part of the value,
-and `%` is not one of them (chapter 15). In prose, keep it outside the anchor
-(chapter 9).
+Two different things sit next to a number. A **decoration** is presentation:
+the `$` in `$12.50`, the ` kg` in `3.5 kg`. A **unit** is a declaration: the
+`[kg]` after a name, which says what the number measures and which arithmetic
+is legal. Keep a decoration outside an anchor in prose (chapter 9), or let
+`|unit` write the binding's unit inside the anchor for you (chapter 15).
 
 ### Decoration in a cell
 
-A column may carry a currency symbol or a unit:
+A column may carry a currency symbol or a unit word:
 
 ```markdown
 | Item    | Price  | Qty |    Net |
@@ -1415,9 +1530,8 @@ A column may carry a currency symbol or a unit:
 | Gadgets | $30.00 |   2 | $60.00 |
 ```
 
-VisiMark strips the `$` to compute, and puts it back when it writes. The
-decoration is **inert**: it is never converted, never propagated through a
-formula, and never given meaning.
+VisiMark strips the `$` to compute, and puts it back when it writes. A
+decoration on its own is never converted and never carried through a formula.
 
 ### One column means one thing
 
@@ -1430,6 +1544,96 @@ A column holding both `$5.00` and `€4.00` is an error, not a sum:
 
 This is not fussiness. Two currencies in one column have no total, and guessing
 one would be worse than refusing.
+
+### Declare a unit on a header
+
+A bracket at the end of a header declares that column's unit. The name is what
+comes before it:
+
+```markdown
+| Weight [kg] | Count |
+|------------:|------:|
+|           2 |     4 |
+|           3 |     1 |
+```
+
+```text
+total [kg] = SUM(Weight)
+```
+
+The column is called `Weight`. A formula reads it as `Weight`, with no `is`
+line, exactly as it would read a header that said `Weight`. The full text,
+`"Weight [kg]"`, is not a name, and quoting it is `UNDEF` with a hint that
+says so:
+
+```console
+  UNDEF   s.w               unknown name `Weight [kg]`
+          the header's name is Weight; [kg] is its unit
+```
+
+A header whose name is not one identifier still uses `is`, and still quotes the
+name without its bracket: `"Worker cost" is wc` for a header
+`Worker cost [USD/node/month]`.
+
+### Declare a unit on a binding
+
+A scalar's unit goes right after its name, before any `precision` clause:
+
+```text
+metabolic_rate [kcal] precision 0 = 1600
+hours          [h]                = 24
+per_hour       [kcal/h] precision 2 = metabolic_rate / hours
+```
+
+`1600` and `24` carry no unit of their own, so each takes the one its line
+declares. `per_hour` is different: its right side already has a unit,
+`kcal ÷ h`, so the declaration is **checked** against it. Write
+`metabolic_rate / 24` instead and the right side derives `kcal`, which is not
+`kcal/h`:
+
+```console
+  UNIT    s.per_hour        per_hour declares kcal/h but its formula derives kcal
+```
+
+### How units combine
+
+`*` and `/` combine units: `PLN ÷ PLN/EUR` is `EUR`, `USD/node/month × node` is
+`USD/month`. `+`, `-` and every comparison need the same unit on both sides, so
+`5 [kg] + 3 [m]` does not evaluate. A literal that needs a unit can carry one,
+`Net [PLN] = Qty * Rate + 10 [PLN]`; the literal `0` matches any unit, so
+`assert variance == 0` needs nothing. `⋅` is a second spelling of `*`, handy
+inside and outside a bracket alike.
+
+A name with no bracket and no unit-bearing operand is dimensionless, and a
+dimensionless number added to a unit is a mismatch — so once a document starts
+declaring units, it declares them all the way along a calculation.
+
+### Money
+
+A currency is an ordinary unit, written as its code. The symbol stays in the
+prose:
+
+```text
+tax_amount [USD] precision 2 = 1800
+```
+
+```markdown
+Tax comes to $**1800.00**<!--vmark=s.tax_amount-->.
+```
+
+`$` is not `USD`, and VisiMark never assumes it is. Nor does a currency imply
+a precision: write `precision 2` yourself. A column declared `[USD]` refuses a
+`$` decoration in its cells, because the bracket already says what the symbol
+would.
+
+### Let `infer` write the rest
+
+`visimark infer` proposes the unit each formula derives wherever nothing is
+declared, and `infer --write` adds it — ` [PLN]` after a computed column's
+header or a scalar's name, nothing else. The first write records whatever the
+formula produces, right or wrong; from the next edit on, each one is a check.
+`fmt --fix-units` respells the brackets you already have (`[kg*m^2/s^2]`
+becomes `[kg⋅m²/s²]`) and never changes what they mean.
 
 ### Thousands separators are refused
 
@@ -1542,8 +1746,9 @@ Use this when you only produce that column and never read it back.
 
 ### Matching is exact
 
-The quoted text must be byte-for-byte identical to the header cell's printed
-text. No trimming, no case folding. If it does not match any header, that is an
+The quoted text must be byte-for-byte identical to the header's name — its
+printed text, minus a trailing unit bracket (chapter 16), which is never part of
+a name. No trimming, no case folding. If it does not match any header, that is an
 `UNDEF` error with a suggestion — never a silently created scalar.
 
 ## 19. Assertions: facts that must stay true
@@ -1595,11 +1800,11 @@ Here is the one from [`tutorial/capstone.md`](tutorial/capstone.md):
 
 ````markdown
 ```vmark #recon
-invoiced  = lines.gross_total
-scheduled = schedule.covered
-variance  = scheduled - invoiced
+invoiced  [EUR] = lines.gross_total
+scheduled [EUR] = schedule.covered
+variance  [EUR] = scheduled - invoiced
 
-assert |variance| <= 0.05
+assert |variance| <= 0.05 [EUR]
 ```
 ````
 
@@ -1768,6 +1973,14 @@ unambiguous ones.
 ```console
   UNIT    s.Price         · b                     "€4.00"
           column mixes units: $ and €
+```
+
+`UNIT` is also what units that disagree report — a declaration the formula
+does not derive, two different units added together, or a bracket that is not
+a unit (chapter 16):
+
+```console
+  UNIT    terms.eur_total   eur_total declares EUR but its formula derives PLN²/EUR
 ```
 
 **`UNDEF` — a formula names something that does not exist.**
@@ -2282,6 +2495,7 @@ differently from `1`.
     "tax.gross_total": "194.34",
     "order.Net": ["50", "60", "48"]
   },
+  "units": {},
   "assertions": [
     {
       "sheet": "tax",
@@ -2302,6 +2516,11 @@ is on purpose. JSON numbers are IEEE floats, and money is not. Parse them with a
 decimal library, or keep them as strings.
 
 **A column is an array.** A scalar is a single string.
+
+**Units sit beside the values, never inside them.** `units` maps every name
+that has a unit to its exponents — `"lines.gross_total": {"PLN": 1}`,
+`"s.work": {"kg": 1, "m": 2, "s": -2}` — and is `{}` when nothing declares one,
+as here. A script never has to parse `kg⋅m²/s²` out of a string.
 
 **Assertions come with the values filled in.** `substituted` is the assertion
 with each name replaced by what it evaluated to. A monitoring script can report
@@ -2477,7 +2696,7 @@ payroll   = SUM(Cost)
 
 The team of **11**<!--vmark=team.headcount--> people costs
 **111240.00**<!--vmark=team.payroll--> PLN a month, after a
-**3.0%**<!--vmark=team.raise%--> raise.
+**3.0%**<!--vmark=team.raise|percent--> raise.
 
 ```vmark #runway
 param cash      precision 2 = default 2000000.00
@@ -2528,7 +2747,7 @@ document. A scenario is only a view of it.**
 
 A `param` behaves like any other scalar. Formulas read it, locally or as
 `team.raise`. An assertion can read it. An anchor can show it, and the anchor
-always shows the default. Above, `**3.0%**<!--vmark=team.raise%-->` prints the
+always shows the default. Above, `**3.0%**<!--vmark=team.raise|percent-->` prints the
 default raise as a percent (chapter 15). It shows one decimal because `raise`
 is three decimals wide.
 
@@ -2695,6 +2914,23 @@ is evaluated:
 
 A `param` with the same name as a column of its sheet is a `DUP` error, and one
 nothing reads gets the usual `WARN`.
+
+### A lattice names the sweep spacing
+
+A domain says which values are legal. It does not say which of them a later
+sweep should visit. A `lattice` at the end of the domain does:
+
+```text
+param extra_hours precision 0 integer in [0, 80] lattice 20 = default 40
+param volume_disc precision 3 in [0%, 10%] lattice 1% = default 0%
+```
+
+`extra_hours` is visited at 0, 20, 40, 60 and 80, and `volume_disc` at 0%, 1%,
+… 10%. The lattice narrows nothing: `7` is still a legal `extra_hours`, as a
+default and as a scenario value. A lattice needs a finite interval and a step
+that lands on both ends, so `lattice 3` on `[0, 10]` is a `TYPE` error at the
+declaration rather than a last point quietly dropped. `eval` and `explain` print
+the lattice beside the domain.
 
 ### `param` is not a reserved word
 
@@ -2935,6 +3171,7 @@ carries a `defaults` field with `pass`, `fail` or `unverified`:
     "runway.months": "11.5",
     …
   },
+  "units": {},
   "assertions": [
     {
       "sheet": "runway",
@@ -2989,15 +3226,13 @@ Follow along. Every command is shown.
 
 ### Step 1 — the table, inputs only
 
-The header is written for the reader, not for the tool. Do not rename it.
-
 ```markdown
-| Stage            | Effort (man-days)    |    Rate |   Net |   VAT | Gross |
-|------------------|---------------------:|--------:|------:|------:|------:|
-| Discovery        |                    6 |  900.00 |  0.00 |  0.00 |  0.00 |
-| Schema mapping   |                   14 |  850.00 |  0.00 |  0.00 |  0.00 |
-| Migration runs   |                    9 |  850.00 |  0.00 |  0.00 |  0.00 |
-| Cutover support  |                    4 | 1100.00 |  0.00 |  0.00 |  0.00 |
+| Stage            | Effort [mandays] | Rate [EUR/mandays] | Net [EUR] | VAT [EUR] | Gross [EUR] |
+|------------------|------------------:|--------------------:|----------:|----------:|------------:|
+| Discovery        |                 6 |               900.00 |      0.00 |      0.00 |        0.00 |
+| Schema mapping   |                14 |               850.00 |      0.00 |      0.00 |        0.00 |
+| Migration runs   |                 9 |               850.00 |      0.00 |      0.00 |        0.00 |
+| Cutover support  |                 4 |              1100.00 |      0.00 |      0.00 |        0.00 |
 ```
 
 Three inputs, three placeholders. Leave room in the computed columns so the
@@ -3007,25 +3242,26 @@ table still lines up after `fmt`.
 
 ````markdown
 ```vmark #lines
-"Effort (man-days)" is days
-
 param vat_rate precision 2 = default 23%
 
-Net   = days * Rate
+Net   = Effort * Rate
 VAT   = ROUND(Net * vat_rate, 2)
 Gross = Net + VAT
 
-effort_total = SUM(days)
-net_total    = SUM(Net)
-vat_total    = SUM(VAT)
-gross_total  = SUM(Gross)
-day_rate_avg precision 2 = net_total / effort_total
+effort_total [mandays]                 = SUM(Effort)
+net_total    [EUR]                     = SUM(Net)
+vat_total    [EUR]                     = SUM(VAT)
+gross_total  [EUR]                     = SUM(Gross)
+day_rate_avg [EUR/mandays] precision 2 = net_total / effort_total
 ```
 ````
 
 Five decisions are visible here, and each one is a chapter you have read:
 
-- The alias (chapter 18) lets the header stay as written.
+- Effort, rate and every money value carry a unit (chapter 16):
+  `[mandays]` and `[EUR]` keep a day count from ever being added to a cost, on
+  purpose rather than by luck. `Rate` and `day_rate_avg` both declare
+  `EUR/mandays`, the same thing read two different ways.
 - The VAT rate is a `param` (chapter 29). It is 23% in the document, and a
   what-if run may try another rate. Its width, 2, allows any whole percent.
 - `ROUND(…, 2)` on VAT (chapter 14) keeps money at two decimals, as a stated
@@ -3037,54 +3273,60 @@ Five decisions are visible here, and each one is a chapter you have read:
 
 ```markdown
 The engagement is **0**<!--vmark=lines.effort_total--> man-days at an
-average of **0.00**<!--vmark=lines.day_rate_avg--> PLN per day. Net of tax it
-comes to **0.00**<!--vmark=lines.net_total--> PLN. VAT at
-**0**<!--vmark=lines.vat_rate%--> adds **0.00**<!--vmark=lines.vat_total-->
-PLN, giving a total of **0.00**<!--vmark=lines.gross_total--> PLN gross.
+average of **0.00**<!--vmark=lines.day_rate_avg--> EUR per day. Net of tax it
+comes to **0.00**<!--vmark=lines.net_total--> EUR. VAT at
+**0**<!--vmark=lines.vat_rate|percent--> adds **0.00**<!--vmark=lines.vat_total-->
+EUR, giving a total of **0.00**<!--vmark=lines.gross_total--> EUR gross.
 ```
 
-Currency stays outside the anchors (chapter 9). The rate is not typed into the
-sentence: the `%` anchor prints the `param` as a percent (chapter 15), so the
-sentence cannot disagree with the rate the formulas use.
+Currency stays outside the anchors (chapter 9) — the unit bracket on
+`gross_total` is a declaration the engine checks, not a symbol for the prose
+to print. The rate is not typed into the sentence either: the `%` anchor
+prints the `param` as a percent (chapter 15), so the sentence cannot disagree
+with the rate the formulas use.
 
 ### Step 4 — the schedule, a second sheet
 
 ````markdown
-| Milestone        | Share | Amount | Due        |
-|------------------|------:|-------:|------------|
-| Signature        |   25% |   0.00 | 2026-10-01 |
-| Schema sign-off  |   45% |   0.00 | 2026-11-16 |
-| Cutover accepted |   30% |   0.00 | 2027-01-15 |
+| Milestone        | Share | Amount [EUR] | Due        |
+|------------------|------:|-------------:|------------|
+| Signature        |   25% |         0.00 | 2026-10-01 |
+| Schema sign-off  |   45% |         0.00 | 2026-11-16 |
+| Cutover accepted |   30% |         0.00 | 2027-01-15 |
 
 ```vmark #schedule
 Amount = ROUND(Share * lines.gross_total, 2)
 
-covered  = SUM(Amount)
+covered   [EUR]       = SUM(Amount)
 share_sum precision 2 = SUM(Share)
 
 assert share_sum == 1
 ```
 ````
 
-`lines.gross_total` crosses sheets and is qualified (chapter 10). Dates are ISO
-(chapter 17). The assertion says the shares must be a whole (chapter 19).
+`lines.gross_total` crosses sheets and is qualified (chapter 10); its unit
+crosses with it, so `Amount` is checked as `EUR` without saying so again.
+Dates are ISO (chapter 17). The assertion says the shares must be a whole
+(chapter 19).
 
 ### Step 5 — the reconciliation, a sheet with no table
 
 ````markdown
 ```vmark #recon
-invoiced  = lines.gross_total
-scheduled = schedule.covered
-variance  = scheduled - invoiced
+invoiced  [EUR] = lines.gross_total
+scheduled [EUR] = schedule.covered
+variance  [EUR] = scheduled - invoiced
 
-assert |variance| <= 0.05
+assert |variance| <= 0.05 [EUR]
 ```
 ````
 
-Rounding each instalment can leave a few grosz of remainder. The tolerance is
-written down where a reviewer can argue with it, instead of being assumed.
-`|variance|` is the absolute value, written the way a reader expects
-(chapter 12).
+Rounding each instalment can leave a few cents of remainder. The tolerance is
+written down where a reviewer can argue with it, instead of being assumed —
+and it carries the same unit as the `variance` it is compared against
+(chapter 16), so a tolerance typed in the wrong column would be a `UNIT` error
+rather than a silent pass. `|variance|` is the absolute value, written the way
+a reader expects (chapter 12).
 
 ### Step 6 — fill it in
 
@@ -3106,10 +3348,10 @@ Change one input. Raise the schema-mapping effort from 14 days to 16:
 $ visimark check capstone.md
 capstone.md
 
-  STALE   lines.Net       · Schema mapping         11900.00 ≠ 13600.00   days * Rate
+  STALE   lines.Net       · Schema mapping         11900.00 ≠ 13600.00   Effort * Rate
   STALE   lines.VAT       · Schema mapping          2737.00 ≠ 3128.00    ROUND(Net * vat_rate, 2)
   STALE   lines.Gross     · Schema mapping         14637.00 ≠ 16728.00   Net + VAT
-  STALE   lines.effort_total                             33 ≠ 35         SUM(days)
+  STALE   lines.effort_total                             33 ≠ 35         SUM(Effort)
   STALE   lines.net_total                          29350.00 ≠ 31050.00   SUM(Net)
   STALE   lines.vat_total                           6750.50 ≠ 7141.50    SUM(VAT)
   STALE   lines.gross_total                        36100.50 ≠ 38191.50   SUM(Gross)
@@ -3149,8 +3391,8 @@ capstone.md
   ASSERT  #schedule       share_sum == 1
           1.05 == 1   is false
 
-  ASSERT  #recon          |variance| <= 0.05
-          |1805.04| <= 0.05   is false
+  ASSERT  #recon          |variance| <= 0.05 [EUR]
+          |1805.04| <= 0.05 [EUR]   is false
 
   9 problems (7 stale, 2 errors)
 ```
@@ -3158,7 +3400,7 @@ capstone.md
 This is the important difference. `fmt` would happily repair all seven `STALE`
 findings, and the document would then be internally consistent — and still
 wrong, because the shares add to 105% and the schedule over-collects by 1805.04
-PLN.
+EUR.
 
 The two assertions survive `fmt` and keep failing. They are the part of the
 document that says what *should* be true, rather than what is.
@@ -3191,21 +3433,21 @@ come to then? Do not edit the rate. Ask:
 $ cat reverse-charge.json
 { "vat_rate": "0%" }
 $ visimark eval --scenario reverse-charge.json capstone.md
-lines.vat_rate      0
-lines.effort_total  33
-lines.net_total     29350
-lines.vat_total     0
-lines.gross_total   29350
-lines.day_rate_avg  889.39
-schedule.covered    29350
-schedule.share_sum  1
-recon.invoiced      29350
-recon.scheduled     29350
-recon.variance      0
-lines.Net           5400, 11900, 7650, 4400
-lines.VAT           0, 0, 0, 0
-lines.Gross         5400, 11900, 7650, 4400
-schedule.Amount     7337.5, 13207.5, 8805
+lines.vat_rate                    0
+lines.effort_total [mandays]      33
+lines.net_total [EUR]             29350
+lines.vat_total [EUR]             0
+lines.gross_total [EUR]           29350
+lines.day_rate_avg [EUR/mandays]  889.39
+schedule.covered [EUR]            29350
+schedule.share_sum                1
+recon.invoiced [EUR]              29350
+recon.scheduled [EUR]             29350
+recon.variance [EUR]              0
+lines.Net [EUR]                   5400, 11900, 7650, 4400
+lines.VAT [EUR]                   0, 0, 0, 0
+lines.Gross [EUR]                 5400, 11900, 7650, 4400
+schedule.Amount [EUR]             7337.5, 13207.5, 8805
 scenario: reverse-charge.json
   lines.vat_rate  0  scenario  (default 0.23)
 ```
@@ -3267,6 +3509,7 @@ the decision on it. The review process is
 | Document | What it answers |
 |---|---|
 | [`ci.md`](ci.md) | Protect your Markdown numbers with CI — the Action, globs, annotations, pinning and rollout |
+| [`mcp-server.md`](mcp-server.md) | Set up and run `visimark-mcp` — a host, the write gate, the plan/apply split |
 | [`cli-reference.md`](cli-reference.md) | Every command, option, exit code and finding, in tables |
 | [`function-reference.md`](function-reference.md) | What each of the sixteen builtins does, with examples that run in CI |
 | [`visimark-design.md`](visimark-design.md) | The normative specification, the deferred work, and the known tensions |

@@ -1,8 +1,10 @@
 import { parseBinding } from "../lang/parser.js";
 import { build } from "../model/build.js";
-import { type Binding, type DocModel, type Sheet } from "../model/types.js";
+import { type Binding, type DeclaredUnit, type DocModel, type Sheet } from "../model/types.js";
 import { locate, type LocatedDoc, type RawBlock, type RawTable } from "../parse/document.js";
 import { numericValue } from "../eval/units.js";
+import { headerNameList, headerNames } from "../model/header-name.js";
+import { parseUnit } from "../lang/unit-expr.js";
 
 /**
  * A table as inference sees it. Inference runs on documents whose tables are
@@ -67,7 +69,9 @@ export function buildContext(source: string): InferContext {
     const existing = base.sheets.get(id);
 
     const index = new Map<string, number>();
-    table.headers.forEach((h, i) => index.set(h.text, i));
+    headerNameList(table, doc.source).forEach((name, i) => {
+      if (name !== "") index.set(name, i);
+    });
 
     const numeric: string[] = [];
     const filled = new Map<string, number>();
@@ -117,9 +121,11 @@ export function provisional(ctx: InferContext, extra: Binding[]): DocModel {
         scalars: new Map(),
         columnIndex: new Map(s.index),
         inputColumns: new Set(s.index.keys()),
+        headerUnits: headerUnitsOf(s.table, ctx.source),
         aliases: new Map(),
         assertions: [],
         charts: [],
+        reports: [],
         imported: null,
       });
     }
@@ -146,6 +152,8 @@ export function provisional(ctx: InferContext, extra: Binding[]): DocModel {
     source: ctx.source,
     located: ctx.doc,
     blockOfSheet: ctx.base.blockOfSheet,
+    unitDefinitions: ctx.base.unitDefinitions,
+    unitDefs: ctx.base.unitDefs,
   };
 }
 
@@ -157,9 +165,11 @@ function cloneSheet(s: Sheet): Sheet {
     scalars: new Map(s.scalars),
     columnIndex: new Map(s.columnIndex),
     inputColumns: new Set(s.inputColumns),
+    headerUnits: new Map(s.headerUnits),
     aliases: new Map(s.aliases),
     assertions: [...s.assertions],
     charts: [...s.charts],
+    reports: [...s.reports],
     imported: s.imported,
   };
 }
@@ -180,4 +190,15 @@ export function makeBinding(sheet: InferSheet, text: string): Binding {
     ...(parsed.precision === undefined ? {} : { precision: parsed.precision }),
     span: { start: 0, end: text.length },
   };
+}
+
+/** a table's header units, for a sheet the document has not built yet */
+function headerUnitsOf(table: RawTable, source: string): Map<string, DeclaredUnit> {
+  const out = new Map<string, DeclaredUnit>();
+  for (const h of headerNames(table, source)) {
+    if (h.name === null || !h.unit) continue;
+    const parsed = parseUnit(h.unit.text);
+    if (parsed.ok) out.set(h.name, { map: parsed.map, text: h.unit });
+  }
+  return out;
 }

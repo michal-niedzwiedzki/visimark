@@ -1,11 +1,5 @@
 # The budget an agent cannot talk itself out of
 
-Tags: AI, Agents, Markdown, CI
-Author: Michał Niedźwiedzki
-
-Posted:
-Reposted:
-
 ## The prompt said two dollars. Breakfast said forty-six.
 
 Dana keeps the platform standing at a company that landed its second customer before it wrote a runbook. She gets paged when a test flakes, which is most nights, so last month she did the obvious thing: pointed a coding agent at the backlog, put `Keep the whole session under $2` in the system prompt, and went to bed. She put it in the user prompt as well, the way you tap a pocket twice for keys.
@@ -45,7 +39,7 @@ assert spent <= rates.budget
 ```
 ````
 
-The cap itself is one line in another block, `param budget precision 2 = default 2.00`, and only the human who opened the task edits it. The harness writes the rows; the agent has no write access to the file. The whole ledger is [on the site](https://michal-niedzwiedzki.github.io/visimark/preview.html?file=example-agent-budget.md&highlight=1), with its rate card and the five calls that have run so far.
+The cap itself is one line in another block, `param budget precision 2 = default 2.00`, and only the human who opened the task edits it. The harness writes the rows; the agent has no write access to the file. The whole ledger is [on the site](https://visimark.dev/preview.html?file=example-agent-budget.md&highlight=1), with its rate card and the five calls that have run so far.
 
 ## Dana goes to bed again
 
@@ -78,3 +72,5 @@ The prompt still says two dollars. This time, so does breakfast.
 ## Disclosure
 
 I wrote this article with AI. VisiMark is a MIT-licensed project with no business model or sales team behind it.
+
+The [Playground](https://visimark.dev/playground.html) runs the tool in your browser with nothing to install. The [repository](https://github.com/michal-niedzwiedzki/visimark) and the [project site](https://visimark.dev/) have the rest.

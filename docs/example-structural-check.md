@@ -10,14 +10,22 @@ whether anyone ever asked for a spreadsheet.
 
 ## Loads
 
-| Component     | psf  |
-|---------------|-----:|
-| Dead load     | 10.0 |
-| Live load     | 40.0 |
-| Snow load     |  0.0 |
+Two units are defined once, so the checker knows a pressure in `psf` is
+pounds per square foot and a stress in `psi` is pounds per square inch:
+
+```vmark
+[psf] = [lb/ft²]
+[psi] = [lb/in²]
+```
+
+| Component     | Load [psf] |
+|---------------|-----------:|
+| Dead load     |       10.0 |
+| Live load     |       40.0 |
+| Snow load     |        0.0 |
 
 ```vmark #loads
-total = SUM(psf)
+total [psf] = SUM(Load)
 ```
 
 The design load for this deck, in a snow-free region, is
@@ -28,15 +36,15 @@ every load case considered.
 ## Joist sizing
 
 Joists are `2x10` Douglas fir-larch, allowable bending stress
-`Fb = 875 psi`, section modulus `S = 21.39 in^3` for the actual (dressed)
+`Fb = 875 psi`, section modulus `S = 21.39 in³` for the actual (dressed)
 dimension. Spacing is 16 inches on center.
 
 ```vmark #joist
-Fb = 875
-S  = 21.39
-spacing_in = 16
+Fb [psi]        = 875
+S [in³]        = 21.39
+spacing_in [in] = 16
 
-w_plf precision 2 = loads.total * spacing_in / 12
+w_plf [lb/ft] precision 2 = loads.total * spacing_in / 12 [in/ft]
 ```
 
 Tributary load per joist comes to **66.67**<!--vmark=joist.w_plf--> lb/ft.
@@ -45,11 +53,11 @@ The maximum allowable span for a simply-supported joist under uniform load,
 governed by bending, is the standard beam formula solved for length:
 
 ```vmark #span
-Mallow precision 2 = joist.Fb * joist.S / 12
-Lmax   = SQRT(8 * Mallow / joist.w_plf)
+Mallow [lb⋅ft] precision 2 = joist.Fb * joist.S / 12 [in/ft]
+Lmax [ft]                   = SQRT(8 * Mallow / joist.w_plf)
 
-Lmax_ft = ROUND(Lmax, 2)
-proposed_span = 11.83
+Lmax_ft [ft]        = ROUND(Lmax, 2)
+proposed_span [ft]  = 11.83
 
 assert proposed_span <= Lmax_ft
 ```
@@ -67,7 +75,7 @@ engineer's sheet by hand. Suppose "16 inches on center" is retyped as
 no opinion about:
 
 ```console
-$ sed -i 's/spacing_in = 16/spacing_in = 1.6/' deck.md
+$ sed -i 's/spacing_in \[in\] = 16/spacing_in [in] = 1.6/' deck.md
 $ visimark check deck.md
   STALE   joist.w_plf                            66.67 ≠ 6.67
   STALE   span.Lmax_ft                           13.68 ≠ 43.25
@@ -88,6 +96,30 @@ assertion is suspicious. The anchored numbers disagreeing with their own
 formula are the first line of defense; the assertion is the second, and
 between them a spacing error that happens to make the assertion look better
 is still caught.
+
+## The mistake units catch instead
+
+The retyped decimal is a *value* error: `1.6 in` is as good a spacing as
+`16 in` as far as dimensions go, so the unit check has nothing to say about it
+and the anchored prose has to. Units catch the other family, where the
+digits are right and the conversion is wrong. The bracketed units above
+(`[psf]`, `[in]`, `[lb/ft]`) are declarations the checker verifies against each
+formula. `w_plf` is pounds per foot because `psf * in / (in/ft)` reduces to
+`lb/ft`. A second party who "simplifies" the formula by dropping the
+`/ 12 [in/ft]` conversion:
+
+```console
+$ visimark check deck.md
+  UNIT    joist.w_plf       w_plf declares lb/ft but its formula derives in⋅psf
+
+  1 problem (0 stale, 1 error)
+```
+
+The formula still looks plausible and the result is off by a factor of twelve,
+which is easy to miss in a column of figures. The declared `lb/ft` no longer
+follows from it, so `check` fails before the span is trusted. The two checks are
+complementary: anchored numbers catch a wrong value, units catch a wrong
+relationship between values.
 
 ## Why this is a verifier, not a calculator
 

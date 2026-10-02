@@ -51,7 +51,7 @@ export const BADGE_ICON_NAMES: readonly string[] = Object.keys(BADGE_ICONS);
 
 const BADGES_STORAGE_KEY = "visimark-playground-badges";
 
-export const SHARE_URL = "https://michal-niedzwiedzki.github.io/visimark/";
+export const SHARE_URL = "https://visimark.dev/";
 
 /**
  * The skill line is already written first-person and ready to post as-is (see

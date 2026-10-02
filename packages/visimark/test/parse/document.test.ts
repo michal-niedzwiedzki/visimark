@@ -12,10 +12,10 @@ test("locates blocks and links the immediately preceding table", () => {
     "Item",
     "Unit",
     "Qty",
-    "Rate",
-    "Net",
-    "VAT",
-    "Gross",
+    "Rate [PLN]",
+    "Net [PLN]",
+    "VAT [PLN]",
+    "Gross [PLN]",
   ]);
   expect(table!.rows.length).toBe(4);
 });
@@ -25,9 +25,9 @@ test("id-less block has sheetId null", () => {
   const docScope = d.blocks.filter((b) => b.sheetId === null);
   expect(docScope.length).toBe(1);
   expect(docScope[0]!.bindings.map((x) => x.raw)).toEqual([
-    "vat            = 23%",
-    "early_pay_disc = 2%",
-    "fx_eur         = 4.2650",
+    "vat              = 23%",
+    "early_pay_disc   = 2%",
+    "fx_eur [PLN/EUR] = 4.2650",
   ]);
 });
 
@@ -67,9 +67,9 @@ test("binding offsets slice back to the binding text", () => {
     "Net               = Qty * Rate",
     "VAT   precision 2 = Net * vat",
     "Gross             = Net + VAT",
-    "net_total   = SUM(Net)",
-    "vat_total   = SUM(VAT)",
-    "gross_total = SUM(Gross)",
+    "net_total   [PLN] = SUM(Net)",
+    "vat_total   [PLN] = SUM(VAT)",
+    "gross_total [PLN] = SUM(Gross)",
   ]);
 });
 
@@ -78,7 +78,7 @@ test("strong-wrapped prose anchor locates its value span", () => {
   const a = d.anchors.find((x) => x.sheetId === "lines" && x.name === "gross_total")!;
   expect(a.value).not.toBeNull();
   expect(a.value!.kind).toBe("strong");
-  expect(clean.slice(a.value!.start, a.value!.end)).toBe("28659.00");
+  expect(clean.slice(a.value!.start, a.value!.end)).toBe("28659.00 PLN");
 });
 
 test("finds every anchor in the clean example", () => {
@@ -128,20 +128,27 @@ test("a marker shown inside a fenced example is documentation, not a marker", ()
   expect(d.noFormulas).toBeNull();
 });
 
-test("a trailing % on an anchor comment is a percent display request", () => {
-  const src = "**0.4026**<!--vmark=lines.margin%-->\n";
+test("a trailing |name on an anchor comment is a display-rule request", () => {
+  const src = "**0.4026**<!--vmark=lines.margin|percent-->\n";
   const d = locate(src);
   const a = d.anchors[0]!;
   expect(a.sheetId).toBe("lines");
   expect(a.name).toBe("margin");
-  expect(a.percent).toBe(true);
+  expect(a.displayRule).toBe("percent");
   expect(d.malformedAnchors).toEqual([]);
   expect(src.slice(a.value!.start, a.value!.end)).toBe("0.4026");
 });
 
-test("a well-formed anchor without % has no percent flag", () => {
+test("a well-formed anchor without |name has no display rule", () => {
   const src = "**0.4026**<!--vmark=lines.margin-->\n";
-  expect(locate(src).anchors[0]!.percent).toBeUndefined();
+  expect(locate(src).anchors[0]!.displayRule).toBeUndefined();
+});
+
+test("the old trailing % syntax is now a malformed anchor", () => {
+  const src = "**0.4026**<!--vmark=lines.margin%-->\n";
+  const d = locate(src);
+  expect(d.anchors).toEqual([]);
+  expect(d.malformedAnchors).toHaveLength(1);
 });
 
 test("a space before % is a malformed anchor", () => {
@@ -200,4 +207,31 @@ test("a comment where vmark is not followed by = is not a malformed anchor", () 
   const d = locate(src);
   expect(d.anchors).toEqual([]);
   expect(d.malformedAnchors).toEqual([]);
+});
+
+test("a strong target carries its decoded text and its delimiters", () => {
+  const src = "Status **past&nbsp;due**<!--vmark=s.a|nbsp-->.\n";
+  const a = locate(src).anchors[0]!;
+  expect(a.valueText).toBe("past due");
+  expect(a.delimiters).toEqual({ open: "**", close: "**" });
+  expect(a.value!.end - a.value!.start).toBe(13);
+  expect(src.slice(a.value!.start, a.value!.end)).toBe("past&nbsp;due");
+});
+
+test("an underscore emphasis target keeps an intraword underscore in its text", () => {
+  const a = locate("Key _user_id_<!--vmark=s.a-->.\n").anchors[0]!;
+  expect(a.value!.kind).toBe("emphasis");
+  expect(a.valueText).toBe("user_id");
+  expect(a.delimiters).toEqual({ open: "_", close: "_" });
+});
+
+test("a code-span or text target carries no decoded text or delimiters", () => {
+  const code = locate("Code `3.00`<!--vmark=s.a-->.\n").anchors[0]!;
+  expect(code.value!.kind).toBe("inlineCode");
+  expect(code.valueText).toBeUndefined();
+  expect(code.delimiters).toBeUndefined();
+  const text = locate("Total 3.00<!--vmark=s.a-->.\n").anchors[0]!;
+  expect(text.value!.kind).toBe("text");
+  expect(text.valueText).toBeUndefined();
+  expect(text.delimiters).toBeUndefined();
 });

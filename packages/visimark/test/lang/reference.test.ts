@@ -142,7 +142,9 @@ test("each prose spelling in the registry parses to the call it is registered un
       : n && typeof n === "object"
         ? Object.fromEntries(
             Object.entries(n)
-              .filter(([k]) => k !== "start" && k !== "end")
+              // the notation's own step is marked so the unit pass gives it
+              // the operand's unit; the value it stands for is the same `1`
+              .filter(([k]) => k !== "start" && k !== "end" && k !== "implicitStep")
               .map(([k, v]) => [k, strip(v)]),
           )
         : n;

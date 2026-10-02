@@ -130,3 +130,5 @@ to leave alone.
 §2.1 (boot failure path), §2.2 (responsive layout) and §2.3 (tab/motion
 semantics) all touch this code and all land next, on top of it — which is the
 sequencing §3 of the review asks for, and the reason this one went first.
+
+<!--vmark:no-formulas-->

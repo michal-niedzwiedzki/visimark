@@ -23,6 +23,20 @@ const pages = readdirSync(docs)
 
 const source = (page: string): string => readFileSync(join(docs, page), "utf8");
 
+/**
+ * Origins a page's own script reaches via `fetch()` rather than declaring as
+ * a markup subresource — invisible to the `<script src>`/`<link href>` sweep
+ * below the same way `fonts.gstatic.com`'s preconnect is, and for the same
+ * reason it needs a documented, explicit list instead of grepping the
+ * compiled bundle for any `https://` literal: that would also catch
+ * `https://github.com`, which index.html's "Scan your repo" widget uses only
+ * for a plain `<a href>` (navigation, not a fetch) and must not be granted.
+ * See packages/visimark/src/site/repo-scan.ts.
+ */
+const RUNTIME_FETCH_ORIGINS: Record<string, string[]> = {
+  "index.html": ["https://api.github.com", "https://raw.githubusercontent.com"],
+};
+
 /** The page with its comments removed. Several of them quote the markup they
  *  are discussing, including the `<script>` this work took out. */
 const markup = (page: string): string => withoutComments(source(page));
@@ -44,12 +58,13 @@ function directive(page: string, name: string): string[] {
   return found === undefined ? [] : found.slice(name.length).trim().split(/\s+/).filter(Boolean);
 }
 
-test("there are seven pages, so this sweep is sweeping something", () => {
+test("there are eight pages, so this sweep is sweeping something", () => {
   expect(pages).toEqual([
-    "article.html",
     "articles.html",
     "ci.html",
+    "examples.html",
     "index.html",
+    "mcp-server.html",
     "playground.html",
     "preview.html",
     "tutorial.html",
@@ -102,12 +117,22 @@ describe.each(pages)("%s", (page) => {
         .filter((s) => s.startsWith("https://")),
     );
     const referenced = new Set(
-      [...markup(page).matchAll(/<(?:script|link)\b[^>]*?(?:src|href)="(https:\/\/[^/"]+)/g)]
-        .map((m) => m[1]!)
+      // Case-insensitive for the same reason as the inline-<script> sweep
+      // above: HTML tag names are not case-sensitive, and a filter that only
+      // catches the lower-case spelling is a filter with a documented way
+      // round it.
+      [...markup(page).matchAll(/<(?:script|link)\b[^>]*>/gi)]
+        // rel="canonical" is metadata for search engines, not a fetch: the
+        // browser never requests it, so like preconnect below it needs no
+        // grant.
+        .filter((m) => !/\brel="canonical"/i.test(m[0]))
+        .map((m) => /(?:src|href)="(https:\/\/[^/"]+)/i.exec(m[0])?.[1])
+        .filter((origin): origin is string => origin !== undefined)
         // preconnect is a hint, not a fetch, and the host it names is always
         // reached through one of the tags below it.
         .filter((origin) => origin !== "https://fonts.gstatic.com"),
     );
+    for (const origin of RUNTIME_FETCH_ORIGINS[page] ?? []) referenced.add(origin);
     for (const origin of referenced) {
       expect([...granted], `${page} loads from ${origin} without granting it`).toContain(origin);
     }

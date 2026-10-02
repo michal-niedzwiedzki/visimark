@@ -54,7 +54,8 @@ export function aliasCandidates(
   const proposals: Proposal[] = [];
   const collisions: AliasCollision[] = [];
   const seen = new Set(taken);
-  for (const header of sheet.table.headers.map((h) => h.text)) {
+  // by name: a header's unit clause is not part of what an alias stands for
+  for (const header of sheet.index.keys()) {
     if (IDENT_RE.test(header)) continue;
     if (sheet.managed.has(header)) continue; // already has a rule
     if (sheet.aliasedHeaders.has(header)) continue; // already has an alias
