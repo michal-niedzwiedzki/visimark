@@ -28,6 +28,9 @@ import { createContext, runInContext } from "node:vm";
 import { decodeNamedCharacterReference } from "decode-named-character-reference";
 
 import { readVersion } from "../packages/visimark/src/cli/version.js";
+import { listParams } from "../packages/visimark/src/eval/scenario.js";
+import { domainJson } from "../packages/visimark/src/lang/domain.js";
+import { latticeJson } from "../packages/visimark/src/lang/lattice.js";
 import { explainView } from "../packages/visimark/src/report/explain.js";
 import { explainJson } from "../packages/visimark/src/report/envelope.js";
 import {
@@ -83,6 +86,7 @@ const EXPLAIN_ONLY_EXCLUDED_KEYS: Record<string, string[]> = {
   "example-charts.md": ["state"],
   "example-onboarding-dashboard.md": ["state"],
   "example-deal-desk.md": ["state"],
+  "example-battery-storage.md": ["state"],
 };
 
 /** every exact JSON path under `envelope` whose last segment is one of `keys` */
@@ -192,12 +196,29 @@ function browserEnvelope(vm: VM, command: Command, file: string, source: string)
   if (command === "eval") {
     const result = vm.check(model);
     const assertExit: 0 | 1 = result.assertions.some((a) => a.holds === false) ? 1 : 0;
+    const values = evalValues(result as never);
+    // `cmdEval`'s `params` block: every param that declares a domain, present
+    // only when one does (a-param-declares-the-set-of-values-it-ac-spec.md §6)
+    const domainParams = listParams(model as never).filter((p) => p.domain !== undefined);
+    const params = Object.fromEntries(
+      domainParams.map((p) => [
+        p.id,
+        {
+          value: typeof values[p.id] === "string" ? values[p.id] : null,
+          default: p.defaultValue,
+          source: "default",
+          domain: domainJson(p.domain!),
+          ...(p.lattice === undefined ? {} : { lattice: latticeJson(p.lattice) }),
+        },
+      ]),
+    );
     return {
       command: "eval",
       visimark: readVersion(),
       status: statusFromExit(assertExit),
       file: relPath,
-      values: evalValues(result as never),
+      ...(domainParams.length > 0 ? { params } : {}),
+      values,
       units: evalUnits(result as never, evalValues(result as never)),
       assertions: publicAssertions(result.assertions as never),
       charts: publicCharts(result.charts as never),
