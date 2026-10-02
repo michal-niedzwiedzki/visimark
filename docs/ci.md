@@ -1526,7 +1526,7 @@ And the things to have done around it:
 | [`cli-reference.md`](cli-reference.md) | Every command, option, exit code and finding |
 | [`playground.html`](playground.html) | The real engine in your browser, nothing to install |
 | [`example-invoice-drift.md`](example-invoice-drift.md) | One input changed and nothing else — 26 findings, each walked through |
-| [`example-battery-storage.md`](example-battery-storage.md) | A model with a declared sweep: 576 questions, four covenants, every `simulate` report |
+| [`example-battery-storage.md`](example-battery-storage.md) | A model with a declared sweep: 577 questions, four covenants, every `simulate` report |
 | [`mcp.md`](mcp.md) | The MCP server: every tool, the write gate, the plan/apply split |
 | [`mcp-server.md`](mcp-server.md) | Setting up and running the MCP server, tutorial-style |
 

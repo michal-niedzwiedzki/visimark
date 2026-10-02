@@ -3429,7 +3429,7 @@ place on a terminal, and printed at every tenth of the run in a CI log.
   time. The count line tells you how big the run is before it starts.
 
 [`example-battery-storage.md`](example-battery-storage.md) is the large worked
-case: five levers, 576 questions, four lender covenants and all five reports,
+case: five levers, 577 questions, four lender covenants and all five reports,
 in a project-finance model of a grid-scale battery.
 
 ---
@@ -3750,7 +3750,7 @@ Or ask the tool: `visimark ref NAME`.
 | [`example-ci-sharding.md`](example-ci-sharding.md) | A document a build tool reads. |
 | [`example-agent-budget.md`](example-agent-budget.md) | A spending cap an agent cannot talk itself out of, and a what-if run against it. |
 | [`example-executable-documentation.md`](example-executable-documentation.md) | A capacity decision that stopped being a second source of truth, with ratios printed as percents. |
-| [`example-battery-storage.md`](example-battery-storage.md) | A battery project a lender can sweep: 576 questions, four covenants, all five `simulate` reports. |
+| [`example-battery-storage.md`](example-battery-storage.md) | A battery project a lender can sweep: 577 questions, four covenants, all five `simulate` reports. |
 
 ### Try it without installing
 

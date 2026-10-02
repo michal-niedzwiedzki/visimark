@@ -279,7 +279,14 @@ export function simulate(source: string, opts: SimulateOptions = {}): Simulation
   opts.onPlan?.(sim);
   if (blocked.length === reportSheets.length) return sim;
 
-  const readIds = new Set([...refIds.values()].flat());
+  // only the sheets that run read anything: a blocked sheet's REFs must not
+  // fault the questions its neighbours read (spec §3.4)
+  const blockedIds = new Set(blocked.map((b) => b.sheetId));
+  const readIds = new Set(
+    reportSheets
+      .filter((s) => !blockedIds.has(s))
+      .flatMap((s) => reports.get(s)!.flatMap((r) => refIds.get(r.id) ?? [])),
+  );
   const questions: Question[] = [{ index: "base", values: new Map() }, ...grid];
   const n = questions.length;
   questions.forEach((q, i) => {

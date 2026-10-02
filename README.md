@@ -366,7 +366,7 @@ npx visimark-mcp        # or: bunx visimark-mcp
 claude mcp add visimark -- npx -y visimark-mcp
 ```
 
-The full surface is [`docs/mcp.md`](docs/mcp.md), and chapter 29 of
+The full surface is [`docs/mcp.md`](docs/mcp.md), and chapter 27 of
 [`docs/ci.md`](docs/ci.md#27-the-mcp-server) covers running it beside a CI
 check.
 

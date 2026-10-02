@@ -106,6 +106,14 @@ describe("sheets that cannot start", () => {
     expect(sim.blocked).toEqual([]);
     expect(sim.answers.length).toBe(10);
   });
+  test("a blocked sheet's REFs do not fault the questions a clean sheet reads", () => {
+    const md =
+      FIXTURE + "\n```vmark #broken\nbad precision 2 = 1 / 0\nreport deltas on broken.bad\n```\n";
+    const sim = simulate(md);
+    expect(sim.blocked.map((b) => b.sheetId)).toEqual(["broken"]);
+    expect(sim.answers.length).toBe(10);
+    expect(sim.answers.some((a) => a.faulted)).toBe(false);
+  });
   test("a fault inside the closure blocks it", () => {
     const sim = simulate(
       FIXTURE.replace("rate precision 2 = 100.00", "rate precision 2 = 100.00 / 0"),
