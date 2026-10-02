@@ -22,7 +22,7 @@ const api = createApi(read, (f) => (typeof f === "string" ? f : null));
 
 test("a scalar's line has the formula, the result and what it reads", async () => {
   const e = (await api.explain("invoice.md", "lines.net_total"))!;
-  expect(summaryFor(e)).toBe("net_total   = SUM(Net) · comes to 23300 · reads lines.Net");
+  expect(summaryFor(e)).toBe("net_total   [PLN] = SUM(Net) · comes to 23300 · reads lines.Net");
 });
 
 test("a cross-sheet input is named, which §2.3 asks for by name", async () => {

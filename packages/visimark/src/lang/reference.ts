@@ -93,6 +93,49 @@ export function precisionPhrase(p: FnPrecision): string {
   }
 }
 
+/**
+ * How a call's result gets its unit map, as data — the unit counterpart of
+ * `FnPrecision`. `dimensionless` (printed `1`) requires a unit-free argument;
+ * `any` accepts and drops one; a `var` ties every argument and result naming
+ * it to one map, raised to `pow` where given. `type` marks an argument or
+ * result that never carries a unit. See
+ * docs/design/algebraic-unit-maps-on-names-spec.md §3.
+ */
+export type UnitSig =
+  | { kind: "dimensionless" }
+  | { kind: "any" }
+  | { kind: "type"; type: "bool" | "date" | "string" }
+  | { kind: "var"; name: "U" | "V"; pow?: number };
+
+export interface FnUnits {
+  params: Readonly<Record<string, UnitSig>>;
+  returns: UnitSig;
+}
+
+const SUPERSCRIPT_DIGITS = "⁰¹²³⁴⁵⁶⁷⁸⁹";
+
+/** one signature slot as printed: `1`, `any`, `bool`, `U`, `U²` */
+export function unitSigSlot(sig: UnitSig): string {
+  switch (sig.kind) {
+    case "dimensionless":
+      return "1";
+    case "any":
+      return "any";
+    case "type":
+      return sig.type;
+    case "var":
+      return sig.pow && sig.pow !== 1
+        ? sig.name + [...String(sig.pow)].map((d) => SUPERSCRIPT_DIGITS[Number(d)]).join("")
+        : sig.name;
+  }
+}
+
+/** the whole signature in one line — `SUM(col: U) → U` */
+export function unitSigText(name: string, doc: Pick<FnDoc, "params" | "units">): string {
+  const params = doc.params.map((p) => `${p.name}: ${unitSigSlot(doc.units.params[p.name]!)}`);
+  return `${name}(${params.join(", ")}) → ${unitSigSlot(doc.units.returns)}`;
+}
+
 export interface FnDoc {
   /** one line; this becomes the `Meaning` column of the design-doc table */
   summary: string;
@@ -105,6 +148,11 @@ export interface FnDoc {
    * of a vocabulary request.
    */
   precision: FnPrecision;
+  /**
+   * Where the result's unit map comes from. Required for the same reason
+   * `precision` is: a function cannot be added without stating it.
+   */
+  units: FnUnits;
   /**
    * Rounding behaviour of the function's own, where it has any — how it breaks
    * a tie, not how wide its result is. Only `ROUND` has one.
@@ -201,6 +249,7 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
     params: [{ name: "col", type: "column", note: "the column to total" }],
     returns: "number",
     precision: { from: "operands", params: ["col"] },
+    units: { params: { col: { kind: "var", name: "U" } }, returns: { kind: "var", name: "U" } },
     errors: [],
     examples: [
       { expr: "SUM(t.Amount)", is: "60", given: AMOUNTS },
@@ -213,6 +262,7 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
     params: [{ name: "col", type: "column", note: "a column of numbers, or of dates" }],
     returns: "number or date, matching the column",
     precision: { from: "operands", params: ["col"] },
+    units: { params: { col: { kind: "var", name: "U" } }, returns: { kind: "var", name: "U" } },
     errors: [{ when: "a column mixing numbers and dates", code: "TYPE" }],
     examples: [{ expr: "MIN(t.Amount)", is: "10", given: AMOUNTS }],
     see: ["MAX"],
@@ -222,6 +272,7 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
     params: [{ name: "col", type: "column", note: "a column of numbers, or of dates" }],
     returns: "number or date, matching the column",
     precision: { from: "operands", params: ["col"] },
+    units: { params: { col: { kind: "var", name: "U" } }, returns: { kind: "var", name: "U" } },
     errors: [{ when: "a column mixing numbers and dates", code: "TYPE" }],
     examples: [{ expr: "MAX(t.Amount)", is: "30", given: AMOUNTS }],
     see: ["MIN"],
@@ -231,6 +282,7 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
     params: [{ name: "col", type: "column", note: "the column to average" }],
     returns: "number",
     precision: { from: "declared" },
+    units: { params: { col: { kind: "var", name: "U" } }, returns: { kind: "var", name: "U" } },
     errors: [{ when: "an empty column", code: "TYPE" }],
     examples: [{ expr: "AVG(t.Amount)", is: "20", given: AMOUNTS }],
     see: ["SUM", "COUNT"],
@@ -240,6 +292,7 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
     params: [{ name: "col", type: "column", note: "the column whose rows are counted" }],
     returns: "number",
     precision: { from: "fixed", width: 0 },
+    units: { params: { col: { kind: "any" } }, returns: { kind: "dimensionless" } },
     errors: [],
     examples: [{ expr: "COUNT(t.Amount)", is: "3", given: AMOUNTS }],
     see: ["SUM"],
@@ -257,6 +310,10 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
     ],
     returns: "number",
     precision: { from: "declared" },
+    units: {
+      params: { rate: { kind: "dimensionless" }, flows: { kind: "var", name: "U" } },
+      returns: { kind: "var", name: "U" },
+    },
     errors: [
       { when: "a non-numeric `rate`", code: "TYPE" },
       { when: "a `rate` of -1 or below", code: "TYPE" },
@@ -282,6 +339,7 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
     ],
     returns: "number",
     precision: { from: "declared" },
+    units: { params: { flows: { kind: "var", name: "U" } }, returns: { kind: "dimensionless" } },
     errors: [
       { when: "an empty column", code: "TYPE" },
       { when: "a non-numeric cell", code: "TYPE" },
@@ -306,6 +364,10 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
     ],
     returns: "number",
     precision: { from: "argument-value", param: "places" },
+    units: {
+      params: { x: { kind: "var", name: "U" }, places: { kind: "dimensionless" } },
+      returns: { kind: "var", name: "U" },
+    },
     rounding: "Ties round away from zero (half-up), not to even.",
     errors: [],
     examples: [
@@ -320,6 +382,7 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
     params: [{ name: "x", type: "number", note: "the value whose sign is discarded" }],
     returns: "number",
     precision: { from: "operands", params: ["x"] },
+    units: { params: { x: { kind: "var", name: "U" } }, returns: { kind: "var", name: "U" } },
     errors: [],
     examples: [
       { expr: "ABS(-7)", is: "7" },
@@ -335,6 +398,10 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
     ],
     returns: "number",
     precision: { from: "operands", params: ["x", "y"] },
+    units: {
+      params: { x: { kind: "var", name: "U" }, y: { kind: "var", name: "U" } },
+      returns: { kind: "var", name: "U" },
+    },
     errors: [{ when: "a zero divisor", code: "TYPE" }],
     examples: [
       { expr: "MOD(7, 3)", is: "1" },
@@ -347,6 +414,10 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
     params: [{ name: "x", type: "number", note: "a non-negative number" }],
     returns: "number",
     precision: { from: "declared" },
+    units: {
+      params: { x: { kind: "var", name: "U", pow: 2 } },
+      returns: { kind: "var", name: "U" },
+    },
     errors: [{ when: "a negative operand", code: "TYPE" }],
     examples: [
       { expr: "SQRT(9)", is: "3" },
@@ -362,6 +433,10 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
     ],
     returns: "number",
     precision: { from: "argument-scale", param: "s" },
+    units: {
+      params: { x: { kind: "var", name: "U" }, s: { kind: "var", name: "U" } },
+      returns: { kind: "var", name: "U" },
+    },
     errors: [{ when: "a non-positive `s`", code: "TYPE" }],
     examples: [
       { expr: "FLOOR(7, 3)", is: "6" },
@@ -378,6 +453,10 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
     ],
     returns: "number",
     precision: { from: "argument-scale", param: "s" },
+    units: {
+      params: { x: { kind: "var", name: "U" }, s: { kind: "var", name: "U" } },
+      returns: { kind: "var", name: "U" },
+    },
     errors: [{ when: "a non-positive `s`", code: "TYPE" }],
     examples: [
       { expr: "CEILING(7, 3)", is: "9" },
@@ -395,6 +474,14 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
     ],
     returns: "whichever of `a` or `b` was selected",
     precision: { from: "operands", params: ["a", "b"] },
+    units: {
+      params: {
+        cond: { kind: "type", type: "bool" },
+        a: { kind: "var", name: "U" },
+        b: { kind: "var", name: "U" },
+      },
+      returns: { kind: "var", name: "U" },
+    },
     errors: [{ when: "a non-boolean `cond`", code: "TYPE" }],
     examples: [
       { expr: "IF(1 < 2, 10, 20)", is: "10" },
@@ -409,6 +496,10 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
     ],
     returns: "date",
     precision: { from: "date" },
+    units: {
+      params: { d: { kind: "type", type: "date" }, months: { kind: "any" } },
+      returns: { kind: "type", type: "date" },
+    },
     errors: [
       { when: "a non-whole `months`", code: "TYPE" },
       { when: "a result outside years 1–9999", code: "DATE" },
@@ -430,6 +521,14 @@ export const FUNCTION_DOCS: Record<FunctionName, FnDoc> = {
     ],
     returns: "number",
     precision: { from: "declared" },
+    units: {
+      params: {
+        rate: { kind: "dimensionless" },
+        nper: { kind: "dimensionless" },
+        pv: { kind: "var", name: "U" },
+      },
+      returns: { kind: "var", name: "U" },
+    },
     errors: [
       { when: "a non-numeric `rate`, `nper`, or `pv`", code: "TYPE" },
       { when: "a non-positive or non-whole `nper`", code: "TYPE" },

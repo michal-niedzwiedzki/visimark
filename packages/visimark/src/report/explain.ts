@@ -1,4 +1,6 @@
 import type { ChartResult, CheckResult } from "../eval/check.js";
+import type { UnitInfo } from "../eval/dimensions.js";
+import { formatUnit, unitJson } from "../lang/unit-expr.js";
 import { domainJson } from "../lang/domain.js";
 import { topoOrder } from "../eval/graph.js";
 import type { Binding, DocModel, ImportStatus } from "../model/types.js";
@@ -23,6 +25,23 @@ export interface ExplainView {
   /** write precision per column id and per binding id, as `check` settled it */
   readonly columnPrecision: ReadonlyMap<string, number>;
   readonly scalarPrecision: ReadonlyMap<string, number>;
+  /** unit map per binding id and per `sheet.Column`, as `check` settled it */
+  readonly unitMaps: ReadonlyMap<string, UnitInfo>;
+}
+
+/** `[PLN] (declared)`, or nothing for a dimensionless binding */
+function unitOf(view: ExplainView, id: string): string | undefined {
+  const u = view.unitMaps.get(id);
+  return u ? `[${formatUnit(u.map)}] (${u.source})` : undefined;
+}
+
+/** the same two facts `unitOf` renders, for `--json` */
+function unitJsonOf(
+  view: ExplainView,
+  id: string,
+): { unit?: { map: Record<string, number>; source: "declared" | "derived" } } {
+  const u = view.unitMaps.get(id);
+  return u ? { unit: { map: unitJson(u.map), source: u.source } } : {};
 }
 
 /** the same two facts `precisionOf` renders, for `--json` */
@@ -48,6 +67,7 @@ export function explainView(model: DocModel, result: CheckResult, sheets: string
     sheets: sheets.length > 0 ? sheets : [...model.sheets.keys()],
     columnPrecision: result.columnPrecision,
     scalarPrecision: result.scalarPrecision,
+    unitMaps: result.unitMaps,
   };
 }
 
@@ -67,9 +87,16 @@ function precisionOf(view: ExplainView, b: Binding, colId: string): string | und
 
 /** `name = expr` lines with their precision aligned into one column */
 function bindingLines(view: ExplainView, sheetId: string, bs: Binding[]): string[] {
-  const rows = bs.map((b) => ({
+  const raw = bs.map((b) => ({
     text: `${b.name} = ${slice(view.model, b)}`,
     prec: precisionOf(view, b, `${sheetId}.${b.name}`),
+    unit: unitOf(view, b.id),
+  }));
+  // the unit annotation gets its own aligned column after the precision one
+  const pw = Math.max(0, ...raw.filter((r) => r.unit).map((r) => (r.prec ?? "").length));
+  const rows = raw.map((r) => ({
+    text: r.text,
+    prec: r.unit ? `${(r.prec ?? "").padEnd(pw)}   ${r.unit}`.trimStart() : r.prec,
   }));
   const w = Math.max(0, ...rows.filter((r) => r.prec).map((r) => r.text.length));
   return rows.map((r) => `    ${r.prec ? `${r.text.padEnd(w)}   ${r.prec}` : r.text}`);
@@ -102,10 +129,17 @@ export function explainText(view: ExplainView): string {
   const { model } = view;
   const lines: string[] = [];
 
-  if (model.docScope.size > 0) {
+  if (model.docScope.size > 0 || model.unitDefinitions.length > 0) {
     lines.push("document scope");
     for (const b of nonParams(model.docScope.values())) {
-      lines.push(`  ${b.name} = ${slice(model, b)}`);
+      const unit = unitOf(view, b.id);
+      lines.push(`  ${b.name} = ${slice(model, b)}${unit ? `   ${unit}` : ""}`);
+    }
+    if (model.unitDefinitions.length > 0) {
+      lines.push("  units:");
+      for (const d of model.unitDefinitions) {
+        lines.push(`    [${d.atom.text.trim()}] = [${d.unit.text.trim()}]`);
+      }
     }
     const docParams = params(model.docScope.values());
     if (docParams.length > 0) {
@@ -129,7 +163,11 @@ export function explainText(view: ExplainView): string {
       lines.push(`  import:  ${sheet.imported.path}${delim}${labels}  [${st?.state ?? "unknown"}]`);
     }
     if (sheet.inputColumns.size > 0) {
-      lines.push(`  inputs:  ${[...sheet.inputColumns].join(", ")}`);
+      const shown = [...sheet.inputColumns].map((name) => {
+        const u = sheet.headerUnits.get(name);
+        return u ? `${name} [${formatUnit(u.map)}]` : name;
+      });
+      lines.push(`  inputs:  ${shown.join(", ")}`);
     }
     if (sheet.aliases.size > 0) {
       lines.push("  aliases:");
@@ -196,7 +234,16 @@ export function explainBody(view: ExplainView, file: string): object {
     documentScope: nonParams(model.docScope.values()).map((b) => ({
       name: b.name,
       rule: slice(model, b),
+      ...unitJsonOf(view, b.id),
     })),
+    ...(model.unitDefinitions.length > 0
+      ? {
+          unitDefinitions: model.unitDefinitions.map((d) => ({
+            atom: d.atom.text.trim(),
+            unit: d.unit.text.trim(),
+          })),
+        }
+      : {}),
     ...(params(model.docScope.values()).length > 0
       ? { documentScopeParams: params(model.docScope.values()).map(paramJson) }
       : {}),
@@ -219,16 +266,27 @@ export function explainBody(view: ExplainView, file: string): object {
             }
           : {}),
         inputs: [...sheet.inputColumns],
+        ...([...sheet.inputColumns].some((c) => view.unitMaps.has(`${sid}.${c}`))
+          ? {
+              inputUnits: Object.fromEntries(
+                [...sheet.inputColumns]
+                  .filter((c) => view.unitMaps.has(`${sid}.${c}`))
+                  .map((c) => [c, unitJson(view.unitMaps.get(`${sid}.${c}`)!.map)]),
+              ),
+            }
+          : {}),
         aliases: [...sheet.aliases].map(([symbol, entry]) => ({ symbol, header: entry.header })),
         rules: [...sheet.columns.values()].map((b) => ({
           name: b.name,
           rule: slice(model, b),
           ...precisionJson(view, b, `${sid}.${b.name}`),
+          ...unitJsonOf(view, b.id),
         })),
         scalars: nonParams(sheet.scalars.values()).map((b) => ({
           name: b.name,
           rule: slice(model, b),
           ...precisionJson(view, b, `${sid}.${b.name}`),
+          ...unitJsonOf(view, b.id),
         })),
         ...(params(sheet.scalars.values()).length > 0
           ? { params: params(sheet.scalars.values()).map(paramJson) }

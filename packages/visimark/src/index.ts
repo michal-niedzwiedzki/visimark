@@ -14,10 +14,13 @@ export { topoOrder, dependencies, resolve, refText } from "./eval/graph.js";
 export { FUNCTIONS, isReduce, type FnKind, type FnSpec } from "./eval/functions.js";
 export type { FunctionName } from "./eval/functions.js";
 export type { Expr } from "./lang/ast.js";
+export { formatUnit, unitJson, type UnitMap } from "./lang/unit-expr.js";
+export type { UnitInfo } from "./eval/dimensions.js";
 export {
   describeFunction,
   functionNames,
   precisionPhrase,
+  unitSigText,
   type FnDoc,
   type FnEntry,
   type FnError,
@@ -56,6 +59,7 @@ export { describeFinding, formatCheck } from "./report/format.js";
 // consumer that re-derives it is a second serialisation that can drift from
 // this one. Additive; no existing consumer changes.
 export {
+  evalUnits,
   evalValues,
   findingSummary,
   inferSummary,

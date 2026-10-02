@@ -1,4 +1,5 @@
 import { Decimal } from "decimal.js";
+import { formatUnit, parseUnit, sameUnit, type UnitDefs, type UnitMap } from "../lang/unit-expr.js";
 
 /**
  * A unit is a display decoration on a number: `$` in `$5.50`, `N` in `12 N`.
@@ -152,4 +153,32 @@ export function decimalPlaces(text: string, fallback: number): number {
   if (m) return m[1]!.length;
   if (/^-?\d+$/.test(t)) return 0;
   return fallback;
+}
+
+/**
+ * A decoration read against a declared unit — a header's or a binding head's.
+ * A prefix is presentation and a column with a unit forbids it; a suffix must
+ * parse as a unit and equal the declared one after expansion; a percent is a
+ * ratio and never sits under a unit. `null` when the text is fine. `noun` and
+ * `owner` word the message: `cell … the column`, `anchor … total`. See
+ * docs/design/algebraic-unit-maps-on-names-spec.md §3, "Cell decorations".
+ */
+export function decorationProblem(
+  text: string,
+  declared: UnitMap,
+  defs: UnitDefs,
+  noun: "cell" | "anchor",
+  owner: string,
+): string | null {
+  const t = text.trim();
+  if (/^-?\d+(?:\.\d+)?%$/.test(t)) return `${t} is a ratio and cannot carry a unit`;
+  const d = parseDecorated(t);
+  if (d.kind !== "number" || !d.unit) return null;
+  if (d.unit.side === "prefix") {
+    return `${noun} "${t}" has a prefix, which a ${noun === "cell" ? "column" : "binding"} with a unit forbids`;
+  }
+  const parsed = parseUnit(d.unit.text);
+  if (!parsed.ok) return `${noun} "${t}" carries "${d.unit.text}", which is not a unit`;
+  if (sameUnit(parsed.map, declared, defs)) return null;
+  return `${noun} "${t}" carries ${d.unit.text}, but ${owner} declares ${formatUnit(declared)}`;
 }

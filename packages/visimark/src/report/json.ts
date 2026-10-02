@@ -2,7 +2,8 @@ import type { AssertionResult, ChartResult, CheckResult } from "../eval/check.js
 import type { Value } from "../eval/value.js";
 import type { Proposal } from "../infer/propose.js";
 import { ERROR_CODES, isProblem, type Finding } from "../model/types.js";
-import { precisionPhrase, type FnEntry } from "../lang/reference.js";
+import { precisionPhrase, unitSigSlot, unitSigText, type FnEntry } from "../lang/reference.js";
+import { unitJson } from "../lang/unit-expr.js";
 
 export type JsonWriter = (line: string) => void;
 export type CommandName = "check" | "fmt" | "infer" | "eval" | "explain" | "ref";
@@ -72,6 +73,7 @@ export function publicFinding(file: string, f: Finding): object {
   } else {
     if (f.message) details.message = f.message;
     if (f.suggestion) details.suggestion = f.suggestion;
+    if (f.hint) details.hint = f.hint;
     if (f.code === "NOTE" && f.suppressedCount !== undefined) {
       details.suppressedCount = f.suppressedCount;
     }
@@ -100,6 +102,30 @@ export function evalValues(result: CheckResult): Record<string, JsonValue> {
     values[k] = col.map((v) => (v ? jsonShowValue(v) : null));
   }
   return values;
+}
+
+/**
+ * The `units` object beside `values`: one exponent map per name that has a
+ * unit, atoms in code-point order. Keys follow `values`' order, then declared
+ * input columns — which `values` never lists — in sheet order. With `only`,
+ * restricted to those keys (`eval --get`). Always an object, `{}` when no name
+ * has a unit. See docs/design/algebraic-unit-maps-on-names-spec.md §5.9.
+ */
+export function evalUnits(
+  result: CheckResult,
+  values: Record<string, JsonValue>,
+  only?: string[],
+): Record<string, Record<string, number>> {
+  const out: Record<string, Record<string, number>> = {};
+  const keys = only ?? [
+    ...Object.keys(values).filter((k) => result.unitMaps.has(k)),
+    ...[...result.unitMaps.keys()].filter((k) => !(k in values)),
+  ];
+  for (const k of keys) {
+    const u = result.unitMaps.get(k);
+    if (u) out[k] = unitJson(u.map);
+  }
+  return out;
 }
 
 /** how a failed assertion fares on the document's defaults, under a scenario */
@@ -150,6 +176,10 @@ export function publicProposal(p: Proposal): object {
   };
   if (p.reason) out.reason = p.reason;
   if (p.alternatives) out.alternatives = p.alternatives;
+  if (p.unit) {
+    out.unit = p.unit.text;
+    out.target = p.unit.target;
+  }
   if (p.disagreement) {
     out.disagreement = {
       rowLabel: p.disagreement.rowLabel,
@@ -192,6 +222,13 @@ export function publicFnEntry(e: FnEntry): object {
     params: e.params.map((p) => ({ name: p.name, type: p.type, note: p.note })),
     returns: e.returns,
     precision: { ...e.precision, text: precisionPhrase(e.precision) },
+    units: {
+      params: Object.fromEntries(
+        e.params.map((p) => [p.name, unitSigSlot(e.units.params[p.name]!)]),
+      ),
+      returns: unitSigSlot(e.units.returns),
+      text: unitSigText(e.name, e),
+    },
     ...(e.rounding ? { rounding: e.rounding } : {}),
     errors: e.errors.map((x) => ({ when: x.when, code: x.code })),
     examples: e.examples.map((x) => ({ expr: x.expr, is: x.is })),

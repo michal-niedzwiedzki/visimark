@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Hovering a binding or a column now shows its unit and whether it was declared or derived (`unit: [PLN] (declared)`); hovering a builtin shows its unit signature (`SUM(col: U) → U`). Units that disagree — a declared unit the formula does not derive, two different units added together, a malformed unit bracket — get a `UNIT` diagnostic.
+
 ## 0.1.11 - 2026-09-30
 
 - A `|nbsp` anchor on a string value (`**past&nbsp;due**<!--vmark=s.status|nbsp-->`) now gets a `STALE` diagnostic when its prose drifts, with a formatting fix, and `ANCHOR` when the value cannot be written there.

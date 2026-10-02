@@ -19,7 +19,7 @@ import { domainLiterals, formatDomain, isEmptyDomain, testDomain } from "../lang
 import { derivePrecision, type Width } from "./precision.js";
 import { DISPLAY_RULES, displayRuleTypeMessage, markdownSyntaxIn } from "./display-rules.js";
 import { roundTrips } from "./display-round-trip.js";
-import { applyUnit, cellPrecision, parseDecorated, type Unit } from "./units.js";
+import { applyUnit, cellPrecision, decorationProblem, parseDecorated, type Unit } from "./units.js";
 import { parseIsoDate } from "./dates.js";
 import {
   EvalError,
@@ -32,6 +32,8 @@ import {
 import { coerceInput, lookupVector, rowLabel, Unevaluable } from "./check-lookup.js";
 import { checkCharts } from "./check-charts.js";
 import { inferDecoration } from "./check-decoration.js";
+import { DimensionChecker, type UnitInfo } from "./dimensions.js";
+import { formatUnit, isDimensionless } from "../lang/unit-expr.js";
 import {
   reportAnchors,
   reportCycles,
@@ -66,6 +68,10 @@ const BOOLEAN_BINDING_MESSAGE =
   "a boolean cannot be stored; wrap it in `IF()` to produce a number or a string";
 
 export interface CheckResult {
+  /** every name with a non-empty unit map — computed bindings by id, declared
+   *  input columns by `sheet.Column` — and whether it was declared or derived.
+   *  See docs/design/algebraic-unit-maps-on-names-spec.md §5.9. */
+  unitMaps: Map<string, UnitInfo>;
   findings: Finding[];
   values: Map<string, Value>;
   cells: Map<string, (Value | null)[]>;
@@ -134,6 +140,8 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
   emitCoverage(model, emit);
 
   inferDecoration(st);
+  const dimensions = new DimensionChecker(model, (f) => emit(f, { sheetId: f.sheetId }));
+  dimensions.checkInputColumns();
   // An input column's precision is its cells' — they are the visible values, so
   // the inference is exact. It has to land before the dependency walk, since a
   // rule reading the column derives its own width from this.
@@ -228,7 +236,15 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
     // synthetic expression is never evaluated — the artifact is built on its
     // own branch, after this loop.
     if (chartIds.has(binding.id)) {
-      buildableCharts.add(binding.id);
+      const chart = sheet?.charts.find((c) => c.id === binding.id);
+      if (!chart || dimensions.checkChart(chart)) buildableCharts.add(binding.id);
+      continue;
+    }
+
+    // the static unit pass: a binding whose units disagree gets no value, and
+    // its readers fold into the suppression above (units spec §4)
+    if (!dimensions.checkBinding(binding)) {
+      unevaluable.add(binding.id);
       continue;
     }
 
@@ -252,6 +268,7 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
 
   reportCycles(st, cycles);
   reportUnreachableAssertions(st, ledger, assertionIds);
+  dimensions.reportUnusedDefinitions();
 
   // ---- generated artifacts -------------------------------------------------
   // Emits findings, so it runs here and not later: orderFindings sorts on the
@@ -315,6 +332,7 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
     charts,
     imports: imported.statuses,
     refusedAnchors,
+    unitMaps: dimensions.unitMaps,
     exitCode: findings.some(isProblem) ? 1 : 0,
   };
 
@@ -760,6 +778,28 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
             })()
           : null;
       scalarUnits.set(binding.id, anchorUnit);
+      if (anchorText !== undefined && binding.unit) {
+        const problem = decorationProblem(
+          anchorText,
+          binding.unit.map,
+          model.unitDefs,
+          "anchor",
+          binding.name,
+        );
+        if (problem) {
+          emit(
+            {
+              code: "UNIT",
+              sheetId: binding.sheetId,
+              name: binding.name,
+              raw: anchorText,
+              message: problem,
+            },
+            { sheetId: binding.sheetId },
+          );
+          unitConflicts.add(binding.id);
+        }
+      }
       // The anchor supplies the *unit* and nothing else. Its text used to supply
       // the precision too, which made a `0` placeholder in prose round the
       // stored value and move every figure downstream of it.
@@ -819,6 +859,25 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
             name: binding.name,
             message: displayRuleTypeMessage(),
             span: wrongTypeMine[0]!.commentSpan,
+          },
+          { sheetId: binding.sheetId },
+        );
+        sigilBlocked = true;
+      }
+      // every display rule receives the value's unit, and none renders one
+      // (units spec §5.4) — `|percent` of a PLN amount is a category error
+      const unitMap = dimensions.unitOf(binding.id);
+      const unitBlocked = isDimensionless(unitMap)
+        ? []
+        : registeredMine.filter((a) => !wrongTypeMine.includes(a));
+      if (unitBlocked.length > 0) {
+        emit(
+          {
+            code: "TYPE",
+            sheetId: binding.sheetId,
+            name: binding.name,
+            message: `|${unitBlocked[0]!.displayRule} cannot render a value with a unit (${formatUnit(unitMap)})`,
+            span: unitBlocked[0]!.commentSpan,
           },
           { sheetId: binding.sheetId },
         );
@@ -1027,6 +1086,10 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
     if ([...dep.deps].some((d) => unevaluable.has(d))) {
       record(null);
       ledger.bumpSuppressed(a.sheetId);
+      return;
+    }
+    if (!dimensions.checkAssertion(node)) {
+      record(null);
       return;
     }
 

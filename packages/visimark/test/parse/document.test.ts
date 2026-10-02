@@ -12,10 +12,10 @@ test("locates blocks and links the immediately preceding table", () => {
     "Item",
     "Unit",
     "Qty",
-    "Rate",
-    "Net",
-    "VAT",
-    "Gross",
+    "Rate [PLN]",
+    "Net [PLN]",
+    "VAT [PLN]",
+    "Gross [PLN]",
   ]);
   expect(table!.rows.length).toBe(4);
 });
@@ -25,9 +25,9 @@ test("id-less block has sheetId null", () => {
   const docScope = d.blocks.filter((b) => b.sheetId === null);
   expect(docScope.length).toBe(1);
   expect(docScope[0]!.bindings.map((x) => x.raw)).toEqual([
-    "vat            = 23%",
-    "early_pay_disc = 2%",
-    "fx_eur         = 4.2650",
+    "vat              = 23%",
+    "early_pay_disc   = 2%",
+    "fx_eur [PLN/EUR] = 4.2650",
   ]);
 });
 
@@ -67,9 +67,9 @@ test("binding offsets slice back to the binding text", () => {
     "Net               = Qty * Rate",
     "VAT   precision 2 = Net * vat",
     "Gross             = Net + VAT",
-    "net_total   = SUM(Net)",
-    "vat_total   = SUM(VAT)",
-    "gross_total = SUM(Gross)",
+    "net_total   [PLN] = SUM(Net)",
+    "vat_total   [PLN] = SUM(VAT)",
+    "gross_total [PLN] = SUM(Gross)",
   ]);
 });
 

@@ -108,9 +108,18 @@ block that declares column rules but owns no table is a `SHEET` error, so
 inserting a paragraph between a table and its block fails loudly rather than
 silently detaching the rules.
 
+**A header that ends in a bracket declares a unit.** `Weight [kg]` is the
+column `Weight` with unit `kg`: the stem before the trailing bracket is the
+column's name, and the bracket is its declaration ([§21](#21-units)). A
+footnote reference `[^1]`, a reference link `[text][ref]` and an escaped
+`\[…\]` are not unit clauses, and a header that does not end in `]` is named
+by its whole text, as before. Everything below that says "header text" means
+the header's name: a quoted head or an `is` alias names `Weight`, never
+`Weight [kg]`, and `Weight` beside `Weight [kg]` is `DUP`.
+
 **A column rule's left-hand side may also be a quoted string** instead of an
-identifier, matched byte-for-byte against a header cell's raw source text
-rather than parsed as a name — see [§4](#4-syntax). This is what lets a
+identifier, matched byte-for-byte against a header cell's name rather than
+parsed as an identifier — see [§4](#4-syntax). This is what lets a
 formula target a header that is not itself a valid identifier, one carrying
 spaces or punctuation, without rewriting the table. Two header cells sharing
 byte-identical text are a `DUP` finding ([§10](#10-error-taxonomy)), naming
@@ -203,6 +212,11 @@ does not match the loose prefix at all is unaffected, including the distinct
 **Bindings.** A block is a list of `name = expression` bindings, one per line.
 A binding's head may carry a **`precision N` clause** — `total precision 2 =
 SUM(Net)` — declaring the width it writes at ([§7](#7-numeric-semantics)).
+A head may also carry a **unit**, in a bracket right after the name and before
+any `precision` clause — `eur_total [EUR] precision 2 = gross / fx_eur` — and a
+number literal may carry one too, `10 [PLN]`. A column's unit lives on its
+header instead, never on its rule. `[J] = [N⋅m]` in a document-scope block
+defines a unit at scale 1. Units are [§21](#21-units).
 `precision` is a reserved word, tokenised beside `is`, `assert` and `chart`: it
 may not be a bound name or a column header, and `precision = 2` reports as
 keyword misuse rather than binding anything. The clause is legal on a scalar and
@@ -291,6 +305,9 @@ in an input column would silently change type. A materialised value is a
 number, a date, or a string — nothing else.
 
 **Operators.** `+ - * / ^`, comparison `== != < <= > >=`, and `and or not`.
+`⋅` (U+22C5) is a second spelling of `*`. Each operator also has a unit rule:
+`+`, `-` and comparison need equal units, `*` and `/` combine them, and `^`
+needs a literal exponent when its base has one ([§21](#21-units)).
 Their precision behaviour: `+` and `-` take the wider operand, `*` sums the two
 scales, `^` multiplies by a non-negative integer exponent, and **`/` bounds
 nothing**, so a binding that divides declares its width
@@ -358,26 +375,26 @@ derivation the engine actually performs.
 
 <!-- generated: function-table — `bun run gen:docs` -->
 
-| Function | Kind | Arity | Precision | Meaning |
-|----------|------|------:|-----------|---------|
-| `SUM(col)` | reduce | 1 | the width of `col` | total of a column; `0` over an empty column |
-| `MIN(col)` | reduce | 1 | the width of `col` | least value; a column mixing numbers and dates is a `TYPE` error |
-| `MAX(col)` | reduce | 1 | the width of `col` | greatest value; a column mixing numbers and dates is a `TYPE` error |
-| `AVG(col)` | reduce | 1 | **must be declared** | arithmetic mean; an empty column is a `TYPE` error |
-| `COUNT(col)` | reduce | 1 | always 0 | number of rows |
-| `NPV(rate, flows)` | reduce | 2 | **must be declared** | present value of a cash-flow column; row 0 is undiscounted; an empty column is a TYPE error; a non-numeric `rate` is a `TYPE` error; a `rate` of -1 or below is a `TYPE` error; an empty column is a `TYPE` error; a non-numeric cell is a `TYPE` error; a non-column `flows` argument is a `TYPE` error |
-| `IRR(flows)` | reduce | 1 | **must be declared** | rate at which a cash-flow column has present value zero; row 0 is undiscounted; an empty column is a `TYPE` error; a non-numeric cell is a `TYPE` error; an all-zero column is a `TYPE` error; a column with no sign change is a `TYPE` error; a column with more than one sign change is a `TYPE` error; a rate not determined at the declared width is a `PRECISION` error; a non-column `flows` argument is a `TYPE` error |
-| `ROUND(x, places)` | map | 2 | the value of `places` | half-up to `places` decimals |
-| `ABS(x)` · `\|x\|` | map | 1 | the width of `x` | absolute value |
-| `MOD(x, y)` | map | 2 | the wider of `x` and `y` | remainder; a zero divisor is a `TYPE` error |
-| `SQRT(x)` · `√(x)` | map | 1 | **must be declared** | non-negative square root; a negative operand is a `TYPE` error |
-| `FLOOR(x, s)` · `⌊x⌋` | map | 2 | the width of `s` | greatest multiple of `s` that does not exceed `x`, toward −∞; a non-positive `s` is a `TYPE` error |
-| `CEILING(x, s)` · `⌈x⌉` | map | 2 | the width of `s` | least multiple of `s` that is not less than `x`, toward +∞; a non-positive `s` is a `TYPE` error |
-| `IF(cond, a, b)` | map | 3 | the wider of `a` and `b` | returns `a` or `b`; a non-boolean `cond` is a `TYPE` error |
-| `EOMONTH(d, months)` | map | 2 | not applicable — the result is a date | last day of the month `months` calendar months from `d`; `d`'s day is discarded; a non-whole `months` is a `TYPE` error; a result outside years 1–9999 is a `DATE` error |
-| `PMT(rate, nper, pv)` | map | 3 | **must be declared** | instalment that repays `pv` to zero over `nper` periods at per-period rate `rate`; a non-numeric `rate`, `nper`, or `pv` is a `TYPE` error; a non-positive or non-whole `nper` is a `TYPE` error; a `rate` of -1 or below is a `TYPE` error |
+| Function | Kind | Arity | Precision | Units | Meaning |
+|----------|------|------:|-----------|-------|---------|
+| `SUM(col)` | reduce | 1 | the width of `col` | `SUM(col: U) → U` | total of a column; `0` over an empty column |
+| `MIN(col)` | reduce | 1 | the width of `col` | `MIN(col: U) → U` | least value; a column mixing numbers and dates is a `TYPE` error |
+| `MAX(col)` | reduce | 1 | the width of `col` | `MAX(col: U) → U` | greatest value; a column mixing numbers and dates is a `TYPE` error |
+| `AVG(col)` | reduce | 1 | **must be declared** | `AVG(col: U) → U` | arithmetic mean; an empty column is a `TYPE` error |
+| `COUNT(col)` | reduce | 1 | always 0 | `COUNT(col: any) → 1` | number of rows |
+| `NPV(rate, flows)` | reduce | 2 | **must be declared** | `NPV(rate: 1, flows: U) → U` | present value of a cash-flow column; row 0 is undiscounted; an empty column is a TYPE error; a non-numeric `rate` is a `TYPE` error; a `rate` of -1 or below is a `TYPE` error; an empty column is a `TYPE` error; a non-numeric cell is a `TYPE` error; a non-column `flows` argument is a `TYPE` error |
+| `IRR(flows)` | reduce | 1 | **must be declared** | `IRR(flows: U) → 1` | rate at which a cash-flow column has present value zero; row 0 is undiscounted; an empty column is a `TYPE` error; a non-numeric cell is a `TYPE` error; an all-zero column is a `TYPE` error; a column with no sign change is a `TYPE` error; a column with more than one sign change is a `TYPE` error; a rate not determined at the declared width is a `PRECISION` error; a non-column `flows` argument is a `TYPE` error |
+| `ROUND(x, places)` | map | 2 | the value of `places` | `ROUND(x: U, places: 1) → U` | half-up to `places` decimals |
+| `ABS(x)` · `\|x\|` | map | 1 | the width of `x` | `ABS(x: U) → U` | absolute value |
+| `MOD(x, y)` | map | 2 | the wider of `x` and `y` | `MOD(x: U, y: U) → U` | remainder; a zero divisor is a `TYPE` error |
+| `SQRT(x)` · `√(x)` | map | 1 | **must be declared** | `SQRT(x: U²) → U` | non-negative square root; a negative operand is a `TYPE` error |
+| `FLOOR(x, s)` · `⌊x⌋` | map | 2 | the width of `s` | `FLOOR(x: U, s: U) → U` | greatest multiple of `s` that does not exceed `x`, toward −∞; a non-positive `s` is a `TYPE` error |
+| `CEILING(x, s)` · `⌈x⌉` | map | 2 | the width of `s` | `CEILING(x: U, s: U) → U` | least multiple of `s` that is not less than `x`, toward +∞; a non-positive `s` is a `TYPE` error |
+| `IF(cond, a, b)` | map | 3 | the wider of `a` and `b` | `IF(cond: bool, a: U, b: U) → U` | returns `a` or `b`; a non-boolean `cond` is a `TYPE` error |
+| `EOMONTH(d, months)` | map | 2 | not applicable — the result is a date | `EOMONTH(d: date, months: any) → date` | last day of the month `months` calendar months from `d`; `d`'s day is discarded; a non-whole `months` is a `TYPE` error; a result outside years 1–9999 is a `DATE` error |
+| `PMT(rate, nper, pv)` | map | 3 | **must be declared** | `PMT(rate: 1, nper: 1, pv: U) → U` | instalment that repays `pv` to zero over `nper` periods at per-period rate `rate`; a non-numeric `rate`, `nper`, or `pv` is a `TYPE` error; a non-positive or non-whole `nper` is a `TYPE` error; a `rate` of -1 or below is a `TYPE` error |
 
-Parameters, precision and worked examples for each are in
+Parameters, precision, units and worked examples for each are in
 [`function-reference.md`](function-reference.md), or `visimark ref NAME`.
 
 <!-- /generated: function-table -->
@@ -533,11 +550,10 @@ Thousands separators are rejected. They reintroduce exactly what ISO-only dates
 eliminated: a separator whose meaning depends on locale, colliding with the
 format's own punctuation. Presentation is the renderer's job.
 
-**A materialised value may carry a unit.** `$5.50`, `5.50 PLN`, `12 N` and
-`3.5 kg` are numbers with a decoration: a run of characters that are not
-digits, whitespace, `.` or `-`, sitting entirely before the number or entirely
-after it. A leading `-` binds to the number, so `$-5.00` and `-$5.00` both read
-as −5.00. Decoration on both sides is a `UNIT` error. Parenthesised negatives
+**A materialised value may carry a decoration.** `$5.50`, `5.50 PLN`, `12 N` and
+`3.5 kg` are numbers with a prefix or suffix around them. A sign may sit before
+the decoration or after it: `-$5.00` and `$-5.00` both read as −5.00.
+Decoration on both sides is a `UNIT` error. Parenthesised negatives
 (`($5.00)`) are not supported.
 
 The decoration is inferred, never declared — the same principle as write
@@ -545,28 +561,25 @@ precision and column alignment. **Within a column, every non-empty cell must
 carry the identical decoration**, or none at all. Any deviation — `$` against
 `€`, prefix against suffix, a decorated cell among bare ones — is a `UNIT`
 error that names the forms it saw. The tool never decides which decoration is
-the right one; a human does.
+the right one; a human does. A decoration is stripped for every arithmetic
+operation, every comparison, and precision inference, and is **re-applied on
+write-back**: a column whose input cells are uniformly `$5.50`, `$4.00` has its
+computed cells written `$16.50`; a bare column stays bare. An anchored scalar's
+decoration is the one around its anchored value, and two anchors that disagree
+are a `UNIT` error.
 
-A unit is stripped for every arithmetic operation, every comparison, and
-precision inference, and is **re-applied on write-back**: a column whose input
-cells are uniformly `$5.50`, `$4.00` has its computed cells written `$16.50`;
-a bare column stays bare. A computed column does not inherit a unit from its
-operands — there is no dimensional analysis — so a column computing
-`Force / Length` writes bare numbers until its own cells are decorated.
-Operand propagation and an explicit per-column unit declaration are deferred
-(section 14).
-
-Scalars work the same way: a scalar's unit is the decoration on its anchored
-value, and two anchors on one scalar that disagree are a `UNIT` error. A unit is
-therefore still inferred from prose while precision no longer is, and the
-asymmetry is deliberate: [§15](#15-known-tensions)'s compromise is that a unit
-is inert and does not compute, so a wrong unit cannot move a number the way a
-wrong width could. The
+**A unit is a declaration, and it computes.** A decoration is presentation; a
+unit is the bracket after a name — `Rate [PLN]` on a header, `fx_eur [PLN/EUR]`
+on a head — and it propagates through every formula as a map from unit atom to
+integer exponent ([§21](#21-units)). Under a header that declares one, a
+decoration answers to it: a suffix must be the same unit, and a prefix is
+refused. The compromise this replaces is in [§15](#15-known-tensions). The
 invoice's `**23300.00**<!--vmark=lines.net_total--> PLN` is unaffected: the
 anchored value is bare and `PLN` sits in the prose after the comment.
 
 `%` is not a unit. `23%` remains exactly `0.23` by the rule in section 4; a
-unit never scales the number it decorates. A trailing `%` on an *anchor
+unit never scales the number it decorates, a `%` literal is never given one,
+and `[%]` is refused. A trailing `%` on an *anchor
 comment* is a display request for that span ([§3](#3-document-model)); it
 does not declare write precision and does not change the stored number.
 
@@ -587,6 +600,11 @@ unevaluable. `chart` declarations ([§18](#18-generated-artifacts)) are nodes on
 the same footing: ordered after the columns they read, with no dependents, and
 folded into a per-sheet `NOTE` of their own when a series cannot be computed.
 
+Before anything is evaluated, the **unit pass** walks the same order and gives
+every binding its unit map, reading no value ([§21](#21-units)). A binding whose
+units disagree is a `UNIT` error and gets no value; its readers are suppressed
+exactly like the readers of any other error.
+
 Recomputation reparses the document. A full reparse of a large document is
 single-digit milliseconds; incremental range remapping is a later optimisation
 to be justified by profiling, not assumed.
@@ -601,7 +619,11 @@ rendering rule to the span it already owns. `|nbsp` is the one case where
 trip ([§3](#3-document-model)) proves it reads back unchanged. Everything else —
 input columns, prose, headings, table alignment, the blocks themselves — is
 human territory and is never touched. The sole exception is `fmt --fix-dates`,
-which is opt-in precisely because it writes to input.
+which is opt-in precisely because it writes to input. Two writers share that
+footing, both opt-in and both confined to unit brackets: `infer --write` may
+add a missing derived unit to a computed column's header or a scalar's head,
+and `fmt --fix-units` respells the brackets a document already has
+([§21](#21-units)). Neither touches a cell.
 
 A fourth category sits beside the three the tool writes: a **declared
 input** ([§19](#19-declared-local-data-imports)) — a file the document names
@@ -633,8 +655,9 @@ and an anchor with nothing in front of it is seeded. `fmt` never *inserts* a
 from prose is what this replaced. `infer` proposes the clause instead, where the
 document's own cells or figures verify one.
 
-A rewritten cell or anchor keeps its column's or scalar's inferred unit: the
-number changes, the `$` or ` kg` around it does not. A column carrying a `UNIT`
+A rewritten cell or anchor keeps its column's or scalar's inferred decoration:
+the number changes, the `$` or ` kg` around it does not. An anchor never gains
+a unit it did not have. A column carrying a `UNIT`
 error is not rewritten at all — the tool cannot know which decoration to
 apply — and its staleness is reported once, as the `UNIT` error, not as a row
 of `STALE` findings.
@@ -652,20 +675,20 @@ justifies the project.
 |------|---------|--------------|
 | `STALE` | stored value **or artifact** disagrees with its formula | yes, by `fmt` |
 | `DATE` | not an ISO 8601 calendar date | only if decidable, with `--fix-dates` |
-| `UNIT` | a column mixes unit decorations, a value is decorated on both sides, or a display rule shares a span with a unit | no |
+| `UNIT` | a column mixes unit decorations, a value is decorated on both sides, or a display rule shares a span with a unit; or units disagree — a declared unit the formula does not derive, `+`/`-`/comparison over different units, a builtin argument against its unit signature, a malformed unit bracket, a decoration against its header's unit ([§21](#21-units)) | no |
 | `UNDEF` | unresolvable name | no |
-| `DUP` | a name is bound twice in one scope, or two header cells sharing text | no |
+| `DUP` | a name is bound twice in one scope, two header cells sharing a name, or a unit defined twice | no |
 | `VECTOR` | foreign column outside an aggregate | no |
-| `CYCLE` | circular dependency | no |
-| `TYPE` | illegal operand types, a malformed call (name, arity, shape), or a display rule on a value of a type it does not accept (a date or a string for `percent`; a number or a date for `nbsp`), or a chart/image | no |
-| `SHEET` | column rules with no table, or an `assert` in a document-scope block | no |
+| `CYCLE` | circular dependency, among bindings or among unit definitions | no |
+| `TYPE` | illegal operand types, a malformed call (name, arity, shape), or a display rule on a value of a type it does not accept (a date or a string for `percent`; a number or a date for `nbsp`; any value with a unit), or a chart/image | no |
+| `SHEET` | column rules with no table, an `assert` in a document-scope block, or a unit definition in a sheet block | no |
 | `ANCHOR` | anchor with no rewritable target, an unrecognised display-rule name, a display-rule anchor with no delimited seed, a display rule that cannot render in a code span, or a string display rule whose rendering would not read back as the stored text | no |
 | `PRECISION` | a numeric binding with no declared width and none derivable, a value too large to carry the width it has ([§7](#7-numeric-semantics)), or a `percent` display rule on a binding whose width is below 2 | no |
 | `DOMAIN` | a `param`'s default is outside its declared domain, or the domain has no legal value ([§20](#20-scenario-parameters)) | no |
 | `ASSERT` | an `assert` statement evaluated false ([§17](#17-assertions)) | no |
 | `ARTIFACT` | a declared artifact cannot be built or written ([§18](#18-generated-artifacts)) | no |
 | `IMPORT` | a declared local import cannot be resolved: unstamped, missing file, malformed stamp, bad path, malformed CSV, or a column rule attempted on a read-only imported sheet ([§19](#19-declared-local-data-imports)) | no (except the stamp itself — see below) |
-| `WARN` | scalar defined and never read, or an alias declared and never used | no |
+| `WARN` | scalar defined and never read, an alias declared and never used, or a unit defined and never used | no |
 | `NOTE` | finding suppressed by an upstream error | n/a |
 | `COVERAGE` | a table with no `vmark` rules, or a `no-formulas` marker on a document that has them | no |
 
@@ -859,13 +882,10 @@ settles its form without further argument: a user-defined function is a **map**
 — scalar parameters, scalar result. Users cannot define a reduce, because doing
 so would require vector parameters, and the language does not have them.
 
-**Units, beyond the inferred decoration in section 7.** Propagating a unit
-through a formula so that a computed column inherits `$` from `Price * Qty`
-without a seed cell; an explicit `Col :: "unit"` declaration for computed
-columns whose cells cannot be inferred from; anything resembling dimensional
-analysis, where `N` divided by `m` yields `N/m`. The v1 rule is deliberately
-flat: a unit is a display decoration on one column, inferred from that column's
-own cells, and it does not compute.
+**Units, beyond scale 1.** Algebraic unit maps shipped ([§21](#21-units)).
+Still deferred: conversion by any factor other than 1 (`5 kg + 300 g`), SI and
+numeric prefixes, multi-hop conversion, affine arithmetic on temperatures, and
+logarithmic units.
 
 Beyond scalar scenario parameters: table overrides, required params,
 non-numeric params, named scenarios inside a document, and per-param
@@ -885,12 +905,15 @@ scalars.
 
 **Unit decorations let locale back in through a side door.** `$` and `kg` are
 exactly the presentational, culture-bound noise the ISO-only date rule and the
-thousands-separator ban were meant to keep out. The compromise: a unit is
-inert. It is never parsed for meaning, never converted, never propagated
-through a formula; it is a fixed string the tool carries from an input cell to
-the computed cells beside it, and a column that is not internally consistent
-about it is an error. The number is still the value; the decoration is still
-the renderer's concern, just pinned in place.
+thousands-separator ban were meant to keep out. The compromise: a unit is a
+declaration on a column header or a binding head, never a decoration parsed out
+of a cell or a literal. It propagates as a map from unit atom to integer
+exponent, and a mismatch is a hard error. It does not convert by a factor other
+than the algebra itself, does not consult locale, and does not read a rate the
+document has not written down. The number is still the value. The declaration
+only says which unit that value is in, and which operations are legal. A
+decoration stays what it was — a fixed string carried from an input cell to the
+computed cells beside it — and `$` is never read as `USD`.
 
 **Anchors depend on renderers permitting raw HTML.** Verified on 2026-09-03,
 with Obsidian added by hand on 2026-09-23; see section 16. Seven of eight
@@ -1178,7 +1201,9 @@ extension instead of `.svg`. `delimited <char>` names a non-default CSV
 delimiter (comma otherwise); the character may not be a letter, digit, quote,
 `.`, `-`, or whitespace, since a delimiter drawn from a field's own alphabet
 silently corrupts every field containing it. `labelled <col>,...` asserts the
-CSV header, in order. `unlabelled <col>,...` is the positional counterpart for
+CSV header's names, in order; a bracket on a name declares that column's unit
+(`labelled Item, Qty, Price [USD]`), as a bracket on the CSV header itself does
+([§21](#21-units)). `unlabelled <col>,...` is the positional counterpart for
 a CSV with **no header row**: row 1 is read as data, not consumed as column
 names, and the declared names are assigned to columns in order. `labelled` and
 `unlabelled` are mutually exclusive — declaring both, or repeating either, is
@@ -1245,12 +1270,14 @@ full specification. The motivating document is
 
 **The defaults are the document; a scenario is a view of it.**
 
-- **Declaring.** `param NAME precision N = default LITERAL` in a `vmark` block
+- **Declaring.** `param NAME [UNIT] precision N = default LITERAL` in a `vmark` block
   declares a numeric scalar of its sheet (or of document scope). `NAME` is an
   identifier, `precision` is required, and `LITERAL` is a number literal
   (optionally negative, optionally a percent). The default must fit the
   declared width ([§7](#7-numeric-semantics)). A param named like a column
-  header of its sheet is `DUP`.
+  header of its sheet is `DUP`. The optional `[UNIT]` bracket follows the name;
+  the default, the domain bounds and every scenario value take that unit, and a
+  scenario never changes it ([§21](#21-units)).
 - **Everywhere but `eval --scenario`** — `check`, `fmt`, `infer`, `explain`,
   a plain `eval` — a param is the constant binding its default declares.
   Stored numbers, anchors and artifacts are always the defaults'. The tool
@@ -1279,5 +1306,48 @@ full specification. The motivating document is
   an `assert`. `eval` and `explain` report each domain-bearing param's domain;
   `fmt` writes nothing new. See
   [`design/a-param-declares-the-set-of-values-it-ac-spec.md`](design/a-param-declares-the-set-of-values-it-ac-spec.md).
+
+## 21. Units
+
+[`design/algebraic-unit-maps-on-names-spec.md`](design/algebraic-unit-maps-on-names-spec.md)
+is the full specification; this section is the summary.
+
+- **A unit map.** Every value carries a map from unit atom to non-zero integer
+  exponent. An atom is one or more Unicode letters, optionally led by `°`, and
+  opaque: `m` is not a metre, `kg` is not a thousand `g`, `$` is not an atom
+  at all. `degC`, `°C`, `℃` are one atom, and so are `degF`, `°F`, `℉`.
+- **Written once, after a name.** `name [unit] precision N = …` on a scalar or
+  `param` head; `Name [unit]` on a column header (§3), or in an import's
+  `labelled` list; `10 [PLN]` on a number literal. Nowhere else — not on a
+  column rule's head, not on an operand, not on a `%` literal.
+- **The grammar.** Atoms joined by `⋅` (or `*`, `·`, `×`), exponents as `^n` or
+  superscripts, divisors each after their own `/` (`USD/node/month`), `1` as
+  the numerator of `1/s`. `[a/b⋅c]` reads two ways and is refused, as are
+  `[100km]`, `[N m]`, `[%]` and a map that is empty.
+- **Ascription and the check.** A declared unit is given to a right side no
+  operand of which carries a unit (`fee [PLN] = 10`). Any other right side must
+  derive exactly the declared unit, after definitions are expanded —
+  `per_hour [kcal/h] = rate / 24` derives `kcal` and is `UNIT`. A map that
+  cancels to nothing is dimensionless, not unit-free. An undeclared input or
+  literal is dimensionless; an undeclared computed binding carries what its
+  formula derives.
+- **Operators and builtins.** `+`, `-`, comparisons and `IF`'s branches need
+  equal units; the literal `0` matches any. `*` and `/` combine; `^` on a
+  unit-bearing base needs a literal non-negative integer exponent. Each builtin
+  states a unit signature beside its precision — `SUM(col: U) → U`,
+  `COUNT(col: any) → 1`, `SQRT(x: U²) → U` — and `visimark ref` prints it.
+  A number added to a date, and `EOMONTH`'s `months`, are not unit-checked.
+- **Definitions.** `[J] = [N⋅m]`, in a document-scope block only, scale 1, no
+  built-ins. Comparison expands them; printing never does.
+- **Static.** The unit pass runs before evaluation and reads no value
+  (§8). A binding whose units disagree gets no value and its readers are
+  suppressed.
+- **What it does not do.** No conversion factor, so "re-add it on a
+  calculator" still holds exactly (§7). No rate table, no locale. Anchors stay
+  bare; a display rule refuses a value with a unit.
+- **Reporting.** `eval` prints `name [unit]`, and `eval --json` adds a `units`
+  object of exponent maps. `explain` shows each binding's unit and whether it
+  was declared or derived. `infer` proposes a missing derived unit and
+  `infer --write` adds it; `fmt --fix-units` normalises spelling (§9).
 
 <!--vmark:no-formulas-->

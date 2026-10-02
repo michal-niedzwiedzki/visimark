@@ -7,10 +7,10 @@
 
 ## Services rendered
 
-```vmark #lines from example-invoice-csv-import.csv labelled Item, Unit, Qty, Rate, Net, VAT, Gross at sha256:e6667fb8dda6801721d885c259e2456a9e6c92f1ec89af7f14330e0c54c6ac14
-net_total   = SUM(Net)
-vat_total   = SUM(VAT)
-gross_total = SUM(Gross)
+```vmark #lines from example-invoice-csv-import.csv labelled Item, Unit, Qty, Rate [PLN], Net [PLN], VAT [PLN], Gross [PLN] at sha256:e6667fb8dda6801721d885c259e2456a9e6c92f1ec89af7f14330e0c54c6ac14
+net_total   [PLN] = SUM(Net)
+vat_total   [PLN] = SUM(VAT)
+gross_total [PLN] = SUM(Gross)
 ```
 
 Net of tax the engagement comes to **23300.00**<!--vmark=lines.net_total--> PLN.
@@ -46,10 +46,17 @@ its data lives in the same text `check` is already reading. Editing
 `example-invoice-csv-import.csv` and running `visimark fmt` rewrites only this
 `at` clause; the CSV itself is never touched by any VisiMark command.
 
-**`labelled` asserts the header.** `labelled Item, Unit, Qty, Rate, Net, VAT,
-Gross` checks the CSV's header row matches this exact name and order before
-anything is evaluated, so a column renamed or reordered upstream is a loud
-`IMPORT` finding instead of a silent misread.
+**`labelled` asserts the header.** `labelled Item, Unit, Qty, Rate [PLN], Net
+[PLN], VAT [PLN], Gross [PLN]` checks the CSV's header row matches this exact
+name and order before anything is evaluated, so a column renamed or reordered
+upstream is a loud `IMPORT` finding instead of a silent misread.
+
+**Units come from the declaration.** The CSV header row stays `Item,Unit,Qty,
+Rate,Net,VAT,Gross`, so its bytes and the `sha256` stamp are untouched; the
+brackets in the `labelled` list attach `PLN` to the money columns. A CSV that
+carried `Rate [PLN]` in its own header would work too, and a header and a
+declaration that disagree is a `UNIT` finding. The three totals then declare
+`[PLN]`, which `check` verifies against the unit the `SUM`s derive.
 
 See `docs/design/declared-local-data-imports-spec.md` for the full syntax and
 semantics.

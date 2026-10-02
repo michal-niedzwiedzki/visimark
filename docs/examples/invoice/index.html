@@ -496,27 +496,27 @@
 <pre class="src"># Invoice 2026/09/014</pre><div class="out"><h1 id="invoice-202609014">Invoice 2026/09/014</h1></div><pre class="src">**Seller:** EPSI sp. z o.o., ul. Bura 21, 00-000 Burowce, NIP PL9998877666
 **Buyer:** Northwind Logistics GmbH, Hafenstraße 8, 22222 Hamburg, USt-IdNr. DE881188118</pre><div class="out"><p><strong>Seller:</strong> EPSI sp. z o.o., ul. Bura 21, 00-000 Burowce, NIP PL9998877666
 <strong>Buyer:</strong> Northwind Logistics GmbH, Hafenstraße 8, 22222 Hamburg, USt-IdNr. DE881188118</p></div><pre class="src">**Issued:** 2026-09-03 &amp;nbsp;&amp;nbsp; **Delivered:** 2026-08-31 &amp;nbsp;&amp;nbsp; **Payment due:** 2026-09-17</pre><div class="out"><p><strong>Issued:</strong> 2026-09-03    <strong>Delivered:</strong> 2026-08-31    <strong>Payment due:</strong> 2026-09-17</p></div><pre class="src">```vmark
-vat            = 23%
-early_pay_disc = 2%
-fx_eur         = 4.2650
-```</pre><div class="out"><pre><code class="language-vmark">vat            = 23%
-early_pay_disc = 2%
-fx_eur         = 4.2650
-</code></pre></div><pre class="src">## Services rendered</pre><div class="out"><h2 id="services-rendered">Services rendered</h2></div><pre class="src">| Item                       | Unit  | Qty |    Rate |      Net |     VAT |    Gross |
-|----------------------------|-------|----:|--------:|---------:|--------:|---------:|
-| Discovery workshop         | day   |   2 | 1800.00 |  3600.00 |  828.00 |  4428.00 |
-| **Backend implementation** | hour  |  64 |  220.00 | 14080.00 | 3238.40 | 17318.40 |
-| Code review retainer       | month |   1 | 2500.00 |  2500.00 |  575.00 |  3075.00 |
-| On-call support            | hour  |  12 |  260.00 |  3120.00 |  717.60 |  3837.60 |</pre><div class="out"><table>
+vat              = 23%
+early_pay_disc   = 2%
+fx_eur [PLN/EUR] = 4.2650
+```</pre><div class="out"><pre><code class="language-vmark">vat              = 23%
+early_pay_disc   = 2%
+fx_eur [PLN/EUR] = 4.2650
+</code></pre></div><pre class="src">## Services rendered</pre><div class="out"><h2 id="services-rendered">Services rendered</h2></div><pre class="src">| Item                       | Unit  | Qty | Rate [PLN] | Net [PLN] | VAT [PLN] | Gross [PLN] |
+|----------------------------|-------|----:|-----------:|----------:|----------:|------------:|
+| Discovery workshop         | day   |   2 |    1800.00 |   3600.00 |    828.00 |     4428.00 |
+| **Backend implementation** | hour  |  64 |     220.00 |  14080.00 |   3238.40 |    17318.40 |
+| Code review retainer       | month |   1 |    2500.00 |   2500.00 |    575.00 |     3075.00 |
+| On-call support            | hour  |  12 |     260.00 |   3120.00 |    717.60 |     3837.60 |</pre><div class="out"><table>
 <thead>
 <tr>
 <th>Item</th>
 <th>Unit</th>
 <th align="right">Qty</th>
-<th align="right">Rate</th>
-<th align="right">Net</th>
-<th align="right">VAT</th>
-<th align="right">Gross</th>
+<th align="right">Rate [PLN]</th>
+<th align="right">Net [PLN]</th>
+<th align="right">VAT [PLN]</th>
+<th align="right">Gross [PLN]</th>
 </tr>
 </thead>
 <tbody>
@@ -562,30 +562,30 @@ Net               = Qty * Rate
 VAT   precision 2 = Net * vat
 Gross             = Net + VAT
 
-net_total   = SUM(Net)
-vat_total   = SUM(VAT)
-gross_total = SUM(Gross)
+net_total   [PLN] = SUM(Net)
+vat_total   [PLN] = SUM(VAT)
+gross_total [PLN] = SUM(Gross)
 ```</pre><div class="out"><pre><code class="language-vmark">Net               = Qty * Rate
 VAT   precision 2 = Net * vat
 Gross             = Net + VAT
 
-net_total   = SUM(Net)
-vat_total   = SUM(VAT)
-gross_total = SUM(Gross)
+net_total   [PLN] = SUM(Net)
+vat_total   [PLN] = SUM(VAT)
+gross_total [PLN] = SUM(Gross)
 </code></pre></div><pre class="src">Net of tax the engagement comes to **23300.00**&lt;!--vmark=lines.net_total--&gt; PLN.
 VAT at 23% adds **5359.00**&lt;!--vmark=lines.vat_total--&gt; PLN, giving a total due of
 **28659.00**&lt;!--vmark=lines.gross_total--&gt; PLN.</pre><div class="out"><p>Net of tax the engagement comes to <strong>23300.00</strong> PLN.
 VAT at 23% adds <strong>5359.00</strong> PLN, giving a total due of
-<strong>28659.00</strong> PLN.</p></div><pre class="src">## Payment schedule</pre><div class="out"><h2 id="payment-schedule">Payment schedule</h2></div><pre class="src">| Milestone           | Share |   Amount | Due        |
-|---------------------|------:|---------:|------------|
-| Signature           |   30% |  8597.70 | 2026-09-10 |
-| Delivery of backend |   40% | 11463.60 | 2026-10-15 |
-| Acceptance          |   30% |  8597.70 | 2026-11-30 |</pre><div class="out"><table>
+<strong>28659.00</strong> PLN.</p></div><pre class="src">## Payment schedule</pre><div class="out"><h2 id="payment-schedule">Payment schedule</h2></div><pre class="src">| Milestone           | Share | Amount [PLN] | Due        |
+|---------------------|------:|-------------:|------------|
+| Signature           |   30% |      8597.70 | 2026-09-10 |
+| Delivery of backend |   40% |     11463.60 | 2026-10-15 |
+| Acceptance          |   30% |      8597.70 | 2026-11-30 |</pre><div class="out"><table>
 <thead>
 <tr>
 <th>Milestone</th>
 <th align="right">Share</th>
-<th align="right">Amount</th>
+<th align="right">Amount [PLN]</th>
 <th>Due</th>
 </tr>
 </thead>
@@ -612,17 +612,17 @@ VAT at 23% adds <strong>5359.00</strong> PLN, giving a total due of
 </table></div><pre class="src">```vmark #schedule
 Amount precision 2 = Share * lines.gross_total
 
-covered = SUM(Amount)
+covered [PLN] = SUM(Amount)
 ```</pre><div class="out"><pre><code class="language-vmark">Amount precision 2 = Share * lines.gross_total
 
-covered = SUM(Amount)
+covered [PLN] = SUM(Amount)
 </code></pre></div><pre class="src">The three milestones account for **28659.00**&lt;!--vmark=schedule.covered--&gt; PLN.</pre><div class="out"><p>The three milestones account for <strong>28659.00</strong> PLN.</p></div><pre class="src">## Payment terms</pre><div class="out"><h2 id="payment-terms">Payment terms</h2></div><pre class="src">```vmark #terms
-early_pay_total precision 2 = lines.gross_total * (1 - early_pay_disc)
-early_pay_saved             = lines.gross_total - early_pay_total
-eur_total       precision 2 = lines.gross_total / fx_eur
-```</pre><div class="out"><pre><code class="language-vmark">early_pay_total precision 2 = lines.gross_total * (1 - early_pay_disc)
-early_pay_saved             = lines.gross_total - early_pay_total
-eur_total       precision 2 = lines.gross_total / fx_eur
+early_pay_total [PLN] precision 2 = lines.gross_total * (1 - early_pay_disc)
+early_pay_saved [PLN]             = lines.gross_total - early_pay_total
+eur_total       [EUR] precision 2 = lines.gross_total / fx_eur
+```</pre><div class="out"><pre><code class="language-vmark">early_pay_total [PLN] precision 2 = lines.gross_total * (1 - early_pay_disc)
+early_pay_saved [PLN]             = lines.gross_total - early_pay_total
+eur_total       [EUR] precision 2 = lines.gross_total / fx_eur
 </code></pre></div><pre class="src">Settlement within 7 days qualifies for a 2% early-payment discount, reducing the
 amount due to **28085.82**&lt;!--vmark=terms.early_pay_total--&gt; PLN — a saving of
 **573.18**&lt;!--vmark=terms.early_pay_saved--&gt; PLN.</pre><div class="out"><p>Settlement within 7 days qualifies for a 2% early-payment discount, reducing the
@@ -632,11 +632,11 @@ amount due to <strong>28085.82</strong> PLN — a saving of
 4.2650 PLN/EUR recorded on the delivery date.</pre><div class="out"><p>For reference, the gross total is approximately
 <strong>6719.58</strong> EUR at the ECB reference rate of
 4.2650 PLN/EUR recorded on the delivery date.</p></div><pre class="src">## Reconciliation</pre><div class="out"><h2 id="reconciliation">Reconciliation</h2></div><pre class="src">```vmark #recon
-scheduled = SUM(schedule.Amount)
-variance  = lines.gross_total - scheduled
+scheduled [PLN] = SUM(schedule.Amount)
+variance  [PLN] = lines.gross_total - scheduled
 assert variance == 0
-```</pre><div class="out"><pre><code class="language-vmark">scheduled = SUM(schedule.Amount)
-variance  = lines.gross_total - scheduled
+```</pre><div class="out"><pre><code class="language-vmark">scheduled [PLN] = SUM(schedule.Amount)
+variance  [PLN] = lines.gross_total - scheduled
 assert variance == 0
 </code></pre></div><pre class="src">Scheduled instalments total **28659.00**&lt;!--vmark=recon.scheduled--&gt; PLN against a
 gross invoice value of **28659.00**&lt;!--vmark=lines.gross_total--&gt; PLN, leaving a
@@ -686,7 +686,23 @@ and fails if it is ever false. Without it, a payment schedule whose shares stop
 summing to the invoice total would leave a non-zero <code>variance</code>, and <code>check</code>
 would still pass: every number would agree with its own formula. The assertion
 is what turns "the reconciliation is computed" into "the reconciliation is
-enforced".</p></div><pre class="src">The payoff is the last section. `visimark check` recomputes every formula and
+enforced".</p></div><pre class="src">**A unit is declared in a bracket after a name, and checked.** `Rate [PLN]` says
+each rate is złoty per item, `fx_eur [PLN/EUR]` says what the exchange rate
+converts, and `eur_total [EUR]` says what the conversion must produce. The other
+units — `Net [PLN]`, `net_total [PLN]` and the rest — were written by
+`visimark infer --write`, which records the unit each formula derives; from then
+on each one is checked like any other declaration. Dividing `PLN` by `PLN/EUR`
+derives the `EUR` that `eur_total` declares, so multiplying by the rate instead,
+or adding a euro amount to a złoty one, fails `check`. The anchored numbers stay
+bare — `PLN` and `EUR` stay in the prose, where a reader expects them.</pre><div class="out"><p><strong>A unit is declared in a bracket after a name, and checked.</strong> <code>Rate [PLN]</code> says
+each rate is złoty per item, <code>fx_eur [PLN/EUR]</code> says what the exchange rate
+converts, and <code>eur_total [EUR]</code> says what the conversion must produce. The other
+units — <code>Net [PLN]</code>, <code>net_total [PLN]</code> and the rest — were written by
+<code>visimark infer --write</code>, which records the unit each formula derives; from then
+on each one is checked like any other declaration. Dividing <code>PLN</code> by <code>PLN/EUR</code>
+derives the <code>EUR</code> that <code>eur_total</code> declares, so multiplying by the rate instead,
+or adding a euro amount to a złoty one, fails <code>check</code>. The anchored numbers stay
+bare — <code>PLN</code> and <code>EUR</code> stay in the prose, where a reader expects them.</p></div><pre class="src">The payoff is the last section. `visimark check` recomputes every formula and
 exits non-zero if any stored number disagrees, so an arithmetic error in this
 invoice fails CI instead of reaching the buyer — whether a human or an agent
 wrote it.</pre><div class="out"><p>The payoff is the last section. <code>visimark check</code> recomputes every formula and

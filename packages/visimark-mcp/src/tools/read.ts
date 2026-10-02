@@ -20,6 +20,7 @@ import {
   publicProposal,
   resolveScenario,
   ScenarioError,
+  evalUnits,
   evalValues,
   type DocModel,
   type ParamInfo,
@@ -234,6 +235,7 @@ const evalTool: ToolDef = {
 
       const get = a["get"];
       let selected = values;
+      let only: string[] | undefined;
       if (get !== undefined) {
         if (typeof get !== "string") {
           return { fault: fault("USAGE", "visimark: get must be a string") };
@@ -244,6 +246,7 @@ const evalTool: ToolDef = {
           return { fault: fault("USAGE", `visimark: no value named ${get}`) };
         }
         selected = { [get]: picked };
+        only = [values[get] !== undefined ? get : qualified];
       }
 
       // Under a scenario, each failed assertion also says how it fares on the
@@ -269,6 +272,7 @@ const evalTool: ToolDef = {
           file: r.file ?? CONTENT_SOURCE,
           ...(scenario ? { scenario: scenarioJson(scenario, values) } : {}),
           values: selected,
+          units: evalUnits(result, selected, only),
           assertions: publicAssertions(result.assertions, onDefaults),
           charts: publicCharts(result.charts, scenario === null),
           skipped: skipped(result),

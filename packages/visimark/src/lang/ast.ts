@@ -3,10 +3,22 @@ export interface Pos {
   end: number;
 }
 
+/** the raw text of a unit bracket, without the brackets; `start`/`end` span
+ *  the brackets themselves */
+export interface UnitText extends Pos {
+  text: string;
+}
+
 export interface NumberLit extends Pos {
   type: "num";
   /** Decimal string. Percent literals are folded here (`23%` -> `"0.23"`). */
   value: string;
+  /** a unit written on the literal, `10 [PLN]` */
+  unit?: UnitText;
+  /** true when the literal was written with `%` — a ratio, never given a unit */
+  percent?: boolean;
+  /** true for the step `⌊x⌋` and `⌈x⌉` supply themselves: it takes `x`'s unit */
+  implicitStep?: boolean;
 }
 export interface DateLit extends Pos {
   type: "date";
@@ -60,6 +72,14 @@ export interface ChartDecl extends Pos {
   series: string[];
   labels: string;
   aspect: { w: number; h: number } | null;
+}
+
+/** A `[atom] = [unit]` statement: a scale-1 unit definition. Binds no value.
+ *  See docs/design/algebraic-unit-maps-on-names-spec.md §2.5. */
+export interface UnitDef extends Pos {
+  type: "unitdef";
+  atom: UnitText;
+  unit: UnitText;
 }
 
 /** A `"<header>" is <symbol>` statement. Binds no expression; declares that

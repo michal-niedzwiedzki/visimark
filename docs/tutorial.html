@@ -559,6 +559,11 @@
 <a href="#16-currency-and-units" data-level="2">16. Currency and units</a>
 <a href="#decoration-in-a-cell" data-level="3">Decoration in a cell</a>
 <a href="#one-column-means-one-thing" data-level="3">One column means one thing</a>
+<a href="#declare-a-unit-on-a-header" data-level="3">Declare a unit on a header</a>
+<a href="#declare-a-unit-on-a-binding" data-level="3">Declare a unit on a binding</a>
+<a href="#how-units-combine" data-level="3">How units combine</a>
+<a href="#money" data-level="3">Money</a>
+<a href="#let-infer-write-the-rest" data-level="3">Let `infer` write the rest</a>
 <a href="#thousands-separators-are-refused" data-level="3">Thousands separators are refused</a>
 <a href="#17-dates" data-level="2">17. Dates</a>
 <a href="#why-the-tool-refuses-the-alternatives" data-level="3">Why the tool refuses the alternatives</a>
@@ -1695,10 +1700,12 @@ Share precision 4 = Net / SUM(Net)
 </code></pre></div><pre class="src">`SUM(Net)` collapses the column to a number, and then the division runs once per
 row. This is legal and useful.</pre><div class="out"><p><code>SUM(Net)</code> collapses the column to a number, and then the division runs once per
 row. This is legal and useful.</p></div><pre class="src">### Operators</pre><div class="out"><h3 id="operators">Operators</h3></div><pre class="src">`+` `-` `*` `/` `^`, the comparisons `==` `!=` `&lt;` `&lt;=` `&gt;` `&gt;=`, and the words
-`and`, `or`, `not`. Division by zero is a `TYPE` error, not a value: `fmt` never
-writes `Infinity` into your document.</pre><div class="out"><p><code>+</code> <code>-</code> <code>*</code> <code>/</code> <code>^</code>, the comparisons <code>==</code> <code>!=</code> <code>&#x3C;</code> <code>&#x3C;=</code> <code>></code> <code>>=</code>, and the words
-<code>and</code>, <code>or</code>, <code>not</code>. Division by zero is a <code>TYPE</code> error, not a value: <code>fmt</code> never
-writes <code>Infinity</code> into your document.</p></div><pre class="src">`%` is not an operator. It is postfix only and belongs to a number, so that
+`and`, `or`, `not`. `⋅` is a second spelling of `*`. Division by zero is a
+`TYPE` error, not a value: `fmt` never writes `Infinity` into your document.
+Each operator also has a rule for units, which chapter 16 covers.</pre><div class="out"><p><code>+</code> <code>-</code> <code>*</code> <code>/</code> <code>^</code>, the comparisons <code>==</code> <code>!=</code> <code>&#x3C;</code> <code>&#x3C;=</code> <code>></code> <code>>=</code>, and the words
+<code>and</code>, <code>or</code>, <code>not</code>. <code>⋅</code> is a second spelling of <code>*</code>. Division by zero is a
+<code>TYPE</code> error, not a value: <code>fmt</code> never writes <code>Infinity</code> into your document.
+Each operator also has a rule for units, which chapter 16 covers.</p></div><pre class="src">`%` is not an operator. It is postfix only and belongs to a number, so that
 `23%` can never be ambiguous. Use `MOD()` for a remainder.</pre><div class="out"><p><code>%</code> is not an operator. It is postfix only and belongs to a number, so that
 <code>23%</code> can never be ambiguous. Use <code>MOD()</code> for a remainder.</p></div><pre class="src">`|` is not an operator either. It is the absolute-value bracket, `|x|`, which
 chapter 12 covers.</pre><div class="out"><p><code>|</code> is not an operator either. It is the absolute-value bracket, <code>|x|</code>, which
@@ -2472,13 +2479,15 @@ anchor still wraps exactly the stored words.</p></div><pre class="src">| You wro
 </tbody>
 </table></div><pre class="src">As with `|percent`, `fmt` never adds `|nbsp` to an anchor you wrote without
 one, and `infer --write` never proposes it.</pre><div class="out"><p>As with <code>|percent</code>, <code>fmt</code> never adds <code>|nbsp</code> to an anchor you wrote without
-one, and <code>infer --write</code> never proposes it.</p></div><pre class="src">## 16. Currency and units</pre><div class="out"><h2 id="16-currency-and-units">16. Currency and units</h2></div><pre class="src">A currency or unit is decoration around a number. It is not part of the value,
-and a display rule like `|percent` is not one of them (chapter 15). In prose,
-keep it outside the anchor
-(chapter 9).</pre><div class="out"><p>A currency or unit is decoration around a number. It is not part of the value,
-and a display rule like <code>|percent</code> is not one of them (chapter 15). In prose,
-keep it outside the anchor
-(chapter 9).</p></div><pre class="src">### Decoration in a cell</pre><div class="out"><h3 id="decoration-in-a-cell">Decoration in a cell</h3></div><pre class="src">A column may carry a currency symbol or a unit:</pre><div class="out"><p>A column may carry a currency symbol or a unit:</p></div><pre class="src">```markdown
+one, and <code>infer --write</code> never proposes it.</p></div><pre class="src">## 16. Currency and units</pre><div class="out"><h2 id="16-currency-and-units">16. Currency and units</h2></div><pre class="src">Two different things sit next to a number. A **decoration** is presentation:
+the `$` in `$12.50`, the ` kg` in `3.5 kg`. A **unit** is a declaration: the
+`[kg]` after a name, which says what the number measures and which arithmetic
+is legal. Keep a decoration outside an anchor in prose (chapter 9); a unit
+never goes there at all.</pre><div class="out"><p>Two different things sit next to a number. A <strong>decoration</strong> is presentation:
+the <code>$</code> in <code>$12.50</code>, the <code> kg</code> in <code>3.5 kg</code>. A <strong>unit</strong> is a declaration: the
+<code>[kg]</code> after a name, which says what the number measures and which arithmetic
+is legal. Keep a decoration outside an anchor in prose (chapter 9); a unit
+never goes there at all.</p></div><pre class="src">### Decoration in a cell</pre><div class="out"><h3 id="decoration-in-a-cell">Decoration in a cell</h3></div><pre class="src">A column may carry a currency symbol or a unit word:</pre><div class="out"><p>A column may carry a currency symbol or a unit word:</p></div><pre class="src">```markdown
 | Item    | Price  | Qty |    Net |
 |---------|-------:|----:|-------:|
 | Widgets | $12.50 |   4 | $50.00 |
@@ -2487,18 +2496,101 @@ keep it outside the anchor
 |---------|-------:|----:|-------:|
 | Widgets | $12.50 |   4 | $50.00 |
 | Gadgets | $30.00 |   2 | $60.00 |
-</code></pre></div><pre class="src">VisiMark strips the `$` to compute, and puts it back when it writes. The
-decoration is **inert**: it is never converted, never propagated through a
-formula, and never given meaning.</pre><div class="out"><p>VisiMark strips the <code>$</code> to compute, and puts it back when it writes. The
-decoration is <strong>inert</strong>: it is never converted, never propagated through a
-formula, and never given meaning.</p></div><pre class="src">### One column means one thing</pre><div class="out"><h3 id="one-column-means-one-thing">One column means one thing</h3></div><pre class="src">A column holding both `$5.00` and `€4.00` is an error, not a sum:</pre><div class="out"><p>A column holding both <code>$5.00</code> and <code>€4.00</code> is an error, not a sum:</p></div><pre class="src">```console
+</code></pre></div><pre class="src">VisiMark strips the `$` to compute, and puts it back when it writes. A
+decoration on its own is never converted and never carried through a formula.</pre><div class="out"><p>VisiMark strips the <code>$</code> to compute, and puts it back when it writes. A
+decoration on its own is never converted and never carried through a formula.</p></div><pre class="src">### One column means one thing</pre><div class="out"><h3 id="one-column-means-one-thing">One column means one thing</h3></div><pre class="src">A column holding both `$5.00` and `€4.00` is an error, not a sum:</pre><div class="out"><p>A column holding both <code>$5.00</code> and <code>€4.00</code> is an error, not a sum:</p></div><pre class="src">```console
   UNIT    s.Price         · b                     &quot;€4.00&quot;
           column mixes units: $ and €
 ```</pre><div class="out"><pre><code class="language-console">  UNIT    s.Price         · b                     "€4.00"
           column mixes units: $ and €
 </code></pre></div><pre class="src">This is not fussiness. Two currencies in one column have no total, and guessing
 one would be worse than refusing.</pre><div class="out"><p>This is not fussiness. Two currencies in one column have no total, and guessing
-one would be worse than refusing.</p></div><pre class="src">### Thousands separators are refused</pre><div class="out"><h3 id="thousands-separators-are-refused">Thousands separators are refused</h3></div><pre class="src">`1,800.00` does not parse. Write `1800.00`. A comma means different things in
+one would be worse than refusing.</p></div><pre class="src">### Declare a unit on a header</pre><div class="out"><h3 id="declare-a-unit-on-a-header">Declare a unit on a header</h3></div><pre class="src">A bracket at the end of a header declares that column's unit. The name is what
+comes before it:</pre><div class="out"><p>A bracket at the end of a header declares that column's unit. The name is what
+comes before it:</p></div><pre class="src">```markdown
+| Weight [kg] | Count |
+|------------:|------:|
+|           2 |     4 |
+|           3 |     1 |
+```</pre><div class="out"><pre><code class="language-markdown">| Weight [kg] | Count |
+|------------:|------:|
+|           2 |     4 |
+|           3 |     1 |
+</code></pre></div><pre class="src">```text
+total [kg] = SUM(Weight)
+```</pre><div class="out"><pre><code class="language-text">total [kg] = SUM(Weight)
+</code></pre></div><pre class="src">The column is called `Weight`. A formula reads it as `Weight`, with no `is`
+line, exactly as it would read a header that said `Weight`. The full text,
+`&quot;Weight [kg]&quot;`, is not a name, and quoting it is `UNDEF` with a hint that
+says so:</pre><div class="out"><p>The column is called <code>Weight</code>. A formula reads it as <code>Weight</code>, with no <code>is</code>
+line, exactly as it would read a header that said <code>Weight</code>. The full text,
+<code>"Weight [kg]"</code>, is not a name, and quoting it is <code>UNDEF</code> with a hint that
+says so:</p></div><pre class="src">```console
+  UNDEF   s.w               unknown name `Weight [kg]`
+          the header's name is Weight; [kg] is its unit
+```</pre><div class="out"><pre><code class="language-console">  UNDEF   s.w               unknown name `Weight [kg]`
+          the header's name is Weight; [kg] is its unit
+</code></pre></div><pre class="src">A header whose name is not one identifier still uses `is`, and still quotes the
+name without its bracket: `&quot;Worker cost&quot; is wc` for a header
+`Worker cost [USD/node/month]`.</pre><div class="out"><p>A header whose name is not one identifier still uses <code>is</code>, and still quotes the
+name without its bracket: <code>"Worker cost" is wc</code> for a header
+<code>Worker cost [USD/node/month]</code>.</p></div><pre class="src">### Declare a unit on a binding</pre><div class="out"><h3 id="declare-a-unit-on-a-binding">Declare a unit on a binding</h3></div><pre class="src">A scalar's unit goes right after its name, before any `precision` clause:</pre><div class="out"><p>A scalar's unit goes right after its name, before any <code>precision</code> clause:</p></div><pre class="src">```text
+metabolic_rate [kcal] precision 0 = 1600
+hours          [h]                = 24
+per_hour       [kcal/h] precision 2 = metabolic_rate / hours
+```</pre><div class="out"><pre><code class="language-text">metabolic_rate [kcal] precision 0 = 1600
+hours          [h]                = 24
+per_hour       [kcal/h] precision 2 = metabolic_rate / hours
+</code></pre></div><pre class="src">`1600` and `24` carry no unit of their own, so each takes the one its line
+declares. `per_hour` is different: its right side already has a unit,
+`kcal ÷ h`, so the declaration is **checked** against it. Write
+`metabolic_rate / 24` instead and the right side derives `kcal`, which is not
+`kcal/h`:</pre><div class="out"><p><code>1600</code> and <code>24</code> carry no unit of their own, so each takes the one its line
+declares. <code>per_hour</code> is different: its right side already has a unit,
+<code>kcal ÷ h</code>, so the declaration is <strong>checked</strong> against it. Write
+<code>metabolic_rate / 24</code> instead and the right side derives <code>kcal</code>, which is not
+<code>kcal/h</code>:</p></div><pre class="src">```console
+  UNIT    s.per_hour        per_hour declares kcal/h but its formula derives kcal
+```</pre><div class="out"><pre><code class="language-console">  UNIT    s.per_hour        per_hour declares kcal/h but its formula derives kcal
+</code></pre></div><pre class="src">### How units combine</pre><div class="out"><h3 id="how-units-combine">How units combine</h3></div><pre class="src">`*` and `/` combine units: `PLN ÷ PLN/EUR` is `EUR`, `USD/node/month × node` is
+`USD/month`. `+`, `-` and every comparison need the same unit on both sides, so
+`5 [kg] + 3 [m]` does not evaluate. A literal that needs a unit can carry one,
+`Net [PLN] = Qty * Rate + 10 [PLN]`; the literal `0` matches any unit, so
+`assert variance == 0` needs nothing. `⋅` is a second spelling of `*`, handy
+inside and outside a bracket alike.</pre><div class="out"><p><code>*</code> and <code>/</code> combine units: <code>PLN ÷ PLN/EUR</code> is <code>EUR</code>, <code>USD/node/month × node</code> is
+<code>USD/month</code>. <code>+</code>, <code>-</code> and every comparison need the same unit on both sides, so
+<code>5 [kg] + 3 [m]</code> does not evaluate. A literal that needs a unit can carry one,
+<code>Net [PLN] = Qty * Rate + 10 [PLN]</code>; the literal <code>0</code> matches any unit, so
+<code>assert variance == 0</code> needs nothing. <code>⋅</code> is a second spelling of <code>*</code>, handy
+inside and outside a bracket alike.</p></div><pre class="src">A name with no bracket and no unit-bearing operand is dimensionless, and a
+dimensionless number added to a unit is a mismatch — so once a document starts
+declaring units, it declares them all the way along a calculation.</pre><div class="out"><p>A name with no bracket and no unit-bearing operand is dimensionless, and a
+dimensionless number added to a unit is a mismatch — so once a document starts
+declaring units, it declares them all the way along a calculation.</p></div><pre class="src">### Money</pre><div class="out"><h3 id="money">Money</h3></div><pre class="src">A currency is an ordinary unit, written as its code. The symbol stays in the
+prose:</pre><div class="out"><p>A currency is an ordinary unit, written as its code. The symbol stays in the
+prose:</p></div><pre class="src">```text
+tax_amount [USD] precision 2 = 1800
+```</pre><div class="out"><pre><code class="language-text">tax_amount [USD] precision 2 = 1800
+</code></pre></div><pre class="src">```markdown
+Tax comes to $**1800.00**&lt;!--vmark=s.tax_amount--&gt;.
+```</pre><div class="out"><pre><code class="language-markdown">Tax comes to $**1800.00**&#x3C;!--vmark=s.tax_amount-->.
+</code></pre></div><pre class="src">`$` is not `USD`, and VisiMark never assumes it is. Nor does a currency imply
+a precision: write `precision 2` yourself. A column declared `[USD]` refuses a
+`$` decoration in its cells, because the bracket already says what the symbol
+would.</pre><div class="out"><p><code>$</code> is not <code>USD</code>, and VisiMark never assumes it is. Nor does a currency imply
+a precision: write <code>precision 2</code> yourself. A column declared <code>[USD]</code> refuses a
+<code>$</code> decoration in its cells, because the bracket already says what the symbol
+would.</p></div><pre class="src">### Let `infer` write the rest</pre><div class="out"><h3 id="let-infer-write-the-rest">Let <code>infer</code> write the rest</h3></div><pre class="src">`visimark infer` proposes the unit each formula derives wherever nothing is
+declared, and `infer --write` adds it — ` [PLN]` after a computed column's
+header or a scalar's name, nothing else. The first write records whatever the
+formula produces, right or wrong; from the next edit on, each one is a check.
+`fmt --fix-units` respells the brackets you already have (`[kg*m^2/s^2]`
+becomes `[kg⋅m²/s²]`) and never changes what they mean.</pre><div class="out"><p><code>visimark infer</code> proposes the unit each formula derives wherever nothing is
+declared, and <code>infer --write</code> adds it — <code> [PLN]</code> after a computed column's
+header or a scalar's name, nothing else. The first write records whatever the
+formula produces, right or wrong; from the next edit on, each one is a check.
+<code>fmt --fix-units</code> respells the brackets you already have (<code>[kg*m^2/s^2]</code>
+becomes <code>[kg⋅m²/s²]</code>) and never changes what they mean.</p></div><pre class="src">### Thousands separators are refused</pre><div class="out"><h3 id="thousands-separators-are-refused">Thousands separators are refused</h3></div><pre class="src">`1,800.00` does not parse. Write `1800.00`. A comma means different things in
 different countries, and no amount of care catches that by reading.</pre><div class="out"><p><code>1,800.00</code> does not parse. Write <code>1800.00</code>. A comma means different things in
 different countries, and no amount of care catches that by reading.</p></div><pre class="src">## 17. Dates</pre><div class="out"><h2 id="17-dates">17. Dates</h2></div><pre class="src">A date is `YYYY-MM-DD`. Ten characters. ISO 8601. Nothing else is a date.</pre><div class="out"><p>A date is <code>YYYY-MM-DD</code>. Ten characters. ISO 8601. Nothing else is a date.</p></div><pre class="src">```markdown
 | Milestone | Due        |
@@ -2594,10 +2686,12 @@ string is already a string literal, so it cannot double as an operand.</pre><div
 string is already a string literal, so it cannot double as an operand.</p></div><pre class="src">### `&quot;Header text&quot; = expr` — write the column directly</pre><div class="out"><h3 id="header-text-expr-write-the-column-directly"><code>"Header text" = expr</code> — write the column directly</h3></div><pre class="src">```
 &quot;GPU-to-GPU Bandwidth (GB/s)&quot; = ROUND(bpu / GPUs * 1000, 0)
 ```</pre><div class="out"><pre><code>"GPU-to-GPU Bandwidth (GB/s)" = ROUND(bpu / GPUs * 1000, 0)
-</code></pre></div><pre class="src">Use this when you only produce that column and never read it back.</pre><div class="out"><p>Use this when you only produce that column and never read it back.</p></div><pre class="src">### Matching is exact</pre><div class="out"><h3 id="matching-is-exact">Matching is exact</h3></div><pre class="src">The quoted text must be byte-for-byte identical to the header cell's printed
-text. No trimming, no case folding. If it does not match any header, that is an
-`UNDEF` error with a suggestion — never a silently created scalar.</pre><div class="out"><p>The quoted text must be byte-for-byte identical to the header cell's printed
-text. No trimming, no case folding. If it does not match any header, that is an
+</code></pre></div><pre class="src">Use this when you only produce that column and never read it back.</pre><div class="out"><p>Use this when you only produce that column and never read it back.</p></div><pre class="src">### Matching is exact</pre><div class="out"><h3 id="matching-is-exact">Matching is exact</h3></div><pre class="src">The quoted text must be byte-for-byte identical to the header's name — its
+printed text, minus a trailing unit bracket (chapter 16), which is never part of
+a name. No trimming, no case folding. If it does not match any header, that is an
+`UNDEF` error with a suggestion — never a silently created scalar.</pre><div class="out"><p>The quoted text must be byte-for-byte identical to the header's name — its
+printed text, minus a trailing unit bracket (chapter 16), which is never part of
+a name. No trimming, no case folding. If it does not match any header, that is an
 <code>UNDEF</code> error with a suggestion — never a silently created scalar.</p></div><pre class="src">## 19. Assertions: facts that must stay true</pre><div class="out"><h2 id="19-assertions-facts-that-must-stay-true">19. Assertions: facts that must stay true</h2></div><pre class="src">Some things are not numbers to compute, but statements that must hold. A
 schedule must cover the invoice. Shares must add to 100%. A span must stay
 inside a limit.</pre><div class="out"><p>Some things are not numbers to compute, but statements that must hold. A
@@ -2793,6 +2887,13 @@ unambiguous ones.</p></div><pre class="src">**`UNIT` — one column means two th
           column mixes units: $ and €
 ```</pre><div class="out"><pre><code class="language-console">  UNIT    s.Price         · b                     "€4.00"
           column mixes units: $ and €
+</code></pre></div><pre class="src">`UNIT` is also what units that disagree report — a declaration the formula
+does not derive, two different units added together, or a bracket that is not
+a unit (chapter 16):</pre><div class="out"><p><code>UNIT</code> is also what units that disagree report — a declaration the formula
+does not derive, two different units added together, or a bracket that is not
+a unit (chapter 16):</p></div><pre class="src">```console
+  UNIT    terms.eur_total   eur_total declares EUR but its formula derives PLN²/EUR
+```</pre><div class="out"><pre><code class="language-console">  UNIT    terms.eur_total   eur_total declares EUR but its formula derives PLN²/EUR
 </code></pre></div><pre class="src">**`UNDEF` — a formula names something that does not exist.**</pre><div class="out"><p><strong><code>UNDEF</code> — a formula names something that does not exist.</strong></p></div><pre class="src">```console
   UNDEF   s.Net             unknown name `Prise`
           did you mean `Price`?
@@ -3308,6 +3409,7 @@ differently from <code>1</code>.</p></div><pre class="src">### Structured output
     &quot;tax.gross_total&quot;: &quot;194.34&quot;,
     &quot;order.Net&quot;: [&quot;50&quot;, &quot;60&quot;, &quot;48&quot;]
   },
+  &quot;units&quot;: {},
   &quot;assertions&quot;: [
     {
       &quot;sheet&quot;: &quot;tax&quot;,
@@ -3331,6 +3433,7 @@ differently from <code>1</code>.</p></div><pre class="src">### Structured output
     "tax.gross_total": "194.34",
     "order.Net": ["50", "60", "48"]
   },
+  "units": {},
   "assertions": [
     {
       "sheet": "tax",
@@ -3346,7 +3449,13 @@ differently from <code>1</code>.</p></div><pre class="src">### Structured output
 is on purpose. JSON numbers are IEEE floats, and money is not. Parse them with a
 decimal library, or keep them as strings.</pre><div class="out"><p><strong>Quantities are decimal strings, not JSON numbers.</strong> <code>"158"</code>, not <code>158</code>. This
 is on purpose. JSON numbers are IEEE floats, and money is not. Parse them with a
-decimal library, or keep them as strings.</p></div><pre class="src">**A column is an array.** A scalar is a single string.</pre><div class="out"><p><strong>A column is an array.</strong> A scalar is a single string.</p></div><pre class="src">**Assertions come with the values filled in.** `substituted` is the assertion
+decimal library, or keep them as strings.</p></div><pre class="src">**A column is an array.** A scalar is a single string.</pre><div class="out"><p><strong>A column is an array.</strong> A scalar is a single string.</p></div><pre class="src">**Units sit beside the values, never inside them.** `units` maps every name
+that has a unit to its exponents — `&quot;lines.gross_total&quot;: {&quot;PLN&quot;: 1}`,
+`&quot;s.work&quot;: {&quot;kg&quot;: 1, &quot;m&quot;: 2, &quot;s&quot;: -2}` — and is `{}` when nothing declares one,
+as here. A script never has to parse `kg⋅m²/s²` out of a string.</pre><div class="out"><p><strong>Units sit beside the values, never inside them.</strong> <code>units</code> maps every name
+that has a unit to its exponents — <code>"lines.gross_total": {"PLN": 1}</code>,
+<code>"s.work": {"kg": 1, "m": 2, "s": -2}</code> — and is <code>{}</code> when nothing declares one,
+as here. A script never has to parse <code>kg⋅m²/s²</code> out of a string.</p></div><pre class="src">**Assertions come with the values filled in.** `substituted` is the assertion
 with each name replaced by what it evaluated to. A monitoring script can report
 *why* a claim failed, not just that it did.</pre><div class="out"><p><strong>Assertions come with the values filled in.</strong> <code>substituted</code> is the assertion
 with each name replaced by what it evaluated to. A monitoring script can report
@@ -4131,6 +4240,7 @@ carries a <code>defaults</code> field with <code>pass</code>, <code>fail</code> 
     &quot;runway.months&quot;: &quot;11.5&quot;,
     …
   },
+  &quot;units&quot;: {},
   &quot;assertions&quot;: [
     {
       &quot;sheet&quot;: &quot;runway&quot;,
@@ -4163,6 +4273,7 @@ carries a <code>defaults</code> field with <code>pass</code>, <code>fail</code> 
     "runway.months": "11.5",
     …
   },
+  "units": {},
   "assertions": [
     {
       "sheet": "runway",

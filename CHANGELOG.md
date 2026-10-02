@@ -2,6 +2,36 @@
 
 ## Unreleased
 
+### Added
+
+- **Algebraic unit maps.** A unit is declared once, in a bracket right after a
+  name — `Rate [PLN]` on a column header, `fx_eur [PLN/EUR] = 4.2650` on a
+  binding head, `10 [PLN]` on a number literal — and propagates through every
+  formula as a map from unit atom to integer exponent. `+`, `-` and comparisons
+  need equal units, `*` and `/` combine them, and a declaration the formula
+  does not derive is a `UNIT` error with no value: `eur_total declares EUR but
+  its formula derives PLN²/EUR`. Every builtin states a unit signature
+  (`SUM(col: U) → U`), which `ref` prints. `[J] = [N⋅m]` defines a unit at
+  scale 1; nothing is ever converted by a factor. `⋅` is a second spelling of
+  `*`. `eval` prints `name [unit]` and `eval --json` adds a `units` object;
+  `explain` shows each unit and whether it was declared or derived;
+  `infer --write` adds the unit each formula derives where none is declared;
+  `fmt --fix-units` normalises unit spelling. The worked invoice declares its
+  units. See [#317](https://github.com/michal-niedzwiedzki/visimark/issues/317)
+  and [`docs/design/algebraic-unit-maps-on-names-spec.md`](docs/design/algebraic-unit-maps-on-names-spec.md).
+
+### Changed
+
+- **Pre-1.0 breaks from unit maps.** A header ending in a bracket is now a name
+  plus a unit: `Weight [kg]` is the column `Weight`, and `"Weight [kg]"` — as a
+  quoted head or an `is` alias — no longer resolves (it reports `UNDEF` with a
+  hint naming the column). `eval --json` keys such a column by its name
+  (`s.Weight`) and every `eval --json` document gains `units`. `Weight` beside
+  `Weight [kg]` in one table is `DUP`. A header ending in a bracket that is not
+  a unit, such as `Revenue [1]`, is `UNIT`; escape it as `Revenue \[1\]` to
+  keep the bracket in the name. A display rule such as `|percent` refuses a
+  value with a unit (`TYPE`).
+
 ### Fixed
 
 - **`server.json`'s MCP-registry `description` is back under the registry's

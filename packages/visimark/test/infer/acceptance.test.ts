@@ -46,7 +46,7 @@ describe("what inference recovers from the stripped worked invoice", () => {
     const amount = proposals.find((p) => p.kind === "column" && p.name === "Amount")!;
     expect(amount.rule).toBe("Amount = Share * unnamed1.gross_total");
     expect(amount.stage).toBe(4);
-    expect(scalar("amount_total")?.rule).toBe("amount_total = SUM(Amount)");
+    expect(scalar("amount_total")?.rule).toBe("amount_total [PLN] = SUM(Amount)");
   });
 
   test("infer proposes code notation only, never a prose spelling", () => {
@@ -117,7 +117,7 @@ describe("check on the written result", () => {
   });
 
   test("changing an input makes check complain", () => {
-    const broken = recovered.replace("|   2 | 1800.00 |", "|   3 | 1800.00 |");
+    const broken = recovered.replace("|   2 |    1800.00 |", "|   3 |    1800.00 |");
     expect(check(build(locate(broken))).findings.length).toBeGreaterThan(0);
   });
 

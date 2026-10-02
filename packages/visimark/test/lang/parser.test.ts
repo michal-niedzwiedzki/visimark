@@ -78,8 +78,8 @@ test("parenthesised subtraction", () => {
 });
 
 test("percent folds to an exact decimal at parse time", () => {
-  expect(s("23%")).toEqual({ type: "num", value: "0.23" });
-  expect(s("2%")).toEqual({ type: "num", value: "0.02" });
+  expect(s("23%")).toEqual({ type: "num", value: "0.23", percent: true });
+  expect(s("2%")).toEqual({ type: "num", value: "0.02", percent: true });
 });
 
 test("== is comparison; bare = is not an expression operator", () => {
@@ -319,7 +319,12 @@ test("each prose spelling parses to the call it stands for", () => {
     ["√(b + 6)", "SQRT(b + 6)"],
     ["|SUM(Net)|", "ABS(SUM(Net))"],
   ] as const) {
-    expect(s(prose)).toEqual(s(named));
+    // the notation's step carries `implicitStep`, so the unit pass can give it
+    // the operand's unit (algebraic-unit-maps-on-names-spec.md §3); the call
+    // is otherwise the one it stands for
+    expect(JSON.stringify(s(prose)).replaceAll(',"implicitStep":true', "")).toEqual(
+      JSON.stringify(s(named)),
+    );
   }
 });
 
@@ -332,9 +337,15 @@ test("a pair's span runs from its opener to its closer", () => {
 
 test("the step ⌊ and ⌈ supply is spanned by the closing glyph", () => {
   const floor = parseExpr("⌊ab⌋") as {
-    args: { type: string; value: string; start: number; end: number }[];
+    args: { type: string; value: string; implicitStep?: boolean; start: number; end: number }[];
   };
-  expect(floor.args[1]).toEqual({ type: "num", value: "1", start: 3, end: 4 });
+  expect(floor.args[1]).toEqual({
+    type: "num",
+    value: "1",
+    implicitStep: true,
+    start: 3,
+    end: 4,
+  });
   const ceil = parseExpr("⌈a⌉") as { args: { start: number; end: number }[] };
   expect(ceil.args[1]).toMatchObject({ start: 2, end: 3 });
 });

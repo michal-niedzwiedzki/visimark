@@ -866,8 +866,9 @@ row. This is legal and useful.
 ### Operators
 
 `+` `-` `*` `/` `^`, the comparisons `==` `!=` `<` `<=` `>` `>=`, and the words
-`and`, `or`, `not`. Division by zero is a `TYPE` error, not a value: `fmt` never
-writes `Infinity` into your document.
+`and`, `or`, `not`. `⋅` is a second spelling of `*`. Division by zero is a
+`TYPE` error, not a value: `fmt` never writes `Infinity` into your document.
+Each operator also has a rule for units, which chapter 16 covers.
 
 `%` is not an operator. It is postfix only and belongs to a number, so that
 `23%` can never be ambiguous. Use `MOD()` for a remainder.
@@ -1468,14 +1469,15 @@ one, and `infer --write` never proposes it.
 
 ## 16. Currency and units
 
-A currency or unit is decoration around a number. It is not part of the value,
-and a display rule like `|percent` is not one of them (chapter 15). In prose,
-keep it outside the anchor
-(chapter 9).
+Two different things sit next to a number. A **decoration** is presentation:
+the `$` in `$12.50`, the ` kg` in `3.5 kg`. A **unit** is a declaration: the
+`[kg]` after a name, which says what the number measures and which arithmetic
+is legal. Keep a decoration outside an anchor in prose (chapter 9); a unit
+never goes there at all.
 
 ### Decoration in a cell
 
-A column may carry a currency symbol or a unit:
+A column may carry a currency symbol or a unit word:
 
 ```markdown
 | Item    | Price  | Qty |    Net |
@@ -1484,9 +1486,8 @@ A column may carry a currency symbol or a unit:
 | Gadgets | $30.00 |   2 | $60.00 |
 ```
 
-VisiMark strips the `$` to compute, and puts it back when it writes. The
-decoration is **inert**: it is never converted, never propagated through a
-formula, and never given meaning.
+VisiMark strips the `$` to compute, and puts it back when it writes. A
+decoration on its own is never converted and never carried through a formula.
 
 ### One column means one thing
 
@@ -1499,6 +1500,96 @@ A column holding both `$5.00` and `€4.00` is an error, not a sum:
 
 This is not fussiness. Two currencies in one column have no total, and guessing
 one would be worse than refusing.
+
+### Declare a unit on a header
+
+A bracket at the end of a header declares that column's unit. The name is what
+comes before it:
+
+```markdown
+| Weight [kg] | Count |
+|------------:|------:|
+|           2 |     4 |
+|           3 |     1 |
+```
+
+```text
+total [kg] = SUM(Weight)
+```
+
+The column is called `Weight`. A formula reads it as `Weight`, with no `is`
+line, exactly as it would read a header that said `Weight`. The full text,
+`"Weight [kg]"`, is not a name, and quoting it is `UNDEF` with a hint that
+says so:
+
+```console
+  UNDEF   s.w               unknown name `Weight [kg]`
+          the header's name is Weight; [kg] is its unit
+```
+
+A header whose name is not one identifier still uses `is`, and still quotes the
+name without its bracket: `"Worker cost" is wc` for a header
+`Worker cost [USD/node/month]`.
+
+### Declare a unit on a binding
+
+A scalar's unit goes right after its name, before any `precision` clause:
+
+```text
+metabolic_rate [kcal] precision 0 = 1600
+hours          [h]                = 24
+per_hour       [kcal/h] precision 2 = metabolic_rate / hours
+```
+
+`1600` and `24` carry no unit of their own, so each takes the one its line
+declares. `per_hour` is different: its right side already has a unit,
+`kcal ÷ h`, so the declaration is **checked** against it. Write
+`metabolic_rate / 24` instead and the right side derives `kcal`, which is not
+`kcal/h`:
+
+```console
+  UNIT    s.per_hour        per_hour declares kcal/h but its formula derives kcal
+```
+
+### How units combine
+
+`*` and `/` combine units: `PLN ÷ PLN/EUR` is `EUR`, `USD/node/month × node` is
+`USD/month`. `+`, `-` and every comparison need the same unit on both sides, so
+`5 [kg] + 3 [m]` does not evaluate. A literal that needs a unit can carry one,
+`Net [PLN] = Qty * Rate + 10 [PLN]`; the literal `0` matches any unit, so
+`assert variance == 0` needs nothing. `⋅` is a second spelling of `*`, handy
+inside and outside a bracket alike.
+
+A name with no bracket and no unit-bearing operand is dimensionless, and a
+dimensionless number added to a unit is a mismatch — so once a document starts
+declaring units, it declares them all the way along a calculation.
+
+### Money
+
+A currency is an ordinary unit, written as its code. The symbol stays in the
+prose:
+
+```text
+tax_amount [USD] precision 2 = 1800
+```
+
+```markdown
+Tax comes to $**1800.00**<!--vmark=s.tax_amount-->.
+```
+
+`$` is not `USD`, and VisiMark never assumes it is. Nor does a currency imply
+a precision: write `precision 2` yourself. A column declared `[USD]` refuses a
+`$` decoration in its cells, because the bracket already says what the symbol
+would.
+
+### Let `infer` write the rest
+
+`visimark infer` proposes the unit each formula derives wherever nothing is
+declared, and `infer --write` adds it — ` [PLN]` after a computed column's
+header or a scalar's name, nothing else. The first write records whatever the
+formula produces, right or wrong; from the next edit on, each one is a check.
+`fmt --fix-units` respells the brackets you already have (`[kg*m^2/s^2]`
+becomes `[kg⋅m²/s²]`) and never changes what they mean.
 
 ### Thousands separators are refused
 
@@ -1611,8 +1702,9 @@ Use this when you only produce that column and never read it back.
 
 ### Matching is exact
 
-The quoted text must be byte-for-byte identical to the header cell's printed
-text. No trimming, no case folding. If it does not match any header, that is an
+The quoted text must be byte-for-byte identical to the header's name — its
+printed text, minus a trailing unit bracket (chapter 16), which is never part of
+a name. No trimming, no case folding. If it does not match any header, that is an
 `UNDEF` error with a suggestion — never a silently created scalar.
 
 ## 19. Assertions: facts that must stay true
@@ -1837,6 +1929,14 @@ unambiguous ones.
 ```console
   UNIT    s.Price         · b                     "€4.00"
           column mixes units: $ and €
+```
+
+`UNIT` is also what units that disagree report — a declaration the formula
+does not derive, two different units added together, or a bracket that is not
+a unit (chapter 16):
+
+```console
+  UNIT    terms.eur_total   eur_total declares EUR but its formula derives PLN²/EUR
 ```
 
 **`UNDEF` — a formula names something that does not exist.**
@@ -2351,6 +2451,7 @@ differently from `1`.
     "tax.gross_total": "194.34",
     "order.Net": ["50", "60", "48"]
   },
+  "units": {},
   "assertions": [
     {
       "sheet": "tax",
@@ -2371,6 +2472,11 @@ is on purpose. JSON numbers are IEEE floats, and money is not. Parse them with a
 decimal library, or keep them as strings.
 
 **A column is an array.** A scalar is a single string.
+
+**Units sit beside the values, never inside them.** `units` maps every name
+that has a unit to its exponents — `"lines.gross_total": {"PLN": 1}`,
+`"s.work": {"kg": 1, "m": 2, "s": -2}` — and is `{}` when nothing declares one,
+as here. A script never has to parse `kg⋅m²/s²` out of a string.
 
 **Assertions come with the values filled in.** `substituted` is the assertion
 with each name replaced by what it evaluated to. A monitoring script can report
@@ -3004,6 +3110,7 @@ carries a `defaults` field with `pass`, `fail` or `unverified`:
     "runway.months": "11.5",
     …
   },
+  "units": {},
   "assertions": [
     {
       "sheet": "runway",

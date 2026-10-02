@@ -19,9 +19,9 @@ and WSL provide it, plain PowerShell does not).
 |---|---|---|---|---|
 | `visimark check FILE...` | Recomputes every formula and reports each number that no longer agrees with it | the files you name | nothing, ever | the document has at least one problem |
 | `visimark fmt FILE...` | Repairs stale values in place, by splicing the bytes of each value it owns, and writes any stale or missing generated artifact | the files you name | computed cells and anchored values, in place; generated artifacts, whole — the artifact write is declinable with `--no-artifacts` | a problem it cannot repair remains |
-| `visimark infer FILE...` | Works out which rules reproduce the numbers a document already has, and proposes them | the files you name | nothing, unless `--write` | never — it is advisory |
-| `visimark eval FILE` | Prints the computed values, so a script can read one out. Adds a `params:` block naming each param's declared domain, when at least one param has one | one file | nothing | never |
-| `visimark explain FILE` | Prints each sheet's inputs, rules, evaluation order, assertions and charts. A param's `params:` row shows its declared domain, when it has one | one file | nothing | never |
+| `visimark infer FILE...` | Works out which rules reproduce the numbers a document already has, and proposes them — and, under a `units` heading, the unit each computed binding derives where none is declared | the files you name | nothing, unless `--write` | never — it is advisory |
+| `visimark eval FILE` | Prints the computed values, so a script can read one out. A value with a unit prints it in brackets after the name, `terms.eur_total [EUR]  6719.58`; `--get` prints the bare value. Adds a `params:` block naming each param's declared domain, when at least one param has one | one file | nothing | never |
+| `visimark explain FILE` | Prints each sheet's inputs, rules, evaluation order, assertions and charts, with each unit and whether it was declared or derived (`[PLN] (declared)`), and the document's unit definitions. A param's `params:` row shows its declared domain, when it has one | one file | nothing | never |
 | `visimark ref [NAME]` | Prints the reference entry for a builtin function, or lists all sixteen | nothing — the only command that reads no file | nothing | `NAME` is not a builtin function |
 
 `check` is the one CI runs. The others exist to get a document into a state
@@ -35,7 +35,11 @@ Each entry states where the result's width comes from, alongside its shape and
 its errors — the question a `PRECISION` finding raises. `ref ROUND` reports
 `precision  the value of \`places\`` and, separately, how it breaks a tie;
 `ref AVG` reports `must be declared`. Under `--json` the rule is structured
-(`{"from": "argument-scale", "param": "s"}`), not only prose.
+(`{"from": "argument-scale", "param": "s"}`), not only prose. Each entry also
+states its unit signature — `units      SUM(col: U) → U` — where `1` means
+dimensionless, `any` means accepted and dropped, and `U` ties arguments and
+result to one unit; under `--json` it is
+`"units": {"params": {"col": "U"}, "returns": "U", "text": "SUM(col: U) → U"}`.
 
 `visimark --version` (also `-v` or `version`) prints `visimark <version>` and
 exits `0`. `visimark --help` (also `-h` or `help`) prints the usage summary.
@@ -45,11 +49,12 @@ exits `0`. `visimark --help` (also `-h` or `help`) prints the usage summary.
 | Option | Command | What it does |
 |---|---|---|
 | `--fix-dates` | `fmt` | Also rewrites non-ISO dates that have only one reading. `15.10.2026` becomes `2026-10-15`; `11/12/2026` is left alone and still reported, because it is two different dates depending on who wrote it. |
+| `--fix-units` | `fmt` | Also respells every unit bracket the document already has — headers, binding heads, literal units, definitions, import lists — to its normalised form: `[kg*m^2/s^2]` becomes `[kg⋅m²/s²]`, `[node⋅USD/month]` becomes `[USD⋅node/month]`, `[degC]` becomes `[℃]`. Spelling only: it never changes which unit a bracket means, never expands or contracts a definition, never adds or removes a declaration, and never touches a malformed bracket, a cell or prose. |
 | `--no-artifacts` | `fmt` | Declines the write of generated artifacts — the SVGs a `chart` statement declares. Every other repair is unaffected: computed cells, anchored values and import stamps are still spliced, and `--fix-dates` still applies. It does **not** change what `check` reports: a missing or stale artifact is still `STALE`, still counted, still exit `1`. For a caller that must not touch files it did not name — a read-only checkout, a sandboxed build, a CI job that runs `fmt` to diff the result rather than keep it. It is not a way to stop committing charts; see [`ci.md` §19](ci.md). |
-| `--write` | `infer` | Inserts what it proposed: a `vmark` block after each table, an anchor after each matched figure, or the `no-formulas` marker if there was nothing to derive. It only ever inserts — no existing byte is rewritten. |
+| `--write` | `infer` | Inserts what it proposed: a `vmark` block after each table, an anchor after each matched figure, a ` [unit]` after a computed column's header or a scalar's name where the formula derives one and none is declared, or the `no-formulas` marker if there was nothing to derive. It only ever inserts — no existing byte is rewritten. A rule it adds carries its unit in the same pass, so a second run writes nothing. |
 | `--get NAME` | `eval` | Prints one value instead of all of them. Takes `sheet.name` or a bare `name` when it is unambiguous. |
 | `--scenario FILE` | `eval` | Evaluates the document with the `param` values in `FILE` in place of their defaults, and writes nothing. `-` reads the scenario from stdin. `FILE` is a flat JSON object whose keys name declared params (`sheet.name`, or a bare `name` when unambiguous) and whose values are strings holding a number literal, such as `{ "tax": "12.5%" }`. An unknown key, a JSON number, a value wider than the param's `precision`, a value outside a declared domain, or a bare value for a percent param is an error. The values are followed by a `scenario:` block listing every param, and a false `assert` says whether it holds on the defaults. Every other command refuses `--scenario` with exit `2`. The rules are in [`design/scenario-params-spec.md`](design/scenario-params-spec.md) and [`design/a-param-declares-the-set-of-values-it-ac-spec.md`](design/a-param-declares-the-set-of-values-it-ac-spec.md). |
-| `--json` | `check`, `fmt`, `infer`, `eval`, `explain`, `ref` | Prints one JSON document on stdout instead of the human report. Default text is unchanged. Document quantities are decimal strings. The envelope is specified in [`design/structured-output-json-spec.md`](design/structured-output-json-spec.md). |
+| `--json` | `check`, `fmt`, `infer`, `eval`, `explain`, `ref` | Prints one JSON document on stdout instead of the human report. Default text is unchanged. Document quantities are decimal strings. The envelope is specified in [`design/structured-output-json-spec.md`](design/structured-output-json-spec.md). `eval --json` carries a `units` object beside `values`: one exponent map per name that has a unit, atoms in code-point order (`"s.work": {"kg": 1, "m": 2, "s": -2}`), declared input columns included, `{}` when no name has one. A column whose header carries a unit is keyed by its name, `s.Weight`, never `s.Weight [kg]`. |
 | `#sheet` | `explain` | Limits the output to one sheet. Repeatable. |
 
 Every command refuses an option it does not accept, and refuses extra file
@@ -61,7 +66,7 @@ both exit `2`, before any file is read or written. Under `--json` the refusal is
 | Command | Options and arguments |
 |---|---|
 | `check` | `FILE...`, `--json` |
-| `fmt` | `FILE...`, `--fix-dates`, `--no-artifacts`, `--json` |
+| `fmt` | `FILE...`, `--fix-dates`, `--fix-units`, `--no-artifacts`, `--json` |
 | `infer` | `FILE...`, `--write`, `--json` |
 | `eval` | one `FILE`, `--get NAME`, `--scenario FILE`, `--json` |
 | `explain` | one `FILE`, `#sheet` (repeatable), `--json` |
@@ -93,7 +98,7 @@ nothing.
 |---|---|---|---|
 | `STALE` | problem | A stored number disagrees with the formula that owns it, or a generated artifact disagrees with the data it was drawn from — including one that is missing. The report shows both values and the formula, or names the artifact. | `visimark fmt` |
 | `DATE` | problem | A date is not ISO 8601. Reported with the ISO reading when there is only one, or with both readings and the days between them when there are two. | `fmt --fix-dates` if unambiguous, otherwise by hand |
-| `UNIT` | problem | One column means two things — mixed decoration such as `$5.00` beside `€5.00`, or a cell decorated on both sides. | by hand |
+| `UNIT` | problem | One column means two things — mixed decoration such as `$5.00` beside `€5.00`, or a cell decorated on both sides. Or units disagree: `per_hour declares kcal/h but its formula derives kcal`, `+ needs matching units: kg and m`, a builtin argument against its unit signature, a malformed bracket (`[100km] is not a unit — an atom is letters only`), or a cell decoration against its header's unit. | by hand |
 | `UNDEF` | problem | A formula names something that does not exist, with a spelling suggestion when one is close. | by hand |
 | `DUP` | problem | The same name is bound twice in one scope. The first binding wins, which is why this is an error and not a silent overwrite. | by hand |
 | `VECTOR` | problem | A column was used where a single value is required. The report names the aggregate that would fix it. | by hand |

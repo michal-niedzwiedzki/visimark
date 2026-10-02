@@ -85,6 +85,7 @@ test("explainJson places the import block between hasTable and inputs", () => {
     "hasTable",
     "import",
     "inputs",
+    "inputUnits",
     "aliases",
     "rules",
     "scalars",
