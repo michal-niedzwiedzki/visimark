@@ -1,4 +1,4 @@
-import type { Expr, Ref, ReportName, UnitText } from "../lang/ast.js";
+import type { Expr, Ref, ReportName, ReportOptions, UnitText } from "../lang/ast.js";
 import type { UnitDefs, UnitMap } from "../lang/unit-expr.js";
 import type { Domain } from "../lang/domain.js";
 import type { Lattice } from "../lang/lattice.js";
@@ -228,6 +228,8 @@ export interface Report {
   name: ReportName;
   /** the `REF`s in the options, source order, absolute spans */
   refs: Ref[];
+  /** the options, parsed; shares its `Ref` objects with `refs` */
+  options: ReportOptions;
   /** whitespace-normalised statement; the duplicate key */
   text: string;
   span: Span;

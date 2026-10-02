@@ -93,3 +93,50 @@ describe("report statement", () => {
     expect(fails("report foo").bindingName).toBeUndefined();
   });
 });
+
+describe("report options (add-a-simulate-command-spec.md §4)", () => {
+  const names = (o: { on?: { qualifier?: string; name: string }[] }) =>
+    (o.on ?? []).map((r) => (r.qualifier ? `${r.qualifier}.${r.name}` : r.name));
+  test("ledger", () => {
+    expect(report("report ledger").options).toEqual({ kind: "ledger", assertionsBroken: false });
+    expect(report("report ledger assertions broken").options).toEqual({
+      kind: "ledger",
+      assertionsBroken: true,
+    });
+  });
+  test("deltas", () => {
+    const bare = report("report deltas").options;
+    expect(bare.kind === "deltas" && bare.on).toEqual([]);
+    const on = report("report deltas on a, s.b").options;
+    expect(on.kind).toBe("deltas");
+    if (on.kind === "deltas") expect(names(on)).toEqual(["a", "s.b"]);
+  });
+  test("deltas shares its Ref objects with refs", () => {
+    const r = report("report deltas on a, b");
+    expect(r.options.kind === "deltas" && r.options.on[1]).toBe(r.refs[1]!);
+  });
+  test("gates and forbidden", () => {
+    expect(report("report gates").options).toEqual({ kind: "gates" });
+    expect(report("report forbidden").options).toEqual({ kind: "forbidden" });
+  });
+  test("best", () => {
+    const max = report("report best scalar s.m direction max").options;
+    expect(max.kind === "best" && [max.scalar.name, max.direction, max.amongFeasible]).toEqual([
+      "m",
+      "max",
+      false,
+    ]);
+    const min = report("report best scalar m direction min among feasible").options;
+    expect(min.kind === "best" && [min.scalar.name, min.direction, min.amongFeasible]).toEqual([
+      "m",
+      "min",
+      true,
+    ]);
+  });
+  test("malformed options keep #258's messages", () => {
+    expect(fails("report best scalar m").message).toBe(
+      "`report best` takes: scalar REF direction max|min [among feasible]",
+    );
+    expect(fails("report gates now").message).toBe("`report gates` takes no options");
+  });
+});

@@ -106,5 +106,16 @@ export interface ReportDecl extends Pos {
   type: "report";
   name: ReportName;
   refs: Ref[];
+  /** the options, parsed; the same `Ref` objects as `refs` */
+  options: ReportOptions;
   text: string;
 }
+
+/** A report's options by name. `deltas` with an empty `on` reads every
+ *  non-param scalar of its sheet. See docs/design/add-a-simulate-command-spec.md §4. */
+export type ReportOptions =
+  | { kind: "ledger"; assertionsBroken: boolean }
+  | { kind: "deltas"; on: Ref[] }
+  | { kind: "gates" }
+  | { kind: "best"; scalar: Ref; direction: "max" | "min"; amongFeasible: boolean }
+  | { kind: "forbidden" };

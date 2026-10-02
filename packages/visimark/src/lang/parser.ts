@@ -8,6 +8,7 @@ import {
   type Expr,
   type Ref,
   type ReportDecl,
+  type ReportOptions,
   REPORT_NAMES,
   type ReportName,
   type UnitDef,
@@ -1113,9 +1114,13 @@ function parseReport(toks: Token[], kw: Token): ReportDecl {
 
   const refs: Ref[] = [];
   const pieces: string[] = [];
+  let assertionsBroken = false;
+  let direction: "max" | "min" = "max";
+  let amongFeasible = false;
   if (name === "ledger" && isWord("assertions")) {
     i++;
     word("broken");
+    assertionsBroken = true;
     pieces.push("assertions broken");
   } else if (name === "deltas" && isWord("on")) {
     i++;
@@ -1134,19 +1139,30 @@ function parseReport(toks: Token[], kw: Token): ReportDecl {
     word("direction");
     const dir = at();
     if (dir.kind !== "ident" || (dir.value !== "max" && dir.value !== "min")) bad();
+    direction = dir.value as "max" | "min";
     i++;
     pieces.push(`scalar ${refText(refs[0]!)} direction ${dir.value}`);
     if (isWord("among")) {
       i++;
       word("feasible");
+      amongFeasible = true;
       pieces.push("among feasible");
     }
   }
   if (at().kind !== "eof") bad();
+  const options: ReportOptions =
+    name === "ledger"
+      ? { kind: "ledger", assertionsBroken }
+      : name === "deltas"
+        ? { kind: "deltas", on: refs }
+        : name === "best"
+          ? { kind: "best", scalar: refs[0]!, direction, amongFeasible }
+          : { kind: name };
   return {
     type: "report",
     name,
     refs,
+    options,
     text: ["report", name, ...pieces].join(" "),
     start: kw.start,
     end: at().start,
