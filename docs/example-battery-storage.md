@@ -97,10 +97,10 @@ capex [EUR]           precision 2 = levers.power * market.capex_power + energy *
 soh_eol               precision 4 = 1 - levers.fade * market.life
 ```
 
-At the defaults the battery stores **120**<!--vmark=asset.energy--> MWh and costs
-**22800000.00**<!--vmark=asset.capex--> EUR to build. In its first year it trades
-**3006720.00**<!--vmark=asset.arbitrage_y1--> EUR of spread and earns
-**1350000.00**<!--vmark=asset.capacity_y--> EUR from the capacity market. After
+At the defaults the battery stores **120 MWh**<!--vmark=asset.energy|unit--> and costs
+**22800000.00 EUR**<!--vmark=asset.capex|unit--> to build. In its first year it trades
+**3006720.00 EUR**<!--vmark=asset.arbitrage_y1|unit--> of spread and earns
+**1350000.00 EUR**<!--vmark=asset.capacity_y|unit--> from the capacity market. After
 fifteen years of fade it holds **0.6250**<!--vmark=asset.soh_eol--> of its
 original capacity.
 
@@ -121,8 +121,8 @@ cfads_tenor [EUR] precision 2 = asset.arbitrage_y1 * (1 - levers.fade * (tenor -
 dscr_min precision 2 = cfads_tenor / service
 ```
 
-The loan is **15960000.00**<!--vmark=debt.amount--> EUR, serviced at
-**1956187.93**<!--vmark=debt.service--> EUR a year. In year twelve, CFADS covers that
+The loan is **15960000.00 EUR**<!--vmark=debt.amount|unit-->, serviced at
+**1956187.93 EUR**<!--vmark=debt.service|unit--> a year. In year twelve, CFADS covers that
 **1.41**<!--vmark=debt.dscr_min-->×.
 
 ## Year by year
@@ -176,7 +176,7 @@ report best scalar returns.npv direction max among feasible
 report deltas
 ```
 
-At the defaults the project is worth **4215389.03**<!--vmark=returns.npv--> EUR at an
+At the defaults the project is worth **4215389.03 EUR**<!--vmark=returns.npv|unit--> at an
 8% cost of capital. The sponsor's equity returns
 **0.1931**<!--vmark=returns.equity_irr--> a year.
 
