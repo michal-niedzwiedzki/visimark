@@ -289,6 +289,22 @@ token followed by a name, and `default` only right after that statement's `=`,
 so `param = 5` and `default = 3` stay ordinary bindings
 ([§20](#20-scenario-parameters)).
 
+**`lattice` — sweep spacing.** A `param` header may end its domain with
+`lattice STEP`: `param volume_disc precision 3 in [0%, 10%] lattice 1% = default 0%`.
+It declares the spacing a sweep visits the interval at, anchored at the lower
+end, both ends visited and an open end dropped. It is not part of the domain:
+`in [0, 80] lattice 20` still accepts `7`, and a default or scenario value off
+the lattice is legal. A lattice needs a finite interval, so a set, an unbounded
+domain, an inexact step or a step that leaves no point is a `TYPE` finding at the
+declaration. `lattice` is contextual: `lattice = 5` still binds a scalar.
+
+**`report` — a named reading.** A sheet block may carry `report NAME [OPTIONS]`,
+a statement beside `chart`. `NAME` is one of `ledger`, `deltas`, `gates`, `best`
+and `forbidden`, each with a closed option grammar. `check` parses the line,
+resolves its refs and counts them as reads, and never runs a question; `fmt`
+leaves it alone. What each report computes belongs to the `simulate` command.
+`report` is contextual too: `report = 5` still binds a scalar.
+
 **Literals.**
 
 | Form | Meaning |
@@ -704,14 +720,14 @@ justifies the project.
 | `STALE` | stored value **or artifact** disagrees with its formula | yes, by `fmt` |
 | `DATE` | not an ISO 8601 calendar date | only if decidable, with `--fix-dates` |
 | `UNIT` | a column mixes unit decorations, a value is decorated on both sides, or `percent` shares a span with a unit; or units disagree — a declared unit the formula does not derive, `+`/`-`/comparison over different units, a builtin argument against its unit signature, a malformed unit bracket, a decoration against its header's unit ([§21](#21-units)) | no |
-| `UNDEF` | unresolvable name | no |
-| `DUP` | a name is bound twice in one scope, two header cells sharing a name, or a unit defined twice | no |
+| `UNDEF` | unresolvable name, or a `report` ref that resolves to nothing | no |
+| `DUP` | a name is bound twice in one scope, two header cells sharing a name, or a unit defined twice, or two identical `report` statements in one sheet | no |
 | `VECTOR` | foreign column outside an aggregate | no |
 | `CYCLE` | circular dependency, among bindings or among unit definitions | no |
-| `TYPE` | illegal operand types, a malformed call (name, arity, shape), or a display rule on a value of a type it does not accept (a date or a string for `percent`; a number or a date for `nbsp`; any value with a unit for those two, and any value without one for `unit`), or a chart/image | no |
-| `SHEET` | column rules with no table, an `assert` in a document-scope block, or a unit definition in a sheet block | no |
+| `TYPE` | illegal operand types, a malformed call (name, arity, shape), or a display rule on a value of a type it does not accept (a date or a string for `percent`; a number or a date for `nbsp`; any value with a unit for those two, and any value without one for `unit`), or a chart/image, or a malformed or impossible `lattice` clause, or a malformed or unknown `report`, or a `report` ref that names a column | no |
+| `SHEET` | column rules with no table, an `assert` in a document-scope block, or a unit definition in a sheet block, or a `report` in a document-scope block | no |
 | `ANCHOR` | anchor with no rewritable target, an unrecognised display-rule name, a display-rule anchor with no delimited seed, a display rule that cannot render in a code span, or a string display rule whose rendering would not read back as the stored text | no |
-| `PRECISION` | a numeric binding with no declared width and none derivable, a value too large to carry the width it has ([§7](#7-numeric-semantics)), or a `percent` display rule on a binding whose width is below 2 | no |
+| `PRECISION` | a numeric binding with no declared width and none derivable, a value too large to carry the width it has ([§7](#7-numeric-semantics)), or a `percent` display rule on a binding whose width is below 2, or a `lattice` step with more decimals than its param declares | no |
 | `DOMAIN` | a `param`'s default is outside its declared domain, or the domain has no legal value ([§20](#20-scenario-parameters)) | no |
 | `ASSERT` | an `assert` statement evaluated false ([§17](#17-assertions)) | no |
 | `ARTIFACT` | a declared artifact cannot be built or written ([§18](#18-generated-artifacts)) | no |
@@ -1334,6 +1350,13 @@ full specification. The motivating document is
   an `assert`. `eval` and `explain` report each domain-bearing param's domain;
   `fmt` writes nothing new. See
   [`design/a-param-declares-the-set-of-values-it-ac-spec.md`](design/a-param-declares-the-set-of-values-it-ac-spec.md).
+- **A lattice** declares the spacing a sweep visits a param's interval at,
+  `param NAME precision N … [in DOMAIN-EXPR] [lattice STEP] = default LITERAL`.
+  It narrows nothing: a default or scenario value off the lattice is legal.
+  `eval` and `explain` print it beside the domain, and `--json` adds a
+  `lattice` object next to `domain`. `report NAME [OPTIONS]` statements name the
+  readings a sweep should print; `check` validates them and never runs them. See
+  [`design/lattice-on-param-and-report-statements-spec.md`](design/lattice-on-param-and-report-statements-spec.md).
 
 ## 21. Units
 

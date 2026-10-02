@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- A `lattice` clause on a `param` and a `report` statement are now understood: an impossible lattice, an unknown report name or a report option that does not match its grammar gets a diagnostic.
 - A `|unit` anchor (`**23300.00 PLN**<!--vmark=lines.net_total|unit-->`) is no longer flagged as an unknown display rule; a missing or wrong unit in it is a `STALE` that formatting repairs, and `|unit` on a value without a unit is a `TYPE` diagnostic. A plain anchor written `5 m^2` or `50 1/s` keeps its unit when formatted.
 - Hovering a binding or a column now shows its unit and whether it was declared or derived (`unit: [PLN] (declared)`); hovering a builtin shows its unit signature (`SUM(col: U) → U`). Units that disagree — a declared unit the formula does not derive, two different units added together, a malformed unit bracket — get a `UNIT` diagnostic.
 

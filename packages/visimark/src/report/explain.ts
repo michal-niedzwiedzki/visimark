@@ -2,6 +2,7 @@ import type { ChartResult, CheckResult } from "../eval/check.js";
 import type { UnitInfo } from "../eval/dimensions.js";
 import { formatUnit, unitJson } from "../lang/unit-expr.js";
 import { domainJson } from "../lang/domain.js";
+import { latticeJson } from "../lang/lattice.js";
 import { topoOrder } from "../eval/graph.js";
 import type { Binding, DocModel, ImportStatus } from "../model/types.js";
 import { nonParams, paramLines, params } from "./params.js";
@@ -109,12 +110,14 @@ function paramJson(b: Binding): {
   precision: number | null;
   default: string;
   domain?: { clauses: string[]; fold?: string[] };
+  lattice?: { step: string };
 } {
   return {
     name: b.name,
     precision: b.precision ?? null,
     default: b.param!.text,
     ...(b.domain === undefined ? {} : { domain: domainJson(b.domain) }),
+    ...(b.lattice === undefined ? {} : { lattice: latticeJson(b.lattice) }),
   };
 }
 

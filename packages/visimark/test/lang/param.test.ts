@@ -212,3 +212,64 @@ describe("param domain clause", () => {
     expect(param("param tax precision 3 = default 19%").domain).toBeUndefined();
   });
 });
+
+describe("param lattice clause (lattice spec §2.1)", () => {
+  test("a lattice follows the domain", () => {
+    const b = param("param extra_hours precision 0 integer in [0, 80] lattice 20 = default 40");
+    expect(b.lattice).toEqual({ step: "20", literal: { text: "20", percent: false } });
+    expect(b.domain).toBeDefined();
+  });
+
+  test("a percent step folds and is remembered as a percent", () => {
+    const b = param("param volume_disc precision 3 in [0%, 10%] lattice 1% = default 0%");
+    expect(b.lattice).toEqual({ step: "0.01", literal: { text: "1%", percent: true } });
+  });
+
+  test("a lattice with no domain still parses; check refuses it", () => {
+    const b = param("param x precision 0 lattice 5 = default 0");
+    expect(b.domain).toBeUndefined();
+    expect(b.lattice?.step).toBe("5");
+  });
+
+  test("a negative step parses; check refuses it", () => {
+    expect(param("param x precision 0 in [0, 10] lattice -5 = default 0").lattice?.step).toBe("-5");
+  });
+
+  test("no clause, no field", () => {
+    expect(param("param x precision 0 in [0, 10] = default 0").lattice).toBeUndefined();
+  });
+
+  test("lattice is contextual: a scalar called lattice still binds", () => {
+    const s = parseStatement("lattice = 5");
+    if ("type" in s) throw new Error("not a binding");
+    expect(s.name).toBe("lattice");
+    expect(s.lattice).toBeUndefined();
+  });
+
+  test("a missing or non-literal step", () => {
+    expect(fails("param x precision 0 in [0, 10] lattice = default 0").message).toBe(
+      "a lattice step must be a number literal",
+    );
+    expect(fails("param x precision 0 in [0, 10] lattice y = default 0").message).toBe(
+      "a lattice step must be a number literal",
+    );
+  });
+
+  test("a second lattice, or a lattice before the domain, is malformed", () => {
+    expect(fails("param x precision 0 in [0, 10] lattice 5 lattice 5 = default 0").message).toBe(
+      "malformed param domain clause",
+    );
+    expect(fails("param x precision 0 lattice 5 in [0, 10] = default 0").message).toBe(
+      "malformed param domain clause",
+    );
+  });
+
+  test("a unit on the step is refused by the existing literal rule", () => {
+    const e = fails("param x precision 0 in [0, 10] lattice 5 [PLN] = default 0");
+    expect(e.code).toBe("UNIT");
+  });
+
+  test("the failure names the param", () => {
+    expect(fails("param x precision 0 in [0, 10] lattice = default 0").bindingName).toBe("x");
+  });
+});

@@ -125,6 +125,7 @@ export function provisional(ctx: InferContext, extra: Binding[]): DocModel {
         aliases: new Map(),
         assertions: [],
         charts: [],
+        reports: [],
         imported: null,
       });
     }
@@ -168,6 +169,7 @@ function cloneSheet(s: Sheet): Sheet {
     aliases: new Map(s.aliases),
     assertions: [...s.assertions],
     charts: [...s.charts],
+    reports: [...s.reports],
     imported: s.imported,
   };
 }

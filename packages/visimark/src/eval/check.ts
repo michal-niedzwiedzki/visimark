@@ -16,6 +16,7 @@ import { dependencies, refText, resolve, topoOrder } from "./graph.js";
 import { resolveImports } from "../import/resolve.js";
 import type { ImportStatus } from "../model/types.js";
 import { domainLiterals, formatDomain, isEmptyDomain, testDomain } from "../lang/domain.js";
+import { analyzeLattice } from "../lang/lattice.js";
 import { derivePrecision, type Width } from "./precision.js";
 import { DISPLAY_RULES, displayRuleTypeMessage, markdownSyntaxIn } from "./display-rules.js";
 import { roundTrips } from "./display-round-trip.js";
@@ -31,6 +32,7 @@ import {
 } from "./value.js";
 import { coerceInput, lookupVector, rowLabel, Unevaluable } from "./check-lookup.js";
 import { checkCharts } from "./check-charts.js";
+import { checkReports } from "./check-reports.js";
 import { inferDecoration } from "./check-decoration.js";
 import { DimensionChecker, type UnitInfo } from "./dimensions.js";
 import { formatUnit, isDimensionless } from "../lang/unit-expr.js";
@@ -274,6 +276,7 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
   // Emits findings, so it runs here and not later: orderFindings sorts on the
   // order phases emitted in.
   const charts = checkCharts(st);
+  checkReports(st);
 
   reportAnchors(st);
   reportUnused(st, entries);
@@ -414,7 +417,52 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
       return false;
     }
     if (binding.domain !== undefined && !paramDomainOk(binding)) return false;
+    // a lattice finding is about the declaration only: the default and the
+    // domain are fine, so the param stays evaluable and its readers are not
+    // suppressed (spec §4.1)
+    if (binding.lattice !== undefined) paramLatticeOk(binding);
     return true;
+  }
+
+  /**
+   * A `param`'s lattice: percent-ness and width of the step, then the facts
+   * `analyzeLattice` decides. Emits at most one finding, the first that fires,
+   * and never marks the binding unevaluable. See
+   * docs/design/lattice-on-param-and-report-statements-spec.md §4.1.
+   */
+  function paramLatticeOk(binding: Binding): void {
+    const lattice = binding.lattice!;
+    const param = binding.param!;
+    const finding = (code: "TYPE" | "PRECISION", message: string): void =>
+      emit(
+        { code, sheetId: binding.sheetId, name: binding.name, message, span: binding.span },
+        { sheetId: binding.sheetId },
+      );
+    const text = lattice.literal.text;
+    if (param.percent && !lattice.literal.percent) {
+      return finding("TYPE", `${binding.name} is a percent; lattice step ${text} must be too`);
+    }
+    if (!param.percent && lattice.literal.percent) {
+      return finding(
+        "TYPE",
+        `${binding.name} is not a percent; lattice step ${text} must not be one`,
+      );
+    }
+    const places = new Decimal(lattice.step).decimalPlaces();
+    if (places > binding.precision!) {
+      return finding(
+        "PRECISION",
+        `lattice step ${text} has ${places} decimal${places === 1 ? "" : "s"}; param ${binding.name} declares ${binding.precision}`,
+      );
+    }
+    const analysis = analyzeLattice({
+      name: binding.name,
+      ...(binding.domain === undefined ? {} : { domain: binding.domain }),
+      step: lattice.step,
+      stepText: text,
+      percent: param.percent,
+    });
+    if (!analysis.ok) finding("TYPE", analysis.message);
   }
 
   /**

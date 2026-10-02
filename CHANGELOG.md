@@ -4,6 +4,16 @@
 
 ### Added
 
+- **`lattice` on a `param`, and `report` statements.** A `param` header may end
+  its domain with `lattice STEP` (`param volume_disc precision 3 in [0%, 10%]
+  lattice 1% = default 0%`): the spacing a sweep visits the interval at. It
+  narrows nothing and `fmt` writes nothing; a set, an unbounded domain, an inexact
+  step or a step with no point is a `TYPE` finding at the declaration. `eval` and
+  `explain` print it beside the domain, and `--json` adds a `lattice` object. A
+  sheet may carry `report ledger|deltas|gates|best|forbidden [options]`, which
+  `check` parses and resolves and never runs. See
+  [#258](https://github.com/michal-niedzwiedzki/visimark/issues/258) and
+  [`docs/design/lattice-on-param-and-report-statements-spec.md`](docs/design/lattice-on-param-and-report-statements-spec.md).
 - **`|unit` display rule.** `**23300.00 PLN**<!--vmark=lines.net_total|unit-->`
   prints a value's unit inside the anchor: the number at its write precision,
   one space, and the declared or derived unit in its normalised spelling

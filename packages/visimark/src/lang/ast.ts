@@ -91,3 +91,20 @@ export interface AliasDecl extends Pos {
   header: string;
   symbol: string;
 }
+
+/** the closed list of reports the tool ships; the list grows only through its
+ *  own catalogue row. See docs/design/lattice-on-param-and-report-statements-spec.md §2.2. */
+export const REPORT_NAMES = ["ledger", "deltas", "gates", "best", "forbidden"] as const;
+export type ReportName = (typeof REPORT_NAMES)[number];
+
+/** A `report <name> [options]` statement. Binds nothing and stores nothing; it
+ *  asks that a named, shipped reading of a simulation be printed. `check`
+ *  parses and resolves it and never runs it. `refs` are the `REF`s in the
+ *  options, in source order; `text` is the whitespace-normalised statement, the
+ *  key a duplicate is judged by. */
+export interface ReportDecl extends Pos {
+  type: "report";
+  name: ReportName;
+  refs: Ref[];
+  text: string;
+}
