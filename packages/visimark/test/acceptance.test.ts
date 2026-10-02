@@ -124,14 +124,14 @@ describe("example-bandwidth.md is the column-aliases acceptance", () => {
     const model = build(locate(bandwidth));
     const sheet = model.sheets.get("network")!;
     expect(sheet.aliases.get("bpu")).toMatchObject({
-      header: "Bandwidth per Unit (TB/s, full-duplex)",
+      header: "Bandwidth per Unit (full-duplex)",
     });
     expect(sheet.aliases.get("gpu_bw")).toMatchObject({
-      header: "GPU-to-GPU Bandwidth (GB/s, full-duplex)",
+      header: "GPU-to-GPU Bandwidth (full-duplex)",
     });
     // gpu_bw is written through its alias, so the rule is keyed by the header,
     // not the alias symbol (see test/model/aliases.test.ts for why).
-    expect(sheet.columns.has("GPU-to-GPU Bandwidth (GB/s, full-duplex)")).toBe(true);
+    expect(sheet.columns.has("GPU-to-GPU Bandwidth (full-duplex)")).toBe(true);
   });
 
   test("peak is the larger of the two rows' GPU-to-GPU bandwidth", () => {
