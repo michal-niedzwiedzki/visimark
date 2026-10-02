@@ -1335,7 +1335,7 @@ plain decimal. Percent display exists only in prose.
 
 Put `|percent` directly after the name inside the anchor comment — a
 **display rule**, one of a small closed set of named prose transforms
-(chapter 15 covers the two that ship, `percent` and `nbsp`):
+(chapter 15 covers the three that ship, `percent`, `nbsp` and `unit`):
 
 ```markdown
 The engagement clears a margin of **0**<!--vmark=lines.margin|percent-->, or
