@@ -24,9 +24,12 @@ ordinary way, no `vmark` block anywhere — **does not need its rules typed out
 by hand.** Do not skip to "Authoring: the shape" below. Run:
 
 ```bash
-visimark infer FILE...          # see what it proposes
-visimark infer FILE... --write  # insert it
+npx visimark infer FILE...          # see what it proposes
+npx visimark infer FILE... --write  # insert it
 ```
+
+(`bunx` works the same way. No global install is assumed anywhere in this
+skill — see "Running it" below.)
 
 `infer` proposes only rules that reproduce every row exactly, verified against
 the same evaluator `check` uses — never a best fit. Hand-author what it leaves:
@@ -64,7 +67,7 @@ numbers. A document with **no formulas** has nothing to disagree with, so
 `check` refuses to call it clean:
 
 ```
-$ visimark check quote-with-no-formulas.md
+$ npx visimark check quote-with-no-formulas.md
 quote-with-no-formulas.md
 
   COVERAGE a table with no `vmark` rules — nothing in this document is checked
@@ -83,9 +86,9 @@ no build. This finding is what stops that.
 Change one input and confirm the checker starts complaining:
 
 ```bash
-sed -i 's/| 40 |/| 48 |/' quote.md      # bump one input
-visimark check quote.md                  # MUST now report problems, exit 1
-git checkout quote.md                    # or undo the edit
+sed -i 's/| 40 |/| 48 |/' quote.md   # bump one input
+npx visimark check quote.md          # MUST now report problems, exit 1
+git checkout quote.md                # or undo the edit
 ```
 
 If `check` still says `0 problems` after you changed an input, nothing in that
@@ -112,18 +115,24 @@ later grows rules is reported too, so the marker cannot outlive its truth.
 
 ## Running it
 
+No global install is required — every command below works through `npx` (as
+shown) or `bunx`, whichever this project's package manager already is:
+
 ```bash
-visimark check FILE...                # read-only; exit 1 if anything disagrees,
-                                       # or if a table has no rules at all
-visimark fmt   FILE... [--fix-dates] [--no-artifacts]
-                                       # rewrite computed cells and anchors;
-                                       # --no-artifacts declines the chart SVG
-                                       # writes, and nothing else
-visimark infer FILE... [--write]      # propose rules for a document with none
-visimark eval  FILE [--scenario FILE|-] [--get NAME] [--json]
-visimark explain FILE [#sheet]        # rules and evaluation order
-visimark ref   [NAME] [--json]        # what a builtin function does; reads no file
+npx visimark check FILE...                # read-only; exit 1 if anything disagrees,
+                                           # or if a table has no rules at all
+npx visimark fmt   FILE... [--fix-dates] [--no-artifacts]
+                                           # rewrite computed cells and anchors;
+                                           # --no-artifacts declines the chart SVG
+                                           # writes, and nothing else
+npx visimark infer FILE... [--write]      # propose rules for a document with none
+npx visimark eval  FILE [--scenario FILE|-] [--get NAME] [--json]
+npx visimark explain FILE [#sheet]        # rules and evaluation order
+npx visimark ref   [NAME] [--json]        # what a builtin function does; reads no file
 ```
+
+If `visimark` is already a global or project dependency, the bare form works
+too — `npx`/`bunx` resolve to it first before fetching.
 
 `fmt` writes two kinds of thing: it splices the document you named, and it
 writes whole SVG files at paths that document derives. Reach for
@@ -172,7 +181,8 @@ it with `npx visimark-mcp` or `bunx visimark-mcp`. The full surface is
 [`docs/mcp.md`](../../docs/mcp.md).
 
 From a clone: `bun src/cli/main.ts check FILE`, or `node bin/visimark.js check FILE`
-once `bun run build` has been run. `npx visimark` for a published install.
+once `bun run build` has been run. `npx visimark` or `bunx visimark` for a
+published install.
 
 ## Authoring: the shape
 

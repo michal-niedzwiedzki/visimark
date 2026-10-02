@@ -360,6 +360,15 @@ function createTutorialHtml(mainHtml: string, toc: TocEntry[], options: SplitPag
         border-color: var(--accent);
         color: var(--accent);
       }
+      .toc-hint {
+        margin-left: 0.4rem;
+        font: 0.75em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        padding: 0.05rem 0.4rem;
+        border: 1px solid var(--rule);
+        border-radius: 4px;
+        color: var(--muted);
+        background: var(--src-bg);
+      }
 
       .toc {
         width: 66%;
@@ -397,6 +406,21 @@ function createTutorialHtml(mainHtml: string, toc: TocEntry[], options: SplitPag
       .toc-head strong {
         font-size: 1rem;
       }
+      .toc-search {
+        flex: 1;
+        min-width: 0;
+        font: inherit;
+        font-size: 0.9rem;
+        padding: 0.35rem 0.8rem;
+        color: var(--fg);
+        background: var(--src-bg);
+        border: 1px solid var(--rule);
+        border-radius: 999px;
+        outline: none;
+      }
+      .toc-search:focus-visible {
+        border-color: var(--accent);
+      }
       .toc-close {
         margin-left: auto;
         font: inherit;
@@ -425,6 +449,9 @@ function createTutorialHtml(mainHtml: string, toc: TocEntry[], options: SplitPag
         color: var(--fg);
         text-decoration: none;
         border-left: 3px solid transparent;
+      }
+      .toc-list a[hidden] {
+        display: none;
       }
       .toc-list a:hover,
       .toc-list a:focus-visible {
@@ -621,7 +648,7 @@ function createTutorialHtml(mainHtml: string, toc: TocEntry[], options: SplitPag
       </div>
 
       <button class="toc-btn" id="toc-btn" type="button" aria-haspopup="dialog">
-        Table of Contents
+        Table of Contents <kbd class="toc-hint">/</kbd>
       </button>
 
       <div class="bar-side bar-side-end">
@@ -637,6 +664,14 @@ function createTutorialHtml(mainHtml: string, toc: TocEntry[], options: SplitPag
       <div class="toc-inner">
         <div class="toc-head">
           <strong>Table of Contents</strong>
+          <input
+            type="search"
+            id="toc-search"
+            class="toc-search"
+            placeholder="Search"
+            aria-label="Search table of contents"
+            autocomplete="off"
+          />
           <button class="toc-close" id="toc-close" type="button" aria-label="Close">&times;</button>
         </div>
         <nav class="toc-list" id="toc-list">
@@ -906,6 +941,15 @@ export function renderDocPage(markdown: string, options: DocPageOptions): string
         border-color: var(--accent);
         color: var(--accent);
       }
+      .toc-hint {
+        margin-left: 0.4rem;
+        font: 0.75em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        padding: 0.05rem 0.4rem;
+        border: 1px solid var(--rule);
+        border-radius: 4px;
+        color: var(--muted);
+        background: var(--src-bg);
+      }
 
       .toc {
         width: 66%;
@@ -943,6 +987,21 @@ export function renderDocPage(markdown: string, options: DocPageOptions): string
       .toc-head strong {
         font-size: 1rem;
       }
+      .toc-search {
+        flex: 1;
+        min-width: 0;
+        font: inherit;
+        font-size: 0.9rem;
+        padding: 0.35rem 0.8rem;
+        color: var(--fg);
+        background: var(--src-bg);
+        border: 1px solid var(--rule);
+        border-radius: 999px;
+        outline: none;
+      }
+      .toc-search:focus-visible {
+        border-color: var(--accent);
+      }
       .toc-close {
         margin-left: auto;
         font: inherit;
@@ -971,6 +1030,9 @@ export function renderDocPage(markdown: string, options: DocPageOptions): string
         color: var(--fg);
         text-decoration: none;
         border-left: 3px solid transparent;
+      }
+      .toc-list a[hidden] {
+        display: none;
       }
       .toc-list a:hover,
       .toc-list a:focus-visible {
@@ -1120,7 +1182,7 @@ export function renderDocPage(markdown: string, options: DocPageOptions): string
       </div>
 
       <button class="toc-btn" id="toc-btn" type="button" aria-haspopup="dialog">
-        Table of Contents
+        Table of Contents <kbd class="toc-hint">/</kbd>
       </button>
 
       <div class="bar-side bar-side-end"></div>
@@ -1130,6 +1192,14 @@ export function renderDocPage(markdown: string, options: DocPageOptions): string
       <div class="toc-inner">
         <div class="toc-head">
           <strong>Table of Contents</strong>
+          <input
+            type="search"
+            id="toc-search"
+            class="toc-search"
+            placeholder="Search"
+            aria-label="Search table of contents"
+            autocomplete="off"
+          />
           <button class="toc-close" id="toc-close" type="button" aria-label="Close">&times;</button>
         </div>
         <nav class="toc-list" id="toc-list">

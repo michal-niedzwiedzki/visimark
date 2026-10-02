@@ -1756,11 +1756,11 @@ Here is the one from [`tutorial/capstone.md`](tutorial/capstone.md):
 
 ````markdown
 ```vmark #recon
-invoiced  = lines.gross_total
-scheduled = schedule.covered
-variance  = scheduled - invoiced
+invoiced  [EUR] = lines.gross_total
+scheduled [EUR] = schedule.covered
+variance  [EUR] = scheduled - invoiced
 
-assert |variance| <= 0.05
+assert |variance| <= 0.05 [EUR]
 ```
 ````
 
@@ -3165,15 +3165,13 @@ Follow along. Every command is shown.
 
 ### Step 1 — the table, inputs only
 
-The header is written for the reader, not for the tool. Do not rename it.
-
 ```markdown
-| Stage            | Effort (man-days)    |    Rate |   Net |   VAT | Gross |
-|------------------|---------------------:|--------:|------:|------:|------:|
-| Discovery        |                    6 |  900.00 |  0.00 |  0.00 |  0.00 |
-| Schema mapping   |                   14 |  850.00 |  0.00 |  0.00 |  0.00 |
-| Migration runs   |                    9 |  850.00 |  0.00 |  0.00 |  0.00 |
-| Cutover support  |                    4 | 1100.00 |  0.00 |  0.00 |  0.00 |
+| Stage            | Effort [mandays] | Rate [EUR/mandays] | Net [EUR] | VAT [EUR] | Gross [EUR] |
+|------------------|------------------:|--------------------:|----------:|----------:|------------:|
+| Discovery        |                 6 |               900.00 |      0.00 |      0.00 |        0.00 |
+| Schema mapping   |                14 |               850.00 |      0.00 |      0.00 |        0.00 |
+| Migration runs   |                 9 |               850.00 |      0.00 |      0.00 |        0.00 |
+| Cutover support  |                 4 |              1100.00 |      0.00 |      0.00 |        0.00 |
 ```
 
 Three inputs, three placeholders. Leave room in the computed columns so the
@@ -3183,25 +3181,26 @@ table still lines up after `fmt`.
 
 ````markdown
 ```vmark #lines
-"Effort (man-days)" is days
-
 param vat_rate precision 2 = default 23%
 
-Net   = days * Rate
+Net   = Effort * Rate
 VAT   = ROUND(Net * vat_rate, 2)
 Gross = Net + VAT
 
-effort_total = SUM(days)
-net_total    = SUM(Net)
-vat_total    = SUM(VAT)
-gross_total  = SUM(Gross)
-day_rate_avg precision 2 = net_total / effort_total
+effort_total [mandays]                 = SUM(Effort)
+net_total    [EUR]                     = SUM(Net)
+vat_total    [EUR]                     = SUM(VAT)
+gross_total  [EUR]                     = SUM(Gross)
+day_rate_avg [EUR/mandays] precision 2 = net_total / effort_total
 ```
 ````
 
 Five decisions are visible here, and each one is a chapter you have read:
 
-- The alias (chapter 18) lets the header stay as written.
+- Effort, rate and every money value carry a unit (chapter 16):
+  `[mandays]` and `[EUR]` keep a day count from ever being added to a cost, on
+  purpose rather than by luck. `Rate` and `day_rate_avg` both declare
+  `EUR/mandays`, the same thing read two different ways.
 - The VAT rate is a `param` (chapter 29). It is 23% in the document, and a
   what-if run may try another rate. Its width, 2, allows any whole percent.
 - `ROUND(…, 2)` on VAT (chapter 14) keeps money at two decimals, as a stated
@@ -3213,54 +3212,60 @@ Five decisions are visible here, and each one is a chapter you have read:
 
 ```markdown
 The engagement is **0**<!--vmark=lines.effort_total--> man-days at an
-average of **0.00**<!--vmark=lines.day_rate_avg--> PLN per day. Net of tax it
-comes to **0.00**<!--vmark=lines.net_total--> PLN. VAT at
+average of **0.00**<!--vmark=lines.day_rate_avg--> EUR per day. Net of tax it
+comes to **0.00**<!--vmark=lines.net_total--> EUR. VAT at
 **0**<!--vmark=lines.vat_rate|percent--> adds **0.00**<!--vmark=lines.vat_total-->
-PLN, giving a total of **0.00**<!--vmark=lines.gross_total--> PLN gross.
+EUR, giving a total of **0.00**<!--vmark=lines.gross_total--> EUR gross.
 ```
 
-Currency stays outside the anchors (chapter 9). The rate is not typed into the
-sentence: the `%` anchor prints the `param` as a percent (chapter 15), so the
-sentence cannot disagree with the rate the formulas use.
+Currency stays outside the anchors (chapter 9) — the unit bracket on
+`gross_total` is a declaration the engine checks, not a symbol for the prose
+to print. The rate is not typed into the sentence either: the `%` anchor
+prints the `param` as a percent (chapter 15), so the sentence cannot disagree
+with the rate the formulas use.
 
 ### Step 4 — the schedule, a second sheet
 
 ````markdown
-| Milestone        | Share | Amount | Due        |
-|------------------|------:|-------:|------------|
-| Signature        |   25% |   0.00 | 2026-10-01 |
-| Schema sign-off  |   45% |   0.00 | 2026-11-16 |
-| Cutover accepted |   30% |   0.00 | 2027-01-15 |
+| Milestone        | Share | Amount [EUR] | Due        |
+|------------------|------:|-------------:|------------|
+| Signature        |   25% |         0.00 | 2026-10-01 |
+| Schema sign-off  |   45% |         0.00 | 2026-11-16 |
+| Cutover accepted |   30% |         0.00 | 2027-01-15 |
 
 ```vmark #schedule
 Amount = ROUND(Share * lines.gross_total, 2)
 
-covered  = SUM(Amount)
+covered   [EUR]       = SUM(Amount)
 share_sum precision 2 = SUM(Share)
 
 assert share_sum == 1
 ```
 ````
 
-`lines.gross_total` crosses sheets and is qualified (chapter 10). Dates are ISO
-(chapter 17). The assertion says the shares must be a whole (chapter 19).
+`lines.gross_total` crosses sheets and is qualified (chapter 10); its unit
+crosses with it, so `Amount` is checked as `EUR` without saying so again.
+Dates are ISO (chapter 17). The assertion says the shares must be a whole
+(chapter 19).
 
 ### Step 5 — the reconciliation, a sheet with no table
 
 ````markdown
 ```vmark #recon
-invoiced  = lines.gross_total
-scheduled = schedule.covered
-variance  = scheduled - invoiced
+invoiced  [EUR] = lines.gross_total
+scheduled [EUR] = schedule.covered
+variance  [EUR] = scheduled - invoiced
 
-assert |variance| <= 0.05
+assert |variance| <= 0.05 [EUR]
 ```
 ````
 
-Rounding each instalment can leave a few grosz of remainder. The tolerance is
-written down where a reviewer can argue with it, instead of being assumed.
-`|variance|` is the absolute value, written the way a reader expects
-(chapter 12).
+Rounding each instalment can leave a few cents of remainder. The tolerance is
+written down where a reviewer can argue with it, instead of being assumed —
+and it carries the same unit as the `variance` it is compared against
+(chapter 16), so a tolerance typed in the wrong column would be a `UNIT` error
+rather than a silent pass. `|variance|` is the absolute value, written the way
+a reader expects (chapter 12).
 
 ### Step 6 — fill it in
 
@@ -3282,10 +3287,10 @@ Change one input. Raise the schema-mapping effort from 14 days to 16:
 $ visimark check capstone.md
 capstone.md
 
-  STALE   lines.Net       · Schema mapping         11900.00 ≠ 13600.00   days * Rate
+  STALE   lines.Net       · Schema mapping         11900.00 ≠ 13600.00   Effort * Rate
   STALE   lines.VAT       · Schema mapping          2737.00 ≠ 3128.00    ROUND(Net * vat_rate, 2)
   STALE   lines.Gross     · Schema mapping         14637.00 ≠ 16728.00   Net + VAT
-  STALE   lines.effort_total                             33 ≠ 35         SUM(days)
+  STALE   lines.effort_total                             33 ≠ 35         SUM(Effort)
   STALE   lines.net_total                          29350.00 ≠ 31050.00   SUM(Net)
   STALE   lines.vat_total                           6750.50 ≠ 7141.50    SUM(VAT)
   STALE   lines.gross_total                        36100.50 ≠ 38191.50   SUM(Gross)
@@ -3325,8 +3330,8 @@ capstone.md
   ASSERT  #schedule       share_sum == 1
           1.05 == 1   is false
 
-  ASSERT  #recon          |variance| <= 0.05
-          |1805.04| <= 0.05   is false
+  ASSERT  #recon          |variance| <= 0.05 [EUR]
+          |1805.04| <= 0.05 [EUR]   is false
 
   9 problems (7 stale, 2 errors)
 ```
@@ -3334,7 +3339,7 @@ capstone.md
 This is the important difference. `fmt` would happily repair all seven `STALE`
 findings, and the document would then be internally consistent — and still
 wrong, because the shares add to 105% and the schedule over-collects by 1805.04
-PLN.
+EUR.
 
 The two assertions survive `fmt` and keep failing. They are the part of the
 document that says what *should* be true, rather than what is.
@@ -3367,21 +3372,21 @@ come to then? Do not edit the rate. Ask:
 $ cat reverse-charge.json
 { "vat_rate": "0%" }
 $ visimark eval --scenario reverse-charge.json capstone.md
-lines.vat_rate      0
-lines.effort_total  33
-lines.net_total     29350
-lines.vat_total     0
-lines.gross_total   29350
-lines.day_rate_avg  889.39
-schedule.covered    29350
-schedule.share_sum  1
-recon.invoiced      29350
-recon.scheduled     29350
-recon.variance      0
-lines.Net           5400, 11900, 7650, 4400
-lines.VAT           0, 0, 0, 0
-lines.Gross         5400, 11900, 7650, 4400
-schedule.Amount     7337.5, 13207.5, 8805
+lines.vat_rate                    0
+lines.effort_total [mandays]      33
+lines.net_total [EUR]             29350
+lines.vat_total [EUR]             0
+lines.gross_total [EUR]           29350
+lines.day_rate_avg [EUR/mandays]  889.39
+schedule.covered [EUR]            29350
+schedule.share_sum                1
+recon.invoiced [EUR]              29350
+recon.scheduled [EUR]             29350
+recon.variance [EUR]              0
+lines.Net [EUR]                   5400, 11900, 7650, 4400
+lines.VAT [EUR]                   0, 0, 0, 0
+lines.Gross [EUR]                 5400, 11900, 7650, 4400
+schedule.Amount [EUR]             7337.5, 13207.5, 8805
 scenario: reverse-charge.json
   lines.vat_rate  0  scenario  (default 0.23)
 ```
