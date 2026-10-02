@@ -338,9 +338,11 @@ Floor area **42 m^2**<!--vmark=flat.total--> and **50 1/s**<!--vmark=flat.rate--
 `43 m^2`, never `43` and never `43 m²`. A column mixing `12 m^2`, `30 m²` and
 `4 kg` is `UNIT`, naming the forms seen.
 
-**Existing examples.** `docs/example-invoice.md` adopts `|unit` on its three
-prose anchors (`net_total`, `vat_total`, `gross_total`), each moving `PLN`
-inside the delimiter, and its sentence "The anchored numbers stay bare — `PLN`
+**Existing examples.** `docs/example-invoice.md` adopts `|unit` on all six
+prose anchors followed by `PLN` — the summary sentence's `net_total`,
+`vat_total` and `gross_total`, and the `#recon` paragraph's `scheduled`,
+`gross_total` and `variance` — each moving `PLN` inside the delimiter, so no
+bare `PLN` is left after an anchor. Its sentence "The anchored numbers stay bare — `PLN`
 and `EUR` stay in the prose" is replaced to describe `|unit`.
 `example-invoice-drift.md` and `example-invoice-csv-import.md` are unchanged
 (their expected output is pinned and they do not need the rule). `check` over
