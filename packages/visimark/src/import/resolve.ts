@@ -1,6 +1,8 @@
 import type { DocumentFile } from "../fs/reader.js";
 import type { DocModel, Finding, ImportStatus } from "../model/types.js";
 import type { RawCell, RawRow, RawTable, Span } from "../parse/document.js";
+import { formatUnit, parseUnit, sameUnit, type UnitMap } from "../lang/unit-expr.js";
+import { splitHeader } from "../model/header-name.js";
 import { parseCsv } from "./csv.js";
 import { resolveImportPath } from "./path.js";
 
@@ -128,8 +130,46 @@ export function resolveImports(
     // declared names stand in for the header everywhere below. See
     // docs/design/explicit-schema-for-headerless-csv-imports-spec.md §2–§4.
     const unlabelled = decl.labelsMode === "unlabelled";
-    const names = unlabelled ? decl.labels! : parsed.header;
     const dataRows = unlabelled ? [parsed.header, ...parsed.rows] : parsed.rows;
+
+    // A unit may be declared in the `labelled`/`unlabelled` list, in the CSV
+    // header itself, or both — every one of them is a header, split the same
+    // way an inline table's is (algebraic-unit-maps-on-names-spec.md §5.8).
+    const unitSpan = decl.labelsSpan ?? decl.declSpan;
+    const splitAll = (texts: string[], span: Span) =>
+      texts.map((t) => {
+        const h = splitHeader(t, t, span.start);
+        let unit: UnitMap | null = null;
+        let unitText: string | null = null;
+        if (h.error) {
+          findings.push({
+            code: "UNIT",
+            sheetId: sheet.id,
+            message: h.error.message,
+            span,
+            sourceOffset: span.start,
+          });
+        } else if (h.unit) {
+          const u = parseUnit(h.unit.text);
+          if (u.ok) {
+            unit = u.map;
+            unitText = h.unit.text;
+          } else {
+            findings.push({
+              code: "UNIT",
+              sheetId: sheet.id,
+              message: u.message,
+              span,
+              sourceOffset: span.start,
+            });
+          }
+        }
+        return { name: h.name ?? t, unit, unitText };
+      });
+    const fromCsv = unlabelled ? [] : splitAll(parsed.header, decl.declSpan);
+    const fromDecl = decl.labels ? splitAll(decl.labels, unitSpan) : [];
+    const csvHeader = fromCsv.map((h) => h.name);
+    const names = unlabelled ? fromDecl.map((h) => h.name) : csvHeader;
 
     const dupes = new Set<string>();
     const seen = new Set<string>();
@@ -159,21 +199,46 @@ export function resolveImports(
     }
 
     if (!unlabelled && decl.labels) {
+      // `labelled` asserts the header's names; a bracket on either side is a unit
+      const declared = fromDecl.map((h) => h.name);
       const same =
-        decl.labels.length === parsed.header.length &&
-        decl.labels.every((l, i) => l === parsed.header[i]);
+        declared.length === csvHeader.length && declared.every((l, i) => l === csvHeader[i]);
       if (!same) {
         fail(
           "labelled header does not match: expected [" +
-            decl.labels.join(", ") +
+            declared.join(", ") +
             "], got [" +
-            parsed.header.join(", ") +
+            csvHeader.join(", ") +
             "]",
           decl.labelsSpan ?? decl.declSpan,
         );
         continue;
       }
     }
+
+    sheet.headerUnits = new Map();
+    names.forEach((name, i) => {
+      const a = fromDecl[i];
+      const b = fromCsv[i];
+      if (a?.unit && b?.unit && !sameUnit(a.unit, b.unit, model.unitDefs)) {
+        findings.push({
+          code: "UNIT",
+          sheetId: sheet.id,
+          name,
+          message: `${name} is declared ${formatUnit(a.unit)} in labelled but ${formatUnit(b.unit)} in the CSV header`,
+          span: unitSpan,
+          sourceOffset: unitSpan.start,
+        });
+        return;
+      }
+      const chosen = a?.unit ? a : b?.unit ? b : null;
+      if (chosen?.unit) {
+        sheet.headerUnits.set(name, {
+          map: chosen.unit,
+          text: { text: chosen.unitText!, start: unitSpan.start, end: unitSpan.end },
+        });
+      }
+    });
 
     // `unlabelled` only — no header row makes row width self-evident, so
     // every row's field count is validated against the declared name count.

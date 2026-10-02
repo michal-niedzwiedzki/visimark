@@ -1,7 +1,9 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { formatUnit } from "../lang/unit-expr.js";
+import { mkdirSync, readFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { writeArtifact } from "../artifact/write.js";
 import { onDisk } from "../fs/node-reader.js";
+import { nodeWriter } from "../fs/node-writer.js";
 import { check } from "../eval/check.js";
 import type { Value } from "../eval/value.js";
 import { build } from "../model/build.js";
@@ -10,14 +12,20 @@ import { locate, NO_FORMULAS_MARKER } from "../parse/document.js";
 import { infer } from "../infer/propose.js";
 import { planInfer } from "../infer/write.js";
 import { formatCheck } from "../report/format.js";
-import { explainJson, explainText, explainView } from "../report/explain.js";
+import { explainText, explainView } from "../report/explain.js";
+import { errorEnvelope, explainJson } from "../report/envelope.js";
 import { formatInfer } from "../report/infer.js";
-import { describeFunction, functionNames, precisionPhrase } from "../lang/reference.js";
+import {
+  describeFunction,
+  functionNames,
+  precisionPhrase,
+  unitSigText,
+} from "../lang/reference.js";
 import { domainJson, formatDomain } from "../lang/domain.js";
 import { closest } from "../report/levenshtein.js";
 import {
   emitJson,
-  errorEnvelope,
+  evalUnits,
   evalValues,
   findingSummary,
   inferSummary,
@@ -130,6 +138,7 @@ export function cmdFmt(args: string[], out: Writer, err: Writer): number {
     return 2;
   }
   const fixDates = flags.has("fix-dates");
+  const fixUnits = flags.has("fix-units");
   const noArtifacts = flags.has("no-artifacts");
   const fileEntries: object[] = [];
   let exit: 0 | 1 | 2 = 0;
@@ -153,7 +162,7 @@ export function cmdFmt(args: string[], out: Writer, err: Writer): number {
       exit = 2;
       continue;
     }
-    const r = fmt(source, { fixDates, noArtifacts, doc: onDisk(path) });
+    const r = fmt(source, { fixDates, fixUnits, noArtifacts, doc: onDisk(path) });
     // a generated artifact is written whole; the document itself is spliced.
     // `mkdirSync` still resolves a path - it has to, since the artifact's
     // directory may not exist yet - but nothing is decided by it: the open
@@ -167,13 +176,16 @@ export function cmdFmt(args: string[], out: Writer, err: Writer): number {
         break;
       }
     }
+    if (refused === undefined && r.changed) {
+      const w = nodeWriter.writeText(path, r.output);
+      if ("err" in w) refused = "visimark: " + w.err;
+    }
     if (refused !== undefined) {
       err(refused);
       if (json) fileEntries.push({ path, error: { code: "WRITE", message: refused } });
       exit = 2;
       continue;
     }
-    if (r.changed) writeFileSync(path, r.output);
     // `--no-artifacts` declined a write the caller can still see the cost of:
     // the count is named so a run that touched nothing is distinguishable from
     // one that left five charts alone. It never implies the charts are fine —
@@ -187,6 +199,7 @@ export function cmdFmt(args: string[], out: Writer, err: Writer): number {
           r.cellsUpdated ? `${r.cellsUpdated} cell${r.cellsUpdated === 1 ? "" : "s"}` : "",
           r.anchorsUpdated ? `${r.anchorsUpdated} anchor${r.anchorsUpdated === 1 ? "" : "s"}` : "",
           r.datesFixed ? `${r.datesFixed} date${r.datesFixed === 1 ? "" : "s"}` : "",
+          r.unitsFixed ? `${r.unitsFixed} unit${r.unitsFixed === 1 ? "" : "s"}` : "",
           r.artifacts.length
             ? `${r.artifacts.length} artifact${r.artifacts.length === 1 ? "" : "s"}`
             : "",
@@ -210,6 +223,7 @@ export function cmdFmt(args: string[], out: Writer, err: Writer): number {
         cellsUpdated: r.cellsUpdated,
         anchorsUpdated: r.anchorsUpdated,
         datesFixed: r.datesFixed,
+        ...(fixUnits ? { unitsFixed: r.unitsFixed } : {}),
         artifacts: r.artifacts.map((a) => ({ path: a.path })),
         artifactsSkipped: r.artifactsSkipped,
         findings: r.unfixable.map((f) => publicFinding(path, f)),
@@ -289,18 +303,26 @@ export function cmdInfer(args: string[], out: Writer, err: Writer): number {
     scalars += counts.scalars;
     anchors += counts.anchors;
     if (!json) out(formatInfer(path, source, proposals));
-    let written: { blocks: number; anchors: number; marker: boolean } | undefined;
+    let written: { blocks: number; anchors: number; marker: boolean; units?: number } | undefined;
     if (write) {
       const edits = planInfer(source, proposals);
       if (edits.length === 0) {
         if (!json) out(`${path}: nothing to write`);
         written = { blocks: 0, anchors: 0, marker: false };
       } else {
-        writeFileSync(path, applyEdits(source, edits));
+        const w = nodeWriter.writeText(path, applyEdits(source, edits));
+        if ("err" in w) {
+          const refused = "visimark: " + w.err;
+          err(refused);
+          if (json) fileEntries.push({ path, error: { code: "WRITE", message: refused } });
+          exit = 2;
+          continue;
+        }
         const marker = edits.some((e) => e.kind === "marker");
         const blocks = edits.filter((e) => e.kind === "block").length;
         const nAnchors = edits.filter((e) => e.kind === "anchor").length;
-        written = { blocks, anchors: nAnchors, marker };
+        const nUnits = edits.filter((e) => e.kind === "unit").length;
+        written = { blocks, anchors: nAnchors, marker, ...(nUnits ? { units: nUnits } : {}) };
         if (!json) {
           if (marker) {
             out(`${path}: nothing to derive — marked \`${NO_FORMULAS_MARKER}\``);
@@ -308,6 +330,7 @@ export function cmdInfer(args: string[], out: Writer, err: Writer): number {
             const bits = [
               blocks ? `${blocks} block${blocks === 1 ? "" : "s"}` : "",
               nAnchors ? `${nAnchors} anchor${nAnchors === 1 ? "" : "s"}` : "",
+              nUnits ? `${nUnits} unit${nUnits === 1 ? "" : "s"}` : "",
             ].filter(Boolean);
             out(`${path}: wrote ${bits.join(", ")}`);
           }
@@ -459,7 +482,7 @@ export function cmdEval(args: string[], out: Writer, err: Writer): number {
     ];
   };
 
-  const emitEval = (selected: typeof values): void => {
+  const emitEval = (selected: typeof values, only?: string[]): void => {
     emitJson(out, {
       command: "eval",
       visimark: readVersion(),
@@ -468,6 +491,7 @@ export function cmdEval(args: string[], out: Writer, err: Writer): number {
       ...(scenario ? { scenario: scenarioJson() } : {}),
       ...(domainParams.length > 0 ? { params: domainParamsJson() } : {}),
       values: selected,
+      units: evalUnits(result, selected, only),
       assertions: publicAssertions(result.assertions, onDefaults),
       charts: publicCharts(result.charts, scenario === null),
     });
@@ -484,7 +508,7 @@ export function cmdEval(args: string[], out: Writer, err: Writer): number {
       if (json) emitJson(out, errorEnvelope("eval", "USAGE", msg));
       return 2;
     }
-    if (json) emitEval({ [get]: jsonVal! });
+    if (json) emitEval({ [get]: jsonVal! }, [values[get] !== undefined ? get : qualified]);
     else out(text!);
     if (!json) reportFailures();
     return assertExit;
@@ -492,8 +516,13 @@ export function cmdEval(args: string[], out: Writer, err: Writer): number {
 
   if (json) emitEval(values);
   else {
-    const width = Math.max(...[...all.keys()].map((k) => k.length), 0);
-    for (const [k, v] of all) out(`${k.padEnd(width)}  ${v}`);
+    // a unit-bearing name prints its unit in brackets, as it is declared
+    const label = (k: string): string => {
+      const u = result.unitMaps.get(k);
+      return u ? `${k} [${formatUnit(u.map)}]` : k;
+    };
+    const width = Math.max(...[...all.keys()].map((k) => label(k).length), 0);
+    for (const [k, v] of all) out(`${label(k).padEnd(width)}  ${v}`);
     if (scenario) for (const line of scenarioText(scenario, all)) out(line);
     for (const line of domainParamsText()) out(line);
     reportFailures();
@@ -643,6 +672,7 @@ export function cmdRef(args: string[], out: Writer, err: Writer): number {
   out("");
   out(`  returns    ${entry.returns}`);
   out(`  precision  ${precisionPhrase(entry.precision)}`);
+  out(`  units      ${unitSigText(entry.name, entry)}`);
   if (entry.rounding) out(`  rounding   ${entry.rounding}`);
   if (entry.errors.length > 0) {
     out("");

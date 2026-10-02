@@ -535,3 +535,5 @@ None. Resolved in the #60 review discussion:
 - Decimal strings; dates ISO; `holds` may be boolean; columns are arrays;
   unevaluable cells `null`.
 - `fmt` / `infer --write` report post-write facts, not edit objects.
+
+<!--vmark:no-formulas-->

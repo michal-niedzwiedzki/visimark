@@ -49,8 +49,20 @@ export function lex(src: string): Token[] {
       continue;
     }
     if (c === "[") {
-      push("lbracket", "[", i, i + 1);
-      i++;
+      // A domain interval follows the contextual word `in` (`in [0, 80]`).
+      // Everywhere else a bracket is a unit, kept as raw text for
+      // `lang/unit-expr.ts`: its grammar (`°`, superscripts, `⋅`) is not the
+      // expression grammar. See docs/design/algebraic-unit-maps-on-names-spec.md §2.
+      const prev = tokens[tokens.length - 1];
+      if (prev?.kind === "ident" && prev.value === "in") {
+        push("lbracket", "[", i, i + 1);
+        i++;
+        continue;
+      }
+      const close = src.indexOf("]", i + 1);
+      if (close === -1) throw new LangError("unterminated unit bracket", i, src.length);
+      push("unit", src.slice(i + 1, close), i, close + 1);
+      i = close + 1;
       continue;
     }
     if (c === "]") {
@@ -196,6 +208,14 @@ export function lex(src: string): Token[] {
       } else {
         push("ident", text, start, i);
       }
+      continue;
+    }
+
+    // `⋅` (U+22C5) is a spelling of `*`. Inside a unit bracket it is the
+    // product mark of a unit, which the raw `unit` token above keeps intact.
+    if (c === "⋅") {
+      push("op", "*", i, i + 1);
+      i++;
       continue;
     }
 

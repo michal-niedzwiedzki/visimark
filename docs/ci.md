@@ -1226,7 +1226,7 @@ One number will not match, by design. A stale cell with prose anchors bound to
 it produces one summary finding on top of the cell's own, and this package
 reports the cell rather than the summary, so anchors are not counted twice.
 `visimark check docs/example-invoice-drift.md` prints
-`26 problems (21 stale, 5 errors)` where the same document reports `18 issues`
+`27 problems (22 stale, 5 errors)` where the same document reports `19 issues`
 here — the difference is exactly the eight prose anchors folded into that
 summary. **The exit codes agree in every case**; the headline number is the only
 thing that differs, and the exit code is what a CI gate reads.
@@ -1267,7 +1267,8 @@ context the answer is almost always to leave the gate shut and let the agent
 propose a plan a human applies.
 
 The full surface — every tool, what it reads, what it writes, which annotation
-it carries — is [`mcp.md`](mcp.md).
+it carries — is [`mcp.md`](mcp.md). Setting one up, adding it to a host, and
+working through every tool by hand is [`mcp-server.md`](mcp-server.md).
 
 ---
 
@@ -1420,5 +1421,6 @@ And the things to have done around it:
 | [`playground.html`](playground.html) | The real engine in your browser, nothing to install |
 | [`example-invoice-drift.md`](example-invoice-drift.md) | One input changed and nothing else — 26 findings, each walked through |
 | [`mcp.md`](mcp.md) | The MCP server: every tool, the write gate, the plan/apply split |
+| [`mcp-server.md`](mcp-server.md) | Setting up and running the MCP server, tutorial-style |
 
 <!--vmark:no-formulas-->

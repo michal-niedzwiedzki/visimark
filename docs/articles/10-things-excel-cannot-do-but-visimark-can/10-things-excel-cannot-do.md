@@ -1,11 +1,5 @@
 # 10 things Excel cannot do but VisiMark can
 
-Tags: Excel, Markdown, Git, CI
-Author: Michał Niedźwiedzki
-
-Posted:
-Reposted:
-
 An `.xlsx` is a zip of XML. A VisiMark document is a Markdown file. What follows is what that difference does.
 
 ## 1. Show the formulas in the pull request
@@ -36,7 +30,7 @@ $ visimark check docs/example-invoice-drift.md
   STALE   lines.VAT       · On-call support          717.60 ≠ 1196.00    Net * vat
   STALE   lines.Gross     · On-call support         3837.60 ≠ 6396.00    Net + VAT
   ...
-  26 problems (21 stale, 5 errors)
+  27 problems (22 stale, 5 errors)
 $ echo $?
 1
 ```
@@ -93,7 +87,7 @@ On the clean invoice, `visimark eval --get recon.variance` prints `0` and exits 
 
 ## 8. Ask a what-if without writing the document
 
-`param budget precision 2 = default 2.00` is the cap in [`example-agent-budget.md`](https://michal-niedzwiedzki.github.io/visimark/preview.html?file=example-agent-budget.md). A scenario is an argument to `eval`, not an edit:
+`param budget precision 2 = default 2.00` is the cap in [`example-agent-budget.md`](https://visimark.dev/preview.html?file=example-agent-budget.md). A scenario is an argument to `eval`, not an edit:
 
 ```text
 $ visimark eval --scenario tight.json docs/example-agent-budget.md
@@ -131,3 +125,5 @@ The workbook calculates. The Markdown file is the document in git.
 ## Disclosure
 
 I wrote this article with AI. VisiMark is a MIT-licensed project with no business model or sales team behind it.
+
+The [Playground](https://visimark.dev/playground.html) runs the tool in your browser with nothing to install. The [repository](https://github.com/michal-niedzwiedzki/visimark) and the [project site](https://visimark.dev/) have the rest.

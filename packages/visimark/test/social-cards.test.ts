@@ -1,7 +1,7 @@
 // Review §2.9: what the four badge-share buttons actually produce.
 //
 // `shareViaClipboard()` opens Facebook, LinkedIn, Instagram and X with
-// https://michal-niedzwiedzki.github.io/visimark/ — and every page under that
+// https://visimark.dev/ — and every page under that
 // URL had no og:title, no og:description, no og:image and not even a
 // <meta name="description">, so every badge a visitor was prompted to share
 // rendered as a bare blue link. The feature's own success case was broken.
@@ -20,7 +20,7 @@ const root = join(import.meta.dir, "../../..");
 const docs = join(root, "docs");
 const read = (name: string): string => readFileSync(join(docs, name), "utf8");
 
-const SITE = "https://michal-niedzwiedzki.github.io/visimark/";
+const SITE = "https://visimark.dev/";
 
 /** The one source of truth for how this product describes itself — also what
  *  npm and the VS Code Marketplace show. */

@@ -23,7 +23,7 @@ jobs:
           bun-version: latest
       - run: bun install --frozen-lockfile
 
-      # Eleven files/fields carry the version and all eleven must agree. The six
+      # Twenty files/fields carry the version and all twenty must agree. The six
       # package manifests have to match because one tag publishes all of them, and a
       # mismatch ships a release under the wrong number or fails a leg midway
       # with the others already out. action.yml joins them because its `version`
@@ -44,6 +44,11 @@ jobs:
       # would let a published server pair with an engine it was never tested
       # against — and its envelope reports the engine version it loaded, which
       # would then be a number no CI run ever saw.
+      # bun.lock mirrors all six manifests' "version" and the three exact
+      # "visimark" pins in its own "workspaces" block, for bookkeeping. Bun
+      # links a workspace-named dependency locally no matter what the pin
+      # text says, so --frozen-lockfile never refuses over this drifting —
+      # it sat at 0.1.8 through v0.1.9 and v0.1.10 before anyone noticed.
       #
       # docs/releasing.md used to ask the releaser to eyeball this with grep.
       # A release checklist step that nothing enforces is a step that gets
@@ -68,12 +73,55 @@ jobs:
           markdownlint_dep=$(bun -e 'console.log(require("./packages/markdownlint-visimark/package.json").dependencies.visimark)')
           mcp_version=$(bun -e 'console.log(require("./packages/visimark-mcp/package.json").version)')
           mcp_dep=$(bun -e 'console.log(require("./packages/visimark-mcp/package.json").dependencies.visimark)')
-          echo "engine=$engine lsp=$lsp vscode=$ext action.yml=$pinned precommit-hook=$precommit_versions remark-plugin=$remark_version remark-plugin-dep=$remark_dep markdownlint-rule=$markdownlint_version markdownlint-rule-dep=$markdownlint_dep mcp-server=$mcp_version mcp-server-dep=$mcp_dep"
+          # bun.lock is not JSON (it allows trailing commas), so it is read with
+          # plain string search rather than `bun -e require(...)`. Each lookup
+          # is scoped to the one workspace block, found by substring match on
+          # its `"<workspace>":` key line, so "packages/visimark" cannot pick up
+          # "packages/visimark-lsp"'s field — index() needs the exact `":`
+          # right after the key text, which the longer name never produces.
+          # It stops at the block's own closing brace (four spaces then "},")
+          # rather than scanning past it: without that bound, a field missing
+          # from its own block would silently match the next workspace's.
+          lock_field() {
+            awk -v key="\"$1\":" -v marker="\"$2\": \"" '
+              index($0, key) { f=1; next }
+              f && /^    \},?[ \t]*$/ { exit }
+              f && index($0, marker) {
+                i = index($0, marker) + length(marker)
+                rest = substr($0, i)
+                print substr(rest, 1, index(rest, "\"") - 1)
+                exit
+              }
+            ' bun.lock
+          }
+          lock_engine=$(lock_field "packages/visimark" version)
+          lock_lsp=$(lock_field "packages/visimark-lsp" version)
+          lock_ext=$(lock_field "editors/vscode" version)
+          lock_remark_version=$(lock_field "packages/remark-visimark" version)
+          lock_remark_dep=$(lock_field "packages/remark-visimark" visimark)
+          lock_markdownlint_version=$(lock_field "packages/markdownlint-visimark" version)
+          lock_markdownlint_dep=$(lock_field "packages/markdownlint-visimark" visimark)
+          lock_mcp_version=$(lock_field "packages/visimark-mcp" version)
+          lock_mcp_dep=$(lock_field "packages/visimark-mcp" visimark)
+          echo "engine=$engine lsp=$lsp vscode=$ext action.yml=$pinned precommit-hook=$precommit_versions remark-plugin=$remark_version remark-plugin-dep=$remark_dep markdownlint-rule=$markdownlint_version markdownlint-rule-dep=$markdownlint_dep mcp-server=$mcp_version mcp-server-dep=$mcp_dep bun.lock=$lock_engine,$lock_lsp,$lock_ext,$lock_remark_version,$lock_remark_dep,$lock_markdownlint_version,$lock_markdownlint_dep,$lock_mcp_version,$lock_mcp_dep"
           if [ -z "$pinned" ]; then
             echo "::error::could not read the version default out of action.yml. The version input or its default line moved; fix this check rather than deleting it."
             exit 1
           fi
           fail=0
+          # Every bun.lock field above is mandatory — unlike $precommit, which
+          # can legitimately end up empty after an already-reported mismatch
+          # — so an empty result here means the workspace block or the field
+          # itself is missing, and that has to fail loudly rather than be
+          # skipped by the "$got" is empty" guard the comparison loop below
+          # uses for $precommit.
+          for lock_check in "packages/visimark version:$lock_engine" "packages/visimark-lsp version:$lock_lsp" "editors/vscode version:$lock_ext" "packages/remark-visimark version:$lock_remark_version" "packages/remark-visimark visimark dep:$lock_remark_dep" "packages/markdownlint-visimark version:$lock_markdownlint_version" "packages/markdownlint-visimark visimark dep:$lock_markdownlint_dep" "packages/visimark-mcp version:$lock_mcp_version" "packages/visimark-mcp visimark dep:$lock_mcp_dep"; do
+            name=${lock_check%%:*}; val=${lock_check#*:}
+            if [ -z "$val" ]; then
+              echo "::error file=bun.lock::could not find $name in bun.lock — the workspace block or the field moved. Fix this check or bun.lock — see docs/releasing.md."
+              fail=1
+            fi
+          done
           if [ "$precommit_count" != "1" ]; then
             echo "::error file=scripts/precommit-visimark-check.sh::expected exactly one visimark@<version> pin (the bunx and npx branches must agree), found: $(echo "$precommit_versions" | tr '\n' ' ')"
             fail=1
@@ -81,10 +129,10 @@ jobs:
           else
             precommit=$precommit_versions
           fi
-          for pair in "packages/visimark-lsp/package.json:$lsp" "editors/vscode/package.json:$ext" "action.yml:$pinned" "scripts/precommit-visimark-check.sh:$precommit" "packages/remark-visimark/package.json (version):$remark_version" "packages/remark-visimark/package.json (visimark dep):$remark_dep" "packages/markdownlint-visimark/package.json (version):$markdownlint_version" "packages/markdownlint-visimark/package.json (visimark dep):$markdownlint_dep" "packages/visimark-mcp/package.json (version):$mcp_version" "packages/visimark-mcp/package.json (visimark dep):$mcp_dep"; do
+          for pair in "packages/visimark-lsp/package.json:$lsp" "editors/vscode/package.json:$ext" "action.yml:$pinned" "scripts/precommit-visimark-check.sh:$precommit" "packages/remark-visimark/package.json (version):$remark_version" "packages/remark-visimark/package.json (visimark dep):$remark_dep" "packages/markdownlint-visimark/package.json (version):$markdownlint_version" "packages/markdownlint-visimark/package.json (visimark dep):$markdownlint_dep" "packages/visimark-mcp/package.json (version):$mcp_version" "packages/visimark-mcp/package.json (visimark dep):$mcp_dep" "bun.lock (packages/visimark version):$lock_engine" "bun.lock (packages/visimark-lsp version):$lock_lsp" "bun.lock (editors/vscode version):$lock_ext" "bun.lock (packages/remark-visimark version):$lock_remark_version" "bun.lock (packages/remark-visimark visimark dep):$lock_remark_dep" "bun.lock (packages/markdownlint-visimark version):$lock_markdownlint_version" "bun.lock (packages/markdownlint-visimark visimark dep):$lock_markdownlint_dep" "bun.lock (packages/visimark-mcp version):$lock_mcp_version" "bun.lock (packages/visimark-mcp visimark dep):$lock_mcp_dep"; do
             file=${pair%%:*}; got=${pair#*:}
             if [ -n "$got" ] && [ "$got" != "$engine" ]; then
-              echo "::error file=$file::$file says $got but packages/visimark/package.json says $engine. Bump every version-carrying file in the release commit — see docs/releasing.md."
+              echo "::error file=$file::$file says $got but packages/visimark/package.json says $engine. Bump every version-carrying file in the release commit — see docs/releasing.md (bun scripts/prepare-release.ts does bun.lock too)."
               fail=1
             fi
           done
@@ -102,7 +150,20 @@ jobs:
       - name: every release must have a changelog entry
         run: bun scripts/check-changelog-entries.ts
 
+      # Two release inputs no package build reads. The MCP registry refuses a
+      # publish whose npm `mcpName` differs from server.json's `name` (v0.1.9),
+      # and the Obsidian registry reads the root manifest.json/versions.json
+      # while the release reads editors/obsidian/'s copies.
+      - name: release metadata must agree
+        run: |
+          bun scripts/check-mcp-name.ts
+          bun scripts/check-obsidian-root-mirror.ts
+
       - run: bun run lint
+      # The Obsidian community scanner's ruleset. Errors fail the build; the
+      # warnings that remain are known and listed in editors/obsidian's
+      # changelog, because the scanner shows them publicly on the Scorecard.
+      - run: bun run --filter visimark-obsidian lint
       - run: bun run format:check
       - run: bun run typecheck
       - run: bun run build
@@ -142,11 +203,11 @@ jobs:
             exit 1
           fi
 
-  # The generated function documents must match the registry they come from.
+  # The generated function documents and documentation pages must match their sources.
   # Modelled on `playground-bundle`, but Bun is not pinned: the output is
-  # Markdown rendered by our own script, so there is no minifier whose version
+  # HTML and Markdown rendered by our own scripts, so there is no minifier whose version
   # could churn it.
-  function-reference:
+  generated-docs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -154,11 +215,11 @@ jobs:
         with:
           bun-version: latest
       - run: bun install --frozen-lockfile
-      - name: the generated function reference must match the registry
+      - name: the generated documentation must match the sources
         run: |
           bun run gen:docs
-          if ! git diff --exit-code -- docs/function-reference.md docs/visimark-design.md; then
-            echo "::error::The generated function documents are stale. Run 'bun run gen:docs' and commit the result."
+          if ! git diff --exit-code -- docs/function-reference.md docs/visimark-design.md docs/tutorial.html docs/ci.html docs/mcp-server.html; then
+            echo "::error::The generated documentation is stale. Run 'bun run gen:docs' and commit the result."
             exit 1
           fi
 
@@ -180,6 +241,40 @@ jobs:
           bun run gen:mcp
           if ! git diff --exit-code -- packages/visimark-mcp/skill.md packages/visimark-mcp/docs/; then
             echo "::error::The MCP server's generated resources are stale. Run 'bun run gen:mcp' and commit the result."
+            exit 1
+          fi
+
+  # docs/examples.html and docs/examples/*/index.html are checked here too, as
+  # artifacts of scripts/gen-examples.ts.
+  #
+  # docs/articles.html and docs/articles/*/index.html are committed build
+  # artifacts of scripts/gen-articles.ts, generated from
+  # docs/articles/articles.json and each article's own Markdown file.
+  # Modelled on `function-reference`: the output is HTML rendered by our own
+  # script, so there is no minifier whose version could churn it and Bun is
+  # not pinned.
+  articles-pages:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - name: the generated article pages must match articles.json
+        run: |
+          bun run gen:articles
+          if [ -n "$(git status --porcelain -- docs/articles.html docs/articles/)" ]; then
+            git status --porcelain -- docs/articles.html docs/articles/
+            echo "::error::The generated article pages are stale. Run 'bun run gen:articles' and commit the result."
+            exit 1
+          fi
+      - name: the generated example pages must match examples.json
+        run: |
+          bun run gen:examples
+          if [ -n "$(git status --porcelain -- docs/examples.html docs/examples/)" ]; then
+            git status --porcelain -- docs/examples.html docs/examples/
+            echo "::error::The generated example pages are stale. Run 'bun run gen:examples' and commit the result."
             exit 1
           fi
 
@@ -229,7 +324,7 @@ jobs:
           lts=$(node -p "process.versions.node.split('.')[0]")
           echo "current LTS major: $lts"
           fail=0
-          for manifest in packages/visimark/package.json packages/visimark-mcp/package.json; do
+          for manifest in packages/visimark/package.json packages/visimark-mcp/package.json packages/remark-visimark/package.json packages/markdownlint-visimark/package.json; do
             declared=$(node -p "require('./$manifest').engines?.node ?? ''")
             floor=$(printf '%s' "$declared" | sed -n 's/^>=\([0-9][0-9]*\).*/\1/p')
             if [ -z "$floor" ]; then
@@ -371,6 +466,16 @@ jobs:
       - name: pack the MCP server tarball
         working-directory: packages/visimark-mcp
         run: npm pack --pack-destination "$RUNNER_TEMP"
+      # The two lint plugins have no `bin`, so #29 cannot break them; they are
+      # packed to prove the tarball imports as a library under each runtime
+      # alone (the #190 class). Their names do not match the `visimark-*`
+      # glob below, which keeps the engine/MCP tarball shapes unambiguous.
+      - name: pack the remark plugin tarball
+        working-directory: packages/remark-visimark
+        run: npm pack --pack-destination "$RUNNER_TEMP"
+      - name: pack the markdownlint rule tarball
+        working-directory: packages/markdownlint-visimark
+        run: npm pack --pack-destination "$RUNNER_TEMP"
       - uses: actions/upload-artifact@v7
         with:
           name: visimark-tarball
@@ -378,16 +483,23 @@ jobs:
           # visimark-mcp-X.Y.Z.tgz. The smoke jobs pick them apart by shape —
           # `visimark-[0-9]*` is the engine — because `visimark-*.tgz` would
           # hand `npm i -g` two packages where one was meant.
-          path: ${{ runner.temp }}/visimark-*.tgz
+          path: |
+            ${{ runner.temp }}/visimark-*.tgz
+            ${{ runner.temp }}/remark-lint-visimark-*.tgz
+            ${{ runner.temp }}/markdownlint-rule-visimark-*.tgz
           if-no-files-found: error
       # The smoke jobs have no checkout — they are deliberately bare
       # single-runtime environments — so the handshake driver rides along with
       # the tarballs it exercises.
-      - run: cp scripts/mcp-handshake.mjs "$RUNNER_TEMP/handshake.mjs"
+      - run: |
+          cp scripts/mcp-handshake.mjs "$RUNNER_TEMP/handshake.mjs"
+          cp scripts/plugins-smoke.mjs "$RUNNER_TEMP/plugins-smoke.mjs"
       - uses: actions/upload-artifact@v7
         with:
           name: mcp-handshake
-          path: ${{ runner.temp }}/handshake.mjs
+          path: |
+            ${{ runner.temp }}/handshake.mjs
+            ${{ runner.temp }}/plugins-smoke.mjs
           if-no-files-found: error
 
   smoke-node:
@@ -478,6 +590,26 @@ jobs:
             console.log(`import("visimark-mcp") ok — engine ${mcp.engineVersion()}`);
           ')
           node handshake.mjs "$MCP_BIN"
+      - name: the lint plugins import and report under Node only
+        run: |
+          set -e
+          # A scratch project, not a global install: these packages have no
+          # `bin`, and a library is consumed as a dependency. The engine
+          # tarball is named in the same install so npm dedupes the plugins'
+          # exact `visimark` pin against it instead of fetching the registry
+          # copy; the version check below proves it did. `markdownlint` is the
+          # host the rule runs in, so it comes from the registry.
+          engine_tgz="$(pwd)/$(ls visimark-[0-9]*.tgz)"
+          remark_tgz="$(pwd)/$(ls remark-lint-visimark-*.tgz)"
+          mdl_tgz="$(pwd)/$(ls markdownlint-rule-visimark-*.tgz)"
+          mkdir lib && cd lib
+          npm init -y >/dev/null
+          npm i "$engine_tgz" "$remark_tgz" "$mdl_tgz" markdownlint@0.41
+          packed=$(tar -xzOf "$engine_tgz" package/package.json | tr -d ' \n')
+          installed=$(tr -d ' \n' < node_modules/visimark/package.json)
+          [ "$packed" = "$installed" ] || { echo "::error::the engine under test is not the packed one"; exit 1; }
+          cp ../plugins-smoke.mjs .
+          node plugins-smoke.mjs
 
   smoke-bun:
     needs: pack
@@ -503,9 +635,25 @@ jobs:
           # bun add -g needs an absolute tarball path; a relative ./x.tgz is
           # parsed as a package name.
           # Both tarballs in one install, for the reason smoke-node gives.
-          # Note that this does *not* satisfy the MCP server's `visimark` pin
-          # from the local tarball under bun — the handshake step does that.
-          bun add -g "$(pwd)/$(ls visimark-[0-9]*.tgz)" "$(pwd)/$(ls visimark-mcp-*.tgz)"
+          # Unlike npm, bun does not dedupe the MCP server's exact `visimark`
+          # pin against a sibling tarball named in the same command — it goes
+          # to the registry regardless, which fails outright on a release-prep
+          # commit whose engine version has not been published yet (the
+          # ordinary case is unaffected, since by the time any later commit's
+          # CI runs, the pinned version is already live). An `overrides` entry
+          # in the global install's own package.json forces that resolution to
+          # the local tarball instead, so this step tests the packed engine
+          # regardless of what npm currently has. The later handshake step's
+          # byte-for-byte swap is still what actually proves it end to end;
+          # this just keeps the install itself from failing first.
+          # `bun pm bin -g` itself fails without a global package.json ("No
+          # package.json was found") — nothing has run `bun add -g` yet in
+          # this job, so the path is derived directly rather than through it.
+          engine_tgz="$(pwd)/$(ls visimark-[0-9]*.tgz)"
+          global_root="${BUN_INSTALL:-$HOME/.bun}/install/global"
+          mkdir -p "$global_root"
+          printf '{"overrides":{"visimark":"file:%s"}}' "$engine_tgz" > "$global_root/package.json"
+          bun add -g "$engine_tgz" "$(pwd)/$(ls visimark-mcp-*.tgz)"
           visimark --version | grep -qE '^visimark [0-9]'
           printf '# smoke\n' > smoke.md
           visimark check smoke.md
@@ -567,3 +715,25 @@ jobs:
             console.log(`import("visimark-mcp") ok — engine ${mcp.engineVersion()}`);
           ')
           bun handshake.mjs "$MCP_BIN"
+      - name: the lint plugins import and report under Bun only
+        run: |
+          set -e
+          export PATH="$(bun pm bin -g):/usr/local/bin:/usr/bin:/bin"
+          if command -v node >/dev/null 2>&1; then
+            echo "::error::node still on PATH; smoke-bun must be Bun-only"; exit 1
+          fi
+          # Same scratch project as smoke-node. `bun add` does not dedupe the
+          # plugins' exact `visimark` pin against a named tarball, so an
+          # `overrides` entry forces it to the local one — the reason the
+          # global-install step above gives — and the byte comparison proves it.
+          engine_tgz="$(pwd)/$(ls visimark-[0-9]*.tgz)"
+          remark_tgz="$(pwd)/$(ls remark-lint-visimark-*.tgz)"
+          mdl_tgz="$(pwd)/$(ls markdownlint-rule-visimark-*.tgz)"
+          mkdir lib && cd lib
+          printf '{"name":"lib","private":true,"overrides":{"visimark":"file:%s"}}' "$engine_tgz" > package.json
+          bun add "$engine_tgz" "$remark_tgz" "$mdl_tgz" markdownlint@0.41
+          packed=$(tar -xzOf "$engine_tgz" package/package.json | tr -d ' \n')
+          installed=$(tr -d ' \n' < node_modules/visimark/package.json)
+          [ "$packed" = "$installed" ] || { echo "::error::the engine under test is not the packed one"; exit 1; }
+          cp ../plugins-smoke.mjs .
+          bun plugins-smoke.mjs

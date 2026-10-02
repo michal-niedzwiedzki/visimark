@@ -3,8 +3,10 @@ import type { TextDocument } from "vscode-languageserver-textdocument";
 import {
   dependencies,
   describeFunction,
+  formatUnit,
   precisionPhrase,
   refText,
+  unitSigText,
   type Binding,
   type Expr,
 } from "visimark";
@@ -21,6 +23,12 @@ export function hoverAt(doc: TextDocument, analysis: Analysis, position: Positio
 
   const formula = (b: Binding): string =>
     `${b.name} = ${model.source.slice(b.expr.start, b.expr.end)}`;
+
+  /** `unit: [PLN] (declared)`, or nothing for a dimensionless binding */
+  const unit = (b: Binding): string => {
+    const u = result.unitMaps.get(b.id);
+    return u ? `\n\nunit: \`[${formatUnit(u.map)}]\` (${u.source})` : "";
+  };
 
   const deps = (b: Binding): string => {
     const info = dependencies(model, b);
@@ -50,6 +58,7 @@ export function hoverAt(doc: TextDocument, analysis: Analysis, position: Positio
           `${summary}.\n\n${params}\n\nreturns: ${e.returns}` +
           (e.prose !== undefined ? `\n\nalso written: \`${e.prose}\`` : "") +
           `\n\nprecision: ${precisionPhrase(e.precision)}` +
+          `\n\nunits: \`${unitSigText(e.name, e)}\`` +
           (e.rounding ? `\n\nrounding: ${e.rounding}` : "") +
           (errors ? `\n\nerrors:\n${errors}` : ""),
       );
@@ -63,7 +72,7 @@ export function hoverAt(doc: TextDocument, analysis: Analysis, position: Positio
     const shown = v
       ? `\n\n= \`${v.t === "num" ? v.d.toString() : v.t === "date" ? v.iso : String(v.t === "bool" ? v.b : v.s)}\``
       : "";
-    return md("```vmark\n" + formula(b) + "\n```" + shown + deps(b));
+    return md("```vmark\n" + formula(b) + "\n```" + shown + unit(b) + deps(b));
   }
 
   // 3. a table cell in a computed column
@@ -83,7 +92,7 @@ export function hoverAt(doc: TextDocument, analysis: Analysis, position: Positio
           formula(binding) +
           "\n```" +
           (stale ? `\n\ncomputed \`${stale.computed}\` — the cell says \`${stale.stored}\`` : "");
-        return md(body + deps(binding));
+        return md(body + unit(binding) + deps(binding));
       }
     }
   }
@@ -95,7 +104,7 @@ export function hoverAt(doc: TextDocument, analysis: Analysis, position: Positio
     const id = `${a.sheetId}.${a.name}`;
     const b = allBindings.find((x) => x.id === id);
     if (!b) continue;
-    return md("```vmark\n" + formula(b) + "\n```" + deps(b));
+    return md("```vmark\n" + formula(b) + "\n```" + unit(b) + deps(b));
   }
 
   return null;

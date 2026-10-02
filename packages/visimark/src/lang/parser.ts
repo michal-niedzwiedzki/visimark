@@ -7,6 +7,8 @@ import {
   type Call,
   type Expr,
   type Ref,
+  type UnitDef,
+  type UnitText,
 } from "./ast.js";
 import type { Domain, Leaf, PresetName, RangeLeaf, SetLeaf } from "./domain.js";
 import { lex } from "./lexer.js";
@@ -76,6 +78,21 @@ const UNARY_NOT_BP = 2;
 const MAX_EXPR_DEPTH = 256;
 
 const DEPTH_MESSAGE = `expression nests more than ${MAX_EXPR_DEPTH} levels deep`;
+
+export const UNIT_ON_NAME_MESSAGE = "a unit can be written only on a number literal";
+export const UNIT_ON_PARAM_LITERAL_MESSAGE = "a param's unit is declared on its head";
+export const UNIT_AFTER_PRECISION_MESSAGE =
+  "the unit comes before precision: name [unit] precision N";
+export const UNIT_DEF_ATOM_MESSAGE = "a definition defines one atom";
+const UNIT_DEF_SHAPE_MESSAGE = "a unit definition is written `[atom] = [unit]`";
+const ATOM_RE = /^(?:℃|℉|°?\p{L}+)$/u;
+
+const percentUnitMessage = (written: string): string =>
+  `${written} is a ratio and cannot carry a unit`;
+
+function unitText(t: Token): UnitText {
+  return { text: t.value, start: t.start, end: t.end };
+}
 
 /**
  * Deepest node under `root`, found with an explicit worklist. A recursive
@@ -169,6 +186,11 @@ class Parser {
 
     for (;;) {
       const t = this.peek();
+      if (t.kind === "unit") {
+        // `10 [PLN]` is consumed with its literal in `nud`; a bracket anywhere
+        // else follows a name, a call, a group, a string or a date.
+        throw new LangError(UNIT_ON_NAME_MESSAGE, t.start, t.end, "UNIT");
+      }
       if (t.kind !== "op") break;
       const lbp = LEFT_BP[t.value];
       if (lbp === undefined || lbp <= minBp) break;
@@ -195,11 +217,27 @@ class Parser {
   private nud(): Expr {
     const t = this.next();
     switch (t.kind) {
-      case "number":
+      case "number": {
+        const u = this.peek();
+        if (u.kind === "unit") {
+          this.next();
+          return {
+            type: "num",
+            value: normNum(t.value),
+            unit: unitText(u),
+            start: t.start,
+            end: u.end,
+          };
+        }
         return { type: "num", value: normNum(t.value), start: t.start, end: t.end };
+      }
       case "percent": {
+        const u = this.peek();
+        if (u.kind === "unit") {
+          throw new LangError(percentUnitMessage(`${t.value}%`), t.start, u.end, "UNIT");
+        }
         const folded = new Decimal(t.value).div(100).toString();
-        return { type: "num", value: folded, start: t.start, end: t.end };
+        return { type: "num", value: folded, percent: true, start: t.start, end: t.end };
       }
       case "date":
         return { type: "date", value: t.value, start: t.start, end: t.end };
@@ -237,7 +275,13 @@ class Parser {
         // The notation itself supplies the step, and the closing glyph is the
         // span it points at, so no finding lands on text the author never wrote.
         if (pair.step !== undefined) {
-          args.push({ type: "num", value: pair.step, start: close.start, end: close.end });
+          args.push({
+            type: "num",
+            value: pair.step,
+            implicitStep: true,
+            start: close.start,
+            end: close.end,
+          });
         }
         return { type: "call", name: pair.fn, args, start: t.start, end: close.end };
       }
@@ -323,6 +367,8 @@ export interface Binding {
   quoted: boolean;
   /** declared write precision, from a `precision N` clause on the head */
   precision?: number;
+  /** the declared unit, from a `[unit]` bracket right after the name */
+  unit?: UnitText;
   /** set on a `param NAME precision N = default LITERAL` statement: the default
    *  literal as written, and whether it was a percent literal. See
    *  docs/design/scenario-params-spec.md. */
@@ -353,7 +399,9 @@ export function parseBinding(line: string): Binding {
  * ordinary `name = expression` binding. `assert` is a keyword — `assert = 1`
  * and a binding named `assert` are rejected here rather than silently parsed.
  */
-export function parseStatement(line: string): Binding | Assertion | ChartDecl | AliasDecl {
+export function parseStatement(
+  line: string,
+): Binding | Assertion | ChartDecl | AliasDecl | UnitDef {
   try {
     return parseStatementInner(line);
   } catch (e) {
@@ -365,9 +413,12 @@ export function parseStatement(line: string): Binding | Assertion | ChartDecl | 
   }
 }
 
-function parseStatementInner(line: string): Binding | Assertion | ChartDecl | AliasDecl {
+function parseStatementInner(line: string): Binding | Assertion | ChartDecl | AliasDecl | UnitDef {
   const toks = lex(line);
   const first = toks.find((t) => t.kind !== "eof");
+  if (first?.kind === "unit") {
+    return parseUnitDef(toks, first);
+  }
   if (first?.kind === "chart") {
     return parseChart(toks, first);
   }
@@ -429,7 +480,33 @@ function parseBindingInner(line: string): Binding {
   }
   const lhs = toks.slice(0, eqIndex);
   const headToks = lhs.filter((t) => t.kind !== "eof");
-  const { nameToks, precision } = takePrecisionClause(headToks);
+  const precAt = headToks.findIndex((t) => t.kind === "precision");
+  const unitAt = headToks.findIndex((t) => t.kind === "unit");
+  if (precAt !== -1 && unitAt > precAt) {
+    const u = headToks[unitAt]!;
+    const e = new LangError(UNIT_AFTER_PRECISION_MESSAGE, u.start, u.end);
+    if (headToks[0]?.kind === "ident") e.bindingName = headToks[0].value;
+    throw e;
+  }
+  const split = takePrecisionClause(headToks);
+  const { precision } = split;
+  let nameToks = split.nameToks;
+  let unit: UnitText | undefined;
+  if (nameToks.length === 2 && nameToks[1]!.kind === "unit") {
+    const u = nameToks[1]!;
+    if (nameToks[0]!.kind === "string") {
+      // a quoted head is always a column rule, and a column's unit lives on
+      // its header
+      throw new LangError(
+        `${nameToks[0]!.value}'s unit is declared on its header, not on its rule`,
+        u.start,
+        u.end,
+        "UNIT",
+      );
+    }
+    unit = unitText(u);
+    nameToks = nameToks.slice(0, 1);
+  }
   if (nameToks.length !== 1 || (nameToks[0]!.kind !== "ident" && nameToks[0]!.kind !== "string")) {
     const start = nameToks[0]?.start ?? 0;
     const end = nameToks[nameToks.length - 1]?.end ?? line.length;
@@ -445,6 +522,28 @@ function parseBindingInner(line: string): Binding {
     nameEnd: nameTok.end,
     quoted: nameTok.kind === "string",
     ...(precision === undefined ? {} : { precision }),
+    ...(unit === undefined ? {} : { unit }),
+  };
+}
+
+/** `[atom] = [unit]` — see docs/design/algebraic-unit-maps-on-names-spec.md §2.5 */
+function parseUnitDef(toks: Token[], lhs: Token): UnitDef {
+  const eq = toks[toks.indexOf(lhs) + 1];
+  const rhs = toks[toks.indexOf(lhs) + 2];
+  const end = toks[toks.indexOf(lhs) + 3];
+  if (eq?.kind !== "op" || eq.value !== "=" || rhs?.kind !== "unit" || end?.kind !== "eof") {
+    const last = toks[toks.length - 1]!;
+    throw new LangError(UNIT_DEF_SHAPE_MESSAGE, lhs.start, Math.max(last.end, lhs.end));
+  }
+  if (!ATOM_RE.test(lhs.value.trim())) {
+    throw new LangError(UNIT_DEF_ATOM_MESSAGE, lhs.start, lhs.end, "UNIT");
+  }
+  return {
+    type: "unitdef",
+    atom: unitText(lhs),
+    unit: unitText(rhs),
+    start: lhs.start,
+    end: rhs.end,
   };
 }
 
@@ -481,6 +580,15 @@ function parseParamInner(line: string, toks: Token[], kw: Token, nameTok: Token)
   }
   const head = toks.slice(toks.indexOf(nameTok), eqIndex);
   let rest = head.slice(1); // past `nameTok`
+  let unit: UnitText | undefined;
+  if (rest[0]?.kind === "unit") {
+    unit = unitText(rest[0]!);
+    rest = rest.slice(1);
+  }
+  // a unit bracket inside the domain clause is the domain parser's to refuse
+  const inAt = rest.findIndex((t) => t.kind === "ident" && t.value === "in");
+  const lateUnit = (inAt === -1 ? rest : rest.slice(0, inAt)).find((t) => t.kind === "unit");
+  if (lateUnit) throw new LangError(UNIT_AFTER_PRECISION_MESSAGE, lateUnit.start, lateUnit.end);
   let precision: number | undefined;
   if (rest[0]?.kind === "precision") {
     const kw = rest[0]!;
@@ -510,6 +618,10 @@ function parseParamInner(line: string, toks: Token[], kw: Token, nameTok: Token)
     i++;
   }
   const lit = toks[i]!;
+  const after = toks[i + 1];
+  if (after?.kind === "unit" && (lit.kind === "number" || lit.kind === "percent")) {
+    throw new LangError(UNIT_ON_PARAM_LITERAL_MESSAGE, after.start, after.end, "UNIT");
+  }
   if ((lit.kind !== "number" && lit.kind !== "percent") || toks[i + 1]?.kind !== "eof") {
     const at = toks[eqIndex + 2]!;
     throw new LangError(PARAM_DEFAULT_MESSAGE, at.start, Math.max(line.length, at.end));
@@ -526,6 +638,7 @@ function parseParamInner(line: string, toks: Token[], kw: Token, nameTok: Token)
     nameEnd: nameTok.end,
     quoted: false,
     ...(precision === undefined ? {} : { precision }),
+    ...(unit === undefined ? {} : { unit }),
     param: { text: line.slice(litStart, lit.end), percent },
     ...(domain === undefined ? {} : { domain }),
   };
@@ -623,6 +736,10 @@ function parseDomainLiteral(
   const lit = tokens[j];
   if (!lit || (lit.kind !== "number" && lit.kind !== "percent")) {
     throw new LangError(PARAM_DOMAIN_LITERAL_MESSAGE, start, lit?.end ?? start);
+  }
+  const trailing = tokens[j + 1];
+  if (trailing?.kind === "unit") {
+    throw new LangError(UNIT_ON_PARAM_LITERAL_MESSAGE, trailing.start, trailing.end, "UNIT");
   }
   const percent = lit.kind === "percent";
   const magnitude = percent ? new Decimal(lit.value).div(100).toString() : lit.value;

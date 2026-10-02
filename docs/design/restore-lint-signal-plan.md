@@ -265,3 +265,5 @@ Two things worth knowing that the plan did not anticipate:
 - Any change to the rule set, the enabled categories, or oxlint plugins. This branch
   changes *which files* are linted and *whether warnings fail*, not *what counts as a
   warning*.
+
+<!--vmark:no-formulas-->

@@ -10,8 +10,9 @@ description: Use when authoring, editing, or verifying a Markdown document conta
 
 ## Overview
 
-VisiMark makes a number in a Markdown document carry the formula that produced
-it, so a machine can prove the two still agree. You are unreliable at
+VisiMark is a document integrity layer for Markdown. It makes a number carry
+the formula that produced it, so a machine can prove the two still agree and a
+correct formula never ships with a wrong total. You are unreliable at
 arithmetic and reliable at writing formulas. Write the formula; let the tool do
 the arithmetic.
 
@@ -26,9 +27,12 @@ ordinary way, no `vmark` block anywhere — **does not need its rules typed out
 by hand.** Do not skip to "Authoring: the shape" below. Run:
 
 ```bash
-visimark infer FILE...          # see what it proposes
-visimark infer FILE... --write  # insert it
+npx visimark infer FILE...          # see what it proposes
+npx visimark infer FILE... --write  # insert it
 ```
+
+(`bunx` works the same way. No global install is assumed anywhere in this
+skill — see "Running it" below.)
 
 `infer` proposes only rules that reproduce every row exactly, verified against
 the same evaluator `check` uses — never a best fit. Hand-author what it leaves:
@@ -66,7 +70,7 @@ numbers. A document with **no formulas** has nothing to disagree with, so
 `check` refuses to call it clean:
 
 ```
-$ visimark check quote-with-no-formulas.md
+$ npx visimark check quote-with-no-formulas.md
 quote-with-no-formulas.md
 
   COVERAGE a table with no `vmark` rules — nothing in this document is checked
@@ -85,9 +89,9 @@ no build. This finding is what stops that.
 Change one input and confirm the checker starts complaining:
 
 ```bash
-sed -i 's/| 40 |/| 48 |/' quote.md      # bump one input
-visimark check quote.md                  # MUST now report problems, exit 1
-git checkout quote.md                    # or undo the edit
+sed -i 's/| 40 |/| 48 |/' quote.md   # bump one input
+npx visimark check quote.md          # MUST now report problems, exit 1
+git checkout quote.md                # or undo the edit
 ```
 
 If `check` still says `0 problems` after you changed an input, nothing in that
@@ -233,9 +237,33 @@ a human actually writes — needs one of these instead of a rewrite:
 - **`"Header text" = expr`** writes a rule directly, no alias needed, when you
   only ever produce that column and never read it back elsewhere.
 
-Matching is byte-for-byte against the header's exact printed text — no
-trimming, no case-folding. Neither form ever touches the table: the header
-stays exactly as written.
+Matching is byte-for-byte against the header's name — its printed text, minus
+a trailing unit bracket — with no trimming and no case-folding. Neither form
+ever touches the table: the header stays exactly as written.
+
+## Units
+
+A bracket right after a name declares a unit, and `check` enforces it:
+
+```
+| Weight [kg] | Count |        ← the column is `Weight`; `[kg]` is its unit
+
+fx_eur [PLN/EUR] = 4.2650
+eur_total [EUR] precision 2 = lines.gross_total / fx_eur
+```
+
+- A header `Weight [kg]` is read as `Weight` — no `is` line. `"Weight [kg]"`
+  does not resolve. A header whose stem is not an identifier still uses `is`,
+  quoting the stem without its bracket: `"Worker cost" is wc`.
+- `+`, `-` and comparisons need the same unit; `*` and `/` combine them. A
+  declaration is given to a unit-free right side and checked against any other:
+  a mismatch is `UNIT` and the binding gets no value. A literal that needs a
+  unit carries one, `10 [PLN]`; `0` matches any unit.
+- Write a currency as its code, `[USD]`, and leave `$` in the prose. Declare
+  `precision 2` yourself. A display rule such as `|percent` refuses a value
+  with a unit.
+- `infer --write` adds the unit each formula derives where nothing is declared;
+  `fmt --fix-units` respells brackets. Never type a unit into an anchor.
 
 ## Rules that bite
 
@@ -246,7 +274,7 @@ stays exactly as written.
 | Cross-sheet column references must be qualified **and** aggregated | `SUM(schedule.Amount)` is legal; bare `schedule.Amount` is a `VECTOR` error. |
 | Dates are ISO 8601 only, `YYYY-MM-DD` | `15.10.2026` is refused with an offered fix; `11/12/2026` is refused outright. |
 | No thousands separators | `1,800.00` is a lex error. Write `1800.00`. |
-| A currency or unit in a cell must be uniform down the column | `$5.50` and `€4.00` in one column is a `UNIT` error, not a sum. |
+| A currency or unit in a cell must be uniform down the column | `$5.50` and `€4.00` in one column is a `UNIT` error, not a sum. Under a header with a unit, a cell's suffix must be that unit and a prefix is refused. |
 | Currency in prose goes **outside** the anchor | `**13200.00**<!--vmark=lines.net_total--> PLN` — not inside the bold. |
 | A name bound twice in one scope is a `DUP` error | The first binding wins and the second is reported. |
 | An unreferenced scalar is a `WARN` | Usually means you typo'd a column name and silently created a scalar. |

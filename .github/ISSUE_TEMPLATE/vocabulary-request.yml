@@ -74,6 +74,19 @@ body:
         - Not sure
     validations:
       required: true
+  - type: input
+    id: units
+    attributes:
+      label: Unit behaviour
+      description: >
+        How the result gets its unit, as a signature in the notation `visimark
+        ref` prints: `1` is dimensionless, `any` accepts a unit and drops it,
+        `U` ties arguments and the result to one unit, `U²` is its square. It is
+        written down as `FnUnits` in `packages/visimark/src/lang/reference.ts`.
+        See the design doc section 21.
+      placeholder: "SUM(col: U) → U   |   COUNT(col: any) → 1   |   ROUND(x: U, places: 1) → U"
+    validations:
+      required: true
   - type: textarea
     id: what
     attributes:

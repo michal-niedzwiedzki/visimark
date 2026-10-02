@@ -72,6 +72,10 @@ export interface RawBlock {
 
 export interface RawCell extends Span {
   text: string;
+  /** the whole cell's trimmed content, where `start`/`end` span only its first
+   *  inline node — `**Weight** [kg]` has a first node `Weight`. Absent on a
+   *  synthetic (imported CSV) cell, which has no source of its own. */
+  cellSpan?: Span;
 }
 
 export interface RawRow {
@@ -99,8 +103,13 @@ export interface RawAnchor {
   /** the image's URL when the anchor follows an image node — the artifact path a
    *  chart declaration writes to. Absent for every other anchor kind. */
   imageUrl?: string;
-  /** set when the comment is `<!--vmark=sheet.name%-->` */
-  percent?: true;
+  /** the display-rule name, when the comment is `<!--vmark=sheet.name|rule-->` */
+  displayRule?: string;
+  /** decoded value of a strong/emphasis target's single text child */
+  valueText?: string;
+  /** the target's own delimiter source, e.g. `{ open: "**", close: "**" }` —
+   *  set with `valueText`, for a refusal to name the seed it could not write */
+  delimiters?: { open: string; close: string };
 }
 
 /**
@@ -150,7 +159,7 @@ export interface LocatedDoc {
 }
 
 const ANCHOR_RE =
-  /^<!--\s*vmark\s*=\s*([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)(%)?\s*-->$/;
+  /^<!--\s*vmark\s*=\s*([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)(?:\|([A-Za-z_][A-Za-z0-9_]*))?\s*-->$/;
 /** loose enough to catch "this was meant to be a value anchor" without
  *  matching the `vmark:no-formulas` marker (`:`, not `=`) or an unrelated
  *  comment. Anything that matches this but not the full `ANCHOR_RE` above
@@ -158,7 +167,19 @@ const ANCHOR_RE =
 const ANCHOR_LOOSE_RE = /^<!--\s*vmark\s*=/;
 export const NO_FORMULAS_MARKER = "<!--vmark:no-formulas-->";
 const NO_FORMULAS_RE = /^<!--\s*vmark\s*:\s*no-formulas\s*-->$/;
-const TRAILING_NUMBER_RE = /(-?\d+(?:\.\d+)?)\s*$/;
+/** a trailing ISO-shaped date, tried before TRAILING_NUMBER_RE — otherwise
+ *  the number regex reads a date's last `-DD` as a negative number and
+ *  mis-scopes the span to three characters instead of the whole date.
+ *  Anchored on a preceding boundary (start of string or whitespace) so a
+ *  digit glued directly in front — `12026-01-15` — does not read as the
+ *  date `2026-01-15` preceded by a stray `1`. */
+const TRAILING_DATE_RE = /(?:^|\s)(\d{4}-\d{2}-\d{2})\s*$/;
+/** A leading lookbehind refuses a "-" or digit immediately before the match:
+ *  without it, a glued date's own hyphen reads as a negative sign, reducing
+ *  "12026-01-15" to the number -15. A decoration glued with no space (the
+ *  "$" in "$110.00") is unaffected — only a digit or "-" right before the
+ *  match is forbidden, not decoration characters in general. */
+const TRAILING_NUMBER_RE = /(?<![\d-])(-?\d+(?:\.\d+)?)\s*$/;
 /** the value an anchor rewrites when it is not a number — the trailing word,
  *  so a string-valued scalar can be materialised in prose at all */
 const TRAILING_WORD_RE = /(\S+?)\s*$/;
@@ -313,30 +334,27 @@ function readTable(node: MdNode, source: string): RawTable {
 }
 
 function readCell(cell: MdNode, source: string): RawCell {
-  const child = cell.children?.[0];
-  if (child) {
-    const span = innerValueSpan(child);
-    if (span) return { ...span, text: source.slice(span.start, span.end) };
-  }
-  // empty cell: point span just inside the trimmed cell body
   const rawStart = off(cell, "start");
   const rawEnd = off(cell, "end");
   const raw = source.slice(rawStart, rawEnd);
   const inner = raw.replace(/^\|?\s*/, "");
   const lead = raw.length - inner.length;
   const trimmed = inner.replace(/\s*\|?\s*$/, "");
-  return {
-    start: rawStart + lead,
-    end: rawStart + lead + trimmed.length,
-    text: trimmed,
-  };
+  const cellSpan = { start: rawStart + lead, end: rawStart + lead + trimmed.length };
+  const child = cell.children?.[0];
+  if (child) {
+    const span = innerValueSpan(child);
+    if (span) return { ...span, text: source.slice(span.start, span.end), cellSpan };
+  }
+  // empty cell: point span just inside the trimmed cell body
+  return { ...cellSpan, text: trimmed, cellSpan };
 }
 
 /** value span for a strong/emphasis/inlineCode/text inline node */
 function innerValueSpan(node: MdNode): (Span & { kind: AnchorTargetKind }) | null {
   if (node.type === "strong" || node.type === "emphasis") {
     const t = node.children?.[0];
-    if (t && t.type === "text") {
+    if (node.children?.length === 1 && t && t.type === "text") {
       return {
         start: off(t, "start"),
         end: off(t, "end"),
@@ -383,13 +401,25 @@ function collectAnchors(
         end: off(child, "end"),
       };
       const prev = kids[i - 1];
+      const value = prev ? anchorValueSpan(prev) : null;
+      const delimited =
+        prev && value && (value.kind === "strong" || value.kind === "emphasis")
+          ? {
+              valueText: prev.children![0]!.value ?? "",
+              delimiters: {
+                open: source.slice(off(prev, "start"), value.start),
+                close: source.slice(value.end, off(prev, "end")),
+              },
+            }
+          : {};
       out.push({
         sheetId: m[1]!,
         name: m[2]!,
         commentSpan,
-        value: prev ? anchorValueSpan(prev) : null,
+        value,
         ...(prev?.type === "image" && prev.url !== undefined ? { imageUrl: prev.url } : {}),
-        ...(m[3] ? { percent: true as const } : {}),
+        ...(m[3] ? { displayRule: m[3] } : {}),
+        ...delimited,
       });
     }
   });
@@ -406,6 +436,14 @@ function anchorValueSpan(prev: MdNode): (Span & { kind: AnchorTargetKind }) | nu
   }
   if (prev.type === "text") {
     const value = prev.value ?? "";
+    const d = TRAILING_DATE_RE.exec(value);
+    if (d) {
+      // d.index is the boundary's own start (the leading `^`/`\s` the
+      // non-capturing group consumed), not the date's — locate the date
+      // substring within the full match rather than assuming an offset.
+      const start = off(prev, "start") + d.index + d[0].indexOf(d[1]!);
+      return { start, end: start + d[1]!.length, kind: "text" };
+    }
     const m = TRAILING_NUMBER_RE.exec(value);
     if (m) {
       const start = off(prev, "start") + m.index;

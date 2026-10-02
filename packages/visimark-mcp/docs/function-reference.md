@@ -33,6 +33,8 @@ Total of a column; `0` over an empty column.
 
 **Precision:** the width of `col`.
 
+**Units:** `SUM(col: U) → U`
+
 **Examples**
 
 | Expression | Is |
@@ -55,6 +57,8 @@ Least value.
 **Returns:** number or date, matching the column.
 
 **Precision:** the width of `col`.
+
+**Units:** `MIN(col: U) → U`
 
 **Errors**
 
@@ -82,6 +86,8 @@ Greatest value.
 
 **Precision:** the width of `col`.
 
+**Units:** `MAX(col: U) → U`
+
 **Errors**
 
 - A column mixing numbers and dates — `TYPE`
@@ -107,6 +113,8 @@ Arithmetic mean.
 **Returns:** number.
 
 **Precision:** must be declared.
+
+**Units:** `AVG(col: U) → U`
 
 **Errors**
 
@@ -134,6 +142,8 @@ Number of rows.
 
 **Precision:** always 0.
 
+**Units:** `COUNT(col: any) → 1`
+
 **Examples**
 
 | Expression | Is |
@@ -156,6 +166,8 @@ Present value of a cash-flow column; row 0 is undiscounted; an empty column is a
 **Returns:** number.
 
 **Precision:** must be declared.
+
+**Units:** `NPV(rate: 1, flows: U) → U`
 
 **Errors**
 
@@ -188,6 +200,8 @@ Rate at which a cash-flow column has present value zero; row 0 is undiscounted.
 **Returns:** number.
 
 **Precision:** must be declared.
+
+**Units:** `IRR(flows: U) → 1`
 
 **Errors**
 
@@ -228,6 +242,8 @@ Half-up to `places` decimals.
 
 **Precision:** the value of `places`.
 
+**Units:** `ROUND(x: U, places: 1) → U`
+
 **Rounding:** Ties round away from zero (half-up), not to even.
 
 **Examples**
@@ -256,6 +272,8 @@ Absolute value.
 
 **Precision:** the width of `x`.
 
+**Units:** `ABS(x: U) → U`
+
 **Examples**
 
 | Expression | Is |
@@ -277,6 +295,8 @@ Remainder.
 **Returns:** number.
 
 **Precision:** the wider of `x` and `y`.
+
+**Units:** `MOD(x: U, y: U) → U`
 
 **Errors**
 
@@ -307,6 +327,8 @@ Non-negative square root.
 
 **Precision:** must be declared.
 
+**Units:** `SQRT(x: U²) → U`
+
 **Errors**
 
 - A negative operand — `TYPE`
@@ -334,6 +356,8 @@ Greatest multiple of `s` that does not exceed `x`, toward −∞.
 **Returns:** number.
 
 **Precision:** the width of `s`.
+
+**Units:** `FLOOR(x: U, s: U) → U`
 
 **Errors**
 
@@ -365,6 +389,8 @@ Least multiple of `s` that is not less than `x`, toward +∞.
 
 **Precision:** the width of `s`.
 
+**Units:** `CEILING(x: U, s: U) → U`
+
 **Errors**
 
 - A non-positive `s` — `TYPE`
@@ -394,6 +420,8 @@ Returns `a` or `b`.
 
 **Precision:** the wider of `a` and `b`.
 
+**Units:** `IF(cond: bool, a: U, b: U) → U`
+
 **Errors**
 
 - A non-boolean `cond` — `TYPE`
@@ -419,6 +447,8 @@ Last day of the month `months` calendar months from `d`; `d`'s day is discarded.
 **Returns:** date.
 
 **Precision:** not applicable — the result is a date.
+
+**Units:** `EOMONTH(d: date, months: any) → date`
 
 **Errors**
 
@@ -451,6 +481,8 @@ Instalment that repays `pv` to zero over `nper` periods at per-period rate `rate
 **Returns:** number.
 
 **Precision:** must be declared.
+
+**Units:** `PMT(rate: 1, nper: 1, pv: U) → U`
 
 **Errors**
 

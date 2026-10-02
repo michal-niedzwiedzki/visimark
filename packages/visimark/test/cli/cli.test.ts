@@ -277,16 +277,16 @@ test("check passes the prose-notation fixture, and explain echoes the glyphs as 
 });
 
 const percentFixture = fileURLToPath(
-  new URL("../fixtures/percent-display-sigil.md", import.meta.url),
+  new URL("../fixtures/display-rule-percent.md", import.meta.url),
 );
 
-test("check passes the percent-display fixture", async () => {
+test("check passes the display-rule-percent fixture", async () => {
   const c = capture();
   expect(await runCli(["check", percentFixture], c.io)).toBe(0);
   expect(c.out()).toContain("0 problems");
 });
 
-test("eval --json on the percent-display fixture reports stored numbers", async () => {
+test("eval --json on the display-rule-percent fixture reports stored numbers", async () => {
   const c = capture();
   expect(await runCli(["eval", percentFixture, "--json"], c.io)).toBe(0);
   const j = JSON.parse(c.out()) as { values: Record<string, string> };
@@ -305,7 +305,7 @@ test("fmt repairs a sabotaged percent span and is idempotent", async () => {
   expect(check1.out()).toContain("41.55% ≠ 40.26%");
   const fmt1 = capture();
   expect(await runCli(["fmt", path], fmt1.io)).toBe(0);
-  expect(readFileSync(path, "utf8")).toContain("**40.26%**<!--vmark=s.margin%-->");
+  expect(readFileSync(path, "utf8")).toContain("**40.26%**<!--vmark=s.margin|percent-->");
   const fmt2 = capture();
   expect(await runCli(["fmt", path], fmt2.io)).toBe(0);
   expect(fmt2.out()).toContain("unchanged");
@@ -313,8 +313,152 @@ test("fmt repairs a sabotaged percent span and is idempotent", async () => {
   expect(await runCli(["check", path], check2.io)).toBe(0);
 });
 
-test("explain on a percent-display document does not mention the sigil", async () => {
+test("explain on a display-rule-percent document does not mention the rule name", async () => {
   const c = capture();
   expect(await runCli(["explain", percentFixture], c.io)).toBe(0);
-  expect(c.out()).not.toContain("margin%");
+  expect(c.out()).not.toContain("margin|percent");
+});
+
+const displayRuleErrorsFixture = fileURLToPath(
+  new URL("../fixtures/display-rule-errors.md", import.meta.url),
+);
+
+test("check on the display-rule-errors fixture reports all four refusals", async () => {
+  const c = capture();
+  expect(await runCli(["check", displayRuleErrorsFixture], c.io)).toBe(1);
+  const out = c.out();
+  expect(out).toContain("a display rule needs a delimited seed");
+  expect(out).toContain("unknown display rule `nope`");
+  expect(out).toContain("a display rule is only legal on a value it accepts");
+  expect(out).toContain(
+    "malformed anchor comment — expected `<!--vmark=sheet.name-->` or `<!--vmark=sheet.name|rule-->`",
+  );
+  expect(out).toContain("4 problems");
+});
+
+const nbspFixture = fileURLToPath(new URL("../fixtures/display-rule-nbsp.md", import.meta.url));
+const nbspErrorsFixture = fileURLToPath(
+  new URL("../fixtures/display-rule-nbsp-errors.md", import.meta.url),
+);
+
+test("check passes the display-rule-nbsp fixture", async () => {
+  const c = capture();
+  expect(await runCli(["check", nbspFixture], c.io)).toBe(0);
+  expect(c.out()).toContain("0 problems");
+});
+
+test("eval --json on the display-rule-nbsp fixture reports the stored string", async () => {
+  const c = capture();
+  expect(await runCli(["eval", nbspFixture, "--json"], c.io)).toBe(0);
+  const j = JSON.parse(c.out()) as { values: Record<string, string> };
+  expect(j.values["s.status"]).toBe("past due");
+});
+
+test("explain on a display-rule-nbsp document does not mention the rule name", async () => {
+  const c = capture();
+  expect(await runCli(["explain", nbspFixture], c.io)).toBe(0);
+  expect(c.out()).not.toContain("status|nbsp");
+});
+
+test("fmt repairs a drifted |nbsp string and leaves the plain anchor alone", async () => {
+  const src = readFileSync(nbspFixture, "utf8").replace(
+    'status = "past due"',
+    'status = "paid in full"',
+  );
+  const dir = mkdtempSync(join(tmpdir(), "vm-nbsp-"));
+  const path = join(dir, "n.md");
+  writeFileSync(path, src);
+  const check1 = capture();
+  expect(await runCli(["check", path], check1.io)).toBe(1);
+  expect(check1.out()).toContain("past&nbsp;due ≠ paid&nbsp;in&nbsp;full");
+  expect(check1.out()).toContain("3 prose anchors bound to the values above");
+  expect(check1.out()).toContain("5 problems (5 stale, 0 errors)");
+  const fmt1 = capture();
+  expect(await runCli(["fmt", path], fmt1.io)).toBe(0);
+  expect(fmt1.out()).toContain("updated 2 anchors");
+  const after = readFileSync(path, "utf8");
+  expect(after).toContain(
+    "**Status:** **paid&nbsp;in&nbsp;full**<!--vmark=s.status|nbsp--> &nbsp;&nbsp; **Also:** *paid&nbsp;in&nbsp;full*<!--vmark=s.status|nbsp-->",
+  );
+  expect(after).toContain("**past due**<!--vmark=s.status-->");
+  const fmt2 = capture();
+  expect(await runCli(["fmt", path], fmt2.io)).toBe(0);
+  expect(fmt2.out()).toContain("unchanged");
+  const check2 = capture();
+  expect(await runCli(["check", path], check2.io)).toBe(0);
+});
+
+test("check on the display-rule-nbsp-errors fixture reports all nine refusals", async () => {
+  const c = capture();
+  expect(await runCli(["check", nbspErrorsFixture], c.io)).toBe(1);
+  const out = c.out();
+  for (const line of [
+    "TYPE    s.n               a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only)",
+    "ANCHOR  .                 malformed anchor comment — expected `<!--vmark=sheet.name-->` or `<!--vmark=sheet.name|rule-->`",
+    "ANCHOR  s.bare            a display rule needs a delimited seed — wrap a placeholder instead, such as **_**",
+    "ANCHOR  s.code            display rule `nbsp` cannot render inside a code span — wrap the seed in **…** or *…* instead",
+    "ANCHOR  s.n               display rule `nbsp` cannot render inside a code span — wrap the seed in **…** or *…* instead",
+    "ANCHOR  s.star            display rule `nbsp` cannot write this value inside **…** and read it back unchanged — it contains Markdown syntax: *",
+    "ANCHOR  s.tick            display rule `nbsp` cannot write this value inside **…** and read it back unchanged — it contains Markdown syntax: `",
+    "ANCHOR  s.joined          display rule `nbsp` cannot write this value inside **…** and read it back unchanged — it contains Markdown syntax: &",
+    "ANCHOR  s.empty           display rule `nbsp` cannot write an empty value inside **…**",
+  ]) {
+    expect(out).toContain(line);
+  }
+  expect(out).toContain("9 problems (0 stale, 9 errors)");
+});
+
+test("fmt leaves the display-rule-nbsp-errors fixture byte-identical", async () => {
+  const src = readFileSync(nbspErrorsFixture, "utf8");
+  const dir = mkdtempSync(join(tmpdir(), "vm-nbsp-err-"));
+  const path = join(dir, "e.md");
+  writeFileSync(path, src);
+  const f = capture();
+  await runCli(["fmt", path], f.io);
+  expect(f.out()).toContain("unchanged");
+  expect(readFileSync(path, "utf8")).toBe(src);
+});
+
+const anchorAcceptanceFixture = fileURLToPath(
+  new URL("../fixtures/anchor-placeholder-acceptance.md", import.meta.url),
+);
+
+test("check reports the four ANCHOR refusals and the one STALE seed on the anchor-acceptance fixture", async () => {
+  const c = capture();
+  expect(await runCli(["check", anchorAcceptanceFixture], c.io)).toBe(1);
+  const out = c.out();
+  expect(out).toContain(
+    "no number to rewrite in front of this anchor — wrap a placeholder instead, such as **0** or **_**",
+  );
+  expect(out).toContain(
+    "no date to rewrite in front of this anchor — wrap a placeholder instead, such as **2026-01-01** or **_**",
+  );
+  expect(out).toContain(
+    "a string anchor cannot rewrite bare prose — wrap a placeholder instead, such as **_**",
+  );
+  expect(out).toContain("no value to rewrite in front of this anchor");
+  expect(out).toContain("_ ≠ 7.00");
+  expect(out).toContain("6 problems (2 stale, 4 errors)");
+});
+
+test("fmt on the anchor-acceptance fixture rewrites only the seeded span and leaves every ANCHOR span untouched", async () => {
+  const src = readFileSync(anchorAcceptanceFixture, "utf8");
+  const dir = mkdtempSync(join(tmpdir(), "vm-anchor-"));
+  const path = join(dir, "a.md");
+  writeFileSync(path, src);
+  const fmt1 = capture();
+  // exit 1: four ANCHOR findings remain unfixable by design after fmt runs —
+  // this is the same "findings remain" exit code check reports, not a
+  // failure of the write itself
+  expect(await runCli(["fmt", path], fmt1.io)).toBe(1);
+  const rewritten = readFileSync(path, "utf8");
+  expect(rewritten).toContain("**7.00**<!--vmark=s.seed-->");
+  expect(rewritten).toContain("It comes to <!--vmark=s.bad--> PLN.");
+  expect(rewritten).toContain("Due sometime soon<!--vmark=s.due_bad-->.");
+  expect(rewritten).toContain("The status is no problem<!--vmark=s.status_bad--> today.");
+  expect(rewritten).toContain("Claim: **a **bold** claim**<!--vmark=s.embed-->.");
+  expect(fmt1.out()).toContain("updated 1 anchor");
+  const fmt2 = capture();
+  expect(await runCli(["fmt", path], fmt2.io)).toBe(1);
+  expect(fmt2.out()).toContain("unchanged");
 });

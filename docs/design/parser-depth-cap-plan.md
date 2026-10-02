@@ -427,3 +427,5 @@ and the comment beside it says why one guard is not enough.
   rewrites of load-bearing code to buy depth no real document wants.
 - **`remark`'s own recursion** over deeply nested Markdown, which is upstream's parser
   and upstream's limit.
+
+<!--vmark:no-formulas-->

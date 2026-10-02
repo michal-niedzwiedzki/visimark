@@ -1,14 +1,22 @@
 import { locate } from "../parse/document.js";
 import { build } from "../model/build.js";
 import { check, type CheckResult, matchesStored, roundValue, showValue } from "../eval/check.js";
-import { isPercentText, percentDisplay } from "../eval/percent-display.js";
+import { DISPLAY_RULES, isPercentText } from "../eval/display-rules.js";
 import type { DocumentFile } from "../fs/reader.js";
 import type { DocModel, Finding } from "../model/types.js";
 import { applyUnit } from "../eval/units.js";
 import { applyEdits, type Edit } from "./splice.js";
+import type { Expr } from "../lang/ast.js";
+import { formatUnit, parseUnit } from "../lang/unit-expr.js";
+import { headerNames } from "../model/header-name.js";
 
 export interface FmtOptions {
   fixDates?: boolean;
+  /** rewrite the spelling of every unit bracket to its normalised form —
+   *  `[kg*m^2/s^2]` → `[kg⋅m²/s²]`. Spelling only: no map changes, no
+   *  declaration is added or removed. See
+   *  docs/design/algebraic-unit-maps-on-names-spec.md §5.3. */
+  fixUnits?: boolean;
   /** decline the write of generated artifacts: `fmt` still splices the
    *  document, but returns no artifact for the caller to write. The finding is
    *  unaffected — `check` still reports a missing or stale artifact as STALE.
@@ -45,6 +53,8 @@ export interface FmtResult {
   datesFixed: number;
   /** import stamps added or corrected — never the CSV file itself */
   stampsUpdated: number;
+  /** unit brackets respelled by `fixUnits`; `0` without it */
+  unitsFixed: number;
   unfixable: Finding[];
   /** artifacts that are stale or missing — the caller writes them. Always
    *  empty under `FmtOptions.noArtifacts`. */
@@ -108,23 +118,42 @@ export function planFmt(model: DocModel, result: CheckResult, opts: FmtOptions):
     if (!a.value) continue;
     // an image anchor points at a generated artifact; it is never spliced
     if (a.value.kind === "image") continue;
+    // refused as a rewrite target (ANCHOR, type-aware placeholder
+    // acceptance) — fmt must not write what check refused to claim
+    if (result.refusedAnchors.has(a.commentSpan.start)) continue;
     const id = `${a.sheetId}.${a.name}`;
     const v = result.values.get(id);
     if (!v) continue;
     const current = source.slice(a.value.start, a.value.end);
+    // A string has no write precision. Only a registered rule makes its
+    // anchor an output, and check has already proved (or refused) the
+    // rendering's round trip, so what is left is a byte comparison.
+    if (v.t === "str") {
+      const rule = a.displayRule !== undefined ? DISPLAY_RULES[a.displayRule] : undefined;
+      if (!rule || sigilBlocked.has(id)) continue;
+      const wanted = rule.render(v, 0);
+      if (current !== wanted) {
+        edits.push({
+          start: a.value.start,
+          end: a.value.end,
+          text: wanted,
+          finding: findingFor(a.value.start, a.value.end),
+        });
+      }
+      continue;
+    }
     // The anchor is an output: it renders the scalar at the scalar's own
     // precision. Reading the width back out of `current` is what let a `0`
     // placeholder in prose round the stored value.
     const prec = result.scalarPrecision.get(id);
     if (prec === undefined) continue;
-    if (a.percent && sigilBlocked.has(id)) continue;
+    if (a.displayRule !== undefined && sigilBlocked.has(id)) continue;
     const unit = result.scalarUnits.get(id) ?? null;
     const rounded = roundValue(v, prec);
-    const wanted = a.percent
-      ? percentDisplay(rounded, prec)
-      : applyUnit(showValue(rounded, prec), unit);
+    const rule = a.displayRule !== undefined ? DISPLAY_RULES[a.displayRule] : undefined;
+    const wanted = rule ? rule.render(rounded, prec) : applyUnit(showValue(rounded, prec), unit);
     const rewrite =
-      a.percent || isPercentText(current)
+      a.displayRule === "percent" || isPercentText(current)
         ? current !== wanted
         : !matchesStored(rounded, current, prec);
     if (rewrite) {
@@ -202,11 +231,39 @@ function dedupe(edits: PlannedEdit[]): PlannedEdit[] {
 
 const FIXABLE_BY_FMT = new Set(["STALE"]);
 
+/**
+ * Which charts `fmt` would write, read straight off an already-computed
+ * `CheckResult` — exported so a caller that keeps its own `check()` result
+ * for another reason (the Obsidian plugin's findings view, v1.1 row 14) does
+ * not have to re-run `check`/`fmt` a second time just to learn what artifacts
+ * exist. `fmt` itself calls this rather than repeating the loop, so there is
+ * one place that decides "which charts need writing" — an artifact carrying
+ * an ARTIFACT error is not among them, the same rule a column with a UNIT
+ * conflict already follows.
+ */
+export function artifactsFor(result: CheckResult): ArtifactWrite[] {
+  const artifacts: ArtifactWrite[] = [];
+  for (const c of result.charts) {
+    if (c.state !== "stale" && c.state !== "missing") continue;
+    if (!c.target || !c.svg) continue;
+    artifacts.push({
+      target: c.target,
+      svg: c.svg,
+      path: c.path,
+      state: c.state,
+      sheetId: c.sheetId,
+      chart: c.name,
+    });
+  }
+  return artifacts;
+}
+
 export function fmt(source: string, opts: FmtOptions = {}): FmtResult {
   const model = build(locate(source));
   const result = check(model, { doc: opts.doc });
+  const unitEdits = opts.fixUnits ? planUnitSpelling(model, source) : [];
   const edits = planFmt(model, result, opts);
-  const output = applyEdits(source, edits);
+  const output = applyEdits(source, [...edits, ...unitEdits]);
 
   const cellsUpdated = countCellEdits(model, result, edits);
   const datesFixed = opts.fixDates
@@ -224,21 +281,7 @@ export function fmt(source: string, opts: FmtOptions = {}): FmtResult {
     return true;
   });
 
-  // an artifact carrying an ARTIFACT error is not written at all — the same
-  // rule a column with a UNIT conflict already follows
-  const artifacts: ArtifactWrite[] = [];
-  for (const c of result.charts) {
-    if (c.state !== "stale" && c.state !== "missing") continue;
-    if (!c.target || !c.svg) continue;
-    artifacts.push({
-      target: c.target,
-      svg: c.svg,
-      path: c.path,
-      state: c.state,
-      sheetId: c.sheetId,
-      chart: c.name,
-    });
-  }
+  const artifacts = artifactsFor(result);
 
   // `noArtifacts` withholds the artifacts from the caller; it does not change
   // what was found. `unfixable` above is untouched, which is what keeps the
@@ -251,6 +294,7 @@ export function fmt(source: string, opts: FmtOptions = {}): FmtResult {
     anchorsUpdated,
     datesFixed,
     stampsUpdated,
+    unitsFixed: unitEdits.length,
     unfixable,
     artifacts: opts.noArtifacts ? [] : artifacts,
     artifactsSkipped: opts.noArtifacts ? artifacts.length : 0,
@@ -279,4 +323,73 @@ function countCellEdits(model: DocModel, _result: CheckResult, edits: Edit[]): n
     }
   }
   return edits.filter((e) => cellSpans.has(`${e.start}:${e.end}`)).length;
+}
+
+/**
+ * `--fix-units`: every unit bracket the document writes — header clauses, head
+ * clauses, literal units, definitions, import lists — respelled as its own
+ * map's normalised form. Never a definition expanded or contracted, never a
+ * bracket that does not parse, never a cell decoration or prose. Kept apart
+ * from `planFmt` because no finding asks for it.
+ */
+export function planUnitSpelling(model: DocModel, source: string): Edit[] {
+  const sites: { start: number; end: number }[] = [];
+  const seen = new Set<number>();
+  const add = (u: { start: number; end: number } | undefined): void => {
+    if (!u || seen.has(u.start)) return;
+    seen.add(u.start);
+    sites.push(u);
+  };
+  const walk = (e: Expr): void => {
+    switch (e.type) {
+      case "num":
+        add(e.unit);
+        break;
+      case "unary":
+        walk(e.operand);
+        break;
+      case "binary":
+        walk(e.left);
+        walk(e.right);
+        break;
+      case "call":
+        for (const a of e.args) walk(a);
+        break;
+      default:
+        break;
+    }
+  };
+  const bindings = [...model.docScope.values()];
+  for (const sheet of model.sheets.values()) {
+    bindings.push(...sheet.columns.values(), ...sheet.scalars.values());
+    for (const a of sheet.assertions) walk(a.expr);
+    if (sheet.table && !sheet.imported) {
+      for (const h of headerNames(sheet.table, source)) add(h.unit ?? undefined);
+    }
+    const labels = sheet.imported?.labelsSpan;
+    if (labels) {
+      const text = source.slice(labels.start, labels.end);
+      for (const m of text.matchAll(/\[[^\]]*\]/g)) {
+        add({ start: labels.start + m.index, end: labels.start + m.index + m[0].length });
+      }
+    }
+  }
+  for (const b of bindings) {
+    add(b.unitText);
+    walk(b.expr);
+  }
+  for (const d of model.unitDefinitions) {
+    add(d.atom);
+    add(d.unit);
+  }
+
+  const edits: Edit[] = [];
+  for (const site of sites) {
+    const written = source.slice(site.start, site.end);
+    const parsed = parseUnit(written.slice(1, -1));
+    if (!parsed.ok) continue;
+    const normal = `[${formatUnit(parsed.map)}]`;
+    if (normal !== written) edits.push({ start: site.start, end: site.end, text: normal });
+  }
+  return edits;
 }

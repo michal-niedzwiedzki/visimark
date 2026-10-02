@@ -1,5 +1,5 @@
 name: "VisiMark check"
-description: "Verify that a VisiMark Markdown document's formulas still agree with its numbers, and fail the build if they don't."
+description: "Document integrity check for Markdown: verify that a document's formulas still agree with its numbers, and fail the build if they don't."
 author: "VisiMark"
 branding:
   icon: "check-square"
@@ -26,7 +26,7 @@ inputs:
   version:
     description: "visimark npm version or dist-tag to install. Defaults to the release this Action ref ships, so pinning the Action pins the engine too. Set it to `latest` to track releases as they land instead."
     required: false
-    default: "0.1.7"
+    default: "0.1.11"
 
 runs:
   using: "composite"

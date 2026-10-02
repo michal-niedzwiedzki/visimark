@@ -122,15 +122,15 @@ request: comment asking the author to refile on the template, then stop.
 ### 2V.1 Parse the request
 
 The body is the rendered issue form. Extract each field by its bold label:
-`Name`, `Kind`, `Signature and shape`, `Precision behaviour`, `What it does`,
+`Name`, `Kind`, `Signature and shape`, `Precision behaviour`, `Unit behaviour`, `What it does`,
 `Worked values`, `What it refuses`, `Rounding rule, if it has one`,
 `The real document that needs it`, `Why not existing vocabulary or an input column`,
 `Constraint check`, `Anything else`.
 
 If any field except `Rounding rule, if it has one` and `Anything else` is blank
-or missing, set **INCOMPLETE**. An older issue filed before `Worked values` and
-`What it refuses` existed is not INCOMPLETE for missing them — derive them from
-`What it does` and flag both as open forks instead.
+or missing, set **INCOMPLETE**. An older issue filed before `Worked values`,
+`What it refuses` or `Unit behaviour` existed is not INCOMPLETE for missing
+them — derive them from `What it does` and flag each as an open fork instead.
 
 These fields are the `FnDoc` in `packages/visimark/src/lang/reference.ts`. Map
 them as you parse, so the pre-review hands `/issue-decide` a near-complete
@@ -140,6 +140,7 @@ entry rather than prose to re-read:
 |---|---|---|
 | `Signature and shape` | `params`, `returns` | Arity matches the parameter count |
 | `Precision behaviour` | `precision` | The answer is one of the six `FnPrecision` variants; `Not sure` is an open fork, not a rejection |
+| `Unit behaviour` | `units` | A `FnUnits` signature: every parameter has a slot (`1`, `any`, `bool`/`date`/`string`, `U`, `U²`) and the result has one; a `U` the result names is tied by at least one argument |
 | `Worked values` | `examples` | Each output's decimal width is what the stated precision rule produces — a mismatch here is the single most common latent contradiction |
 | `What it refuses` | `errors` | Every case names a [§10](../../docs/visimark-design.md#10-error-taxonomy) code; no sentinel value, no `NaN`, no empty result (constraint 3, and the reason #122 was a bug) |
 | `Rounding rule…` | `rounding` | Present only where ties are possible |
@@ -172,7 +173,8 @@ One of `APPROVED` / `DEFERRED` / `REJECTED` with a one-paragraph reason in the c
 Then list **Open forks** — every question a spec would have to close that the
 form did not: an unstated boundary, an ambiguous precision answer, a refusal
 with no code, an interaction with `param`, imports, `assert` or charts. Empty is
-a valid and good answer; an omitted list is not. `/issue-decide` resolves these
+a valid and good answer; an omitted list is not. Number the list (see §4,
+*Numbered open questions*). `/issue-decide` resolves these
 with the maintainer before an `APPROVED` lands, so anything found here is a
 question asked one stage earlier than it would otherwise be.
 
@@ -248,7 +250,8 @@ One of `APPROVED` / `DEFERRED` / `REJECTED`, one paragraph, in the catalogue's
 idiom, citing the section that governs.
 
 Then **Open design questions** — every fork a spec would have to close. Start
-from the form's `The forks you left open`, then add what it missed. Work the
+from the form's `The forks you left open`, then add what it missed. Number
+the list (see §4, *Numbered open questions*). Work the
 list systematically rather than by inspiration:
 
 - every boundary the semantics imply — zero, negative, empty, absent, duplicate, out-of-range;
@@ -328,7 +331,8 @@ Draft the **section F row**: `Change`, `What it changes`, `Pros`, `Cons`, `Reque
 
 ### 2T.5 Disposition and open forks
 
-Verdict as above, then **Open design questions**, worked from:
+Verdict as above, then **Open design questions** — a numbered list (see §4,
+*Numbered open questions*) — worked from:
 
 - the exact spelling of any new option, and its short form if any;
 - the exit code for every new outcome;
@@ -441,6 +445,14 @@ The Open design questions are not optional decoration on any row-producing
 track. They are what `/issue-decide` works through with the maintainer before
 an `APPROVED` lands, and every one raised here is a contradiction not
 discovered during implementation.
+
+**Numbered open questions.** Open forks and Open design questions are always a
+numbered list (`1.`, `2.`, …), never bullets, in `--draft` output and in the
+posted comment alike. The maintainer answers them by number ("3. Entity"), and
+`/issue-discuss` and `/issue-decide` refer back to the same numbers; bullets
+force every reply to re-enumerate them. Carry the author's forks over first,
+in their order, then append what the review found — never renumber an item
+once it is posted. Sub-points inside one question may be bullets.
 
 **Special stops — comment only, no branch, no PR:**
 - VOCAB **INCOMPLETE** → the comment names the blank fields and asks the author to complete them.

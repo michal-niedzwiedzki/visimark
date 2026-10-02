@@ -15,12 +15,14 @@ integer-capacity arithmetic in
 [`docs/example-executable-documentation.md`](../example-executable-documentation.md)
 (issue #53, split out of #52):
 
+````markdown
 ```vmark #kubernetes
 MaxNodes = FLOOR(WorkerBudget / WorkerNodeMonthlyCost)
 UsableNodes = FLOOR(MaxNodes * (1 - ReservedCapacity))
 UsableCPU = FLOOR(TotalCPU * (1 - ReservedCapacity))
 UsableMemory = FLOOR(TotalMemory * (1 - ReservedCapacity))
 ```
+````
 
 Those four calls are a **1-argument** `FLOOR(x)` — round down to the nearest
 integer. Function overloading (one name, two arities) is **undecided** in the
@@ -31,12 +33,14 @@ call if the project settles on "no overloading".
 
 With that spelling the kubernetes bindings become:
 
+````markdown
 ```vmark #kubernetes
 MaxNodes = FLOOR(WorkerBudget / WorkerNodeMonthlyCost, 1)
 UsableNodes = FLOOR(MaxNodes * (1 - ReservedCapacity), 1)
 UsableCPU = FLOOR(TotalCPU * (1 - ReservedCapacity), 1)
 UsableMemory = FLOOR(TotalMemory * (1 - ReservedCapacity), 1)
 ```
+````
 
 `WorkerBudget = 12000`, `WorkerNodeMonthlyCost = 250` → `MaxNodes = 48`.
 `TotalCPU = 384` with 20 % reserved → `UsableCPU = 307`. A hand-typed `48`
@@ -219,3 +223,5 @@ packages/visimark/test/fixtures/floor-nodes.md
 ## 8. Open questions
 
 None.
+
+<!--vmark:no-formulas-->

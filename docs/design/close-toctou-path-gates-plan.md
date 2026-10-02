@@ -363,3 +363,5 @@ assume a path verdict survives to write time.
 - The document write itself (`writeFileSync(path, r.output)`): that path comes from
   `argv`, not from a document, so it is outside the threat model `SECURITY.md` states.
 - Any change to the gate's nine refusals, its messages, or `classify()`'s verdicts.
+
+<!--vmark:no-formulas-->

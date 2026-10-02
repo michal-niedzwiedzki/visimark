@@ -2,7 +2,7 @@
 
 Buying the press costs 48000.00 PLN today and is expected to save 20000.00 PLN
 at the end of each of the next three years. At a hurdle of
-**8%**<!--vmark=project.hurdle%--> the present value of that series is
+**8%**<!--vmark=project.hurdle|percent--> the present value of that series is
 **3541.94**<!--vmark=project.present--> PLN.
 
 | Year |     Cash |

@@ -181,7 +181,10 @@ early field sometimes closes a later one. For each:
    candidates from (2) plus **Leave open**; never restate the whole drafted
    field in the question, just what's undecided.
 5. Write the resolution into the field. "Leave open" writes the gap itself,
-   as a real sentence a reviewer could act on, not a placeholder.
+   as a real sentence a reviewer could act on, not a placeholder. The forks
+   field is a numbered list (`1.`, `2.`, …), never bullets: `/issue-review`
+   keeps those numbers for its Open design questions, and the maintainer
+   answers by number.
 
 Loop until no field is an unresolved gap. A field can legitimately end in
 "left open: <question>" — that is not the same as unresolved.

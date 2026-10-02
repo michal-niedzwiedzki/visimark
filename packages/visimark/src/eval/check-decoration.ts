@@ -1,6 +1,6 @@
 import type { CheckState } from "./check-state.js";
 import { rowLabel } from "./check-lookup.js";
-import { inferColumnUnit, parseDecorated } from "./units.js";
+import { decorationProblem, inferColumnUnit, parseDecorated } from "./units.js";
 
 /** the inference pass reads the tables and writes the two decoration maps */
 type DecorationState = Pick<CheckState, "model" | "columnUnits" | "unitConflicts" | "emit">;
@@ -44,6 +44,41 @@ export function inferDecoration(st: DecorationState): void {
 
       const inferred = inferColumnUnit(texts);
       st.columnUnits.set(colId, inferred.unit);
+
+      // under a header unit, every cell's decoration answers to it
+      const declared = sheet.headerUnits.get(name);
+      if (declared && !inferred.conflict) {
+        const row = texts.findIndex(
+          (t) =>
+            decorationProblem(t ?? "", declared.map, st.model.unitDefs, "cell", "the column") !==
+            null,
+        );
+        if (row !== -1) {
+          const text = texts[row] ?? "";
+          const cell = table.rows[row]!.cells[idx];
+          st.unitConflicts.add(colId);
+          st.columnUnits.set(colId, null);
+          st.emit(
+            {
+              code: "UNIT",
+              sheetId: sheet.id,
+              name,
+              rowLabel: rowLabel(table, row),
+              raw: text,
+              message: decorationProblem(
+                text,
+                declared.map,
+                st.model.unitDefs,
+                "cell",
+                "the column",
+              )!,
+              span: cell ? { start: cell.start, end: cell.end } : undefined,
+            },
+            { sheetId: sheet.id },
+          );
+          continue;
+        }
+      }
       if (inferred.conflict) {
         st.unitConflicts.add(colId);
         const row = inferred.firstDeviantRow!;

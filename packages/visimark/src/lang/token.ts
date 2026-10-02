@@ -19,6 +19,7 @@ export type TokenKind =
   | "rbrace"
   | "delim"
   | "comma"
+  | "unit"
   | "eof";
 
 export interface Token {
@@ -33,10 +34,14 @@ export class LangError extends Error {
   readonly end: number;
   /** the binding whose line failed, recovered for the report where possible */
   bindingName?: string;
-  constructor(message: string, start: number, end: number) {
+  /** the finding code a failure reports as; absent means `TYPE`, as every
+   *  parse failure did before units. A misplaced unit bracket is `UNIT`. */
+  code?: "TYPE" | "UNIT";
+  constructor(message: string, start: number, end: number, code?: "TYPE" | "UNIT") {
     super(message);
     this.name = "LangError";
     this.start = start;
     this.end = end;
+    if (code) this.code = code;
   }
 }

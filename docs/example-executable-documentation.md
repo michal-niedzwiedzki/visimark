@@ -6,7 +6,7 @@
 
 The infrastructure operating budget for production is **$24000.00**<!--vmark=budget.total_budget--> /month.
 
-The Kubernetes cluster must run continuously and is expected to maintain enough spare capacity for normal workload fluctuations. We reserve **20%**<!--vmark=budget.reserved_capacity%--> of compute capacity as headroom.
+The Kubernetes cluster must run continuously and is expected to maintain enough spare capacity for normal workload fluctuations. We reserve **20%**<!--vmark=budget.reserved_capacity|percent--> of compute capacity as headroom.
 
 ## Monthly operating budget
 
@@ -34,7 +34,7 @@ The remaining budget is available for Kubernetes worker nodes.
 
 **Worker-node budget:** **$12000.00**<!--vmark=budget.WorkerBudget--> /month
 
-**Available for worker nodes:** **50%**<!--vmark=budget.WorkerBudgetPercentage%--> of the infrastructure budget
+**Available for worker nodes:** **50%**<!--vmark=budget.WorkerBudgetPercentage|percent--> of the infrastructure budget
 
 ## Kubernetes worker nodes
 

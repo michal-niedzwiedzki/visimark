@@ -47,7 +47,7 @@
     "reward": {
       "text": "Install VisiMark now.",
       "kind": "link",
-      "link": "https://michal-niedzwiedzki.github.io/visimark/#installation-header"
+      "link": "https://visimark.dev/#installation-header"
     },
     "badge": {
       "name": "Rookie",
@@ -179,7 +179,7 @@
     "badge": {
       "name": "Analytics Specialist",
       "icon": "wrench",
-      "skill": "Me now knows how to add spreadsheet mechanics in Markdown using VisiMark."
+      "skill": "Me now knows how to add checked formulas to Markdown using VisiMark."
     }
   },
 

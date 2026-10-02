@@ -383,3 +383,5 @@ Required `visimark check` transcripts:
 ## 8. Open questions
 
 (none)
+
+<!--vmark:no-formulas-->

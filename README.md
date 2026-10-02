@@ -1,15 +1,8 @@
 # VisiMark
 
-**The numbers in your Markdown, checked on every commit.**
+**A document integrity layer for Markdown: it checks that every number in a document still matches the formula that produced it, so an agent's correct formula can't ship with a wrong total.**
 
-Markdown is a fine way to write a document and a terrible way to keep its
-arithmetic honest. Change a `12` to a `20` in an invoice, forget the totals
-that depend on it, and the document still renders perfectly. GitHub does not
-complain. Your Markdown preview does not complain. A reviewer may not notice.
-
-VisiMark makes those numbers verifiable. It turns the calculations in a
-document into explicit formulas, recomputes them, reports exactly what no
-longer agrees, and fails CI when a document contradicts its own arithmetic.
+VisiMark checks the numbers in Markdown documents, especially ones an agent wrote. Every computed value carries its formula, a machine proves the two still agree, and CI fails when they don't. The document stays plain Markdown.
 
 This matters most when the Markdown is written or edited by an AI agent.
 Agents are reliable at writing formulas and unreliable at the arithmetic those
@@ -25,6 +18,32 @@ with no plugin — verified, not assumed. What VisiMark adds is that every
 computed number in it carries the formula that produced it, that a machine can
 prove the two still agree, and that a change to either shows up as a small,
 readable diff.
+
+## Who it's for
+
+Six audiences so far, each with a specific entry point. Kept short on
+purpose — it grows when one of these gets a real user, not before.
+
+- **Agents and reviewers** verifying a document a model just wrote — the
+  [MCP server](docs/mcp.md) and the [agent skill](skills/visimark/SKILL.md).
+- **Analysts, founders, capacity planners** who want a what-if without a
+  second tab or a copy of the file — `eval --scenario`, worked through on a
+  headcount model in [`docs/tutorial/runway.md`](docs/tutorial/runway.md).
+- **Anyone who already lints Markdown** — the
+  [pre-commit hook](docs/ci.md#23-git-hooks-and-pre-commit),
+  [`remark-lint-visimark`](docs/ci.md#24-the-remarkunified-plugin),
+  [`markdownlint-rule-visimark`](docs/ci.md#25-the-markdownlint-custom-rule),
+  and the composite [GitHub Action](action.yml).
+- **Engineers, scientists, anyone with a unit** — declare it in a bracket after
+  a name, `Rate [PLN]` or `speed [m/s] = Distance / Duration`, and `check`
+  refuses `kg + m` and derives `km/h` (see
+  [What it refuses to do](#what-it-refuses-to-do)).
+- **Obsidian users with a vault of numbers** — the
+  [Obsidian plugin](editors/obsidian/README.md), which marks every computed
+  value in reading mode and Live Preview.
+- **Finance** — `NPV`, `IRR`, `PMT`, and the decimal precision the three of
+  them force you to declare, worked through in
+  [a loan and an investment appraisal](docs/articles/howto-finance-npv-irr-pmt/howto-finance-npv-irr-pmt.md).
 
 ## A wrong invoice that renders clean
 
@@ -46,6 +65,7 @@ docs/example-invoice-drift.md
   STALE   lines.Gross     · Discovery workshop      4428.50 ≠ 4428.00    Net + VAT
   STALE   lines.net_total                          23300.00 ≠ 25380.00   SUM(Net)
   STALE   lines.vat_total                           5359.00 ≠ 5837.40    SUM(VAT)
+  STALE   lines.gross_total                        28659.00 ≠ 31217.40   SUM(Gross)
   STALE   lines.gross_total                        28659.00 ≠ 31217.40   SUM(Gross)
   STALE   schedule.Amount · Signature               8597.70 ≠ 9365.22    Share * lines.gross_total
   STALE   schedule.Amount · Delivery of backend    11463.60 ≠ 12486.96   Share * lines.gross_total
@@ -73,12 +93,12 @@ docs/example-invoice-drift.md
 
   CYCLE   late_fees.base → late_fees.fee → late_fees.total → late_fees.base
 
-  26 problems (21 stale, 5 errors)
+  27 problems (22 stale, 5 errors)
 $ echo $?
 1
 ```
 
-Twenty-six problems: a payment date ambiguous by twenty-nine days, a cell
+Twenty-seven problems: a payment date ambiguous by twenty-nine days, a cell
 someone nudged by hand to make a column look right, a circular reference — all
 invisible on the rendered page, all caught before a human had to notice.
 
@@ -133,7 +153,7 @@ finding `check` can report, and the one habit that keeps a green check meaningfu
 Every transcript in it is real.
 
 There is a side-by-side reader for it at
-[`docs/tutorial.html`](https://michal-niedzwiedzki.github.io/visimark/tutorial.html),
+[`docs/tutorial.html`](https://visimark.dev/tutorial.html),
 which shows each block's Markdown source next to its rendering, in lockstep.
 
 ## Worked examples
@@ -144,9 +164,9 @@ total, early-payment terms, a currency conversion, and a reconciliation that
 proves the instalments sum to the invoice. Its appendix explains each mechanism.
 
 [`docs/example-invoice-drift.md`](docs/example-invoice-drift.md) is that same
-invoice with the drift shown at the top of this README — the `26 problems`
+invoice with the drift shown at the top of this README — the `27 problems`
 transcript above is `check` reading this exact file, and its appendix walks
-through every one of the 26 findings.
+through every one of the 27 problems.
 
 [`docs/example-quote-plain.md`](docs/example-quote-plain.md) is the other
 direction: a quote with no VisiMark in it at all — no `vmark` block, no
@@ -391,8 +411,11 @@ separators are rejected for the same reason.
 A column may carry a currency symbol or a physical unit — `$5.50`, `12 N` —
 and VisiMark strips it to compute and puts it back when it writes. What it will
 not do is let one column mean two things: a column holding both `$5.00` and
-`€5.00` is an error, not a sum. The decoration is inert, never converted and
-never propagated through a formula.
+`€5.00` is an error, not a sum. A unit declared in a bracket — `Weight [kg]` on
+a header, `fx_eur [PLN/EUR]` on a binding — goes further: it propagates through
+every formula, so adding kilograms to metres, or multiplying by an exchange rate
+instead of dividing, fails `check`. Nothing is ever converted by a factor, and
+`$` is never read as `USD`.
 
 A name bound twice in one scope is an error rather than a silent overwrite.
 
@@ -452,6 +475,19 @@ targets need the `code` CLI on your PATH. For development, press <kbd>F5</kbd>
 instead — that runs the extension straight from `editors/vscode` in a separate
 Extension Development Host, so uninstall the packaged copy first or you will see
 every diagnostic twice.
+
+The **Obsidian plugin** is for people who keep notes in Obsidian, read them on
+a phone and will never open a terminal. It marks every computed value in reading
+mode and Live Preview, explains where a value came from, and sweeps a whole vault
+for notes that disagree with themselves. It is a client of the engine rather than
+of the language server, it is not published to npm, and it does nothing on a note
+that has no `vmark` block. Install it from the
+[latest plugin release](https://github.com/michal-niedzwiedzki/visimark/releases)
+(the ones tagged without a `v`, such as `0.2.1`) with
+[BRAT](https://github.com/TfTHacker/obsidian42-brat) or by copying its three
+files into a vault —
+[`editors/obsidian/README.md`](editors/obsidian/README.md) has the steps and
+says what each feature does.
 
 Releases are tag-driven: pushing a `vX.Y.Z` tag publishes the engine to npm and
 the extension to both the VS Code Marketplace and Open VSX. The workflow needs

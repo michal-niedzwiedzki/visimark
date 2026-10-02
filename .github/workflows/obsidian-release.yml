@@ -1,0 +1,112 @@
+name: obsidian-release
+
+# Option C of docs/design/obsidian-release-plan.md, decided by the maintainer
+# on 2026-09-27: keep bare-version tags (the exact string the Obsidian
+# community registry and BRAT match against — confirmed against
+# https://docs.obsidian.md/Plugins/Releasing/Release+your+plugin+with+GitHub+Actions,
+# "this must be the same as the version" in manifest.json), and give them
+# their own workflow gated on a version-shaped glob rather than inventing an
+# `obsidian-v*` prefix release.yml would have to know nothing about.
+#
+# `release.yml`'s existing `v*` trigger is untouched by this file, and this
+# file cannot fire on one of its tags: every tag `release.yml` creates starts
+# with a literal `v`, and `[0-9]*` requires the first character to be a
+# digit.
+#
+# This does not solve docs/design/obsidian-release-plan.md's problem 1 (the
+# registry reads manifest.json from the repository's default-branch root at
+# *submission* time — confirmed against
+# https://docs.obsidian.md/Plugins/Releasing/Submit+your+plugin). That is a
+# one-time step the maintainer does by hand when actually submitting to the
+# registry, not a recurring release concern this workflow's tag-triggered
+# runs are about — see docs/releasing.md.
+on:
+  push:
+    tags: ["[0-9]*.[0-9]*.[0-9]*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to build and release, e.g. 0.1.0. Must already exist and match editors/obsidian/manifest.json's version at that ref."
+        required: true
+        type: string
+
+permissions:
+  contents: write # cut the GitHub Release
+  id-token: write # mint the OIDC token the build attestation is signed with
+  attestations: write # store the attestation against this repository
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - run: bun install --frozen-lockfile
+
+      # The tag is never trusted to already agree with the manifest — the
+      # same "don't publish what the tag doesn't match" discipline
+      # release.yml's own "Resolve the effective tag" step keeps for the npm
+      # packages. A mismatch here means someone pushed the wrong tag or edited
+      # the manifest without re-tagging; failing loudly is cheaper than a
+      # registry listing for a version that isn't what got built.
+      - name: Verify the tag matches manifest.json
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          set -euo pipefail
+          manifest_version="$(node -p "require('./editors/obsidian/manifest.json').version")"
+          if [ "$TAG" != "$manifest_version" ]; then
+            echo "::error::tag '$TAG' does not match editors/obsidian/manifest.json's version '$manifest_version'. A GitHub Release's tag must be the exact manifest version — no 'v' prefix — because that is the string the community registry and BRAT both match against."
+            exit 1
+          fi
+
+      # Not in ci.yml: a core-only bump would turn every PR red until the
+      # plugin was re-released. Here it asks the one question that matters, at
+      # the one commit that is about to ship — does the "Bundles engine X."
+      # line tell the truth about what main.js carries.
+      - name: Verify the changelog names the bundled engine
+        run: bun scripts/check-obsidian-engine-line.ts
+
+      # Only this version's section; the whole file is history, not notes.
+      - name: Extract the release notes
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: bun scripts/changelog-section.ts editors/obsidian/CHANGELOG.md "$TAG" > "$RUNNER_TEMP/release-notes.md"
+
+      - run: bun run --filter visimark-obsidian build
+
+      # The community scanner's Scorecard looks for a verified GitHub artifact
+      # attestation on `main.js` and `styles.css` (the two files that run in a
+      # user's vault). It has to be made from the same bytes the release step
+      # uploads, so it sits between the build and the upload with nothing in
+      # between that could rewrite either file.
+      - name: Attest the build
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: |
+            editors/obsidian/main.js
+            editors/obsidian/styles.css
+
+      # The three files the registry's own submission docs require attached
+      # to the release: main.js, manifest.json, and styles.css. main.js is
+      # gitignored and exists only after the build step above; the other two
+      # are committed as-is. `fail_on_unmatched_files` defaults to false
+      # (CodeRabbit review of PR #278) — without it, a build that silently
+      # produced no main.js would still cut a "successful" release missing
+      # the one file the registry actually installs.
+      - name: GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ inputs.tag || github.ref_name }}
+          fail_on_unmatched_files: true
+          files: |
+            editors/obsidian/main.js
+            editors/obsidian/manifest.json
+            editors/obsidian/styles.css
+          body_path: ${{ runner.temp }}/release-notes.md

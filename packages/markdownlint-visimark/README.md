@@ -8,7 +8,9 @@ already runs — a wrong total fails the same lint run `MD013` does.
 ## Install
 
 ```sh
-npm install --save-dev markdownlint-rule-visimark
+npm i -D markdownlint-rule-visimark
+# or
+bun add -d markdownlint-rule-visimark
 ```
 
 ## Use

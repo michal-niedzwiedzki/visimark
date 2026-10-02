@@ -287,7 +287,7 @@ git commit -m "$(printf 'fix: trailing NOTE counts only upstream-suppressed rows
 - [ ] **Step 1: Create the fixture**
 
 `packages/visimark/test/fixtures/sqrt-braces.md` — the issue's document, verbatim where possible:
-```markdown
+````markdown
 ## Diagonal brace schedule
 
 Each brace spans one rectangular bay corner to corner. The length to cut
@@ -308,7 +308,7 @@ longest = MAX(Length)
 
 All dimensions in mm. The longest brace to cut is
 **6708.20**<!--vmark=braces.longest--> mm.
-```
+````
 (The three `Length` literals and the `6708.20` anchor are what the engine computes — `SQRT(30600000)=5531.73`, `SQRT(18720000)=4326.66`, `SQRT(45000000)=6708.20` at two decimals. If `check` is not clean, fix the literals, never the formulas.)
 
 - [ ] **Step 2: Create the CLI test**

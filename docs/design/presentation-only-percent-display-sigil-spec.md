@@ -2,6 +2,13 @@
 
 **Status:** approved (#140) · **Date:** 2026-09-22 · **Decision:** https://github.com/michal-niedzwiedzki/visimark/issues/140#issuecomment-5775547789
 
+**Superseded.** The `%` sigil this spec describes was removed on
+[#297](https://github.com/michal-niedzwiedzki/visimark/issues/297) in favour
+of `|percent`, a display rule — see
+[`display-rules-replacing-percent-sigil-spec.md`](display-rules-replacing-percent-sigil-spec.md).
+This document is kept as the historical record of #140's own decision and is
+not updated further.
+
 ## 1. Purpose
 
 A scalar prose anchor can ask `fmt` to print a stored ratio as a percent,
@@ -11,9 +18,11 @@ without changing the stored value, the binding, or any arithmetic.
 The engagement clears a margin of **40.26%**<!--vmark=lines.margin%-->.
 ```
 
+````markdown
 ```vmark #lines
 margin precision 4 = (net_total - cost_total) / net_total
 ```
+````
 
 `margin` stays `0.4026`. The `%` on the comment is a display request for that
 one span: write stored × 100 at precision − 2, with a trailing `%`.

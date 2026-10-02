@@ -92,6 +92,7 @@ describe("the motivating document", () => {
       "file",
       "scenario",
       "values",
+      "units",
       "assertions",
       "charts",
     ]);
