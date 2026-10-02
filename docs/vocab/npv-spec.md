@@ -78,7 +78,7 @@ NPV(rate, flows) = Σ flows_k / (1 + r) ^ k
 
 for `k` from 0 through the last data row. The formula is used at every rate, including zero. At zero every denominator is 1, so the value equals the sum of the cells. The precision rule does not change for that call.
 
-The power is `Decimal.prototype.pow` of a non-negative integer. Because `r > -1`, the base `1 + r` is positive. Arithmetic uses `decimal.js` at the engine's 40-significant-digit working precision (design [§7](../visimark-design.md#7-numeric-semantics)). A finite power that needs more than 40 significant digits is rounded to that width by `decimal.js`. That rounding is not a finding. A non-finite intermediate is rejected by `num()` ([§4](#4-type-rules-and-errors)).
+The engine evaluates the same sum as `(Σ flows_k · b ^ (n − 1 − k)) / b ^ (n − 1)` with `b = 1 + r` and `n` data rows: Horner's rule for the numerator, then one `Decimal.prototype.pow` of a non-negative integer and one division. Because `r > -1`, the base `b` is positive. Those steps run in `decimal.js` at 50 significant digits, ten guard digits above the engine's 40-significant-digit working precision (design [§7](../visimark-design.md#7-numeric-semantics)), alongside a bound on their rounding error. When the computed value minus and plus that bound round half-up to the same 40 significant digits, that rounding is returned; otherwise the engine forms the exact fraction in `BigInt` and divides once at 40 digits. The full working value is therefore always the exact present value rounded half-up to 40 significant digits. That rounding is not a finding. A non-finite intermediate is rejected by `num()` ([§4](#4-type-rules-and-errors)). The design is in [`irr-npv-evaluation-speed-spec.md`](../design/irr-npv-evaluation-speed-spec.md).
 
 The result is rounded **once, at the binding**, to that binding's declared width, half-up, by the rule already in [§7](../visimark-design.md#7-numeric-semantics). `NPV` adds no tie-break of its own. `FnDoc` carries no `rounding` field.
 
@@ -91,13 +91,13 @@ What a reduce reads:
 
 | Case | Input | Full working value (`toString`) | Written at 2 dp |
 |---|---|---|---|
-| Motivating series | `NPV(0.08, Cash)` on `-48000, 20000, 20000, 20000` | `3541.9397449575776050398821317888533252` | `3541.94` |
+| Motivating series | `NPV(0.08, Cash)` on `-48000, 20000, 20000, 20000` | `3541.939744957577605039882131788853325204` | `3541.94` |
 | Zero rate, same series | `NPV(0, Cash)` | `12000` | `12000.00` |
-| Issue's second series | `NPV(0.10, Cash)` on `-1000, 400, 400, 400` | `-5.2592036063110443275732531930879038317` | `-5.26` |
+| Issue's second series | `NPV(0.10, Cash)` on `-1000, 400, 400, 400` | `-5.259203606311044327573253193087903831705` | `-5.26` |
 | One data row | `NPV(0.08, Cash)` on `-48000` | `-48000` | `-48000.00` |
 | All zeros | `NPV(0.08, Cash)` on `0, 0, 0` | `0` | `0.00` |
 | Negative rate, still above -1 | `NPV(-0.05, Cash)` on the motivating series | `18540.31199883364922000291587694999271031` | `18540.31` |
-| Two rows, repeating | `NPV(0.08, Cash)` on `-100, 110` | `1.8518518518518518518518518518518518519` | `1.85` |
+| Two rows, repeating | `NPV(0.08, Cash)` on `-100, 110` | `1.851851851851851851851851851851851851852` | `1.85` |
 | Exact negative rate | `NPV(-0.5, Cash)` on `100, 100` | `300` | `300.00` |
 | Rate exactly -1 | `NPV(-1, Cash)` on the motivating series | — | `TYPE` |
 | Rate below -1 | `NPV(-1.5, Cash)` | — | `TYPE` |
@@ -145,7 +145,7 @@ The scalar-name case is a `TYPE`, not a silent skip. Today's `SUM(someScalar)` c
 
 Order 4 does not skip a blank and does not coerce it to zero. Skipping it would shift every later period. Coercing it would invent a cash flow. The author writes `0`. A blank input cell is already a string after `coerceInput`, so it fails the same number test as a word. The finding sits on the `NPV` binding, not on the cell. Later cells are not separately reported.
 
-Order 5 is the guard `num()` already applies. With `rate > -1` the base is positive, and a finite power that merely exceeds 40 significant digits is rounded, not rejected.
+Order 5 is the guard `num()` already applies. With `rate > -1` the base is positive, and an intermediate that merely exceeds 50 significant digits is rounded, not rejected.
 
 A date-shaped cell that is not an ISO date is the existing `DATE` finding on that cell. The column cannot be read (`Unevaluable`), so `NPV` adds no second finding.
 
@@ -184,7 +184,7 @@ An upstream error on the rate (`UNDEF`, a bad dependency) suppresses the binding
 ## 5. Interaction with the rest of the language
 
 - **Shape ([§4](../visimark-design.md#4-syntax)).** The sentence "Every reduce takes exactly one argument by construction" becomes: a reduce has one column parameter, a bare column reference, and its other parameters are scalars. `NPV` is the first reduce with a scalar parameter. Nothing in the language gains a second column parameter. The catalogue section C preface says the same "exactly one argument" sentence today. The implementation's documentation task amends both sentences together. The dependency walk sets `inAggregate` only on the column parameter of a well-formed reduce. `isCrossSheetAggregate` reads that same parameter, so a cross-sheet `flows` follows the cross-sheet path `SUM` already has, and a scalar rate on another sheet stays an ordinary scalar dependency.
-- **Numeric semantics ([§7](../visimark-design.md#7-numeric-semantics)).** `derivePrecision` returns `null` for an `NPV` call, including at rate zero. The binding declares a width when the result is written. Full working precision until that rounding. Half-up stays the global rule. An inexact power is rounded to 40 significant digits and is not a finding. The write-time ceiling is unchanged.
+- **Numeric semantics ([§7](../visimark-design.md#7-numeric-semantics)).** `derivePrecision` returns `null` for an `NPV` call, including at rate zero. The binding declares a width when the result is written. Full working precision until that rounding. Half-up stays the global rule. Intermediate steps round at 50 significant digits and the result at 40; neither is a finding. The write-time ceiling is unchanged.
 - **Units ([§7](../visimark-design.md#7-numeric-semantics)).** Cell units are stripped. A computed column does not inherit a unit, so a present-value column writes bare numbers until its own cells are decorated.
 - **Dates ([§5](../visimark-design.md#5-dates)).** `NPV` neither accepts nor produces a date. The time index is the row position in the document, not a calendar. `EOMONTH` is not involved. A date cell is `TYPE` (`NPV expects a number`).
 - **Write-back ([§9](../visimark-design.md#9-write-back)).** A present-value cell or anchor is tool-owned like any other computed number. `fmt` rewrites it when stale and leaves it when not. `fmt` does not insert a `precision` clause.
@@ -209,7 +209,7 @@ Covered by unit tests plus a test-only fixture. The invoice and charts examples 
 2. **`test/eval/functions.test.ts`**
    - `NPV` is `{ kind: "reduce", arity: 2, column: 1 }`. `SUM` still has `column: 0`.
    - `callProblem("NPV", …)` is `{ kind: "arity" }` for 0, 1, and 3 arguments, `{ kind: "shape" }` for 2 arguments whose second is not a reference, and `null` for `(number-expression, ref)`.
-   - `NPV(0.08, Cash)` on the motivating column evaluates to `3541.9397449575776050398821317888533252`. `NPV(0, Cash)` on that column evaluates to `12000`. `NPV(0.10, Cash)` on `-1000, 400, 400, 400` evaluates to `-5.2592036063110443275732531930879038317`. `NPV(-0.5, Cash)` on `100, 100` evaluates to `300`.
+   - `NPV(0.08, Cash)` on the motivating column evaluates to `3541.939744957577605039882131788853325204`. `NPV(0, Cash)` on that column evaluates to `12000`. `NPV(0.10, Cash)` on `-1000, 400, 400, 400` evaluates to `-5.259203606311044327573253193087903831705`. `NPV(-0.5, Cash)` on `100, 100` evaluates to `300`.
    - `NPV("x", Cash)` throws `NPV expects a number`.
    - `NPV(-1, Cash)` and `NPV(-1.5, Cash)` throw `NPV rate must be greater than -1`, including when the column is empty and when it has one row.
    - `NPV(-1, Cash)` with a blank cell throws the rate message, not the number message.

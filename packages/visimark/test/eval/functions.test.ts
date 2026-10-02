@@ -844,14 +844,37 @@ units = NPV(0, Tagged)
     return v.d.toString();
   };
   expect(str("t.zero")).toBe("12000");
-  expect(str("t.main")).toBe("3541.9397449575776050398821317888533252");
+  expect(str("t.main")).toBe("3541.939744957577605039882131788853325204");
   expect(str("t.pct")).toBe(str("t.main"));
-  expect(str("small.ten")).toBe("-5.2592036063110443275732531930879038317");
+  expect(str("small.ten")).toBe("-5.259203606311044327573253193087903831705");
   expect(str("again.neg")).toBe("18540.31199883364922000291587694999271031");
   expect(str("one.single")).toBe("-48000");
   expect(str("pair.neg")).toBe("300");
   expect(str("pair.bare")).toBe("200");
   expect(str("tag.units")).toBe("0");
+});
+
+test("NPV rounds a value just below a 40-digit midpoint down, not twice", () => {
+  // 1 + (1e-39 - 1e-60) / 2 is 1 + 5e-40 - 5e-61: just below the midpoint
+  // between 1 and 1 + 1e-39. A single 50-digit pass rounds the numerator up to
+  // 2 + 1e-39 and then lands exactly on the midpoint.
+  const tail = "0." + "0".repeat(39) + "9".repeat(21);
+  const r = run(cashDoc("NPV(1, Cash)", `| 1 |\n| ${tail} |`));
+  expect(r.findings.filter((f) => f.code !== "WARN")).toEqual([]);
+  const v = r.values.get("t.present");
+  if (!v || v.t !== "num") throw new Error("t.present");
+  expect(v.d.toString()).toBe("1");
+});
+
+test("NPV keeps a flow that cancels below any fixed width", () => {
+  // 1e250 + 1 - 1e250 is 1, but the 1 is 250 digits below the outlay: any
+  // fixed width under that loses it and returns 0.
+  const big = "1" + "0".repeat(250);
+  const r = run(cashDoc("NPV(0, Cash)", `| ${big} |\n| 1 |\n| -${big} |`));
+  expect(r.findings.filter((f) => f.code !== "WARN")).toEqual([]);
+  const v = r.values.get("t.present");
+  if (!v || v.t !== "num") throw new Error("t.present");
+  expect(v.d.toString()).toBe("1");
 });
 
 test("NPV rejects a bad rate before an empty column, a blank, or a non-number", () => {
