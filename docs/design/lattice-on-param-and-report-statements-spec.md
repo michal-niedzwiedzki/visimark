@@ -246,7 +246,7 @@ The finding names the param (`location.name`), as every `param` finding does.
 | options that do not match the report's grammar | `TYPE` | `` `report best` takes: scalar REF direction max\|min [among feasible] `` (the synopsis from §2.2 for that name; `` `report gates` takes no options `` for the optionless two) |
 | a `REF` that resolves to nothing | `UNDEF` | the message an unresolved name has today |
 | a `REF` that resolves to a column, not a scalar | `TYPE` | `a report reads a scalar; lines.price is a column` |
-| a `report` in a document-scope block (no sheet id) | `SHEET` | `a report needs a sheet` |
+| a `report` in a document-scope block (no sheet id) | `SHEET` | ``` `report` must be in a `#id` sheet block ``` |
 | two byte-identical `report` statements in one sheet, whitespace normalised | `DUP` | `report gates is declared twice in sheet runs` |
 
 The findings carry the sheet (`location.sheet`) and no `name`, as the existing
