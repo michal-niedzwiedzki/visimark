@@ -11,7 +11,9 @@ import type { DocModel } from "../model/types.js";
 import { locate, NO_FORMULAS_MARKER } from "../parse/document.js";
 import { infer } from "../infer/propose.js";
 import { planInfer } from "../infer/write.js";
-import { formatCheck } from "../report/format.js";
+import { describeFinding, formatCheck } from "../report/format.js";
+import { simulate } from "../eval/simulate.js";
+import { renderBlocked, renderSheet } from "../report/simulate.js";
 import { explainText, explainView } from "../report/explain.js";
 import { errorEnvelope, explainJson } from "../report/envelope.js";
 import { formatInfer } from "../report/infer.js";
@@ -704,4 +706,98 @@ function sentence(s: string): string {
 
 function plural(n: number): string {
   return `${n} argument${n === 1 ? "" : "s"}`;
+}
+
+/** how `--progress` reaches stderr: whether it is a terminal, and a raw write with no newline */
+export interface ProgressTTY {
+  isTTY: boolean;
+  raw: (s: string) => void;
+}
+
+/**
+ * `visimark simulate FILE...`: every file's lattice grid, asked once per
+ * question, and every report sheet's readings. Writes nothing. See
+ * docs/design/add-a-simulate-command-spec.md.
+ */
+export function cmdSimulate(args: string[], out: Writer, err: Writer, tty: ProgressTTY): number {
+  const p = parseArgs("simulate", args);
+  if (!p.ok) return refuse("simulate", p, out, err);
+  const { files, flags } = p.parsed;
+  if (files.length === 0) {
+    err(usageLine("simulate"));
+    return 2;
+  }
+  const failOnFault = flags.has("fail-on-fault");
+  const progress = flags.has("progress");
+  let exit: 0 | 1 | 2 = 0;
+  let anyReport = false;
+  let anyBlocked = false;
+  let sheetsRan = 0;
+  let sheetsAll = 0;
+  let printed = 0;
+
+  for (const path of files) {
+    let source: string;
+    try {
+      source = read(path);
+    } catch {
+      err(`visimark: cannot read ${path}`);
+      exit = 2;
+      continue;
+    }
+    let shown = "";
+    const sim = simulate(source, {
+      doc: onDisk(path),
+      onPlan: (plan) => {
+        const n = plan.gridBuilt ? plan.gridSize + 1 : 0;
+        err(`simulate: ${path}: ${n} questions (${plan.latticeCount} lattice params)`);
+      },
+      onQuestion: (i, n) => {
+        if (!progress) return;
+        const line = `simulate: ${path}: question ${i} of ${n}`;
+        if (tty.isTTY) {
+          tty.raw(`\r${line}`);
+          shown = line;
+        } else if (Math.floor((10 * i) / n) > Math.floor((10 * (i - 1)) / n) || i === n) {
+          err(line);
+        }
+      },
+    });
+    if (shown !== "") tty.raw(`\r${" ".repeat(shown.length)}\r`);
+    if (sim.reportSheets.length === 0) {
+      err(`simulate: ${path}: no report statement`);
+      continue;
+    }
+    anyReport = true;
+    if (printed++ > 0) {
+      out("");
+      out("---");
+      out("");
+    }
+    out(`==> ${path} <==`);
+    const blocked = new Map(sim.blocked.map((b) => [b.sheetId, b]));
+    for (const sheetId of sim.reportSheets) {
+      const lines = blocked.has(sheetId) ? renderBlocked(sheetId) : renderSheet(sim, sheetId);
+      for (const line of lines) out(line);
+    }
+    for (const b of sim.blocked) {
+      const f = b.first;
+      const where = f.name === undefined ? "" : ` ${f.sheetId ? `${f.sheetId}.${f.name}` : f.name}`;
+      const more = b.more > 0 ? ` (and ${b.more} more; run visimark check ${path})` : "";
+      err(
+        `simulate: ${path}: #${b.sheetId} cannot start: ${f.code}${where}: ${describeFinding(f)}${more}`,
+      );
+    }
+    const ran = sim.reportSheets.length - sim.blocked.length;
+    err(`simulate: ${path}: ${ran} of ${sim.reportSheets.length} sheets ran`);
+    sheetsRan += ran;
+    sheetsAll += sim.reportSheets.length;
+    if (sim.blocked.length > 0) anyBlocked = true;
+  }
+  if (files.length > 1) {
+    err(`simulate: ${sheetsRan} of ${sheetsAll} sheets ran across ${files.length} files`);
+  }
+  if (exit === 2) return 2;
+  if (!anyReport) return 1;
+  return failOnFault && anyBlocked ? 1 : 0;
 }

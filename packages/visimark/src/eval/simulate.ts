@@ -64,6 +64,10 @@ export interface Simulation {
   params: LatticeParam[];
   /** N: the grid's questions, not counting the base */
   gridSize: number;
+  /** false when a lattice finding stops the grid being built (spec §3.4) */
+  gridBuilt: boolean;
+  /** the params that declare a lattice, whether or not the grid could be built */
+  latticeCount: number;
   /** sheets with at least one `report`, document order */
   reportSheets: string[];
   reports: Map<string, Report[]>;
@@ -84,6 +88,8 @@ export interface Simulation {
 
 export interface SimulateOptions {
   doc?: DocumentFile;
+  /** called once the grid and the blocked sheets are known, before any grid question */
+  onPlan?: (sim: Simulation) => void;
   /** called after each question is evaluated, `i` of `n` (base counted) */
   onQuestion?: (i: number, n: number) => void;
   /** the evaluator; tests wrap `check` to count calls */
@@ -159,7 +165,6 @@ export function simulate(source: string, opts: SimulateOptions = {}): Simulation
     opts.evaluate ?? ((m: DocModel, doc?: DocumentFile) => check(m, doc ? { doc } : {}));
   const located = locate(source);
   const model = build(located);
-  const base = evaluate(model, opts.doc);
   const byId = bindingsById(model);
   const allParams = listParams(model);
   const latticeIds = new Set(allParams.filter((p) => p.lattice !== undefined).map((p) => p.id));
@@ -177,6 +182,25 @@ export function simulate(source: string, opts: SimulateOptions = {}): Simulation
       reports.set(sheet.id, sheet.reports);
     }
   }
+
+  const empty: Simulation = {
+    params: [],
+    gridSize: 0,
+    gridBuilt: false,
+    latticeCount: latticeIds.size,
+    reportSheets,
+    reports,
+    blocked: [],
+    assertions: [],
+    scalarPrecision: new Map(),
+    units: new Map(),
+    sheetScalars,
+    refIds: new Map(),
+    answers: [],
+  };
+  // a file with no report is not evaluated at all
+  if (reportSheets.length === 0) return empty;
+  const base = evaluate(model, opts.doc);
 
   // each report's REFs, and the scalars `deltas` with no `on` reads
   const refIds = new Map<string, string[]>();
@@ -240,6 +264,8 @@ export function simulate(source: string, opts: SimulateOptions = {}): Simulation
   const sim: Simulation = {
     params,
     gridSize: grid.length,
+    gridBuilt: !gridFault,
+    latticeCount: latticeIds.size,
     reportSheets,
     reports,
     blocked,
@@ -250,6 +276,7 @@ export function simulate(source: string, opts: SimulateOptions = {}): Simulation
     refIds,
     answers: [],
   };
+  opts.onPlan?.(sim);
   if (blocked.length === reportSheets.length) return sim;
 
   const readIds = new Set([...refIds.values()].flat());
