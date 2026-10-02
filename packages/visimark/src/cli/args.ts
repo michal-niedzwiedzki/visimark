@@ -22,12 +22,14 @@ const USAGE: Record<CommandName, string> = {
   eval: "usage: visimark eval FILE [--scenario FILE|-] [--get NAME] [--json]",
   explain: "usage: visimark explain FILE [#sheet]",
   ref: "usage: visimark ref [NAME] [--json]",
+  simulate: "usage: visimark simulate FILE... [--fail-on-fault] [--progress]",
 };
 
 export function usageLine(command: CommandName): string {
   return USAGE[command];
 }
 
+/** every command with a `--json` mode; `simulate` has none (add-a-simulate-command-spec.md §2) */
 const ALL: readonly CommandName[] = ["check", "fmt", "infer", "eval", "explain", "ref"];
 
 interface OptionSpec {
@@ -42,6 +44,8 @@ const OPTIONS: Record<string, OptionSpec> = {
   "--fix-units": { commands: ["fmt"], value: false },
   "--no-artifacts": { commands: ["fmt"], value: false },
   "--write": { commands: ["infer"], value: false },
+  "--fail-on-fault": { commands: ["simulate"], value: false },
+  "--progress": { commands: ["simulate"], value: false },
   "--get": { commands: ["eval"], value: true, needsValue: "visimark: --get needs a name" },
   "--scenario": {
     commands: ["eval"],
@@ -100,6 +104,9 @@ export function parseArgs(
     } else if (a.startsWith("-") && a !== "-") {
       const spec = OPTIONS[a];
       if (!spec) return refuse(unknownOption(a, command), a === "--help" || a === "-h");
+      if (a === "--json" && command === "simulate") {
+        return refuse("visimark: simulate has no --json mode");
+      }
       if (!spec.commands.includes(command)) {
         return refuse(`visimark: ${a} is only valid with ${spec.commands[0]}`);
       }
