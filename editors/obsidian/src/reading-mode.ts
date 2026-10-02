@@ -165,7 +165,7 @@ function wrapText(el: HTMLElement, text: string, claimed: Set<Node>): HTMLElemen
     const range = doc.createRange();
     range.setStart(node, at);
     range.setEnd(node, at + text.length);
-    const span = doc.createElement("span");
+    const span = createSpan();
     range.surroundContents(span);
     // `surroundContents` splits `node` into up to three text nodes and
     // leaves the matched run as `span`'s child, a new node distinct from

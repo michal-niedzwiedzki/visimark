@@ -83,11 +83,14 @@ export interface VaultIndex {
 /** how long a note is given to stop changing before it is rechecked */
 const DEBOUNCE_MS = 750;
 
+/** a timer handle — `number` from a window, `Timeout` from Node, so the clock stays injectable */
+type TimerId = number | ReturnType<typeof setTimeout>;
+
 export class LiveVaultIndex implements VaultIndex {
   private entries = new Map<string, SweptNote>();
   private advice = new Set<string>();
   private listeners = new Set<() => void>();
-  private pending = new Map<string, ReturnType<typeof setTimeout>>();
+  private pending = new Map<string, TimerId>();
   private seededOnce = false;
 
   /**
@@ -108,11 +111,8 @@ export class LiveVaultIndex implements VaultIndex {
 
   constructor(
     private read: VaultRead,
-    private scheduleTimeout: (fn: () => void, ms: number) => ReturnType<typeof setTimeout> = (
-      fn,
-      ms,
-    ) => setTimeout(fn, ms),
-    private cancelScheduled: (id: ReturnType<typeof setTimeout>) => void = clearTimeout,
+    private scheduleTimeout: (fn: () => void, ms: number) => TimerId,
+    private cancelScheduled: (id: TimerId) => void,
   ) {}
 
   notes(): readonly SweptNote[] {
