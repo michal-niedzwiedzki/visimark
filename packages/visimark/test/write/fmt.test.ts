@@ -153,6 +153,45 @@ n precision 1 = 1
   expect(once.output).toBe(src);
 });
 
+// ── |unit (#323) ────────────────────────────────────────────────────────────
+
+const unitSrc = (seed: string, decl = "total [PLN] precision 2 = 3.5 [PLN]") => `X ${seed}.
+
+\`\`\`vmark #s
+${decl}
+\`\`\`
+`;
+
+test("fmt writes a |unit span exactly and is idempotent", () => {
+  for (const seed of ["_", "$3.50", "3.50 EUR", "3.50  PLN", "3.5", "24000.00 PLN"]) {
+    const once = fmt(unitSrc(`**${seed}**<!--vmark=s.total|unit-->`), {});
+    expect(once.output).toContain("X **3.50 PLN**<!--vmark=s.total|unit-->.");
+    expect(fmt(once.output, {}).changed).toBe(false);
+    expect(check(build(locate(once.output))).exitCode).toBe(0);
+  }
+});
+
+test("fmt normalises a |unit spelling but keeps a plain anchor's", () => {
+  const src = unitSrc(
+    "**5 m^2**<!--vmark=s.area|unit--> and **5 m^2**<!--vmark=s.area-->",
+    "area [m²] precision 0 = 6 [m²]",
+  );
+  const once = fmt(src, {});
+  expect(once.output).toContain(
+    "**6 m²**<!--vmark=s.area|unit--> and **6 m^2**<!--vmark=s.area-->",
+  );
+});
+
+test("fmt leaves a |unit anchor on a dimensionless value untouched", () => {
+  const src = unitSrc("**_**<!--vmark=s.n|unit-->", "n precision 2 = 3");
+  expect(fmt(src, {}).output).toBe(src);
+});
+
+test("fmt keeps a digit-bearing unit on a plain anchor instead of stripping it", () => {
+  const src = unitSrc("**50 1/s**<!--vmark=s.rate-->", "rate [1/s] precision 0 = 51 [1/s]");
+  expect(fmt(src, {}).output).toContain("**51 1/s**<!--vmark=s.rate-->");
+});
+
 function diffLines(a: string, b: string): number {
   const la = a.split("\n");
   const lb = b.split("\n");
