@@ -591,6 +591,7 @@
 <a href="#what-percent-refuses" data-level="3">What `|percent` refuses</a>
 <a href="#a-percent-in-a-what-if" data-level="3">A percent in a what-if</a>
 <a href="#a-multi-word-string-add-nbsp" data-level="3">A multi-word string: add `|nbsp`</a>
+<a href="#a-figure-with-its-unit-add-unit" data-level="3">A figure with its unit: add `|unit`</a>
 <a href="#16-currency-and-units" data-level="2">16. Currency and units</a>
 <a href="#decoration-in-a-cell" data-level="3">Decoration in a cell</a>
 <a href="#one-column-means-one-thing" data-level="3">One column means one thing</a>
@@ -2403,7 +2404,7 @@ not in the text.</p></div><pre class="src">A wrong number is `STALE` as usual, a
 </code></pre></div><pre class="src">### What `|percent` refuses</pre><div class="out"><h3 id="what-percent-refuses">What <code>|percent</code> refuses</h3></div><pre class="src">| You wrote | Finding |
 |---|---|
 | `\|percent` on a binding narrower than 2 decimals | `PRECISION` — `percent display needs precision 2 or more; a has 1` |
-| `\|percent` on a date or a string | `TYPE` — `a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only)` |
+| `\|percent` on a date or a string | `TYPE` — `a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only; unit: numeric with a unit)` |
 | `\|percent` on a chart image | `TYPE`, the same message |
 | `\|percent` with a currency in the same span, such as `**$0.25**` | `UNIT` — `cannot mix a unit with a display rule` |
 | `\|percent` with a bare, undelimited seed, as in `40.26%&lt;!--vmark=s.m\|percent--&gt;` | `ANCHOR` — `a display rule needs a delimited seed` |
@@ -2422,7 +2423,7 @@ not in the text.</p></div><pre class="src">A wrong number is `STALE` as usual, a
 </tr>
 <tr>
 <td><code>|percent</code> on a date or a string</td>
-<td><code>TYPE</code> — <code>a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only)</code></td>
+<td><code>TYPE</code> — <code>a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only; unit: numeric with a unit)</code></td>
 </tr>
 <tr>
 <td><code>|percent</code> on a chart image</td>
@@ -2487,7 +2488,7 @@ anchor still wraps exactly the stored words.</p></div><pre class="src">| You wro
 | `\|nbsp` in a code span, as in `` `past due` `` | `ANCHOR` — `` display rule `nbsp` cannot render inside a code span `` |
 | `\|nbsp` on a value holding Markdown syntax, such as `a *b* c` | `ANCHOR` — `` display rule `nbsp` cannot write this value inside **…** and read it back unchanged — it contains Markdown syntax: * `` |
 | `\|nbsp` on an empty value | `ANCHOR` — `` display rule `nbsp` cannot write an empty value inside **…** `` |
-| `\|nbsp` on a number or a date | `TYPE` — `a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only)` |</pre><div class="out"><table>
+| `\|nbsp` on a number or a date | `TYPE` — `a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only; unit: numeric with a unit)` |</pre><div class="out"><table>
 <thead>
 <tr>
 <th>You wrote</th>
@@ -2509,20 +2510,84 @@ anchor still wraps exactly the stored words.</p></div><pre class="src">| You wro
 </tr>
 <tr>
 <td><code>|nbsp</code> on a number or a date</td>
-<td><code>TYPE</code> — <code>a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only)</code></td>
+<td><code>TYPE</code> — <code>a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only; unit: numeric with a unit)</code></td>
 </tr>
 </tbody>
 </table></div><pre class="src">As with `|percent`, `fmt` never adds `|nbsp` to an anchor you wrote without
 one, and `infer --write` never proposes it.</pre><div class="out"><p>As with <code>|percent</code>, <code>fmt</code> never adds <code>|nbsp</code> to an anchor you wrote without
-one, and <code>infer --write</code> never proposes it.</p></div><pre class="src">## 16. Currency and units</pre><div class="out"><h2 id="16-currency-and-units">16. Currency and units</h2></div><pre class="src">Two different things sit next to a number. A **decoration** is presentation:
+one, and <code>infer --write</code> never proposes it.</p></div><pre class="src">### A figure with its unit: add `|unit`</pre><div class="out"><h3 id="a-figure-with-its-unit-add-unit">A figure with its unit: add <code>|unit</code></h3></div><pre class="src">*New after 0.1.11: this ships in the next release.*</pre><div class="out"><p><em>New after 0.1.11: this ships in the next release.</em></p></div><pre class="src">When a binding carries a unit (chapter 16), a plain anchor writes only the
+number, and the unit stays in the prose where `fmt` cannot see it:</pre><div class="out"><p>When a binding carries a unit (chapter 16), a plain anchor writes only the
+number, and the unit stays in the prose where <code>fmt</code> cannot see it:</p></div><pre class="src">```markdown
+Net of tax the engagement comes to **23300.00**&lt;!--vmark=lines.net_total--&gt; PLN.
+```</pre><div class="out"><pre><code class="language-markdown">Net of tax the engagement comes to **23300.00**&#x3C;!--vmark=lines.net_total--> PLN.
+</code></pre></div><pre class="src">Change the declaration to `[EUR]` and the sentence still says `PLN`. Move the
+unit inside the bold and add `|unit`, and the anchor writes both:</pre><div class="out"><p>Change the declaration to <code>[EUR]</code> and the sentence still says <code>PLN</code>. Move the
+unit inside the bold and add <code>|unit</code>, and the anchor writes both:</p></div><pre class="src">```markdown
+Net of tax the engagement comes to **23300.00 PLN**&lt;!--vmark=lines.net_total|unit--&gt;.
+```</pre><div class="out"><pre><code class="language-markdown">Net of tax the engagement comes to **23300.00 PLN**&#x3C;!--vmark=lines.net_total|unit-->.
+</code></pre></div><pre class="src">`fmt` writes the number at its write precision, one space, and the unit as
+the binding declares or derives it, in its normal spelling: `5 m²`, `50 1/s`,
+`6.0 N⋅m/s²`. You may seed the span with a placeholder such as `**_**`. When
+the total moves to `24000`, `check` reports the whole span:</pre><div class="out"><p><code>fmt</code> writes the number at its write precision, one space, and the unit as
+the binding declares or derives it, in its normal spelling: <code>5 m²</code>, <code>50 1/s</code>,
+<code>6.0 N⋅m/s²</code>. You may seed the span with a placeholder such as <code>**_**</code>. When
+the total moves to <code>24000</code>, <code>check</code> reports the whole span:</p></div><pre class="src">```console
+  STALE   lines.net_total                      23300.00 PLN ≠ 24000.00 PLN
+```</pre><div class="out"><pre><code class="language-console">  STALE   lines.net_total                      23300.00 PLN ≠ 24000.00 PLN
+</code></pre></div><pre class="src">`fmt` rewrites it to `**24000.00 PLN**`. Changing the declaration to `[EUR]`
+rewrites the unit the same way. The space is an ordinary one, so the number
+and its unit may land on two lines when the paragraph wraps.</pre><div class="out"><p><code>fmt</code> rewrites it to <code>**24000.00 PLN**</code>. Changing the declaration to <code>[EUR]</code>
+rewrites the unit the same way. The space is an ordinary one, so the number
+and its unit may land on two lines when the paragraph wraps.</p></div><pre class="src">| You wrote | Finding |
+|---|---|
+| `\|unit` on a number with no unit, or one whose units cancel (`PLN / PLN`) | `TYPE` — `a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only; unit: numeric with a unit)` |
+| `\|unit` on a string or a date | `TYPE`, the same message |
+| `\|unit` over a bare number, a wrong unit, `m^2` for `m²`, or `$23300.00` | `STALE`, and `fmt` writes the right span |
+| the same `$23300.00` or `23300.00 EUR` on an anchor **without** `\|unit` | `UNIT` — fix it by hand |
+| `\|percent` on a value with a unit | `TYPE` — `\|percent cannot render a value with a unit (PLN)` |</pre><div class="out"><table>
+<thead>
+<tr>
+<th>You wrote</th>
+<th>Finding</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>|unit</code> on a number with no unit, or one whose units cancel (<code>PLN / PLN</code>)</td>
+<td><code>TYPE</code> — <code>a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only; unit: numeric with a unit)</code></td>
+</tr>
+<tr>
+<td><code>|unit</code> on a string or a date</td>
+<td><code>TYPE</code>, the same message</td>
+</tr>
+<tr>
+<td><code>|unit</code> over a bare number, a wrong unit, <code>m^2</code> for <code>m²</code>, or <code>$23300.00</code></td>
+<td><code>STALE</code>, and <code>fmt</code> writes the right span</td>
+</tr>
+<tr>
+<td>the same <code>$23300.00</code> or <code>23300.00 EUR</code> on an anchor <strong>without</strong> <code>|unit</code></td>
+<td><code>UNIT</code> — fix it by hand</td>
+</tr>
+<tr>
+<td><code>|percent</code> on a value with a unit</td>
+<td><code>TYPE</code> — <code>|percent cannot render a value with a unit (PLN)</code></td>
+</tr>
+</tbody>
+</table></div><pre class="src">A plain anchor keeps the unit you typed, in your spelling: `**5 m^2**`
+stays `m^2` when `fmt` updates the number. Only `|unit` writes the unit for
+you. `fmt` never adds `|unit` to an anchor, and `infer --write` never proposes
+it.</pre><div class="out"><p>A plain anchor keeps the unit you typed, in your spelling: <code>**5 m^2**</code>
+stays <code>m^2</code> when <code>fmt</code> updates the number. Only <code>|unit</code> writes the unit for
+you. <code>fmt</code> never adds <code>|unit</code> to an anchor, and <code>infer --write</code> never proposes
+it.</p></div><pre class="src">## 16. Currency and units</pre><div class="out"><h2 id="16-currency-and-units">16. Currency and units</h2></div><pre class="src">Two different things sit next to a number. A **decoration** is presentation:
 the `$` in `$12.50`, the ` kg` in `3.5 kg`. A **unit** is a declaration: the
 `[kg]` after a name, which says what the number measures and which arithmetic
-is legal. Keep a decoration outside an anchor in prose (chapter 9); a unit
-never goes there at all.</pre><div class="out"><p>Two different things sit next to a number. A <strong>decoration</strong> is presentation:
+is legal. Keep a decoration outside an anchor in prose (chapter 9), or let
+`|unit` write the binding's unit inside the anchor for you (chapter 15).</pre><div class="out"><p>Two different things sit next to a number. A <strong>decoration</strong> is presentation:
 the <code>$</code> in <code>$12.50</code>, the <code> kg</code> in <code>3.5 kg</code>. A <strong>unit</strong> is a declaration: the
 <code>[kg]</code> after a name, which says what the number measures and which arithmetic
-is legal. Keep a decoration outside an anchor in prose (chapter 9); a unit
-never goes there at all.</p></div><pre class="src">### Decoration in a cell</pre><div class="out"><h3 id="decoration-in-a-cell">Decoration in a cell</h3></div><pre class="src">A column may carry a currency symbol or a unit word:</pre><div class="out"><p>A column may carry a currency symbol or a unit word:</p></div><pre class="src">```markdown
+is legal. Keep a decoration outside an anchor in prose (chapter 9), or let
+<code>|unit</code> write the binding's unit inside the anchor for you (chapter 15).</p></div><pre class="src">### Decoration in a cell</pre><div class="out"><h3 id="decoration-in-a-cell">Decoration in a cell</h3></div><pre class="src">A column may carry a currency symbol or a unit word:</pre><div class="out"><p>A column may carry a currency symbol or a unit word:</p></div><pre class="src">```markdown
 | Item    | Price  | Qty |    Net |
 |---------|-------:|----:|-------:|
 | Widgets | $12.50 |   4 | $50.00 |

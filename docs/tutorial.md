@@ -1404,7 +1404,7 @@ A wrong number is `STALE` as usual, and the report shows the percent form:
 | You wrote | Finding |
 |---|---|
 | `\|percent` on a binding narrower than 2 decimals | `PRECISION` — `percent display needs precision 2 or more; a has 1` |
-| `\|percent` on a date or a string | `TYPE` — `a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only)` |
+| `\|percent` on a date or a string | `TYPE` — `a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only; unit: numeric with a unit)` |
 | `\|percent` on a chart image | `TYPE`, the same message |
 | `\|percent` with a currency in the same span, such as `**$0.25**` | `UNIT` — `cannot mix a unit with a display rule` |
 | `\|percent` with a bare, undelimited seed, as in `40.26%<!--vmark=s.m\|percent-->` | `ANCHOR` — `a display rule needs a delimited seed` |
@@ -1462,18 +1462,62 @@ anchor still wraps exactly the stored words.
 | `\|nbsp` in a code span, as in `` `past due` `` | `ANCHOR` — `` display rule `nbsp` cannot render inside a code span `` |
 | `\|nbsp` on a value holding Markdown syntax, such as `a *b* c` | `ANCHOR` — `` display rule `nbsp` cannot write this value inside **…** and read it back unchanged — it contains Markdown syntax: * `` |
 | `\|nbsp` on an empty value | `ANCHOR` — `` display rule `nbsp` cannot write an empty value inside **…** `` |
-| `\|nbsp` on a number or a date | `TYPE` — `a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only)` |
+| `\|nbsp` on a number or a date | `TYPE` — `a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only; unit: numeric with a unit)` |
 
 As with `|percent`, `fmt` never adds `|nbsp` to an anchor you wrote without
 one, and `infer --write` never proposes it.
+
+### A figure with its unit: add `|unit`
+
+*New after 0.1.11: this ships in the next release.*
+
+When a binding carries a unit (chapter 16), a plain anchor writes only the
+number, and the unit stays in the prose where `fmt` cannot see it:
+
+```markdown
+Net of tax the engagement comes to **23300.00**<!--vmark=lines.net_total--> PLN.
+```
+
+Change the declaration to `[EUR]` and the sentence still says `PLN`. Move the
+unit inside the bold and add `|unit`, and the anchor writes both:
+
+```markdown
+Net of tax the engagement comes to **23300.00 PLN**<!--vmark=lines.net_total|unit-->.
+```
+
+`fmt` writes the number at its write precision, one space, and the unit as
+the binding declares or derives it, in its normal spelling: `5 m²`, `50 1/s`,
+`6.0 N⋅m/s²`. You may seed the span with a placeholder such as `**_**`. When
+the total moves to `24000`, `check` reports the whole span:
+
+```console
+  STALE   lines.net_total                      23300.00 PLN ≠ 24000.00 PLN
+```
+
+`fmt` rewrites it to `**24000.00 PLN**`. Changing the declaration to `[EUR]`
+rewrites the unit the same way. The space is an ordinary one, so the number
+and its unit may land on two lines when the paragraph wraps.
+
+| You wrote | Finding |
+|---|---|
+| `\|unit` on a number with no unit, or one whose units cancel (`PLN / PLN`) | `TYPE` — `a display rule is only legal on a value it accepts (percent: numeric only; nbsp: string only; unit: numeric with a unit)` |
+| `\|unit` on a string or a date | `TYPE`, the same message |
+| `\|unit` over a bare number, a wrong unit, `m^2` for `m²`, or `$23300.00` | `STALE`, and `fmt` writes the right span |
+| the same `$23300.00` or `23300.00 EUR` on an anchor **without** `\|unit` | `UNIT` — fix it by hand |
+| `\|percent` on a value with a unit | `TYPE` — `\|percent cannot render a value with a unit (PLN)` |
+
+A plain anchor keeps the unit you typed, in your spelling: `**5 m^2**`
+stays `m^2` when `fmt` updates the number. Only `|unit` writes the unit for
+you. `fmt` never adds `|unit` to an anchor, and `infer --write` never proposes
+it.
 
 ## 16. Currency and units
 
 Two different things sit next to a number. A **decoration** is presentation:
 the `$` in `$12.50`, the ` kg` in `3.5 kg`. A **unit** is a declaration: the
 `[kg]` after a name, which says what the number measures and which arithmetic
-is legal. Keep a decoration outside an anchor in prose (chapter 9); a unit
-never goes there at all.
+is legal. Keep a decoration outside an anchor in prose (chapter 9), or let
+`|unit` write the binding's unit inside the anchor for you (chapter 15).
 
 ### Decoration in a cell
 

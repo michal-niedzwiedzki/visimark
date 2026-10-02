@@ -1,4 +1,7 @@
 import { expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { Decimal } from "decimal.js";
 import { matchesStored } from "../../src/eval/check.js";
 import {
@@ -128,4 +131,20 @@ test("markdownSyntaxIn lists distinct syntax characters in first-appearance orde
   expect(markdownSyntaxIn("already&nbsp;joined")).toEqual(["&"]);
   expect(markdownSyntaxIn("www.example.com")).toEqual([]);
   expect(markdownSyntaxIn("_a_ *b*")).toEqual(["_", "*"]);
+});
+
+test("the §3 display-rules table lists exactly the registry, in order", () => {
+  const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
+  const design = readFileSync(join(root, "docs/visimark-design.md"), "utf8");
+  const lines = design.split("\n");
+  const header = lines.findIndex((l) =>
+    /^\|\s*Rule\s*\|\s*Accepts\s*\|\s*Renders\s*\|\s*Example seed\s*\|\s*Request\s*\|$/.test(l),
+  );
+  expect(header).toBeGreaterThan(-1);
+  const names: string[] = [];
+  for (const line of lines.slice(header + 2)) {
+    if (!line.startsWith("|")) break;
+    names.push(line.split("|")[1]!.trim().replace(/`/g, ""));
+  }
+  expect(names).toEqual(Object.keys(DISPLAY_RULES));
 });

@@ -427,7 +427,9 @@ only; the splicer does not re-pad the column.
 ### 5.4 Anchors ([§3](../visimark-design.md#3-document-model))
 
 An anchor writes the bare number, as today, and the invoice's `PLN` stays in
-the prose. A `|unit` display rule is out of scope (§7). Every display rule
+the prose. A `|unit` display rule is out of scope (§7). *(Superseded by #323: the
+[`|unit` display rule](unit-display-rule-appends-a-value-s-unit-spec.md) now
+prints the unit inside the anchor's span, and the invoice uses it.)* Every display rule
 receives the value's unit and refuses a unit-bearing value with `TYPE`. The
 decoration rules of §3 apply to an anchored span of a scalar with a declared
 unit.
@@ -623,7 +625,8 @@ the `eval --json` key of one.
 ## 7. Non-goals
 
 - **A `|unit` display rule** printing an anchor's unit — a follow-up issue in
-  the display-rule family.
+  the display-rule family. *(Since specified and approved as #323:
+  [`|unit` display rule](unit-display-rule-appends-a-value-s-unit-spec.md).)*
 - **A `|currency` display rule** and any treatment of `$`, `€`, `£`, `¥`. They
   stay presentation; `$` is not `USD`; no minor-unit table; `infer` never
   proposes a precision from a currency code.

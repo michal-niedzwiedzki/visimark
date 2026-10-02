@@ -4,6 +4,20 @@
 
 ### Added
 
+- **`|unit` display rule.** `**23300.00 PLN**<!--vmark=lines.net_total|unit-->`
+  prints a value's unit inside the anchor: the number at its write precision,
+  one space, and the declared or derived unit in its normalised spelling
+  (`5 m²`, `50 1/s`, `6.0 N⋅m/s²`; a declared `[J]` prints `J`). The span is
+  compared byte for byte, so a bare number, a wrong or non-normal unit, or a
+  `$` seed is `STALE` and `fmt` rewrites it; changing the declaration from
+  `PLN` to `EUR` rewrites the unit in the sentence. `|unit` on a value without
+  a unit is `TYPE`. The worked invoice now carries every prose unit this way
+  (#323).
+- **Decorations read the whole unit grammar.** A plain anchor or cell written
+  `5 m^2` or `50 1/s` is now a number with a unit; `fmt` used to rewrite it as
+  a bare `5`, dropping the unit. `m^2` and `m²` are the same decoration, and
+  `fmt` keeps the author's spelling. `infer` anchors a prose figure that
+  carries the value's own unit, such as `**23300.00 PLN**` (#323).
 - **Algebraic unit maps.** A unit is declared once, in a bracket right after a
   name — `Rate [PLN]` on a column header, `fx_eur [PLN/EUR] = 4.2650` on a
   binding head, `10 [PLN]` on a number literal — and propagates through every
