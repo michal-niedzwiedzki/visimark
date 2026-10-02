@@ -32,6 +32,7 @@ import {
 } from "./value.js";
 import { coerceInput, lookupVector, rowLabel, Unevaluable } from "./check-lookup.js";
 import { checkCharts } from "./check-charts.js";
+import { checkReports } from "./check-reports.js";
 import { inferDecoration } from "./check-decoration.js";
 import { DimensionChecker, type UnitInfo } from "./dimensions.js";
 import { formatUnit, isDimensionless } from "../lang/unit-expr.js";
@@ -275,6 +276,7 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
   // Emits findings, so it runs here and not later: orderFindings sorts on the
   // order phases emitted in.
   const charts = checkCharts(st);
+  checkReports(st);
 
   reportAnchors(st);
   reportUnused(st, entries);

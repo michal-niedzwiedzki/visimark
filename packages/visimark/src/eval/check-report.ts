@@ -188,6 +188,8 @@ function collectReferenced(model: DocModel): { referenced: Set<string>; usedAlia
         else markAlias(full.slice(0, dot), full.slice(dot + 1));
       }
     }
+    // a report's refs are reads: a scalar only a report names is not "never read"
+    for (const r of sheet.reports) for (const ref of r.refs) visit(ref, r.sheetId);
   }
   return { referenced: out, usedAliases };
 }
