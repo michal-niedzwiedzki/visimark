@@ -80,6 +80,14 @@
       "teaser": "A quote with five scenario parameters and a set of guardrails. eval --scenario tries a combination for one run without writing anything, and check rejects any that breaks margin, discount, budget or capacity.",
       "icon": "../assets/actions.webp",
       "path": "../example-deal-desk.md"
+    },
+    {
+      "slug": "battery-storage",
+      "title": "Battery storage: a project a lender can sweep",
+      "tags": ["Project finance", "simulate", "Units"],
+      "teaser": "A grid-scale battery modelled as its lender sees it, with covenants as assertions and five levers declared with lattices. visimark simulate asks all 576 questions on the grid and prints which covenant binds, which choices are ruled out whatever else is chosen, and the best feasible case.",
+      "icon": "../assets/dollars.webp",
+      "path": "../example-battery-storage.md"
     }
   ]
 }
