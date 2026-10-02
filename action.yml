@@ -11,7 +11,7 @@ inputs:
     required: false
     default: "**/*.md"
   command:
-    description: "visimark subcommand to run: check or fmt"
+    description: "visimark subcommand to run: check, fmt or simulate"
     required: false
     default: "check"
   args:

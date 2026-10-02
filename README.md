@@ -273,6 +273,7 @@ flowchart LR
 | `visimark eval FILE` | Prints the computed values — all of them, or one by name | `--get NAME`, `--json` | nothing | `0` · `2` bad usage, unreadable file, or no such name |
 | `visimark explain FILE` | Prints each sheet's inputs, rules and evaluation order | `#sheet` limits it to one sheet | nothing | `0` · `2` bad usage, unreadable file, or no such sheet |
 | `visimark ref [NAME]` | Prints what a builtin function does — signature, parameters, errors, worked examples — or lists all sixteen | `--json` | nothing | `0` · `2` no such function |
+| `visimark simulate FILE...` | Asks every question a document's `lattice` params declare, plus the defaults, and prints the readings its `report` statements ask for | `--fail-on-fault` fails the run when a report sheet cannot start · `--progress` reports progress on stderr | nothing | `0` readings printed, even where assertions fail · `1` no `report` anywhere, or a sheet cannot start under `--fail-on-fault` · `2` bad usage or unreadable file |
 
 Every option, every exit code and every finding `check` can report is
 tabulated in [`docs/cli-reference.md`](docs/cli-reference.md).
@@ -356,7 +357,7 @@ them with
 An agent reaches the same engine over
 [MCP](https://modelcontextprotocol.io) with
 [`visimark-mcp`](https://www.npmjs.com/package/visimark-mcp), which serves
-every command as a tool, the authoring discipline as resources, and writes
+every command except `simulate` as a tool, the authoring discipline as resources, and writes
 nothing unless an operator opens the write gate:
 
 ```bash
