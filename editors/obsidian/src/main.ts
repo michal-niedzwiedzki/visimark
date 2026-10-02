@@ -536,7 +536,11 @@ export default class VisiMarkPlugin extends Plugin {
    */
   private async buildAmbientIndex(generation: number): Promise<void> {
     const read = vaultSweepRead(this.app.vault);
-    const index = new LiveVaultIndex(read);
+    const index = new LiveVaultIndex(
+      read,
+      (fn, ms) => window.setTimeout(fn, ms),
+      (id) => window.clearTimeout(id),
+    );
     index.beginSeed();
 
     // every listener below is scoped to Markdown files — an image or a PDF

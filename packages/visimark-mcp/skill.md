@@ -27,9 +27,12 @@ ordinary way, no `vmark` block anywhere — **does not need its rules typed out
 by hand.** Do not skip to "Authoring: the shape" below. Run:
 
 ```bash
-visimark infer FILE...          # see what it proposes
-visimark infer FILE... --write  # insert it
+npx visimark infer FILE...          # see what it proposes
+npx visimark infer FILE... --write  # insert it
 ```
+
+(`bunx` works the same way. No global install is assumed anywhere in this
+skill — see "Running it" below.)
 
 `infer` proposes only rules that reproduce every row exactly, verified against
 the same evaluator `check` uses — never a best fit. Hand-author what it leaves:
@@ -67,7 +70,7 @@ numbers. A document with **no formulas** has nothing to disagree with, so
 `check` refuses to call it clean:
 
 ```
-$ visimark check quote-with-no-formulas.md
+$ npx visimark check quote-with-no-formulas.md
 quote-with-no-formulas.md
 
   COVERAGE a table with no `vmark` rules — nothing in this document is checked
@@ -86,9 +89,9 @@ no build. This finding is what stops that.
 Change one input and confirm the checker starts complaining:
 
 ```bash
-sed -i 's/| 40 |/| 48 |/' quote.md      # bump one input
-visimark check quote.md                  # MUST now report problems, exit 1
-git checkout quote.md                    # or undo the edit
+sed -i 's/| 40 |/| 48 |/' quote.md   # bump one input
+npx visimark check quote.md          # MUST now report problems, exit 1
+git checkout quote.md                # or undo the edit
 ```
 
 If `check` still says `0 problems` after you changed an input, nothing in that

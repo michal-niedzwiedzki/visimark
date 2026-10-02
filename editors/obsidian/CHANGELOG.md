@@ -7,6 +7,12 @@ stall the engine or ship plugin versions nobody changed
 ([`obsidian-plugin-spec.md`](../../docs/design/obsidian-plugin-spec.md) §2.2).
 Each entry says which engine version the bundle carries.
 
+## Unreleased
+
+Community-scanner cleanups with no behaviour change: reading mode builds its
+provenance spans with Obsidian's `createSpan`, and the vault index debounces
+with the window's timers (injected, so popout windows and tests are both fine).
+
 ## 0.2.3 - 2026-09-30
 
 The plugin description now leads with the new pitch: it checks that every
