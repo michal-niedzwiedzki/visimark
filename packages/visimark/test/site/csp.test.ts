@@ -58,7 +58,7 @@ function directive(page: string, name: string): string[] {
   return found === undefined ? [] : found.slice(name.length).trim().split(/\s+/).filter(Boolean);
 }
 
-test("there are eight pages, so this sweep is sweeping something", () => {
+test("there are nine pages, so this sweep is sweeping something", () => {
   expect(pages).toEqual([
     "articles.html",
     "ci.html",
@@ -67,6 +67,7 @@ test("there are eight pages, so this sweep is sweeping something", () => {
     "mcp-server.html",
     "playground.html",
     "preview.html",
+    "simulate.html",
     "tutorial.html",
   ]);
 });

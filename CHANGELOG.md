@@ -4,6 +4,12 @@
 
 ### Added
 
+- **Guide pages share one stylesheet.** `docs/guide.css` replaces the CSS that
+  was inlined in each of `tutorial.html`, `ci.html`, `mcp-server.html`, the new
+  `simulate.html` and every example page, so those pages no longer need
+  `'unsafe-inline'` in `style-src`. The Table of Contents pill and the contents
+  dialog's header are sage on every page, and a link from one guide's Markdown
+  to another's is re-pointed at the generated `.html` page.
 - **An integer domain is its own width.** A `param` whose domain is
   `integer`, `natural` or `positive integer` (or `ℤ`, `ℕ`, `ℤ⁺`) may leave out
   `precision` and is `precision 0`: `param sponsors integer in [0, 3] = default
@@ -20,7 +26,8 @@
   carries the question count before the run, any `cannot start` line and a
   summary with the time the file took. It has no `--json`. The tutorial gains
   chapter 31 and the CI guide a chapter on it, and `docs/ci.md` is renumbered.
-  See
+  A guide of its own, `docs/simulate.md`, walks through designing the levers
+  and the reports, reading every report, and running the sweep in CI. See
   [#259](https://github.com/michal-niedzwiedzki/visimark/issues/259) and
   [`docs/design/add-a-simulate-command-spec.md`](docs/design/add-a-simulate-command-spec.md).
 - **A battery storage example that a lender can sweep.**

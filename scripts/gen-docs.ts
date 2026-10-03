@@ -1,5 +1,6 @@
 /**
- * Regenerates docs/tutorial.html, docs/ci.html, and docs/mcp-server.html
+ * Regenerates docs/tutorial.html, docs/ci.html, docs/simulate.html and
+ * docs/mcp-server.html
  * from their corresponding Markdown files at build time.
  *
  * Run with `bun run gen:docs`. CI re-runs it and fails on a diff.
@@ -38,6 +39,17 @@ const docs: DocConfig[] = [
       ogTitle: "Protect your Markdown numbers with CI",
       navLabel: "CI",
       scriptName: "ci",
+    },
+  },
+  {
+    name: "simulate",
+    options: {
+      title: "Sweep a Markdown model with simulate",
+      description:
+        "Turn a checked Markdown document into a model you can sweep — choose the levers, space the lattice, ask for readings, read every report, and publish them from CI.",
+      ogTitle: "Sweep a Markdown model with simulate",
+      navLabel: "simulate",
+      scriptName: "simulate",
     },
   },
   {
