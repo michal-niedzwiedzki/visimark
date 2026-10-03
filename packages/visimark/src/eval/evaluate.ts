@@ -20,6 +20,12 @@ export interface EvalEnv {
   vector(ref: Ref): Value[];
 }
 
+/** The working precision plus ten guard digits, for `NPV`'s one bounded pass. */
+const Guarded = Decimal.clone({
+  precision: MAX_SIGNIFICANT_DIGITS + 10,
+  rounding: Decimal.ROUND_HALF_UP,
+});
+
 const irrBands = new WeakMap<Decimal, { lo: Decimal; hi: Decimal }>();
 
 /** The bracket `IRR` isolated, when the returned decimal is not an exact root. */
@@ -237,38 +243,61 @@ function irr(vec: Value[]): Value {
   const sum = flows.reduce((acc, f) => acc.plus(f), new Decimal(0));
   if (sum.isZero()) return num(new Decimal(0));
 
+  // NPV(r) times (1+r)^(n-1): the same sign and the same roots for r > -1,
+  // evaluated by Horner's rule with one multiply-add per flow and no powers or
+  // divisions.
   const npvAt = (rate: Decimal): Decimal => {
-    let s = new Decimal(0);
     const base = rate.plus(1);
-    for (let k = 0; k < flows.length; k++) s = s.plus(flows[k]!.div(base.pow(k)));
+    let s = flows[0]!;
+    for (let k = 1; k < flows.length; k++) s = s.times(base).plus(flows[k]!);
     return s;
-  };
-  const sign = (rate: Decimal): number => {
-    const v = npvAt(rate);
-    if (v.isZero()) return 0;
-    return v.isNeg() ? -1 : 1;
   };
   // The last rate above -1 that 40-digit arithmetic can tell from -1.
   // A root closer than this rounds to -1 at every width the language can declare.
   let lo = new Decimal(-1).plus(new Decimal(10).pow(-MAX_SIGNIFICANT_DIGITS));
   if (!lo.gt(-1)) lo = new Decimal(-1).plus(new Decimal(10).pow(1 - MAX_SIGNIFICANT_DIGITS));
+  let fLo = npvAt(lo);
+  if (fLo.isZero()) return num(lo);
   let hi = new Decimal(1);
-  const sLo = sign(lo);
-  if (sLo === 0) return num(lo);
-  let guard = 0;
-  while (sign(hi) === sLo && guard < 200) {
+  let fHi = npvAt(hi);
+  for (let guard = 0; !fHi.isZero() && fHi.isNeg() === fLo.isNeg() && guard < 200; guard++) {
     hi = hi.times(2).plus(1);
-    guard++;
+    fHi = npvAt(hi);
   }
-  if (sign(hi) === 0) return num(hi);
-  if (sign(hi) === sLo) return num(lo);
-  for (let i = 0; i < 400; i++) {
-    const mid = lo.plus(hi).div(2);
-    const sm = sign(mid);
-    if (sm === 0) return num(snap(mid));
-    if (sm === sLo) lo = mid;
-    else hi = mid;
-    if (hi.minus(lo).lt(new Decimal(10).pow(-40))) break;
+  if (fHi.isZero()) return num(hi);
+  if (fHi.isNeg() === fLo.isNeg()) return num(lo);
+
+  // Shrink the bracket with the Illinois method: a false-position step that
+  // halves the value kept at an end chosen twice in a row, so both ends close
+  // in instead of one sticking. Two steps that fail to halve the bracket buy a
+  // bisection step, so one step in three at worst halves the bracket. The
+  // ends' values are only ever scaled by positive factors, so their signs
+  // stay exact.
+  const tol = new Decimal(10).pow(-40);
+  let width = hi.minus(lo);
+  let kept = 0;
+  let slow = 0;
+  for (let i = 0; i < 1200 && !width.lt(tol); i++) {
+    let x = slow >= 2 ? lo.plus(hi).div(2) : lo.minus(fLo.times(width).div(fHi.minus(fLo)));
+    if (!(x.gt(lo) && x.lt(hi))) x = lo.plus(hi).div(2);
+    // The ends are neighbours at 40 significant digits: nothing lies between.
+    if (!(x.gt(lo) && x.lt(hi))) break;
+    const fx = npvAt(x);
+    if (fx.isZero()) return num(snap(x));
+    if (fx.isNeg() === fLo.isNeg()) {
+      lo = x;
+      fLo = fx;
+      if (kept === 1) fHi = fHi.div(2);
+      kept = 1;
+    } else {
+      hi = x;
+      fHi = fx;
+      if (kept === -1) fLo = fLo.div(2);
+      kept = -1;
+    }
+    const next = hi.minus(lo);
+    slow = next.times(2).gt(width) ? slow + 1 : 0;
+    width = next;
   }
   const mid = lo.plus(hi).div(2);
   const snapped = snap(mid);
@@ -277,8 +306,12 @@ function irr(vec: Value[]): Value {
   return num(mid);
 
   function snap(mid: Decimal): Decimal {
+    // A short decimal this far from a converged root cannot be the root; skip
+    // its evaluation. The bracket is good to about 38 significant digits.
+    const near = Decimal.max(1, mid.abs()).times("1e-30");
     for (let p = 0; p <= 20; p++) {
       const c = mid.toDecimalPlaces(p, Decimal.ROUND_HALF_UP);
+      if (c.minus(mid).abs().gt(near)) continue;
       if (c.gt(-1) && npvAt(c).isZero()) return c.isZero() ? new Decimal(0) : c;
     }
     return mid;
@@ -289,12 +322,64 @@ function npv(rate: Value, vec: Value[]): Value {
   const r = asNum(rate, "NPV");
   if (!r.gt(-1)) throw new EvalError("NPV rate must be greater than -1");
   if (vec.length === 0) throw new EvalError("NPV() of an empty column");
-  let sum = new Decimal(0);
-  for (let k = 0; k < vec.length; k++) {
-    const flow = asNum(vec[k]!, "NPV");
-    sum = sum.plus(flow.div(r.plus(1).pow(k)));
+  const flows = vec.map((v) => asNum(v, "NPV"));
+  // Σ flow_k / b^k = (Σ flow_k · b^(n-1-k)) / b^(n-1) with b = 1 + r: Horner's
+  // rule for the numerator, then one power and one division, at ten guard
+  // digits. The same pass sums |flow_k| / b^k, which bounds the rounding error
+  // of every step. When the value minus and plus that bound round to the same
+  // 40 digits, that rounding is the exact present value's. Otherwise the true
+  // value sits near a rounding midpoint, or the flows cancel below the guard
+  // digits, and the exact fraction decides.
+  const n = flows.length;
+  const base = new Guarded(r).plus(1);
+  let s = new Guarded(flows[0]!);
+  let a = s.abs();
+  for (let k = 1; k < n; k++) {
+    s = s.times(base).plus(flows[k]!);
+    a = a.times(base).plus(flows[k]!.abs());
   }
+  const scale = base.pow(n - 1);
+  const value = s.div(scale);
+  const err = a
+    .div(scale)
+    .times(4 * n + 8)
+    .times(new Guarded(10).pow(-MAX_SIGNIFICANT_DIGITS - 9));
+  const low = value.minus(err).toSignificantDigits(MAX_SIGNIFICANT_DIGITS);
+  const high = value.plus(err).toSignificantDigits(MAX_SIGNIFICANT_DIGITS);
+  const sum = low.eq(high) ? new Decimal(low) : exactNpv(r, flows);
   return num(sum.isZero() ? new Decimal(0) : sum);
+}
+
+/** `d` as `[numerator, power of ten]`: `d = numerator / 10^places`, exactly. */
+function decimalFraction(d: Decimal): [bigint, number] {
+  const text = d.toFixed();
+  const dot = text.indexOf(".");
+  if (dot < 0) return [BigInt(text), 0];
+  return [BigInt(text.slice(0, dot) + text.slice(dot + 1)), text.length - dot - 1];
+}
+
+/**
+ * The present value as one exact fraction, divided once at the working
+ * precision: `decimal.js` rounds a quotient correctly. With `r = R / 10^m`,
+ * `b = (10^m + R) / 10^m`, so every term shares the denominator
+ * `(10^m + R)^(n-1) · 10^M`, where `M` is the most decimal places of any flow.
+ */
+function exactNpv(r: Decimal, flows: Decimal[]): Decimal {
+  const [rNum, rPlaces] = decimalFraction(r);
+  const q = 10n ** BigInt(rPlaces);
+  const p = q + rNum;
+  const parts = flows.map(decimalFraction);
+  const places = Math.max(...parts.map(([, k]) => k));
+  const scaled = parts.map(([f, k]) => f * 10n ** BigInt(places - k));
+  // Σ scaled_k · q^k · p^(n-1-k), by Horner's rule in p.
+  let top = scaled[0]!;
+  let qk = 1n;
+  for (let k = 1; k < scaled.length; k++) {
+    qk *= q;
+    top = top * p + scaled[k]! * qk;
+  }
+  const bottom = p ** BigInt(scaled.length - 1) * 10n ** BigInt(places);
+  return new Decimal(top.toString()).div(bottom.toString());
 }
 
 function aggregate(name: string, vec: Value[]): Value {
