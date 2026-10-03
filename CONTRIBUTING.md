@@ -189,9 +189,13 @@ of the docs it serves.
 This repository dogfoods its own [pre-commit](https://pre-commit.com) hook
 (`.pre-commit-config.yaml`) — run `pre-commit install` once, after `pip install
 pre-commit`, to have `git commit` run `visimark check` over this repo's own
-tracked documents locally, and `git push` regenerate `docs/articles/` from
-`articles.json` if it's stale (committing the fix and refusing that push, so
-you re-run it with the fix included). Both are a convenience, the way `bun run
+tracked documents locally, and `git push` regenerate the committed build
+outputs if they're stale: `docs/articles/` and `docs/examples/`, the docs pages
+and MCP resources (`gen:docs`, `gen:mcp`), and the playground bundle in
+`docs/vendor/`. A stale output is committed and that push refused, so you
+re-run it with the fix included. The bundle is only rebuilt under the Bun that
+`packageManager` pins; on any other Bun the hook skips it, since the minifier's
+output differs between versions. Both are a convenience, the way `bun run
 vscode-install` is a from-a-clone step rather than a requirement: `dogfood.yml`
 and `articles-pages` enforce the same checks in CI either way.
 

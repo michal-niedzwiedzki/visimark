@@ -28,3 +28,21 @@ repos:
         # Same trigger set as the articles-pages CI job: the catalogue, the
         # generator, and anything under docs/articles/.
         files: ^(docs/articles/|scripts/gen-articles(-lib)?\.ts$)
+      - id: gen-playground-bundle
+        name: rebuild playground bundle
+        language: system
+        entry: sh scripts/prepush-regen.sh --pin-bun "build: regenerate the playground bundle" "bun run --filter visimark build:playground" "docs/vendor/*"
+        stages: [pre-push]
+        pass_filenames: false
+        # Same trigger set as the playground-bundle CI job: anything the
+        # bundles are built from. Skipped, not failed, on a Bun that is not
+        # the pinned one — the minifier's output is version-specific.
+        files: ^(packages/visimark/src/|packages/visimark/package\.json$|bun\.lock$)
+      - id: gen-docs
+        name: regenerate docs pages and MCP resources
+        language: system
+        entry: sh scripts/prepush-regen.sh "build: regenerate docs pages" "bun run gen:docs && bun run gen:mcp" docs/function-reference.md docs/visimark-design.md docs/tutorial.html docs/ci.html docs/simulate.html docs/mcp-server.html packages/visimark-mcp/skill.md packages/visimark-mcp/docs/
+        stages: [pre-push]
+        pass_filenames: false
+        # The generated-docs and mcp-resources CI jobs' inputs.
+        files: ^(docs/[^/]*\.md$|docs/design/|scripts/gen-(docs|function-reference|mcp-skill)|packages/visimark/src/lang/reference\.ts$|skills/visimark/SKILL\.md$)
