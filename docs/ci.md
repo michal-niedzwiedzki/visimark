@@ -1161,13 +1161,20 @@ diff the two:
         run: |
           shopt -s nullglob
           git worktree add ../base "origin/$BASE_REF"
-          (cd ../base && npx --yes visimark@X.Y.Z simulate models/*.md) > base.txt || true
-          npx --yes visimark@X.Y.Z simulate models/*.md > head.txt || true
+          base_status=0
+          head_status=0
+          (cd ../base && npx --yes visimark@X.Y.Z simulate models/*.md) > base.txt || base_status=$?
+          npx --yes visimark@X.Y.Z simulate models/*.md > head.txt || head_status=$?
           {
             echo "## What this pull request changes in the sweeps"
             echo
+            if (( base_status != 0 || head_status != 0 )); then
+              echo "Sweep exit status: base=$base_status, head=$head_status."
+            fi
             if diff -u --label base --label head base.txt head.txt > sweep.diff; then
-              echo "No reading changed."
+              if (( base_status == 0 && head_status == 0 )); then
+                echo "No reading changed."
+              fi
             else
               echo '```diff'
               cat sweep.diff
