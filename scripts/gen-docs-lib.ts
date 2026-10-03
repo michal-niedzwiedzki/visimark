@@ -10,6 +10,7 @@ import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
 import { unified } from "unified";
 import { escapeHtml, slugify } from "../packages/visimark/src/site/dom.js";
+import { renderNav } from "./nav-lib.js";
 
 export interface TocEntry {
   text: string;
@@ -246,12 +247,7 @@ function createTutorialHtml(mainHtml: string, toc: TocEntry[], options: SplitPag
       <div class="bar-side">
         <span class="title"><a href="${base}index.html">VisiMark</a> — ${escapeHtml(options.navLabel)}</span>
         <nav class="nav" aria-label="Site">
-          <a href="${base}index.html">Home</a>
-          <a href="${base}playground.html">Playground</a>
-          <a href="${base}ci.html">Continuous integration</a>
-          <a href="${base}mcp-server.html">MCP server</a>
-          <a href="${base}examples.html">Examples</a>
-          <a href="https://github.com/michal-niedzwiedzki/visimark" rel="noopener">GitHub</a>
+${renderNav(base, options.ogPath)}
         </nav>
       </div>
 
@@ -443,13 +439,7 @@ export function renderDocPage(markdown: string, options: DocPageOptions): string
       <div class="bar-side">
         <span class="title"><a href="${base}index.html">VisiMark</a> — ${escapeHtml(options.navLabel)}</span>
         <nav class="nav" aria-label="Site">
-          <a href="${base}index.html">Home</a>
-          <a href="${base}playground.html">Playground</a>
-          <a href="${base}tutorial.html">Tutorial</a>
-          <a href="${base}ci.html">Continuous integration</a>
-          <a href="${base}mcp-server.html">MCP server</a>
-          <a href="${base}examples.html">Examples</a>
-          <a href="https://github.com/michal-niedzwiedzki/visimark" rel="noopener">GitHub</a>
+${renderNav(base, options.ogPath ?? `${options.scriptName}.html`)}
         </nav>
       </div>
 

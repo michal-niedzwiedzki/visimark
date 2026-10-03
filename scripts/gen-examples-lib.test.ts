@@ -39,7 +39,7 @@ describe("renderExamplePage", () => {
   test("reaches the site root two directories up", () => {
     expect(html).toContain('href="../../assets/visimark.webp"');
     expect(html).toContain('<script src="../../vendor/visimark-site-tutorial.js">');
-    expect(html).toContain('<a href="../../examples.html">Examples</a>');
+    expect(html).toContain('<a href="../../examples.html" aria-current="page">Examples</a>');
   });
 
   test("shows each block beside its rendering", () => {
