@@ -12,9 +12,8 @@
       <meta> policy is the only content-security control available, and it
       has to come before the first subresource.
 
-      `style-src` carries 'unsafe-inline' for the same reason playground.html's
-      does: this page's CSS is inline. An inline-style injection is a defacement, not code
-      execution, so the trade is a different order of magnitude.
+      `style-src 'self'` covers guide.css, the stylesheet every generated
+      guide page shares. Nothing here is inline, so nothing inline is granted.
 
       `script-src 'self'` covers this page's own bundled script under
       vendor/, which is a sibling.
@@ -28,7 +27,7 @@
       http-equiv="Content-Security-Policy"
       content="default-src 'none';
                script-src 'self';
-               style-src 'self' 'unsafe-inline';
+               style-src 'self';
                img-src 'self';
                base-uri 'none';
                form-action 'none'"
@@ -64,345 +63,10 @@
     <title>Protect your Markdown numbers with CI</title>
     <link rel="icon" type="image/webp" href="assets/visimark.webp" />
 
-    <style>
-      :root {
-        --bg: #fdfdfc;
-        --fg: #1c1b19;
-        --muted: #6b6862;
-        --rule: #e0ddd6;
-        --src-bg: #f5f3ee;
-        --src-fg: #3a372f;
-        --accent: #2f6f4f;
-        --bar: #ffffff;
-      }
-      @media (prefers-color-scheme: dark) {
-        :root {
-          --bg: #16161a;
-          --fg: #e6e4de;
-          --muted: #9a968d;
-          --rule: #33333a;
-          --src-bg: #1e1e24;
-          --src-fg: #c9c5ba;
-          --accent: #7fc4a0;
-          --bar: #1b1b20;
-        }
-      }
-
-      * {
-        box-sizing: border-box;
-      }
-      html {
-        scroll-padding-top: 4.5rem;
-      }
-      body {
-        margin: 0;
-        background: var(--bg);
-        color: var(--fg);
-        font:
-          16px/1.6 -apple-system,
-          BlinkMacSystemFont,
-          "Segoe UI",
-          Roboto,
-          Helvetica,
-          Arial,
-          sans-serif;
-      }
-
-      /* ---- top bar ---- */
-      .bar {
-        position: sticky;
-        top: 0;
-        z-index: 10;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.75rem;
-        align-items: center;
-        padding: 0.6rem 1rem;
-        background: var(--bar);
-        border-bottom: 1px solid var(--rule);
-      }
-      .bar-side {
-        flex: 1 1 0;
-        min-width: 0;
-        display: flex;
-        align-items: center;
-        gap: 0.9rem;
-      }
-      .bar-side-end {
-        justify-content: flex-end;
-      }
-      .bar .title {
-        font-weight: 600;
-        margin-right: 1.25rem;
-      }
-      .bar .title a {
-        color: inherit;
-        text-decoration: none;
-      }
-      .nav {
-        display: flex;
-        align-items: center;
-        gap: 14px;
-      }
-      .nav a {
-        font-size: 0.85rem;
-        font-weight: 600;
-        color: var(--muted);
-        text-decoration: none;
-        white-space: nowrap;
-        padding: 2px 0;
-        border-bottom: 2px solid transparent;
-      }
-      .nav a:hover,
-      .nav a:focus-visible {
-        color: var(--fg);
-        border-bottom-color: var(--accent);
-      }
-
-      /* ---- table of contents ---- */
-      .toc-btn {
-        font: inherit;
-        font-size: 0.85rem;
-        font-weight: 600;
-        white-space: nowrap;
-        padding: 0.3rem 1rem;
-        color: var(--fg);
-        background: var(--bg);
-        border: 1px solid var(--rule);
-        border-radius: 999px;
-        cursor: pointer;
-      }
-      .toc-btn:hover,
-      .toc-btn:focus-visible {
-        border-color: var(--accent);
-        color: var(--accent);
-      }
-      .toc-hint {
-        margin-left: 0.4rem;
-        font: 0.75em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-        padding: 0.05rem 0.4rem;
-        border: 1px solid var(--rule);
-        border-radius: 4px;
-        color: var(--muted);
-        background: var(--src-bg);
-      }
-
-      .toc {
-        width: 66%;
-        height: 75%;
-        max-width: none;
-        max-height: none;
-        padding: 0;
-        color: var(--fg);
-        background: var(--bg);
-        border: 1px solid var(--rule);
-        border-radius: 8px;
-        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.18);
-        overflow: hidden;
-      }
-      @media (prefers-color-scheme: dark) {
-        .toc {
-          box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
-        }
-      }
-      .toc::backdrop {
-        background: rgba(0, 0, 0, 0.35);
-      }
-      .toc-inner {
-        display: flex;
-        flex-direction: column;
-        height: 100%;
-      }
-      .toc-head {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        padding: 0.9rem 1.25rem;
-        border-bottom: 1px solid var(--rule);
-      }
-      .toc-head strong {
-        font-size: 1rem;
-      }
-      .toc-search {
-        flex: 1;
-        min-width: 0;
-        font: inherit;
-        font-size: 0.9rem;
-        padding: 0.35rem 0.8rem;
-        color: var(--fg);
-        background: var(--src-bg);
-        border: 1px solid var(--rule);
-        border-radius: 999px;
-        outline: none;
-      }
-      .toc-search:focus-visible {
-        border-color: var(--accent);
-      }
-      .toc-close {
-        margin-left: auto;
-        font: inherit;
-        font-size: 1.3rem;
-        line-height: 1;
-        padding: 0.1rem 0.5rem;
-        color: var(--muted);
-        background: transparent;
-        border: 1px solid transparent;
-        border-radius: 4px;
-        cursor: pointer;
-      }
-      .toc-close:hover,
-      .toc-close:focus-visible {
-        color: var(--fg);
-        border-color: var(--rule);
-      }
-      .toc-list {
-        flex: 1;
-        overflow-y: auto;
-        padding: 0.75rem 0;
-      }
-      .toc-list a {
-        display: block;
-        padding: 0.3rem 1.25rem;
-        color: var(--fg);
-        text-decoration: none;
-        border-left: 3px solid transparent;
-      }
-      .toc-list a[hidden] {
-        display: none;
-      }
-      .toc-list a:hover,
-      .toc-list a:focus-visible {
-        background: var(--src-bg);
-        border-left-color: var(--accent);
-      }
-      .toc-list a[data-level="1"] {
-        font-weight: 700;
-        font-size: 1.02rem;
-        margin-top: 0.7rem;
-      }
-      .toc-list a[data-level="2"] {
-        padding-left: 2.5rem;
-      }
-      .toc-list a[data-level="3"] {
-        padding-left: 3.9rem;
-        font-size: 0.9rem;
-        color: var(--muted);
-      }
-      .toc-list a[data-level="4"],
-      .toc-list a[data-level="5"],
-      .toc-list a[data-level="6"] {
-        padding-left: 5.3rem;
-        font-size: 0.9rem;
-        color: var(--muted);
-      }
-
-      /* ---- the document ---- */
-      main {
-        max-width: 880px;
-        margin: 0 auto;
-        padding: 1.5rem 1rem 6rem;
-      }
-      main h1,
-      main h2,
-      main h3,
-      main h4 {
-        line-height: 1.25;
-        margin: 1.8rem 0 0.6rem;
-      }
-      main h1 {
-        font-size: 1.7rem;
-        border-bottom: 2px solid var(--accent);
-        padding-bottom: 0.3rem;
-        margin-top: 2.6rem;
-      }
-      main h2 {
-        font-size: 1.3rem;
-      }
-      main h3 {
-        font-size: 1.05rem;
-      }
-      main p,
-      main ul,
-      main ol {
-        margin: 0.7rem 0;
-      }
-      main a {
-        color: var(--accent);
-      }
-      main code {
-        font:
-          0.87em ui-monospace,
-          SFMono-Regular,
-          Menlo,
-          Consolas,
-          monospace;
-        background: var(--src-bg);
-        padding: 0.1em 0.35em;
-        border-radius: 3px;
-      }
-      main pre {
-        background: var(--src-bg);
-        padding: 0.7rem 0.85rem;
-        overflow-x: auto;
-        border-radius: 4px;
-        border-left: 2px solid var(--accent);
-      }
-      main pre code {
-        background: none;
-        padding: 0;
-        font-size: 0.8rem;
-        line-height: 1.5;
-      }
-      main table {
-        border-collapse: collapse;
-        width: 100%;
-        font-size: 0.9rem;
-        margin: 0.9rem 0;
-      }
-      main th,
-      main td {
-        border: 1px solid var(--rule);
-        padding: 0.35rem 0.55rem;
-        text-align: left;
-        vertical-align: top;
-      }
-      main th {
-        background: var(--src-bg);
-      }
-      main blockquote {
-        margin: 0.8rem 0;
-        padding-left: 0.9rem;
-        border-left: 3px solid var(--rule);
-        color: var(--muted);
-      }
-      main hr {
-        border: 0;
-        border-top: 1px solid var(--rule);
-        margin: 2.5rem 0;
-      }
-      main li:has(> input[type="checkbox"]) {
-        list-style: none;
-        margin-left: -1.2rem;
-      }
-
-      .note {
-        padding: 2rem 0;
-        color: var(--muted);
-      }
-      .note code {
-        color: var(--fg);
-      }
-
-      @media (max-width: 700px) {
-        .toc {
-          width: 92%;
-          height: 85%;
-        }
-      }
-    </style>
+    <link rel="stylesheet" href="guide.css" />
   </head>
 
-  <body>
+  <body class="doc-page">
     <header class="bar">
       <div class="bar-side">
         <span class="title"><a href="index.html">VisiMark</a> — CI</span>
@@ -485,6 +149,11 @@
 <a href="#its-exit-codes-are-not-checks" data-level="3">Its exit codes are not check's</a>
 <a href="#with-the-action" data-level="3">With the Action</a>
 <a href="#into-the-job-summary" data-level="3">Into the job summary</a>
+<a href="#keep-the-full-readings-as-an-artifact" data-level="3">Keep the full readings as an artifact</a>
+<a href="#what-did-this-pull-request-change-in-the-sweep" data-level="3">What did this pull request change in the sweep?</a>
+<a href="#gate-on-one-plan-not-on-the-sweep" data-level="3">Gate on one plan, not on the sweep</a>
+<a href="#when---fail-on-fault-adds-anything" data-level="3">When --fail-on-fault adds anything</a>
+<a href="#when-to-run-it" data-level="3">When to run it</a>
 <a href="#progress-in-a-log" data-level="3">Progress in a log</a>
 <a href="#no---json" data-level="3">No --json</a>
 <a href="#part-6-other-runners" data-level="1">Part 6 — Other runners</a>
@@ -515,7 +184,7 @@
 commit, and stopping a merge when the arithmetic in them stops adding up.</p>
 <p>It is written for people who know Git and have used a CI system once or twice.
 You do not need to know VisiMark well. Chapter 4 gets you a working document in
-a few minutes, and <a href="tutorial.md"><code>tutorial.md</code></a> is there when you want the
+a few minutes, and <a href="tutorial.html"><code>tutorial.md</code></a> is there when you want the
 language itself.</p>
 <p>The language is kept simple on purpose, so that it reads the same way for
 everyone.</p>
@@ -1407,11 +1076,15 @@ single string.</p>
 <h2 id="21-running-the-simulations-in-ci">21. Running the simulations in CI</h2>
 <p>A document can declare a sweep: <code>lattice</code> clauses on its <code>param</code>s say which
 values to try, and <code>report</code> statements say which readings to print
-(<a href="tutorial.md">tutorial chapter 31</a>). <code>visimark simulate</code> asks every question
-on that grid and prints the readings. It writes nothing.</p>
-<p>In CI, that makes it a <strong>published reading, not a gate.</strong> <code>check</code> is still the
+(<a href="tutorial.html">tutorial chapter 31</a>). <code>visimark simulate</code> asks every question
+on that grid and prints the readings. It writes nothing. How to design the
+levers and the reports, and how to read every report, is its own guide:
+<a href="simulate.html"><code>simulate.md</code></a>. This chapter is only about the build.</p>
+<p>In CI, <code>simulate</code> is a <strong>published reading, not a gate.</strong> <code>check</code> is still the
 gate. <code>simulate</code> runs after it and puts the sweep where a reviewer will see
 it.</p>
+<p>The examples below use <code>models/conference.md</code>, the example from the
+<code>simulate</code> guide, copied into a repository's <code>models/</code> directory.</p>
 <h3 id="its-exit-codes-are-not-checks">Its exit codes are not <code>check</code>'s</h3>
 <table>
 <thead>
@@ -1447,36 +1120,252 @@ report line or in a value the report reads.</p>
 <h3 id="with-the-action">With the Action</h3>
 <p><code>simulate</code> first ships in the release after <code>0.1.11</code>. Pin that release or a
 later one. The ref below stands for it.</p>
-<pre><code class="language-yaml">      - uses: michal-niedzwiedzki/visimark@vX.Y.Z   # a release that ships simulate
+<pre><code class="language-yaml">jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: michal-niedzwiedzki/visimark@vX.Y.Z   # a release that ships simulate
         with:
-          files: "docs/**/*.md"
+          files: "docs/**/*.md models/*.md"
 
+  sweep:
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
       - uses: michal-niedzwiedzki/visimark@vX.Y.Z
         with:
           command: simulate
           files: "models/*.md"
-          args: --fail-on-fault --progress
+          args: --progress
 </code></pre>
-<p>The first step is the gate. The second prints every sweep in the job log.
-Point its glob at the documents that declare reports. A file with no <code>report</code>
-is only noted on stderr, but a glob in which <em>no</em> file has one exits <code>1</code>, which
-almost always means the glob is wrong.</p>
+<p>The first job is the gate. The second prints every sweep in the job log.</p>
+<p><strong>Make it a separate job, with <code>needs: check</code>.</strong> A sweep of a document that
+does not check is a sweep of numbers nobody trusts, so it should not run at
+all when the gate is red. A separate job also keeps the gate's own log short,
+and its required status check (chapter 8) is unaffected by how long the sweep
+takes.</p>
+<p><strong>Point its glob at the documents that declare reports.</strong> A file with no
+<code>report</code> is only noted on stderr, but a glob in which <em>no</em> file has one exits
+<code>1</code>, which almost always means the glob is wrong.</p>
+<p><strong>Give it a <code>timeout-minutes</code>.</strong> <code>simulate</code> has no cap on the grid. A document
+edit that halves a lattice step doubles that lever's points, and the run grows
+with it. The count line in the log says how big the run is, before the first
+question. The timeout is what stops a mistake from holding a runner for six
+hours.</p>
+<p><strong>Make sure <code>check</code> covers the same files.</strong> Above, the gate's glob includes
+<code>models/*.md</code>. The gate is what stands behind the sweep, and a file the gate
+never reads gets no protection from it.</p>
 <h3 id="into-the-job-summary">Into the job summary</h3>
 <p>The readings are plain text, written to be read. A fenced block in the job
-summary keeps their columns aligned:</p>
+summary keeps their columns aligned. Capture the output first, then write the
+summary, then exit with the command's code:</p>
 <pre><code class="language-yaml">      - name: publish the sweeps
         run: |
+          shopt -s nullglob
+          status=0
+          npx --yes visimark@X.Y.Z simulate --fail-on-fault models/*.md > sweeps.txt || status=$?
           {
             echo "## Simulations"
             echo
             echo '```text'
-            npx --yes visimark@X.Y.Z simulate --fail-on-fault models/*.md
+            cat sweeps.txt
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"
 </code></pre>
 <p>stdout carries only the readings, so it goes into the summary. stderr carries
 the question counts, any <code>cannot start</code> lines and the per-file totals, so it
 stays in the log.</p>
+<p><strong>Do not run the command inside the <code>{ … }</code> block.</strong> It is tempting to put
+<code>npx … simulate</code> between the two <code>echo</code> lines. GitHub runs a <code>run:</code> step under
+<code>bash -e</code>, so when the command exits non-zero the step stops right there. The
+closing fence is never written, and the summary shows a code block that runs to
+the end of the page. Capturing first, with <code>|| status=$?</code>, keeps both the
+summary and the exit code.</p>
+<p>A job summary is limited to 1 MiB per step. The ledger is one line per
+question, about a hundred bytes, so a grid of tens of thousands of questions
+will not fit. Use an artifact for those.</p>
+<h3 id="keep-the-full-readings-as-an-artifact">Keep the full readings as an artifact</h3>
+<p><code>simulate</code> prints every report sheet of a file. It cannot print just one, so a
+long ledger and the short reports always come out together. When the ledger is
+long, upload the whole text, and keep the summary to what fits:</p>
+<pre><code class="language-yaml">      - name: keep the readings
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: sweeps
+          path: sweeps.txt
+</code></pre>
+<p><code>if: always()</code> uploads the file even when the step before it failed under
+<code>--fail-on-fault</code>, which is when you most want to read it.</p>
+<p>In the document, put the ledger in its own sheet, at the end. Sheets print in
+document order, so the short readings are at the top of the file, and a
+<code>head -n 60 sweeps.txt</code> in the summary step shows them and leaves the ledger to
+the artifact.</p>
+<h3 id="what-did-this-pull-request-change-in-the-sweep">What did this pull request change in the sweep?</h3>
+<p>The most useful reading in a review is not the sweep itself. It is how the
+sweep <strong>moved</strong>. A one-line change to a cost can move the break-even edge of a
+plan, and nobody sees that in a diff of the document.</p>
+<p>Run the sweep twice, once on the base branch and once on the pull request, and
+diff the two:</p>
+<pre><code class="language-yaml">  sweep-diff:
+    if: github.event_name == 'pull_request'
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+      - name: compare the sweeps with the base branch
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          shopt -s nullglob
+          git worktree add ../base "origin/$BASE_REF"
+          base_status=0
+          head_status=0
+          (cd ../base &#x26;&#x26; npx --yes visimark@X.Y.Z simulate models/*.md) > base.txt || base_status=$?
+          npx --yes visimark@X.Y.Z simulate models/*.md > head.txt || head_status=$?
+          {
+            echo "## What this pull request changes in the sweeps"
+            echo
+            if (( base_status != 0 || head_status != 0 )); then
+              echo "Sweep exit status: base=$base_status, head=$head_status."
+            fi
+            if diff -u --label base --label head base.txt head.txt > sweep.diff; then
+              if (( base_status == 0 &#x26;&#x26; head_status == 0 )); then
+                echo "No reading changed."
+              fi
+            else
+              echo '```diff'
+              cat sweep.diff
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+</code></pre>
+<p>Here is what that prints for a pull request that raises the catering price in
+<code>models/conference.md</code> from <code>32.00</code> to <code>36.00</code> a head, and runs <code>fmt</code>:</p>
+<pre><code class="language-diff">--- base
++++ head
+@@ -6,7 +6,7 @@
+   64 questions
+   assert                       holds  fails  faulted  base   first failure
+   attendees &#x3C;= venue_capacity     48     16        0  holds  attendees=400 ticket=60.00 sponsors=0
+-  profit >= 0                     46     18        0  holds  attendees=100 ticket=60.00 sponsors=0
++  profit >= 0                     45     19        0  holds  attendees=100 ticket=60.00 sponsors=0
+   sponsor_share &#x3C;= 50%            57      7        0  holds  attendees=100 ticket=60.00 sponsors=2
+ 
+ report forbidden
+@@ -17,7 +17,7 @@
+ report best scalar event.profit direction max among feasible
+ 
+   attendees=300 ticket=120.00 sponsors=3
+-  event.profit  26050.00  (+19075.00 against base)
++  event.profit  24850.00  (+18875.00 against base)
+   chosen from 25 feasible of 64 questions
+ 
+ report best scalar event.ticket direction min among feasible
+@@ -29,9 +29,9 @@
+ 
+ report deltas on event.profit, event.sponsor_share
+ 
+-  event.profit  base 6975.00
+-    low   -11250.00  (-18225.00)  attendees=100 ticket=60.00 sponsors=0
+-    high   34200.00  (+27225.00)  attendees=400 ticket=120.00 sponsors=3
++  event.profit  base 5975.00
++    low   -11650.00  (-17625.00)  attendees=100 ticket=60.00 sponsors=0
++    high   32600.00  (+26625.00)  attendees=400 ticket=120.00 sponsors=3
+   event.sponsor_share  base 0.333
+     low   0.000  (-0.333)  attendees=100 ticket=60.00 sponsors=0
+     high  0.714  (+0.381)  attendees=100 ticket=60.00 sponsors=3
+@@ -90,7 +90,7 @@
+   47              300  120.00         2  yes
+   48              300  120.00         3  yes
+   49              400   60.00         0  no        attendees &#x3C;= venue_capacity; profit >= 0
+-  50              400   60.00         1  no        attendees &#x3C;= venue_capacity
++  50              400   60.00         1  no        attendees &#x3C;= venue_capacity; profit >= 0
+   51              400   60.00         2  no        attendees &#x3C;= venue_capacity
+   52              400   60.00         3  no        attendees &#x3C;= venue_capacity
+</code></pre>
+<p>The reviewer reads, without working anything out: one more question loses
+money, the best plan earns 1200 less, and the cheapest working ticket did not
+move — its report is not in the diff at all.</p>
+<p>Four notes on that job:</p>
+<ul>
+<li><strong>It works because grid order is fixed.</strong> The same document gives the same
+questions in the same order every run, so a line that moved is a reading
+that changed. Pin the engine version, or a release that changes the layout
+will show up as a diff of every line.</li>
+<li><strong>The worktree keeps the paths the same.</strong> Both runs see <code>models/…</code>, so the
+<code>==> FILE &#x3C;==</code> headers match. <code>git show origin/main:models/conference.md</code>
+into a temporary file would change the header, and would also lose any CSV
+file the document imports (chapter 19).</li>
+<li><strong>A failed sweep is recorded, not fatal.</strong> The job is a reading. A new
+document has no base version, and a base branch whose sweep cannot start
+should still let you see the head's. Each exit status is captured, printed
+when it is not <code>0</code>, and "No reading changed" appears only when both sweeps
+ran: a sweep that failed with no output looks the same as one that did not
+change.</li>
+<li><strong><code>BASE_REF</code> is passed through <code>env</code>,</strong> not written into the script with
+<code>${{ }}</code>. That is GitHub's own advice for any value that comes from the
+event.</li>
+</ul>
+<h3 id="gate-on-one-plan-not-on-the-sweep">Gate on one plan, not on the sweep</h3>
+<p>Sometimes one particular plan must keep working: the budget the board
+approved, the configuration a customer signed. That is not a sweep, it is a
+<strong>scenario</strong>. Commit it as a JSON file and gate on <code>eval --scenario</code>, which
+exits <code>1</code> when an assertion is false (tutorial chapter 30):</p>
+<pre><code class="language-yaml">      - name: the committed plans must still hold
+        run: |
+          shopt -s nullglob
+          status=0
+          for s in models/scenarios/*.json; do
+            echo "::group::$s"
+            npx --yes visimark@X.Y.Z eval --scenario "$s" models/conference.md > /dev/null || status=1
+            echo "::endgroup::"
+          done
+          exit "$status"
+</code></pre>
+<p>With one plan that holds and one that does not, the log reads:</p>
+<pre><code class="language-console">::group::models/scenarios/cheapest.json
+::endgroup::
+::group::models/scenarios/three.json
+  ASSERT  #event   sponsor_share &#x3C;= 50%
+          0.556 &#x3C;= 50%   is false under scenario (holds on defaults)
+::endgroup::
+</code></pre>
+<p>and the step exits <code>1</code>. The values go to <code>/dev/null</code>; the false assertion is
+written to stderr, so it stays in the log.</p>
+<p>This step belongs in the <code>check</code> job, not the sweep job. It is a gate. Each
+scenario names its plan by its lever values, and a reviewer can read the JSON
+in the pull request that adds it.</p>
+<h3 id="when---fail-on-fault-adds-anything">When <code>--fail-on-fault</code> adds anything</h3>
+<p>A sheet cannot start only when <code>check</code> finds an error in it, or in a value it
+reads. So when the <code>check</code> gate covers the same files and runs first, a sheet
+that cannot start has already failed the build, and <code>--fail-on-fault</code> changes
+nothing.</p>
+<p>It matters when the sweep runs on its own: a scheduled job, a job without
+<code>needs: check</code>, or a glob the gate does not reach. Then it is the only thing
+that turns a broken report line into a red build.</p>
+<h3 id="when-to-run-it">When to run it</h3>
+<p>Every pull request is a good default while the grid is small. A sweep of a few
+hundred questions takes seconds.</p>
+<p>When it grows, a <code>paths:</code> filter on the sweep job is reasonable, though
+chapter 11 argued against one for <code>check</code>. The sweep is a reading, so a run
+skipped by mistake costs a reading, not a broken document on the default
+branch. Include every file the swept documents import:</p>
+<pre><code class="language-yaml">on:
+  pull_request:
+    paths:
+      - "models/**"
+</code></pre>
+<p>A scheduled run, nightly or weekly, catches what a filter misses.</p>
 <h3 id="progress-in-a-log">Progress in a log</h3>
 <p>A sweep is one evaluation per question, and the count is printed before the
 first one:</p>
@@ -1505,7 +1394,9 @@ questions.</p>
 <h3 id="no---json">No <code>--json</code></h3>
 <p><code>simulate</code> has no <code>--json</code> mode, and <code>simulate --json</code> is refused with exit
 <code>2</code>. When a script needs one value from one scenario, <code>eval --scenario</code>
-(chapter 20) is the machine interface.</p>
+(chapter 20) is the machine interface. Do not parse the readings to make a
+build decision; chapter 14's rule about the human report applies here too.
+Diffing them, as above, is fine, because a person reads the diff.</p>
 <hr>
 <h1 id="part-6-other-runners">Part 6 — Other runners</h1>
 <h2 id="22-without-the-action-plain-npx">22. Without the Action: plain <code>npx</code></h2>
@@ -1727,7 +1618,7 @@ context the answer is almost always to leave the gate shut and let the agent
 propose a plan a human applies.</p>
 <p>The full surface — every tool, what it reads, what it writes, which annotation
 it carries — is <a href="mcp.md"><code>mcp.md</code></a>. Setting one up, adding it to a host, and
-working through every tool by hand is <a href="mcp-server.md"><code>mcp-server.md</code></a>.</p>
+working through every tool by hand is <a href="mcp-server.html"><code>mcp-server.md</code></a>.</p>
 <hr>
 <h1 id="part-7-rolling-it-out">Part 7 — Rolling it out</h1>
 <h2 id="28-turning-it-on-in-a-repository-that-already-has-documents">28. Turning it on in a repository that already has documents</h2>
@@ -1854,6 +1745,16 @@ advisory one.</p>
 <td>It treats a false assertion as a reading</td>
 <td>Keep <code>check</code> as the gate; add <code>--fail-on-fault</code> only to stop on sheets that cannot start — chapter 21</td>
 </tr>
+<tr>
+<td>The job summary shows a code block that never ends</td>
+<td>The command ran inside the <code>{ … }</code> block and <code>bash -e</code> stopped the step before the closing fence</td>
+<td>Capture to a file first, then write the summary — chapter 21</td>
+</tr>
+<tr>
+<td>A sweep-diff shows every line changed</td>
+<td>The engine version moved between the two runs, or the headers differ because the base was not a worktree</td>
+<td>Pin the version; use <code>git worktree</code> — chapter 21</td>
+</tr>
 </tbody>
 </table>
 <p>If a failure is genuinely confusing, reproduce it locally with the same version
@@ -1927,7 +1828,7 @@ next month.</li>
 </thead>
 <tbody>
 <tr>
-<td><a href="tutorial.md"><code>tutorial.md</code></a></td>
+<td><a href="tutorial.html"><code>tutorial.md</code></a></td>
 <td>The language itself, from a plain table to a full quote</td>
 </tr>
 <tr>
@@ -1947,11 +1848,15 @@ next month.</li>
 <td>A model with a declared sweep: 577 questions, four covenants, every <code>simulate</code> report</td>
 </tr>
 <tr>
+<td><a href="simulate.html"><code>simulate.md</code></a></td>
+<td>Designing a sweep, reading every report, and acting on what it finds</td>
+</tr>
+<tr>
 <td><a href="mcp.md"><code>mcp.md</code></a></td>
 <td>The MCP server: every tool, the write gate, the plan/apply split</td>
 </tr>
 <tr>
-<td><a href="mcp-server.md"><code>mcp-server.md</code></a></td>
+<td><a href="mcp-server.html"><code>mcp-server.md</code></a></td>
 <td>Setting up and running the MCP server, tutorial-style</td>
 </tr>
 </tbody>

@@ -17,7 +17,7 @@
   //
   // docs/articles.html, docs/articles/*/index.html, docs/examples.html,
   // docs/examples/*/index.html, docs/ci.html, docs/tutorial.html,
-  // and docs/mcp-server.html are committed generated output of `bun run gen:articles`
+  // docs/simulate.html and docs/mcp-server.html are committed generated output of `bun run gen:articles`
   // (scripts/gen-articles.ts) and `bun run gen:docs` (scripts/gen-docs.ts), not source.
   // Their shape comes entirely from gen-articles-lib.ts's and gen-docs-lib.ts's
   // template functions; formatting the generated HTML fights every future generator
@@ -33,6 +33,7 @@
     "docs/examples/*/index.html",
     "docs/ci.html",
     "docs/tutorial.html",
+    "docs/simulate.html",
     "docs/mcp-server.html"
   ]
 }

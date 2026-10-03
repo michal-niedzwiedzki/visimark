@@ -999,11 +999,16 @@ single string.
 A document can declare a sweep: `lattice` clauses on its `param`s say which
 values to try, and `report` statements say which readings to print
 ([tutorial chapter 31](tutorial.md)). `visimark simulate` asks every question
-on that grid and prints the readings. It writes nothing.
+on that grid and prints the readings. It writes nothing. How to design the
+levers and the reports, and how to read every report, is its own guide:
+[`simulate.md`](simulate.md). This chapter is only about the build.
 
-In CI, that makes it a **published reading, not a gate.** `check` is still the
+In CI, `simulate` is a **published reading, not a gate.** `check` is still the
 gate. `simulate` runs after it and puts the sweep where a reviewer will see
 it.
+
+The examples below use `models/conference.md`, the example from the
+`simulate` guide, copied into a repository's `models/` directory.
 
 ### Its exit codes are not `check`'s
 
@@ -1025,42 +1030,297 @@ report line or in a value the report reads.
 later one. The ref below stands for it.
 
 ```yaml
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
       - uses: michal-niedzwiedzki/visimark@vX.Y.Z   # a release that ships simulate
         with:
-          files: "docs/**/*.md"
+          files: "docs/**/*.md models/*.md"
 
+  sweep:
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
       - uses: michal-niedzwiedzki/visimark@vX.Y.Z
         with:
           command: simulate
           files: "models/*.md"
-          args: --fail-on-fault --progress
+          args: --progress
 ```
 
-The first step is the gate. The second prints every sweep in the job log.
-Point its glob at the documents that declare reports. A file with no `report`
-is only noted on stderr, but a glob in which *no* file has one exits `1`, which
-almost always means the glob is wrong.
+The first job is the gate. The second prints every sweep in the job log.
+
+**Make it a separate job, with `needs: check`.** A sweep of a document that
+does not check is a sweep of numbers nobody trusts, so it should not run at
+all when the gate is red. A separate job also keeps the gate's own log short,
+and its required status check (chapter 8) is unaffected by how long the sweep
+takes.
+
+**Point its glob at the documents that declare reports.** A file with no
+`report` is only noted on stderr, but a glob in which *no* file has one exits
+`1`, which almost always means the glob is wrong.
+
+**Give it a `timeout-minutes`.** `simulate` has no cap on the grid. A document
+edit that halves a lattice step doubles that lever's points, and the run grows
+with it. The count line in the log says how big the run is, before the first
+question. The timeout is what stops a mistake from holding a runner for six
+hours.
+
+**Make sure `check` covers the same files.** Above, the gate's glob includes
+`models/*.md`. The gate is what stands behind the sweep, and a file the gate
+never reads gets no protection from it.
 
 ### Into the job summary
 
 The readings are plain text, written to be read. A fenced block in the job
-summary keeps their columns aligned:
+summary keeps their columns aligned. Capture the output first, then write the
+summary, then exit with the command's code:
 
 ```yaml
       - name: publish the sweeps
         run: |
+          shopt -s nullglob
+          status=0
+          npx --yes visimark@X.Y.Z simulate --fail-on-fault models/*.md > sweeps.txt || status=$?
           {
             echo "## Simulations"
             echo
             echo '```text'
-            npx --yes visimark@X.Y.Z simulate --fail-on-fault models/*.md
+            cat sweeps.txt
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"
 ```
 
 stdout carries only the readings, so it goes into the summary. stderr carries
 the question counts, any `cannot start` lines and the per-file totals, so it
 stays in the log.
+
+**Do not run the command inside the `{ … }` block.** It is tempting to put
+`npx … simulate` between the two `echo` lines. GitHub runs a `run:` step under
+`bash -e`, so when the command exits non-zero the step stops right there. The
+closing fence is never written, and the summary shows a code block that runs to
+the end of the page. Capturing first, with `|| status=$?`, keeps both the
+summary and the exit code.
+
+A job summary is limited to 1 MiB per step. The ledger is one line per
+question, about a hundred bytes, so a grid of tens of thousands of questions
+will not fit. Use an artifact for those.
+
+### Keep the full readings as an artifact
+
+`simulate` prints every report sheet of a file. It cannot print just one, so a
+long ledger and the short reports always come out together. When the ledger is
+long, upload the whole text, and keep the summary to what fits:
+
+```yaml
+      - name: keep the readings
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: sweeps
+          path: sweeps.txt
+```
+
+`if: always()` uploads the file even when the step before it failed under
+`--fail-on-fault`, which is when you most want to read it.
+
+In the document, put the ledger in its own sheet, at the end. Sheets print in
+document order, so the short readings are at the top of the file, and a
+`head -n 60 sweeps.txt` in the summary step shows them and leaves the ledger to
+the artifact.
+
+### What did this pull request change in the sweep?
+
+The most useful reading in a review is not the sweep itself. It is how the
+sweep **moved**. A one-line change to a cost can move the break-even edge of a
+plan, and nobody sees that in a diff of the document.
+
+Run the sweep twice, once on the base branch and once on the pull request, and
+diff the two:
+
+```yaml
+  sweep-diff:
+    if: github.event_name == 'pull_request'
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+      - name: compare the sweeps with the base branch
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          shopt -s nullglob
+          git worktree add ../base "origin/$BASE_REF"
+          base_status=0
+          head_status=0
+          (cd ../base && npx --yes visimark@X.Y.Z simulate models/*.md) > base.txt || base_status=$?
+          npx --yes visimark@X.Y.Z simulate models/*.md > head.txt || head_status=$?
+          {
+            echo "## What this pull request changes in the sweeps"
+            echo
+            if (( base_status != 0 || head_status != 0 )); then
+              echo "Sweep exit status: base=$base_status, head=$head_status."
+            fi
+            if diff -u --label base --label head base.txt head.txt > sweep.diff; then
+              if (( base_status == 0 && head_status == 0 )); then
+                echo "No reading changed."
+              fi
+            else
+              echo '```diff'
+              cat sweep.diff
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+```
+
+Here is what that prints for a pull request that raises the catering price in
+`models/conference.md` from `32.00` to `36.00` a head, and runs `fmt`:
+
+```diff
+--- base
++++ head
+@@ -6,7 +6,7 @@
+   64 questions
+   assert                       holds  fails  faulted  base   first failure
+   attendees <= venue_capacity     48     16        0  holds  attendees=400 ticket=60.00 sponsors=0
+-  profit >= 0                     46     18        0  holds  attendees=100 ticket=60.00 sponsors=0
++  profit >= 0                     45     19        0  holds  attendees=100 ticket=60.00 sponsors=0
+   sponsor_share <= 50%            57      7        0  holds  attendees=100 ticket=60.00 sponsors=2
+ 
+ report forbidden
+@@ -17,7 +17,7 @@
+ report best scalar event.profit direction max among feasible
+ 
+   attendees=300 ticket=120.00 sponsors=3
+-  event.profit  26050.00  (+19075.00 against base)
++  event.profit  24850.00  (+18875.00 against base)
+   chosen from 25 feasible of 64 questions
+ 
+ report best scalar event.ticket direction min among feasible
+@@ -29,9 +29,9 @@
+ 
+ report deltas on event.profit, event.sponsor_share
+ 
+-  event.profit  base 6975.00
+-    low   -11250.00  (-18225.00)  attendees=100 ticket=60.00 sponsors=0
+-    high   34200.00  (+27225.00)  attendees=400 ticket=120.00 sponsors=3
++  event.profit  base 5975.00
++    low   -11650.00  (-17625.00)  attendees=100 ticket=60.00 sponsors=0
++    high   32600.00  (+26625.00)  attendees=400 ticket=120.00 sponsors=3
+   event.sponsor_share  base 0.333
+     low   0.000  (-0.333)  attendees=100 ticket=60.00 sponsors=0
+     high  0.714  (+0.381)  attendees=100 ticket=60.00 sponsors=3
+@@ -90,7 +90,7 @@
+   47              300  120.00         2  yes
+   48              300  120.00         3  yes
+   49              400   60.00         0  no        attendees <= venue_capacity; profit >= 0
+-  50              400   60.00         1  no        attendees <= venue_capacity
++  50              400   60.00         1  no        attendees <= venue_capacity; profit >= 0
+   51              400   60.00         2  no        attendees <= venue_capacity
+   52              400   60.00         3  no        attendees <= venue_capacity
+```
+
+The reviewer reads, without working anything out: one more question loses
+money, the best plan earns 1200 less, and the cheapest working ticket did not
+move — its report is not in the diff at all.
+
+Four notes on that job:
+
+- **It works because grid order is fixed.** The same document gives the same
+  questions in the same order every run, so a line that moved is a reading
+  that changed. Pin the engine version, or a release that changes the layout
+  will show up as a diff of every line.
+- **The worktree keeps the paths the same.** Both runs see `models/…`, so the
+  `==> FILE <==` headers match. `git show origin/main:models/conference.md`
+  into a temporary file would change the header, and would also lose any CSV
+  file the document imports (chapter 19).
+- **A failed sweep is recorded, not fatal.** The job is a reading. A new
+  document has no base version, and a base branch whose sweep cannot start
+  should still let you see the head's. Each exit status is captured, printed
+  when it is not `0`, and "No reading changed" appears only when both sweeps
+  ran: a sweep that failed with no output looks the same as one that did not
+  change.
+- **`BASE_REF` is passed through `env`,** not written into the script with
+  `${{ }}`. That is GitHub's own advice for any value that comes from the
+  event.
+
+### Gate on one plan, not on the sweep
+
+Sometimes one particular plan must keep working: the budget the board
+approved, the configuration a customer signed. That is not a sweep, it is a
+**scenario**. Commit it as a JSON file and gate on `eval --scenario`, which
+exits `1` when an assertion is false (tutorial chapter 30):
+
+```yaml
+      - name: the committed plans must still hold
+        run: |
+          shopt -s nullglob
+          status=0
+          for s in models/scenarios/*.json; do
+            echo "::group::$s"
+            npx --yes visimark@X.Y.Z eval --scenario "$s" models/conference.md > /dev/null || status=1
+            echo "::endgroup::"
+          done
+          exit "$status"
+```
+
+With one plan that holds and one that does not, the log reads:
+
+```console
+::group::models/scenarios/cheapest.json
+::endgroup::
+::group::models/scenarios/three.json
+  ASSERT  #event   sponsor_share <= 50%
+          0.556 <= 50%   is false under scenario (holds on defaults)
+::endgroup::
+```
+
+and the step exits `1`. The values go to `/dev/null`; the false assertion is
+written to stderr, so it stays in the log.
+
+This step belongs in the `check` job, not the sweep job. It is a gate. Each
+scenario names its plan by its lever values, and a reviewer can read the JSON
+in the pull request that adds it.
+
+### When `--fail-on-fault` adds anything
+
+A sheet cannot start only when `check` finds an error in it, or in a value it
+reads. So when the `check` gate covers the same files and runs first, a sheet
+that cannot start has already failed the build, and `--fail-on-fault` changes
+nothing.
+
+It matters when the sweep runs on its own: a scheduled job, a job without
+`needs: check`, or a glob the gate does not reach. Then it is the only thing
+that turns a broken report line into a red build.
+
+### When to run it
+
+Every pull request is a good default while the grid is small. A sweep of a few
+hundred questions takes seconds.
+
+When it grows, a `paths:` filter on the sweep job is reasonable, though
+chapter 11 argued against one for `check`. The sweep is a reading, so a run
+skipped by mistake costs a reading, not a broken document on the default
+branch. Include every file the swept documents import:
+
+```yaml
+on:
+  pull_request:
+    paths:
+      - "models/**"
+```
+
+A scheduled run, nightly or weekly, catches what a filter misses.
 
 ### Progress in a log
 
@@ -1096,7 +1356,9 @@ questions.
 
 `simulate` has no `--json` mode, and `simulate --json` is refused with exit
 `2`. When a script needs one value from one scenario, `eval --scenario`
-(chapter 20) is the machine interface.
+(chapter 20) is the machine interface. Do not parse the readings to make a
+build decision; chapter 14's rule about the human report applies here too.
+Diffing them, as above, is fine, because a person reads the diff.
 
 ---
 
@@ -1449,6 +1711,8 @@ advisory one.
 | The engine version changed without you asking | `version: latest`, or an unpinned `npx visimark` | Pin both — chapter 12 |
 | `simulate` exits `1` with `no report statement` | No file the glob matched declares a `report` | Point the glob at the documents that do — chapter 21 |
 | `simulate` is green although assertions fail | It treats a false assertion as a reading | Keep `check` as the gate; add `--fail-on-fault` only to stop on sheets that cannot start — chapter 21 |
+| The job summary shows a code block that never ends | The command ran inside the `{ … }` block and `bash -e` stopped the step before the closing fence | Capture to a file first, then write the summary — chapter 21 |
+| A sweep-diff shows every line changed | The engine version moved between the two runs, or the headers differ because the base was not a worktree | Pin the version; use `git worktree` — chapter 21 |
 
 If a failure is genuinely confusing, reproduce it locally with the same version
 the workflow used:
@@ -1528,6 +1792,7 @@ And the things to have done around it:
 | [`playground.html`](playground.html) | The real engine in your browser, nothing to install |
 | [`example-invoice-drift.md`](example-invoice-drift.md) | One input changed and nothing else — 26 findings, each walked through |
 | [`example-battery-storage.md`](example-battery-storage.md) | A model with a declared sweep: 577 questions, four covenants, every `simulate` report |
+| [`simulate.md`](simulate.md) | Designing a sweep, reading every report, and acting on what it finds |
 | [`mcp.md`](mcp.md) | The MCP server: every tool, the write gate, the plan/apply split |
 | [`mcp-server.md`](mcp-server.md) | Setting up and running the MCP server, tutorial-style |
 

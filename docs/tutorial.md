@@ -3438,6 +3438,9 @@ place on a terminal, and printed at every tenth of the run in a CI log.
 case: five levers, 577 questions, four lender covenants and all five reports,
 in a project-finance model of a grid-scale battery.
 
+How to design a sweep from scratch, how to read each report, and how to act on
+what it finds is the subject of its own guide, [`simulate.md`](simulate.md).
+
 ---
 
 # Part 9 — Putting it together
@@ -3737,6 +3740,7 @@ the decision on it. The review process is
 | Document | What it answers |
 |---|---|
 | [`ci.md`](ci.md) | Protect your Markdown numbers with CI — the Action, globs, annotations, pinning and rollout |
+| [`simulate.md`](simulate.md) | Sweep a model with `simulate` — levers, lattices, reports, and reading every one |
 | [`mcp-server.md`](mcp-server.md) | Set up and run `visimark-mcp` — a host, the write gate, the plan/apply split |
 | [`cli-reference.md`](cli-reference.md) | Every command, option, exit code and finding, in tables |
 | [`function-reference.md`](function-reference.md) | What each of the sixteen builtins does, with examples that run in CI |
