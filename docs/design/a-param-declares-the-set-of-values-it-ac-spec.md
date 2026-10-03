@@ -79,6 +79,19 @@ At least one of `PRESET` or `in DOMAIN-EXPR` must be present for the param to
 be treated as declaring a domain; a `param` with neither is exactly today's
 `param` and is unaffected by anything in this spec.
 
+**An integral preset implies the width.** When the domain holds `integer`,
+`natural` or `positive integer` (or `ℤ`, `ℕ`, `ℤ⁺`), `precision N` may be
+left out and the param is `precision 0`: a domain of whole numbers admits no
+decimals, so it is a width as well as a set. An explicit `precision` still
+wins. `positive` admits fractions and implies nothing. This amends the
+"required" rule of
+[scenario-params-spec §2](scenario-params-spec.md#2-syntax) for these
+presets only.
+
+```text
+param sponsors integer in [0, 3] lattice 1 = default 2
+```
+
 ````markdown
 ```vmark
 param extra_hours    precision 0 integer in [0, 80] = default 0

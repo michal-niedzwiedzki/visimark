@@ -896,7 +896,7 @@ report ledger assertions broken
   574              100             4               120  3.5%      60%  no        asset.soh_eol >= 60%; levers.power <= market.grid_limit
   575              100             4               120  3.5%      70%  no        asset.soh_eol >= 60%; levers.power <= market.grid_limit
   576              100             4               120  3.5%      80%  no        asset.soh_eol >= 60%; levers.power <= market.grid_limit; levers.gearing <= 75%
-simulate: example-battery-storage.md: 3 of 3 sheets ran
+simulate: example-battery-storage.md: 3 of 3 sheets ran in 26.5 s
 ```
 
 </details>

@@ -1327,7 +1327,9 @@ full specification. The motivating document is
 
 - **Declaring.** `param NAME [UNIT] precision N = default LITERAL` in a `vmark` block
   declares a numeric scalar of its sheet (or of document scope). `NAME` is an
-  identifier, `precision` is required, and `LITERAL` is a number literal
+  identifier, `precision` is required unless the domain is integral
+  (`integer`, `natural`, `positive integer`), which implies `precision 0`,
+  and `LITERAL` is a number literal
   (optionally negative, optionally a percent). The default must fit the
   declared width ([§7](#7-numeric-semantics)). A param named like a column
   header of its sheet is `DUP`. The optional `[UNIT]` bracket follows the name;

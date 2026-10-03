@@ -39,6 +39,8 @@ export interface CliIO {
   errTTY?: boolean;
   /** a raw stderr write with no newline, for the `\r` progress line */
   errRaw?: (s: string) => void;
+  /** milliseconds on a monotonic clock, for `simulate`'s elapsed time; defaults to performance.now */
+  now?: () => number;
 }
 
 export async function runCli(argv: string[], io: CliIO = {}): Promise<number> {
@@ -63,6 +65,7 @@ export async function runCli(argv: string[], io: CliIO = {}): Promise<number> {
       return cmdSimulate(rest, out, err, {
         isTTY: io.errTTY ?? process.stderr.isTTY === true,
         raw: io.errRaw ?? ((s: string) => void process.stderr.write(s)),
+        now: io.now ?? (() => performance.now()),
       });
     case "-v":
     case "--version":

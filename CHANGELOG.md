@@ -4,6 +4,12 @@
 
 ### Added
 
+- **An integer domain is its own width.** A `param` whose domain is
+  `integer`, `natural` or `positive integer` (or `ℤ`, `ℕ`, `ℤ⁺`) may leave out
+  `precision` and is `precision 0`: `param sponsors integer in [0, 3] = default
+  2`. An explicit `precision` still wins, and every existing line keeps its
+  meaning. See
+  [`docs/design/a-param-declares-the-set-of-values-it-ac-spec.md`](docs/design/a-param-declares-the-set-of-values-it-ac-spec.md).
 - **`visimark simulate FILE... [--fail-on-fault] [--progress]`.** Asks every
   question a document's `lattice` params declare (every combination of their
   points, plus the defaults) once each, in one process, and prints the readings
@@ -12,8 +18,9 @@
   assertion is a reading, so it exits `0`; it exits `1` when no file has a
   `report`, or when a report sheet cannot start under `--fail-on-fault`. stderr
   carries the question count before the run, any `cannot start` line and a
-  summary. It has no `--json`. The tutorial gains chapter 31 and the CI guide a
-  chapter on it, and `docs/ci.md` is renumbered. See
+  summary with the time the file took. It has no `--json`. The tutorial gains
+  chapter 31 and the CI guide a chapter on it, and `docs/ci.md` is renumbered.
+  See
   [#259](https://github.com/michal-niedzwiedzki/visimark/issues/259) and
   [`docs/design/add-a-simulate-command-spec.md`](docs/design/add-a-simulate-command-spec.md).
 - **A battery storage example that a lender can sweep.**

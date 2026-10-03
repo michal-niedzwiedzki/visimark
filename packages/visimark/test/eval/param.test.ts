@@ -62,6 +62,34 @@ describe("findings", () => {
     expect(result.assertions[0]?.holds).toBeNull();
   });
 
+  test("an integral domain is its own width: precision 0", () => {
+    for (const preset of ["integer", "natural", "positive integer", "ℤ", "ℕ", "ℤ⁺"]) {
+      const { model, result } = run(
+        fence("s", `param n ${preset} in [1, 3] = default 2\nx precision 0 = n * 2`),
+      );
+      expect(result.findings.filter((f) => f.code !== "WARN")).toEqual([]);
+      expect(model.sheets.get("s")?.scalars.get("n")?.precision).toBe(0);
+    }
+  });
+
+  test("an explicit precision still wins over an integral domain", () => {
+    const { model } = run(fence("s", "param n precision 2 integer in [1, 3] = default 2\nx = n"));
+    expect(model.sheets.get("s")?.scalars.get("n")?.precision).toBe(2);
+  });
+
+  test("an integral domain still refuses a fractional default", () => {
+    const { result } = run(fence("s", "param n integer in [1, 3] = default 2.5\nx = n"));
+    const f = result.findings.find((x) => x.code === "PRECISION")!;
+    expect(f.message).toBe("default 2.5 has 1 decimal; param n declares 0");
+  });
+
+  test("`positive` is not integral, so it still needs a width", () => {
+    const { result } = run(fence("s", "param r positive = default 2\nx = r"));
+    expect(result.findings.find((x) => x.code === "PRECISION")?.message).toBe(
+      "param r declares no width",
+    );
+  });
+
   test("a default wider than its precision is PRECISION", () => {
     const { result } = run(fence("s", "param tax precision 2 = default 12.5%\nx = tax"));
     const f = result.findings.find((x) => x.code === "PRECISION")!;

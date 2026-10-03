@@ -3828,7 +3828,8 @@ scenario says otherwise.</em> Every part is required, in this order:</p></div><p
 - **`precision N`** — required, even where a plain scalar would derive its
   width. A value that arrives from outside has no width the document could
   work out. The width is also the limit on what a scenario may bring
-  (chapter 30).
+  (chapter 30). The one exception is a param that counts whole numbers: its
+  domain already says the width (see *Domains*, below).
 - **`default` and a number** — the value the document uses. It must be a plain
   number, such as `2`, `10500.00` or `3%`. It cannot be a formula, a name, a
   date or a string. A value you compute is an ordinary binding, not a `param`.</pre><div class="out"><ul>
@@ -3837,7 +3838,8 @@ scenario says otherwise.</em> Every part is required, in this order:</p></div><p
 <li><strong><code>precision N</code></strong> — required, even where a plain scalar would derive its
 width. A value that arrives from outside has no width the document could
 work out. The width is also the limit on what a scenario may bring
-(chapter 30).</li>
+(chapter 30). The one exception is a param that counts whole numbers: its
+domain already says the width (see <em>Domains</em>, below).</li>
 <li><strong><code>default</code> and a number</strong> — the value the document uses. It must be a plain
 number, such as <code>2</code>, <code>10500.00</code> or <code>3%</code>. It cannot be a formula, a name, a
 date or a string. A value you compute is an ordinary binding, not a <code>param</code>.</li>
@@ -3962,13 +3964,19 @@ may drop to zero is `natural`; one that must keep at least one seat is
 `positive integer`. A preset alone needs no range:</pre><div class="out"><p><code>natural</code> and <code>positive integer</code> differ only at the boundary: a headcount that
 may drop to zero is <code>natural</code>; one that must keep at least one seat is
 <code>positive integer</code>. A preset alone needs no range:</p></div><pre class="src">```
-param staff_added precision 0 positive integer = default 1
-```</pre><div class="out"><pre><code>param staff_added precision 0 positive integer = default 1
-</code></pre></div><pre class="src">A preset and a range narrow to their intersection, and a range end need not be
+param staff_added positive integer = default 1
+```</pre><div class="out"><pre><code>param staff_added positive integer = default 1
+</code></pre></div><pre class="src">`integer`, `natural` and `positive integer` admit whole numbers only, so they
+are a width as well as a domain: a param with one of them and no `precision`
+clause is `precision 0`. Writing `precision 0` as well is allowed and changes
+nothing. `positive` admits fractions, so it still needs a `precision`.</pre><div class="out"><p><code>integer</code>, <code>natural</code> and <code>positive integer</code> admit whole numbers only, so they
+are a width as well as a domain: a param with one of them and no <code>precision</code>
+clause is <code>precision 0</code>. Writing <code>precision 0</code> as well is allowed and changes
+nothing. <code>positive</code> admits fractions, so it still needs a <code>precision</code>.</p></div><pre class="src">A preset and a range narrow to their intersection, and a range end need not be
 closed on both sides:</pre><div class="out"><p>A preset and a range narrow to their intersection, and a range end need not be
 closed on both sides:</p></div><pre class="src">```
-param crosssell_days precision 0 ℕ in [0, 8) = default 0
-```</pre><div class="out"><pre><code>param crosssell_days precision 0 ℕ in [0, 8) = default 0
+param crosssell_days ℕ in [0, 8) = default 0
+```</pre><div class="out"><pre><code>param crosssell_days ℕ in [0, 8) = default 0
 </code></pre></div><pre class="src">reads as *the naturals, 0 up to but not including 8* — a half-open range on a
 `natural` preset, written with the glyph. `∈` is accepted in place of `in`
 everywhere a domain clause appears, the same way `ℕ`/`ℤ`/`ℤ⁺` are accepted in
@@ -4600,7 +4608,7 @@ report forbidden
   new_hires = 5  every question with it breaks an assertion
   new_hires = 6  every question with it breaks an assertion
   12 of 28 questions are infeasible
-simulate: runway-sweep.md: 1 of 1 sheets ran
+simulate: runway-sweep.md: 1 of 1 sheets ran in 48 ms
 ```</pre><div class="out"><pre><code class="language-console">$ visimark simulate runway-sweep.md
 simulate: runway-sweep.md: 29 questions (2 lattice params)
 ==> runway-sweep.md &#x3C;==
@@ -4664,16 +4672,16 @@ report forbidden
   new_hires = 5  every question with it breaks an assertion
   new_hires = 6  every question with it breaks an assertion
   12 of 28 questions are infeasible
-simulate: runway-sweep.md: 1 of 1 sheets ran
+simulate: runway-sweep.md: 1 of 1 sheets ran in 48 ms
 </code></pre></div><pre class="src">The first stderr line says how many questions the run asks: the 28 on the grid
 plus the **base**, which is the document at its defaults. It is printed before
 any question is asked, so a sweep that is far bigger than you meant shows up
 straight away. stdout is the readings, under the sheet that asked for them.
-The last line says how many report sheets ran.</pre><div class="out"><p>The first stderr line says how many questions the run asks: the 28 on the grid
+The last line says how many report sheets ran, and how long the file took.</pre><div class="out"><p>The first stderr line says how many questions the run asks: the 28 on the grid
 plus the <strong>base</strong>, which is the document at its defaults. It is printed before
 any question is asked, so a sweep that is far bigger than you meant shows up
 straight away. stdout is the readings, under the sheet that asked for them.
-The last line says how many report sheets ran.</p></div><pre class="src">Every question is asked the way `eval --scenario` would ask it. A question is
+The last line says how many report sheets ran, and how long the file took.</p></div><pre class="src">Every question is asked the way `eval --scenario` would ask it. A question is
 **feasible** when every `assert` in the document holds.</pre><div class="out"><p>Every question is asked the way <code>eval --scenario</code> would ask it. A question is
 <strong>feasible</strong> when every <code>assert</code> in the document holds.</p></div><pre class="src">- **`ledger`** is one row per question, base first. `assertions broken` adds
   the assertions each row breaks. Here every plan with four or more hires

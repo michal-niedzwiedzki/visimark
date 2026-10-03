@@ -7,6 +7,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { elapsedText } from "../src/cli/commands.js";
 import { runCli } from "../src/cli/main.js";
 
 const CLEAN = readFileSync(join(import.meta.dir, "fixtures", "simulation", "simulate.md"), "utf8");
@@ -33,6 +34,7 @@ async function run(args: string[], tty?: { raw: string[] }) {
     err: (l: string) => err.push(l),
     errTTY: tty !== undefined,
     errRaw: (s: string) => tty?.raw.push(s),
+    now: () => 0,
   });
   return { code, out: out.join("\n"), err: err.join("\n") };
 }
@@ -46,7 +48,7 @@ describe("simulate (spec §5)", () => {
     expect(r.code).toBe(0);
     expect(r.out).toBe(section(p));
     expect(r.err).toBe(
-      `simulate: ${p}: 10 questions (2 lattice params)\nsimulate: ${p}: 1 of 1 sheets ran`,
+      `simulate: ${p}: 10 questions (2 lattice params)\nsimulate: ${p}: 1 of 1 sheets ran in 0 ms`,
     );
   });
 
@@ -71,9 +73,9 @@ describe("simulate (spec §5)", () => {
     expect(r.out).toBe(section(p));
     expect(r.err.split("\n")).toEqual([
       `simulate: ${p}: 10 questions (2 lattice params)`,
-      `simulate: ${p}: 1 of 1 sheets ran`,
+      `simulate: ${p}: 1 of 1 sheets ran in 0 ms`,
       `simulate: ${INVOICE}: no report statement`,
-      "simulate: 1 of 1 sheets ran across 2 files",
+      "simulate: 1 of 1 sheets ran across 2 files in 0 ms",
     ]);
   });
 
@@ -82,7 +84,7 @@ describe("simulate (spec §5)", () => {
     const r = await run(["simulate", p, p]);
     expect(r.code).toBe(0);
     expect(r.out).toBe(`${section(p)}\n\n---\n\n${section(p)}`);
-    expect(r.err.split("\n").at(-1)).toBe("simulate: 2 of 2 sheets ran across 2 files");
+    expect(r.err.split("\n").at(-1)).toBe("simulate: 2 of 2 sheets ran across 2 files in 0 ms");
   });
 
   const undef = (): string =>
@@ -96,7 +98,7 @@ describe("simulate (spec §5)", () => {
     expect(r.err.split("\n")).toEqual([
       `simulate: ${p}: 10 questions (2 lattice params)`,
       `simulate: ${p}: #plan cannot start: UNDEF: unknown name \`plan.marginn\`; did you mean \`margin\`?`,
-      `simulate: ${p}: 0 of 1 sheets ran`,
+      `simulate: ${p}: 0 of 1 sheets ran in 0 ms`,
     ]);
   });
 
@@ -113,7 +115,7 @@ describe("simulate (spec §5)", () => {
     expect(r.err.split("\n")).toEqual([
       `simulate: ${p}: 0 questions (2 lattice params)`,
       `simulate: ${p}: #plan cannot start: TYPE plan.hours: lattice step 3 does not reach the end of [0, 20]: 20 is not a multiple of 3 above 0`,
-      `simulate: ${p}: 0 of 1 sheets ran`,
+      `simulate: ${p}: 0 of 1 sheets ran in 0 ms`,
     ]);
   });
 
@@ -158,7 +160,7 @@ describe("simulate (spec §5)", () => {
     expect(r.err.split("\n")).toEqual([
       `simulate: ${p}: 10 questions (2 lattice params)`,
       ...Array.from({ length: 10 }, (_, i) => `simulate: ${p}: question ${i + 1} of 10`),
-      `simulate: ${p}: 1 of 1 sheets ran`,
+      `simulate: ${p}: 1 of 1 sheets ran in 0 ms`,
     ]);
   });
 
@@ -199,9 +201,42 @@ describe("simulate (spec §5)", () => {
     expect(r.err.split("\n")).toEqual([
       `visimark: cannot read ${nope}`,
       `simulate: ${p}: 10 questions (2 lattice params)`,
-      `simulate: ${p}: 1 of 1 sheets ran`,
-      "simulate: 1 of 1 sheets ran across 2 files",
+      `simulate: ${p}: 1 of 1 sheets ran in 0 ms`,
+      "simulate: 1 of 1 sheets ran across 2 files in 0 ms",
     ]);
+  });
+});
+
+describe("elapsed time on the summary lines", () => {
+  test("each file and the total are timed on the given clock", async () => {
+    const p = file("simulate.md", CLEAN);
+    let t = 0;
+    const err: string[] = [];
+    await runCli(["simulate", p, p], {
+      out: () => {},
+      err: (l: string) => err.push(l),
+      errTTY: false,
+      now: () => (t += 250),
+    });
+    // clock reads: run start, then per file a start and an end, then the total
+    expect(err.filter((l) => l.includes("sheets ran"))).toEqual([
+      `simulate: ${p}: 1 of 1 sheets ran in 250 ms`,
+      `simulate: ${p}: 1 of 1 sheets ran in 250 ms`,
+      "simulate: 2 of 2 sheets ran across 2 files in 1.3 s",
+    ]);
+  });
+
+  test.each([
+    [0, "0 ms"],
+    [412.4, "412 ms"],
+    [999.4, "999 ms"],
+    [1000, "1.0 s"],
+    [3449, "3.4 s"],
+    [59_940, "59.9 s"],
+    [60_000, "1 min 00 s"],
+    [125_400, "2 min 05 s"],
+  ])("%p ms reads %p", (ms, text) => {
+    expect(elapsedText(ms)).toBe(text);
   });
 });
 

@@ -708,10 +708,23 @@ function plural(n: number): string {
   return `${n} argument${n === 1 ? "" : "s"}`;
 }
 
-/** how `--progress` reaches stderr: whether it is a terminal, and a raw write with no newline */
+/**
+ * how `simulate` reports on its own run: whether stderr is a terminal, a raw
+ * write with no newline for `--progress`, and a monotonic millisecond clock
+ * for the elapsed time on the summary lines
+ */
 export interface ProgressTTY {
   isTTY: boolean;
   raw: (s: string) => void;
+  now: () => number;
+}
+
+/** `412 ms`, `3.4 s`, `2 min 05 s`: elapsed wall time, to a reader's precision */
+export function elapsedText(ms: number): string {
+  if (ms < 1000) return `${Math.round(ms)} ms`;
+  if (ms < 60_000) return `${(ms / 1000).toFixed(1)} s`;
+  const s = Math.round(ms / 1000);
+  return `${Math.floor(s / 60)} min ${String(s % 60).padStart(2, "0")} s`;
 }
 
 /**
@@ -735,8 +748,10 @@ export function cmdSimulate(args: string[], out: Writer, err: Writer, tty: Progr
   let sheetsRan = 0;
   let sheetsAll = 0;
   let printed = 0;
+  const started = tty.now();
 
   for (const path of files) {
+    const fileStarted = tty.now();
     let source: string;
     try {
       source = read(path);
@@ -789,13 +804,17 @@ export function cmdSimulate(args: string[], out: Writer, err: Writer, tty: Progr
       );
     }
     const ran = sim.reportSheets.length - sim.blocked.length;
-    err(`simulate: ${path}: ${ran} of ${sim.reportSheets.length} sheets ran`);
+    const took = elapsedText(tty.now() - fileStarted);
+    err(`simulate: ${path}: ${ran} of ${sim.reportSheets.length} sheets ran in ${took}`);
     sheetsRan += ran;
     sheetsAll += sim.reportSheets.length;
     if (sim.blocked.length > 0) anyBlocked = true;
   }
   if (files.length > 1) {
-    err(`simulate: ${sheetsRan} of ${sheetsAll} sheets ran across ${files.length} files`);
+    const took = elapsedText(tty.now() - started);
+    err(
+      `simulate: ${sheetsRan} of ${sheetsAll} sheets ran across ${files.length} files in ${took}`,
+    );
   }
   if (exit === 2) return 2;
   if (!anyReport) return 1;
