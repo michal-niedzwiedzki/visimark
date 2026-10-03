@@ -107,6 +107,15 @@
       "banner": "visimark-for-obsidian/visimark-for-obsidian.webp",
       "path": "visimark-for-obsidian/visimark-for-obsidian.md",
       "featured": true
+    },
+    {
+      "slug": "bakeoff",
+      "title": "Manda-Panda and the Sunday bakeoff",
+      "author": "Michał Niedźwiedzki",
+      "tags": ["Scenarios", "Simulation", "Markdown", "Obsidian"],
+      "teaser": "Amanda wants a stall at tomorrow's bakeoff. Dad has a price, a batch size and a laptop. Which combination does she bake?",
+      "icon": "../assets/scenarios.webp",
+      "path": "bakeoff/manda-panda-and-the-bakeoff.md"
     }
   ]
 }
