@@ -1,0 +1,12 @@
+{
+  "links": [
+    { "href": "index.html", "label": "Home" },
+    { "href": "playground.html", "label": "Playground" },
+    { "href": "tutorial.html", "label": "Tutorial" },
+    { "href": "ci.html", "label": "Continuous integration" },
+    { "href": "mcp-server.html", "label": "MCP server" },
+    { "href": "simulate.html", "label": "Simulate" },
+    { "href": "examples.html", "label": "Examples", "covers": "examples/" },
+    { "href": "https://github.com/michal-niedzwiedzki/visimark", "label": "GitHub" }
+  ]
+}

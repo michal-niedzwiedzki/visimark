@@ -155,12 +155,14 @@ export function pageShell(opts: PageShellOptions): string {
       </header>
     </div>
 
+    <!-- Agents: maintained by hand. The site links live in docs/nav.json; keep this row in step with it. -->
     <p class="install-cta">
       <a href="${home}">Home</a>
       <a href="${base}playground.html">Try in Playground</a>
-      <a href="${base}tutorial.html">Read the tutorial</a>
+      <a href="${base}tutorial.html">Tutorial</a>
       <a href="${base}ci.html">Continuous integration</a>
       <a href="${base}mcp-server.html">MCP server</a>
+      <a href="${base}simulate.html">Simulate</a>
       <a href="${base}examples.html">Examples</a>
       <a href="${base}articles.html">Articles</a>
     </p>
