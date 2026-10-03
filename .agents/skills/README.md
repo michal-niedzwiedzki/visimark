@@ -24,6 +24,7 @@ the lockfile is written here by hand and has no upstream.
 | `iterate-pr` | `getsentry/skills` |
 | `karpathy-guidelines` | `szkocot/andrej-karpathy-skills` |
 | `using-git-worktrees` | `obra/superpowers` |
+| `simple-english` | `AminBlg/SimpleEnglish` |
 | `obsidian-markdown` | `kepano/obsidian-skills` |
 | `obsidian-bases` | `kepano/obsidian-skills` |
 | `obsidian-cli` | `kepano/obsidian-skills` |
