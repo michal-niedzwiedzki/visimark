@@ -178,10 +178,20 @@ stderr carries, in this order for each file:
    `simulate: FILE: no report statement` instead.
 2. Progress lines, under `--progress` only (§3.6).
 3. One `cannot start` line per blocked sheet (§3.4), in document order.
-4. `simulate: FILE: R of S sheets ran`, where `S` is the file's report sheets.
+4. `simulate: FILE: R of S sheets ran in T`, where `S` is the file's report
+   sheets and `T` is the wall time the file took, from reading it to its last
+   report: `412 ms` below a second, `3.4 s` below a minute, `2 min 05 s`
+   above.
 
 After the last file, when more than one file was named:
-`simulate: R of S sheets ran across F files`.
+`simulate: R of S sheets ran across F files in T`, `T` covering the whole run.
+
+`T` is the only thing in the output that differs between two runs of the same
+commit, and it is on stderr only. It describes the run, not the document, so
+constraint 4 ([§2](../visimark-design.md#2-constraints-that-shaped-the-design))
+is unaffected. Reports are not timed one by one: every report sheet reads the
+same answers, each question evaluated once, so a per-report time would be
+almost entirely shared work.
 
 An unreadable file prints `visimark: cannot read FILE` in its place, and the
 other files are still processed.
@@ -192,9 +202,9 @@ When stderr is a terminal, a single line `simulate: FILE: question i of N` is
 rewritten in place with `\r` after each question, and cleared when the file
 finishes. When stderr is not a terminal, a line is printed at each tenth of
 `N` (the first question `i` at which `floor(10·i/N)` increases) and at the
-last question. There is no rate and no time estimate: the command reads no
-clock ([§2](../visimark-design.md#2-constraints-that-shaped-the-design),
-constraint 4). Without `--progress`, no progress is written.
+last question. There is no rate and no time estimate; the elapsed time comes
+once, on the summary line (§3.5). Without `--progress`, no progress is
+written.
 
 ### 3.7 Exit codes
 

@@ -1080,13 +1080,14 @@ simulate: runway-sweep.md: question 21 of 29
 simulate: runway-sweep.md: question 24 of 29
 simulate: runway-sweep.md: question 27 of 29
 simulate: runway-sweep.md: question 29 of 29
-simulate: runway-sweep.md: 1 of 1 sheets ran
+simulate: runway-sweep.md: 1 of 1 sheets ran in 46 ms
 ```
 
 On a terminal, `--progress` rewrites one line in place. In a CI log, where
 stderr is not a terminal, it prints a line at every tenth of the run, so a
 long job shows that it is still working without flooding the log. There is no
-time estimate, because the tool reads no clock. There is no cap on the grid
+time estimate while it runs; the last line of each file says how long the file
+took. There is no cap on the grid
 either. The count line is the warning, and the size is the document author's
 decision. [`example-battery-storage.md`](example-battery-storage.md) asks 577
 questions.

@@ -11,6 +11,8 @@ import { runCli } from "../src/cli/main.js";
 const DOCS = join(import.meta.dir, "..", "..", "..", "docs");
 const MODEL = join(DOCS, "tutorial", "runway-sweep.md");
 const PROMPT = "$ visimark simulate runway-sweep.md";
+/** the elapsed time on a summary line is wall time, so neither side compares it */
+const UNTIMED = / in (\d+ ms|\d+\.\d s|\d+ min \d\d s)$/;
 
 function quoted(md: string): string[] {
   const lines = md.split("\n");
@@ -30,9 +32,15 @@ test("chapter 31's simulate transcript is the tool's output", async () => {
     errTTY: false,
   });
   expect(code).toBe(0);
-  const local = (l: string): string => l.split(`${dirname(MODEL)}/`).join("");
+  const local = (l: string): string =>
+    l
+      .split(`${dirname(MODEL)}/`)
+      .join("")
+      .replace(UNTIMED, "");
   const session = [err[0]!, ...out.flatMap((l) => l.split("\n")), err[1]!].map(local);
-  expect(quoted(readFileSync(join(DOCS, "tutorial.md"), "utf8"))).toEqual(session);
+  expect(
+    quoted(readFileSync(join(DOCS, "tutorial.md"), "utf8")).map((l) => l.replace(UNTIMED, "")),
+  ).toEqual(session);
 });
 
 test("runway-sweep.md checks clean", async () => {

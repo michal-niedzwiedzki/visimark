@@ -13,6 +13,8 @@ import { runCli } from "../src/cli/main.js";
 const DOC = join(import.meta.dir, "..", "..", "..", "docs", "example-battery-storage.md");
 const NAME = "example-battery-storage.md";
 const PROMPT = `$ visimark simulate ${NAME}`;
+/** the elapsed time on a summary line is wall time, so neither side compares it */
+const UNTIMED = / in (\d+ ms|\d+\.\d s|\d+ min \d\d s)$/;
 
 function consoleBlocks(md: string): string[][] {
   const blocks: string[][] = [];
@@ -49,10 +51,14 @@ test(
       errTTY: false,
     });
     expect(code).toBe(0);
-    const local = (l: string): string => l.split(`${dirname(DOC)}/`).join("");
+    const local = (l: string): string =>
+      l
+        .split(`${dirname(DOC)}/`)
+        .join("")
+        .replace(UNTIMED, "");
     const session = [err[0]!, ...out.flatMap((l) => l.split("\n")), err[1]!].map(local);
     expect(err.length).toBe(2);
-    expect([...a!.slice(1), ...b!]).toEqual(session);
+    expect([...a!.slice(1), ...b!].map((l) => l.replace(UNTIMED, ""))).toEqual(session);
   },
   { timeout: 180_000 },
 );

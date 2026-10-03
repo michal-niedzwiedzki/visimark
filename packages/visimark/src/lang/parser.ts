@@ -15,7 +15,7 @@ import {
   type UnitText,
 } from "./ast.js";
 import type { Domain, Leaf, PresetName, RangeLeaf, SetLeaf } from "./domain.js";
-import type { Lattice } from "./lattice.js";
+import { isIntegral, type Lattice } from "./lattice.js";
 import { lex } from "./lexer.js";
 import { DELIM_OPENER_OF, DELIM_PAIRS } from "./notation.js";
 import { LangError, type Token } from "./token.js";
@@ -634,6 +634,8 @@ function parseParamInner(line: string, toks: Token[], kw: Token, nameTok: Token)
     rest = rest.slice(0, latticeAt);
   }
   const domain = rest.length === 0 ? undefined : parseParamDomainClause(line, rest);
+  // an integral domain admits whole numbers only, so it is itself the width
+  if (precision === undefined && domain !== undefined && isIntegral(domain)) precision = 0;
   const dflt = toks[eqIndex + 1]!;
   if (dflt.kind !== "ident" || dflt.value !== "default") {
     throw new LangError("expected `default` after `=` in a param", dflt.start, dflt.end);

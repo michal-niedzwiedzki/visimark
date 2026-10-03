@@ -2732,7 +2732,8 @@ scenario says otherwise.* Every part is required, in this order:
 - **`precision N`** — required, even where a plain scalar would derive its
   width. A value that arrives from outside has no width the document could
   work out. The width is also the limit on what a scenario may bring
-  (chapter 30).
+  (chapter 30). The one exception is a param that counts whole numbers: its
+  domain already says the width (see *Domains*, below).
 - **`default` and a number** — the value the document uses. It must be a plain
   number, such as `2`, `10500.00` or `3%`. It cannot be a formula, a name, a
   date or a string. A value you compute is an ordinary binding, not a `param`.
@@ -2817,14 +2818,19 @@ may drop to zero is `natural`; one that must keep at least one seat is
 `positive integer`. A preset alone needs no range:
 
 ```
-param staff_added precision 0 positive integer = default 1
+param staff_added positive integer = default 1
 ```
+
+`integer`, `natural` and `positive integer` admit whole numbers only, so they
+are a width as well as a domain: a param with one of them and no `precision`
+clause is `precision 0`. Writing `precision 0` as well is allowed and changes
+nothing. `positive` admits fractions, so it still needs a `precision`.
 
 A preset and a range narrow to their intersection, and a range end need not be
 closed on both sides:
 
 ```
-param crosssell_days precision 0 ℕ in [0, 8) = default 0
+param crosssell_days ℕ in [0, 8) = default 0
 ```
 
 reads as *the naturals, 0 up to but not including 8* — a half-open range on a
@@ -3355,14 +3361,14 @@ report forbidden
   new_hires = 5  every question with it breaks an assertion
   new_hires = 6  every question with it breaks an assertion
   12 of 28 questions are infeasible
-simulate: runway-sweep.md: 1 of 1 sheets ran
+simulate: runway-sweep.md: 1 of 1 sheets ran in 48 ms
 ```
 
 The first stderr line says how many questions the run asks: the 28 on the grid
 plus the **base**, which is the document at its defaults. It is printed before
 any question is asked, so a sweep that is far bigger than you meant shows up
 straight away. stdout is the readings, under the sheet that asked for them.
-The last line says how many report sheets ran.
+The last line says how many report sheets ran, and how long the file took.
 
 Every question is asked the way `eval --scenario` would ask it. A question is
 **feasible** when every `assert` in the document holds.
