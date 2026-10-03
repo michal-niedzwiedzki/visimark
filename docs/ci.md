@@ -1244,9 +1244,12 @@ Four notes on that job:
   `==> FILE <==` headers match. `git show origin/main:models/conference.md`
   into a temporary file would change the header, and would also lose any CSV
   file the document imports (chapter 19).
-- **`|| true` is on purpose.** The job is a reading. A new document has no base
-  version, and a base branch whose sweep cannot start should still let you see
-  the head's.
+- **A failed sweep is recorded, not fatal.** The job is a reading. A new
+  document has no base version, and a base branch whose sweep cannot start
+  should still let you see the head's. Each exit status is captured, printed
+  when it is not `0`, and "No reading changed" appears only when both sweeps
+  ran: a sweep that failed with no output looks the same as one that did not
+  change.
 - **`BASE_REF` is passed through `env`,** not written into the script with
   `${{ }}`. That is GitHub's own advice for any value that comes from the
   event.

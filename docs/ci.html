@@ -1306,9 +1306,12 @@ will show up as a diff of every line.</li>
 <code>==> FILE &#x3C;==</code> headers match. <code>git show origin/main:models/conference.md</code>
 into a temporary file would change the header, and would also lose any CSV
 file the document imports (chapter 19).</li>
-<li><strong><code>|| true</code> is on purpose.</strong> The job is a reading. A new document has no base
-version, and a base branch whose sweep cannot start should still let you see
-the head's.</li>
+<li><strong>A failed sweep is recorded, not fatal.</strong> The job is a reading. A new
+document has no base version, and a base branch whose sweep cannot start
+should still let you see the head's. Each exit status is captured, printed
+when it is not <code>0</code>, and "No reading changed" appears only when both sweeps
+ran: a sweep that failed with no output looks the same as one that did not
+change.</li>
 <li><strong><code>BASE_REF</code> is passed through <code>env</code>,</strong> not written into the script with
 <code>${{ }}</code>. That is GitHub's own advice for any value that comes from the
 event.</li>
