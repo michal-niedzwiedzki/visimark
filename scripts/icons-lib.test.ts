@@ -2,7 +2,18 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { catalogueIcons, ligaturesIn, MANIFEST_PATH, subsetUrl, usedIcons } from "./icons-lib.js";
+import {
+  catalogueIcons,
+  FONT_PATH,
+  FONT_REFERENCES,
+  fontVersion,
+  fontVersionsIn,
+  ligaturesIn,
+  MANIFEST_PATH,
+  subsetUrl,
+  usedIcons,
+  withFontVersion,
+} from "./icons-lib.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -35,4 +46,28 @@ test("the committed font was built for every icon the site draws — run `bun ru
   const missing = used.filter((n) => !manifest.includes(n));
   expect(missing, `not in docs/fonts/material-symbols-outlined.ttf: ${missing}`).toEqual([]);
   expect(manifest, "the manifest lists icons nothing draws any more").toEqual(used);
+});
+
+describe("the font's cache-busting version", () => {
+  const css = 'src: url("fonts/material-symbols-outlined.ttf") format("truetype");';
+
+  test("is added to a bare URL and replaced on a versioned one", () => {
+    const once = withFontVersion(css, "aaaa1111");
+    expect(once).toContain('material-symbols-outlined.ttf?v=aaaa1111")');
+    expect(withFontVersion(once, "bbbb2222")).toContain('.ttf?v=bbbb2222")');
+    expect(withFontVersion(once, "bbbb2222")).not.toContain("aaaa1111");
+  });
+
+  test("changes when the bytes do", () => {
+    expect(fontVersion(new Uint8Array([1]))).not.toBe(fontVersion(new Uint8Array([2])));
+  });
+
+  test("every file that names the font names the committed bytes — run `bun run gen:fonts`", () => {
+    const version = fontVersion(readFileSync(join(ROOT, FONT_PATH)));
+    for (const path of FONT_REFERENCES) {
+      const found = fontVersionsIn(readFileSync(join(ROOT, path), "utf8"));
+      expect(found.length, `${path} names no font`).toBeGreaterThan(0);
+      expect(found, `${path} points at a stale font`).toEqual(found.map(() => version));
+    }
+  });
 });

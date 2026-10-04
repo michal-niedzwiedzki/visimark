@@ -7,6 +7,7 @@
  * writes beside it is what lets a test (icons-lib.test.ts) notice, offline,
  * that someone forgot.
  */
+import { createHash } from "node:crypto";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
@@ -55,3 +56,27 @@ export function subsetUrl(names: string[]): string {
 }
 
 export const MANIFEST_PATH = "docs/fonts/material-symbols-outlined.icons.json";
+
+export const FONT_PATH = "docs/fonts/material-symbols-outlined.ttf";
+
+/** The two files that name the font in an `@font-face`. Every generated page
+ *  reaches it through docs/styles.css; the playground carries its own copy. */
+export const FONT_REFERENCES = ["docs/styles.css", "docs/playground.html"];
+
+const FONT_URL = /(material-symbols-outlined\.ttf)(?:\?v=[0-9a-f]+)?(?=")/g;
+
+/** Eight hex digits of the font's SHA-256: a URL that changes when the bytes do. */
+export function fontVersion(font: Uint8Array): string {
+  return createHash("sha256").update(font).digest("hex").slice(0, 8);
+}
+
+/** `text` with every font URL pointing at `?v=<version>`, so a browser that
+ *  cached the previous subset under the same URL asks for the new one. */
+export function withFontVersion(text: string, version: string): string {
+  return text.replace(FONT_URL, `$1?v=${version}`);
+}
+
+/** The versions `text` names, one per font URL (`[]` when it names none). */
+export function fontVersionsIn(text: string): (string | undefined)[] {
+  return [...text.matchAll(FONT_URL)].map((m) => /\?v=([0-9a-f]+)/.exec(m[0])?.[1]);
+}

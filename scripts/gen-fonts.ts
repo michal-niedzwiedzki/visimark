@@ -10,10 +10,18 @@
  * icons-lib.test.ts fails, offline, when the manifest and the icons in use
  * disagree.
  */
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { MANIFEST_PATH, subsetUrl, usedIcons } from "./icons-lib.js";
+import {
+  FONT_PATH,
+  FONT_REFERENCES,
+  MANIFEST_PATH,
+  fontVersion,
+  subsetUrl,
+  usedIcons,
+  withFontVersion,
+} from "./icons-lib.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const names = usedIcons(ROOT);
@@ -25,10 +33,17 @@ if (!url) throw new Error("Google Fonts returned no font URL");
 const font = await fetch(url);
 if (!font.ok) throw new Error(`could not fetch the font (HTTP ${font.status})`);
 
+const bytes = new Uint8Array(await font.arrayBuffer());
 mkdirSync(join(ROOT, "docs/fonts"), { recursive: true });
-writeFileSync(
-  join(ROOT, "docs/fonts/material-symbols-outlined.ttf"),
-  new Uint8Array(await font.arrayBuffer()),
-);
+writeFileSync(join(ROOT, FONT_PATH), bytes);
 writeFileSync(join(ROOT, MANIFEST_PATH), `${JSON.stringify(names, null, 2)}\n`);
-console.log(`Wrote docs/fonts/material-symbols-outlined.ttf with ${names.length} icons.`);
+
+// The URL is the cache key. Put a hash of the bytes in it, so a browser or
+// CDN holding the previous subset fetches this one instead of drawing a new
+// icon as its own name.
+const version = fontVersion(bytes);
+for (const path of FONT_REFERENCES) {
+  const file = join(ROOT, path);
+  writeFileSync(file, withFontVersion(readFileSync(file, "utf8"), version));
+}
+console.log(`Wrote ${FONT_PATH} with ${names.length} icons, as ?v=${version}.`);
