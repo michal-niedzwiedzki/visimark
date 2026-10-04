@@ -75,6 +75,18 @@ Object.assign(FILE_SOURCES, {
   "example-charts.md": "example-charts.md",
   "example-executable-documentation.md": "example-executable-documentation.md",
 });
+/**
+ * Documents with a `report`, for the SIMULATION tab. They are served from where
+ * they already live rather than copied beside the other examples, so there is
+ * one file to keep and the guide that links to each stays true.
+ */
+export const SIMULATION_EXAMPLES: Record<string, string> = {
+  "example-runway-sweep.md": "tutorial/runway-sweep.md",
+  "example-conference.md": "simulate/conference.md",
+  "example-bakeoff.md": "articles/bakeoff/bakeoff.md",
+  "example-battery-storage.md": "example-battery-storage.md",
+};
+Object.assign(FILE_SOURCES, SIMULATION_EXAMPLES);
 
 export const SCENARIOS_PATH = "playground/scenarios.json";
 export const BADGES_PATH = "playground/badges.json";

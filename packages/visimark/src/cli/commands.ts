@@ -13,7 +13,7 @@ import { infer } from "../infer/propose.js";
 import { planInfer } from "../infer/write.js";
 import { describeFinding, formatCheck } from "../report/format.js";
 import { simulate } from "../eval/simulate.js";
-import { renderBlocked, renderSheet } from "../report/simulate.js";
+import { elapsedText, renderBlocked, renderSheet } from "../report/simulate.js";
 import { explainText, explainView } from "../report/explain.js";
 import { errorEnvelope, explainJson } from "../report/envelope.js";
 import { formatInfer } from "../report/infer.js";
@@ -717,14 +717,6 @@ export interface ProgressTTY {
   isTTY: boolean;
   raw: (s: string) => void;
   now: () => number;
-}
-
-/** `412 ms`, `3.4 s`, `2 min 05 s`: elapsed wall time, to a reader's precision */
-export function elapsedText(ms: number): string {
-  if (ms < 1000) return `${Math.round(ms)} ms`;
-  if (ms < 60_000) return `${(ms / 1000).toFixed(1)} s`;
-  const s = Math.round(ms / 1000);
-  return `${Math.floor(s / 60)} min ${String(s % 60).padStart(2, "0")} s`;
 }
 
 /**

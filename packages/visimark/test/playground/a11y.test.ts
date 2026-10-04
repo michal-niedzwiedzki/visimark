@@ -43,7 +43,7 @@ describe("the tab pattern", () => {
   });
 
   test("every tab declares its role and the panel it controls", () => {
-    expect(tabTags).toHaveLength(8);
+    expect(tabTags).toHaveLength(9);
     for (const tag of tabTags) {
       expect(attr(tag, "role")).toBe("tab");
       expect(attr(tag, "id")).toBeTruthy();
@@ -53,7 +53,7 @@ describe("the tab pattern", () => {
   });
 
   test("every tab's aria-controls names a real panel, which names it back", () => {
-    expect(panelTags).toHaveLength(8);
+    expect(panelTags).toHaveLength(9);
     const panels = new Map(panelTags.map((tag) => [attr(tag, "id")!, tag]));
     for (const tag of tabTags) {
       const panel = panels.get(attr(tag, "aria-controls")!);
@@ -100,5 +100,14 @@ describe("prefers-reduced-motion", () => {
     expect(quest).toContain("if (prefersReducedMotion()) return;");
     // ...and the reveal is not held back 1.4s waiting for stars that never flew
     expect(quest).toContain("confettiFired ? CONFETTI_SETTLE_MS : 0");
+  });
+});
+
+describe("the SIMULATION tab", () => {
+  test("sits in the diagnostics strip with a lab-flask icon and a Start Simulation button", () => {
+    const tab = tabTags.find((t) => attr(t, "data-tab") === "simulate")!;
+    expect(attr(tab, "data-group")).toBe("diag");
+    expect(page).toMatch(/aria-hidden="true">science<\/span\s*>\s*Simulation/);
+    expect(page).toMatch(/id="simulate-btn"[\s\S]{0,200}Start Simulation/);
   });
 });
