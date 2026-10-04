@@ -114,7 +114,8 @@
       "author": "Michał Niedźwiedzki",
       "tags": ["Scenarios", "Simulation", "Markdown", "Obsidian"],
       "teaser": "Amanda wants a stall at tomorrow's bakeoff. Dad has a price, a batch size and a laptop. Which combination does she bake?",
-      "icon": "../assets/scenarios.webp",
+      "icon": "../assets/muffin.webp",
+      "banner": "bakeoff/manda-panda-and-the-bakeoff.webp",
       "path": "bakeoff/manda-panda-and-the-bakeoff.md"
     }
   ]
