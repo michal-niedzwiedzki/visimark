@@ -184,6 +184,8 @@ export function createFilesPanel(
   /** The shared tail of both reset paths. The store has already put the
    *  restored text into the editor; this is everything downstream of that. */
   function reloadCurrent(): void {
+    // Readings were taken of the text that has just been replaced.
+    for (const panel of panels) panel.reset();
     render();
     pipeline.runNow();
   }
