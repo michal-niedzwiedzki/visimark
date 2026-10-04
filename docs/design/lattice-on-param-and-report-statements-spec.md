@@ -247,6 +247,7 @@ The finding names the param (`location.name`), as every `param` finding does.
 | a `REF` that resolves to nothing | `UNDEF` | the message an unresolved name has today |
 | a `REF` that resolves to a column, not a scalar | `TYPE` | `a report reads a scalar; lines.price is a column` |
 | a `report` in a document-scope block (no sheet id) | `SHEET` | ``` `report` must be in a `#id` sheet block ``` |
+| a `report deltas` with no `on`, in a sheet with no scalar that is not a `param` (amended by #333) | `TYPE` | `` `report deltas` has nothing to read: this sheet has no scalar that is not a param; name the values with `deltas on REF, …` `` |
 | two byte-identical `report` statements in one sheet, whitespace normalised | `DUP` | `report gates is declared twice in sheet runs` |
 
 The findings carry the sheet (`location.sheet`) and no `name`, as the existing
@@ -404,7 +405,10 @@ the four presets and an `in` range alone.
   message is unchanged.
 - **Checking that a report's options are meaningful** for the sheet (a
   `deltas` on a scalar no sweep varies, a `best` over a scalar that
-  never changes). `check` validates syntax and names only.
+  never changes). `check` validates syntax and names only, with one exception
+  added by #333: a bare `deltas` in a sheet with no scalar that is not a
+  `param` has nothing to read and is `TYPE` (§4.2). A sheet of constants still
+  gets a flat reading and no finding.
 
 ## 8. Open questions
 

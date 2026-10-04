@@ -233,7 +233,7 @@ excluding the base.
 | `ledger` | One row per question, base first, then `1…N`. Columns: `question`, each lattice param, `feasible` (`yes`, `no`, `faulted`). |
 | `ledger assertions broken` | As `ledger`, plus a `broken` column listing the false assertions' keys, joined with `; `. It is blank when none is false. |
 | `deltas on REF, …` | For each `REF` in the order written: the line `REF  base V`, then `low` and `high` lines. Each shows the lowest or highest value over the grid's questions that are not faulted, its signed delta from base in parentheses, and the first question in grid order that reaches it. |
-| `deltas` (no `on`) | As above for every scalar of the report's own sheet that is not a param, in document order. |
+| `deltas` (no `on`) | As above for every scalar of the report's own sheet that is not a param, in document order. A sheet with no such scalar is a `TYPE` finding from `check` (#333), so the sheet is `(cannot start)` and never prints an empty body. |
 | `gates` | A line `N questions`, then one row per `assert` in document order. Columns: `assert`, `holds`, `fails`, `faulted` (counts over the grid), `base` (`holds`, `fails`, `faulted`), and `first failure` (the first grid question in which it is false, blank if none). |
 | `best scalar REF direction max\|min` | The winning question in prose, then `REF  V  (Δ against base)`, then `chosen from N questions`. The candidates are the grid's questions that are not faulted. |
 | `… among feasible` | Candidates are the feasible questions only. The last line reads `chosen from F feasible of N questions`. |
