@@ -1,5 +1,7 @@
 # VisiMark
 
+[![visimark MCP server – quality and maintenance score on Glama](https://glama.ai/mcp/servers/michal-niedzwiedzki/visimark/badges/score.svg)](https://glama.ai/mcp/servers/michal-niedzwiedzki/visimark)
+
 **A document integrity layer for Markdown: it checks that every number in a document still matches the formula that produced it, so an agent's correct formula can't ship with a wrong total.**
 
 VisiMark checks the numbers in Markdown documents, especially ones an agent wrote. Every computed value carries its formula, a machine proves the two still agree, and CI fails when they don't. The document stays plain Markdown.
