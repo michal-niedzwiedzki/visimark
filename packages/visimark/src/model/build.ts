@@ -259,6 +259,7 @@ export function build(doc: LocatedDoc): DocModel {
     for (const rb of block.bindings) {
       const stmt = parseOne(rb, doc.source, findings, sheetId);
       if (stmt) stmts.push(stmt);
+      else sheet.droppedLines = true;
     }
     const chartNamesInBlock = new Set(
       stmts.flatMap((s) => (s.kind === "chart" ? [s.chart.name] : [])),
@@ -525,6 +526,7 @@ function ensureSheet(
       assertions: [],
       charts: [],
       reports: [],
+      droppedLines: false,
       imported,
     };
     sheets.set(id, s);

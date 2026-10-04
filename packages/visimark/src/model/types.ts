@@ -178,6 +178,10 @@ export interface Sheet {
   charts: Chart[];
   /** `report` statements, in block-declaration order */
   reports: Report[];
+  /** true when a line of one of this sheet's blocks failed to parse and was
+   *  dropped, so `scalars` may be missing a binding. See
+   *  docs/design/a-bare-report-deltas-in-a-sheet-with-no-spec.md §3. */
+  droppedLines: boolean;
   /** a `from <path> ...` declaration — non-null marks this sheet as a
    *  **declared input**: read-only, its table sourced from a local CSV file
    *  rather than an inline GFM table. See visimark-design.md §3/§9. */
