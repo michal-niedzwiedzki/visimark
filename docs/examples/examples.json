@@ -2,92 +2,103 @@
   "examples": [
     {
       "slug": "invoice",
-      "title": "An invoice that checks its own arithmetic",
-      "tags": ["Invoice", "Assertions", "Anchors"],
+      "title": "Invoice: one that checks its own arithmetic",
+      "tags": ["assertions", "anchors"],
       "teaser": "Line items, a payment schedule, early-payment terms and a reconciliation, all in one Markdown file. check recomputes every number and fails if any stored figure, or the schedule's total, disagrees.",
-      "icon": "../assets/table.webp",
-      "path": "../example-invoice.md"
+      "icon": "receipt_long",
+      "path": "../example-invoice.md",
+      "audience": ["finance", "linters"]
     },
     {
       "slug": "invoice-csv-import",
-      "title": "The same invoice, imported from a CSV",
-      "tags": ["Invoice", "CSV", "Imports"],
+      "title": "Invoice: imported from a CSV file",
+      "tags": ["csv", "imports"],
       "teaser": "The line items live in a CSV and the document pins it by hash. Edit the CSV and the import goes stale until it is regenerated, so the figures cannot drift from their source.",
-      "icon": "../assets/excel.webp",
+      "icon": "receipt_long_off",
       "path": "../example-invoice-csv-import.md",
-      "attachments": ["../example-invoice-csv-import.csv"]
+      "attachments": ["../example-invoice-csv-import.csv"],
+      "audience": ["finance", "linters"]
     },
     {
       "slug": "ci-sharding",
       "title": "Build tool: test-suite sharding",
-      "tags": ["CI", "eval", "Build"],
+      "tags": ["ci", "eval", "build"],
       "teaser": "CI needs to split a test suite across parallel runners. Here the sharding policy is the document, and visimark eval is what CI reads to build the matrix.",
-      "icon": "../assets/actions.webp",
-      "path": "../example-ci-sharding.md"
+      "icon": "design_services",
+      "path": "../example-ci-sharding.md",
+      "audience": ["capacity_planners", "operations", "developers"]
     },
     {
       "slug": "agent-budget",
       "title": "AI agent harness: a spending ledger",
-      "tags": ["AI", "Agents", "Budget"],
+      "tags": ["ai"],
       "teaser": "An autonomous coding agent needs a spending cap it cannot talk itself out of. The cap and the running spend live in a document the harness checks before the next tool call.",
-      "icon": "../assets/agent.webp",
-      "path": "../example-agent-budget.md"
+      "icon": "robot_2",
+      "path": "../example-agent-budget.md",
+      "audience": ["agents", "developers", "finance"]
     },
     {
       "slug": "structural-check",
       "title": "Human error verifier: a deck joist calc",
-      "tags": ["Verification", "Engineering", "Assertions"],
+      "tags": ["assertions"],
       "teaser": "A structural calc gets retyped between engineer, permit office and contractor, and every retyping risks a transposed digit. This sheet catches that before anyone builds the deck.",
-      "icon": "../assets/scenarios.webp",
-      "path": "../example-structural-check.md"
+      "icon": "fact_check",
+      "path": "../example-structural-check.md",
+      "audience": ["engineering"]
     },
     {
       "slug": "pricing-policy",
       "title": "Executable documentation: a pricing policy",
-      "tags": ["Pricing", "eval", "Documentation"],
+      "tags": ["eval"],
       "teaser": "The pricing page, the sales deck and the billing config usually restate the same numbers until one lags a tier change. Here the policy's prose and the values billing reads are one file.",
-      "icon": "../assets/html.webp",
-      "path": "../example-pricing-policy.md"
+      "icon": "request_quote",
+      "path": "../example-pricing-policy.md",
+      "audience": ["developers", "business"]
+    },
+    {
+      "slug": "executable-documentation",
+      "title": "Executable documentation: capacity planning",
+      "tags": ["eval", "json"],
+      "teaser": "An operating budget where the worker-node count is derived rather than typed. The prose is the specification, the tables are its inputs, and eval hands the results to whatever needs them next.",
+      "icon": "folder_managed",
+      "path": "../example-executable-documentation.md",
+      "audience": ["founders", "capacity_planners", "operations"]
     },
     {
       "slug": "onboarding-dashboard",
       "title": "Safety net for stale artifacts: an onboarding dashboard",
-      "tags": ["Charts", "SVG", "CI"],
+      "tags": ["charts", "svg", "ci"],
       "teaser": "A funnel chart pasted into a slide looks current forever. Here the chart is a generated artifact of the document, and check refuses to let it disagree with the table beside it.",
-      "icon": "../assets/report.webp",
-      "path": "../example-onboarding-dashboard.md"
+      "icon": "area_chart",
+      "path": "../example-onboarding-dashboard.md",
+      "audience": ["founders", "linters", "operations"]
     },
     {
       "slug": "charts",
       "title": "Guarantee of artifact integrity",
-      "tags": ["Charts", "SVG", "CI"],
+      "tags": ["charts", "svg", "ci"],
       "teaser": "A chart statement names columns the sheet already has. fmt draws the SVG and check proves the bytes on disk are still what the current table renders to, so the picture cannot quietly drift away from the numbers underneath it.",
-      "icon": "../assets/pie.webp",
-      "path": "../example-charts.md"
-    },
-    {
-      "slug": "executable-documentation",
-      "title": "Executable documentation",
-      "tags": ["eval", "JSON", "Kubernetes"],
-      "teaser": "An operating budget where the worker-node count is derived rather than typed. The prose is the specification, the tables are its inputs, and eval hands the results to whatever needs them next.",
-      "icon": "../assets/json.webp",
-      "path": "../example-executable-documentation.md"
+      "icon": "verified",
+      "path": "../example-charts.md",
+      "audience": ["founders", "operations", "science", "engineering"]
     },
     {
       "slug": "deal-desk",
       "title": "Deal desk: five levers on one quote",
-      "tags": ["eval", "Scenarios", "Assertions"],
+      "tags": ["eval", "scenarios", "assertions"],
       "teaser": "A quote with five scenario parameters and a set of guardrails. eval --scenario tries a combination for one run without writing anything, and check rejects any that breaks margin, discount, budget or capacity.",
-      "icon": "../assets/actions.webp",
-      "path": "../example-deal-desk.md"
+      "icon": "tune",
+      "path": "../example-deal-desk.md",
+      "audience": ["business", "founders", "sales"]
     },
     {
       "slug": "battery-storage",
       "title": "Battery storage: a project a lender can sweep",
-      "tags": ["Project finance", "simulate", "Units"],
+      "tags": ["simulate", "units"],
       "teaser": "A grid-scale battery modelled as its lender sees it, with covenants as assertions and five levers declared with lattices. visimark simulate asks all 576 questions on the grid and prints which covenant binds, which choices are ruled out whatever else is chosen, and the best feasible case.",
-      "icon": "../assets/dollars.webp",
-      "path": "../example-battery-storage.md"
+      "icon": "balance",
+      "path": "../example-battery-storage.md",
+      "audience": ["founders", "business", "finance"]
     }
   ]
 }

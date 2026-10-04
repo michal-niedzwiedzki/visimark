@@ -56,7 +56,7 @@
       content="default-src 'none';
                script-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net;
                style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com;
-               font-src https://fonts.gstatic.com;
+               font-src 'self' https://fonts.gstatic.com;
                img-src 'self' data:;
                connect-src 'self';
                base-uri 'none';
@@ -479,15 +479,37 @@
         color: #9fb6c9;
         border-bottom: 1px solid rgba(255, 255, 255, 0.08);
       }
-      /* Inline Phosphor icon shared by panel heads, diag tabs and action
-         buttons (see the UI_ICONS dict below) — sized to sit on the text
-         baseline at these small, all-caps font sizes rather than as its own
-         block. */
+      /* Material Symbols Outlined, a self-hosted subset (docs/fonts/) shared
+         with the examples page. Icons are ligatures: the glyph name is the
+         span's text. Sized to sit on the text baseline at these small,
+         all-caps font sizes rather than as its own block. */
+      @font-face {
+        font-family: "Material Symbols Outlined";
+        font-style: normal;
+        font-weight: 400;
+        font-display: block;
+        src: url("fonts/material-symbols-outlined.ttf") format("truetype");
+      }
+      .material-symbols-outlined {
+        font-family: "Material Symbols Outlined";
+        font-weight: normal;
+        font-style: normal;
+        letter-spacing: normal;
+        text-transform: none;
+        white-space: nowrap;
+        direction: ltr;
+        -webkit-font-feature-settings: "liga";
+        font-feature-settings: "liga";
+      }
       .ico {
-        width: 14px;
-        height: 14px;
+        display: inline-block;
+        width: 18px;
+        height: 18px;
+        font-size: 18px;
+        line-height: 18px;
+        overflow: hidden;
         flex: none;
-        vertical-align: -2px;
+        vertical-align: -4px;
         margin-right: 6px;
       }
       .panel.on-light > .panel-head {
@@ -765,6 +787,75 @@
            far down. */
         display: flex;
         flex-direction: column;
+      }
+      .knowledge > .panel-head {
+        justify-content: flex-start;
+        padding: 0 6px;
+        gap: 2px;
+      }
+      /* The two SCENARIO tab views are .panel-body first (flex column, see
+         above), so .diag-view's own display:none loses on specificity. */
+      .knowledge .panel-body.diag-view:not(.active) {
+        display: none;
+      }
+      /* Badge gallery — every chapter's badge in tutorial order; earned ones
+         are lit, the rest dimmed until their chapter's quest is done. */
+      .badge-gallery {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .badge-gallery-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 9px 12px;
+        border: 1px solid transparent;
+        border-radius: 9px;
+        color: #7a97ab;
+      }
+      /* Earned: the same plate as .badge-award above. */
+      .badge-gallery-item.earned {
+        color: #ffffff;
+        background: linear-gradient(180deg, #234927, #1d291e), #2a2a2a;
+        border-color: rgba(255, 255, 255, 0.14);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+      }
+      .badge-gallery-icon {
+        flex: none;
+        width: 30px;
+        height: 30px;
+      }
+      .badge-gallery-icon svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+      .badge-gallery-text {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
+      }
+      .badge-gallery-name {
+        font-size: 1rem;
+        font-weight: 700;
+        line-height: 1.3;
+      }
+      .badge-gallery-earn {
+        border: none;
+        background: none;
+        padding: 0;
+        font: inherit;
+        font-size: 0.75rem;
+        color: #ff6259;
+        cursor: pointer;
+      }
+      .badge-gallery-earn:hover {
+        text-decoration: underline;
       }
       #scenario-body p {
         margin: 0 0 14px;
@@ -1392,10 +1483,7 @@
             <section class="panel files">
               <div class="panel-head">
                 <span
-                  ><svg class="ico" viewBox="0 0 256 256" fill="currentColor">
-                    <path
-                      d="M216,72H131.31L104,44.69A15.86,15.86,0,0,0,92.69,40H40A16,16,0,0,0,24,56V200.62A15.4,15.4,0,0,0,39.38,216H216.89A15.13,15.13,0,0,0,232,200.89V88A16,16,0,0,0,216,72ZM40,56H92.69l16,16H40ZM216,200H40V88H216Z"
-                    /></svg
+                  ><span class="ico material-symbols-outlined" aria-hidden="true">folder_open</span
                   >Files</span
                 >
               </div>
@@ -1415,10 +1503,7 @@
             <section class="panel editor">
               <div class="panel-head">
                 <span
-                  ><svg class="ico" viewBox="0 0 256 256" fill="currentColor">
-                    <path
-                      d="M227.31,73.37,182.63,28.68a16,16,0,0,0-22.63,0L36.69,152A15.86,15.86,0,0,0,32,163.31V208a16,16,0,0,0,16,16H92.69A15.86,15.86,0,0,0,104,219.31L227.31,96a16,16,0,0,0,0-22.63ZM51.31,160,136,75.31,152.69,92,68,176.68ZM48,179.31,76.69,208H48Zm48,25.38L79.31,188,164,103.31,180.69,120Zm96-96L147.31,64l24-24L216,84.68Z"
-                    /></svg
+                  ><span class="ico material-symbols-outlined" aria-hidden="true">edit</span
                   >Editor</span
                 >
                 <span
@@ -1439,10 +1524,7 @@
             <section class="panel preview on-light">
               <div class="panel-head">
                 <span
-                  ><svg class="ico" viewBox="0 0 256 256" fill="currentColor">
-                    <path
-                      d="M247.31,124.76c-.35-.79-8.82-19.58-27.65-38.41C194.57,61.26,162.88,48,128,48S61.43,61.26,36.34,86.35C17.51,105.18,9,124,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208s66.57-13.26,91.66-38.34c18.83-18.83,27.3-37.61,27.65-38.4A8,8,0,0,0,247.31,124.76ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.47,133.47,0,0,1,25,128,133.33,133.33,0,0,1,48.07,97.25C70.33,75.19,97.22,64,128,64s57.67,11.19,79.93,33.25A133.46,133.46,0,0,1,231.05,128C223.84,141.46,192.43,192,128,192Zm0-112a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Z"
-                    /></svg
+                  ><span class="ico material-symbols-outlined" aria-hidden="true">visibility</span
                   >Preview</span
                 >
               </div>
@@ -1464,10 +1546,7 @@
                   aria-selected="true"
                   tabindex="0"
                 >
-                  <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
-                    <path
-                      d="M128,128a8,8,0,0,1-3,6.25l-40,32a8,8,0,1,1-10-12.5L107.19,128,75,102.25a8,8,0,1,1,10-12.5l40,32A8,8,0,0,1,128,128Zm48,24H136a8,8,0,0,0,0,16h40a8,8,0,0,0,0-16Zm56-96V200a16,16,0,0,1-16,16H40a16,16,0,0,1-16-16V56A16,16,0,0,1,40,40H216A16,16,0,0,1,232,56ZM216,200V56H40V200H216Z"
-                    /></svg
+                  <span class="ico material-symbols-outlined" aria-hidden="true">terminal</span
                   >Terminal
                 </button>
                 <button
@@ -1481,11 +1560,7 @@
                   aria-selected="false"
                   tabindex="-1"
                 >
-                  <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
-                    <path
-                      d="M251.34,112,183.88,44.08a96.1,96.1,0,0,0-135.77,0l-.09.09L34.25,58.4A8,8,0,0,0,45.74,69.53L59.47,55.35a79.92,79.92,0,0,1,18.71-13.9L124.68,88l-96,96a16,16,0,0,0,0,22.63l20.69,20.69a16,16,0,0,0,22.63,0l96-96,14.34,14.34h0L200,163.3a16,16,0,0,0,22.63,0l28.69-28.69A16,16,0,0,0,251.34,112ZM60.68,216,40,195.31l68-68L128.68,148ZM162.34,114.32,140,136.67,119.31,116l22.35-22.35a8,8,0,0,0,0-11.32L94.32,35a80,80,0,0,1,78.23,20.41l44.22,44.51L188,128.66l-14.34-14.34A8,8,0,0,0,162.34,114.32Zm49,37.66-12-12L228,111.25l12,12Z"
-                    /></svg
-                  >Build
+                  <span class="ico material-symbols-outlined" aria-hidden="true">build</span>Build
                 </button>
                 <button
                   class="diag-tab"
@@ -1498,10 +1573,7 @@
                   aria-selected="false"
                   tabindex="-1"
                 >
-                  <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
-                    <path
-                      d="M224,48H72A32,32,0,0,0,40,80V224a8,8,0,0,0,8,8H192a8,8,0,0,0,0-16H56a16,16,0,0,1,16-16H224a8,8,0,0,0,8-8V56A8,8,0,0,0,224,48Zm-8,136H72a31.82,31.82,0,0,0-16,4.29V80A16,16,0,0,1,72,64H216Z"
-                    /></svg
+                  <span class="ico material-symbols-outlined" aria-hidden="true">menu_book</span
                   >Reference
                 </button>
               </div>
@@ -1540,10 +1612,7 @@
                   <span class="meta" id="build-meta"></span>
                   <span class="action-status" id="build-status"></span>
                   <button class="action-btn" id="build-btn" type="button">
-                    <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
-                      <path
-                        d="M251.34,112,183.88,44.08a96.1,96.1,0,0,0-135.77,0l-.09.09L34.25,58.4A8,8,0,0,0,45.74,69.53L59.47,55.35a79.92,79.92,0,0,1,18.71-13.9L124.68,88l-96,96a16,16,0,0,0,0,22.63l20.69,20.69a16,16,0,0,0,22.63,0l96-96,14.34,14.34h0L200,163.3a16,16,0,0,0,22.63,0l28.69-28.69A16,16,0,0,0,251.34,112ZM60.68,216,40,195.31l68-68L128.68,148ZM162.34,114.32,140,136.67,119.31,116l22.35-22.35a8,8,0,0,0,0-11.32L94.32,35a80,80,0,0,1,78.23,20.41l44.22,44.51L188,128.66l-14.34-14.34A8,8,0,0,0,162.34,114.32Zm49,37.66-12-12L228,111.25l12,12Z"
-                      /></svg
+                    <span class="ico material-symbols-outlined" aria-hidden="true">play_arrow</span
                     >Run Build
                   </button>
                 </div>
@@ -1585,10 +1654,7 @@
                   aria-selected="true"
                   tabindex="0"
                 >
-                  <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
-                    <path
-                      d="M76,152a36,36,0,1,0,36,36A36,36,0,0,0,76,152Zm0,56a20,20,0,1,1,20-20A20,20,0,0,1,76,208ZM42.34,106.34,56.69,92,42.34,77.66A8,8,0,0,1,53.66,66.34L68,80.69,82.34,66.34A8,8,0,0,1,93.66,77.66L79.31,92l14.35,14.34a8,8,0,0,1-11.32,11.32L68,103.31,53.66,117.66a8,8,0,0,1-11.32-11.32Zm187.32,96a8,8,0,0,1-11.32,11.32L204,199.31l-14.34,14.35a8,8,0,0,1-11.32-11.32L192.69,188l-14.35-14.34a8,8,0,0,1,11.32-11.32L204,176.69l14.34-14.35a8,8,0,0,1,11.32,11.32L215.31,188Zm-45.19-89.51c-6.18,22.33-25.32,41.63-46.53,46.93A8.13,8.13,0,0,1,136,160a8,8,0,0,1-1.93-15.76c15.63-3.91,30.35-18.91,35-35.68,3.19-11.5,3.22-29-14.71-46.9L152,59.31V80a8,8,0,0,1-16,0V40a8,8,0,0,1,8-8h40a8,8,0,0,1,0,16H163.31l2.35,2.34C183.9,68.59,190.58,90.78,184.47,112.83Z"
-                    /></svg
+                  <span class="ico material-symbols-outlined" aria-hidden="true">psychology</span
                   >Reasoning
                 </button>
                 <button
@@ -1602,10 +1668,7 @@
                   aria-selected="false"
                   tabindex="-1"
                 >
-                  <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
-                    <path
-                      d="M232,48H160a40,40,0,0,0-32,16A40,40,0,0,0,96,48H24a8,8,0,0,0-8,8V200a8,8,0,0,0,8,8H96a24,24,0,0,1,24,24,8,8,0,0,0,16,0,24,24,0,0,1,24-24h72a8,8,0,0,0,8-8V56A8,8,0,0,0,232,48ZM96,192H32V64H96a24,24,0,0,1,24,24V200A39.81,39.81,0,0,0,96,192Zm128,0H160a39.81,39.81,0,0,0-24,8V88a24,24,0,0,1,24-24h64ZM160,88h40a8,8,0,0,1,0,16H160a8,8,0,0,1,0-16Zm48,40a8,8,0,0,1-8,8H160a8,8,0,0,1,0-16h40A8,8,0,0,1,208,128Zm0,32a8,8,0,0,1-8,8H160a8,8,0,0,1,0-16h40A8,8,0,0,1,208,160Z"
-                    /></svg
+                  <span class="ico material-symbols-outlined" aria-hidden="true">database</span
                   >Knowledge
                 </button>
                 <button
@@ -1619,10 +1682,7 @@
                   aria-selected="false"
                   tabindex="-1"
                 >
-                  <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
-                    <path
-                      d="M174.63,81.37a80,80,0,1,0-93.26,93.26,80,80,0,1,0,93.26-93.26ZM224,160c0,1.52-.07,3-.18,4.51l-50-50A80,80,0,0,0,176,98,64.11,64.11,0,0,1,224,160Zm-13.47,39.21L157.91,146.6a80.5,80.5,0,0,0,9.93-15.44L219.7,183A64,64,0,0,1,210.53,199.21ZM183,219.7l-51.86-51.86a80.5,80.5,0,0,0,15.44-9.93l52.61,52.62A64,64,0,0,1,183,219.7ZM45.47,56.79,98.09,109.4a80.5,80.5,0,0,0-9.93,15.44L36.3,73A64,64,0,0,1,45.47,56.79ZM73,36.3l51.86,51.86a80.5,80.5,0,0,0-15.44,9.93L56.79,45.47A64,64,0,0,1,73,36.3ZM160,96a64.07,64.07,0,0,1-64,64A64.07,64.07,0,0,1,160,96Zm-2-16a80,80,0,0,0-16.49,2.13l-50-50C93,32.07,94.48,32,96,32A64.11,64.11,0,0,1,158,80.05ZM32,96c0-1.52.07-3,.18-4.51l50,50A80,80,0,0,0,80.05,158,64.11,64.11,0,0,1,32,96ZM98,176a80,80,0,0,0,16.49-2.13l50,50c-1.49.11-3,.18-4.51.18A64.11,64.11,0,0,1,98,176Z"
-                    /></svg
+                  <span class="ico material-symbols-outlined" aria-hidden="true">lightbulb</span
                   >Inference
                 </button>
               </div>
@@ -1640,10 +1700,8 @@
                 <div class="action-bar">
                   <span class="action-status" id="reasoning-status"></span>
                   <button class="action-btn" id="reasoning-copy-btn" type="button">
-                    <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
-                      <path
-                        d="M168,152a8,8,0,0,1-8,8H96a8,8,0,0,1,0-16h64A8,8,0,0,1,168,152Zm-8-40H96a8,8,0,0,0,0,16h64a8,8,0,0,0,0-16Zm56-64V216a16,16,0,0,1-16,16H56a16,16,0,0,1-16-16V48A16,16,0,0,1,56,32H92.26a47.92,47.92,0,0,1,71.48,0H200A16,16,0,0,1,216,48ZM96,64h64a32,32,0,0,0-64,0ZM200,48H173.25A47.93,47.93,0,0,1,176,64v8a8,8,0,0,1-8,8H88a8,8,0,0,1-8-8V64a47.93,47.93,0,0,1,2.75-16H56V216H200Z"
-                      /></svg
+                    <span class="ico material-symbols-outlined" aria-hidden="true"
+                      >content_copy</span
                     >Copy to clipboard
                   </button>
                 </div>
@@ -1663,10 +1721,7 @@
                   <span class="action-status" id="knowledge-status"></span>
                   <div class="agent-popover-host" id="knowledge-agent-host">
                     <button class="action-btn secondary" id="knowledge-agent-btn" type="button">
-                      <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
-                        <path
-                          d="M200,48H136V16a8,8,0,0,0-16,0V48H56A32,32,0,0,0,24,80V192a32,32,0,0,0,32,32H200a32,32,0,0,0,32-32V80A32,32,0,0,0,200,48Zm16,144a16,16,0,0,1-16,16H56a16,16,0,0,1-16-16V80A16,16,0,0,1,56,64H200a16,16,0,0,1,16,16Zm-52-56H92a28,28,0,0,0,0,56h72a28,28,0,0,0,0-56Zm-24,16v24H116V152ZM80,164a12,12,0,0,1,12-12h8v24H92A12,12,0,0,1,80,164Zm84,12h-8V152h8a12,12,0,0,1,0,24ZM72,108a12,12,0,1,1,12,12A12,12,0,0,1,72,108Zm88,0a12,12,0,1,1,12,12A12,12,0,0,1,160,108Z"
-                        /></svg
+                      <span class="ico material-symbols-outlined" aria-hidden="true">smart_toy</span
                       >Feed to AI agent
                     </button>
                     <div class="agent-popover" id="agent-popover" hidden>
@@ -1682,10 +1737,8 @@
                     </div>
                   </div>
                   <button class="action-btn" id="knowledge-copy-btn" type="button">
-                    <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
-                      <path
-                        d="M168,152a8,8,0,0,1-8,8H96a8,8,0,0,1,0-16h64A8,8,0,0,1,168,152Zm-8-40H96a8,8,0,0,0,0,16h64a8,8,0,0,0,0-16Zm56-64V216a16,16,0,0,1-16,16H56a16,16,0,0,1-16-16V48A16,16,0,0,1,56,32H92.26a47.92,47.92,0,0,1,71.48,0H200A16,16,0,0,1,216,48ZM96,64h64a32,32,0,0,0-64,0ZM200,48H173.25A47.93,47.93,0,0,1,176,64v8a8,8,0,0,1-8,8H88a8,8,0,0,1-8-8V64a47.93,47.93,0,0,1,2.75-16H56V216H200Z"
-                      /></svg
+                    <span class="ico material-symbols-outlined" aria-hidden="true"
+                      >content_copy</span
                     >Copy to clipboard
                   </button>
                 </div>
@@ -1710,25 +1763,18 @@ applies those proposals to the document.</pre>
                 <div class="action-bar">
                   <span class="action-status" id="infer-status"></span>
                   <button class="action-btn" id="infer-copy-btn" type="button">
-                    <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
-                      <path
-                        d="M168,152a8,8,0,0,1-8,8H96a8,8,0,0,1,0-16h64A8,8,0,0,1,168,152Zm-8-40H96a8,8,0,0,0,0,16h64a8,8,0,0,0,0-16Zm56-64V216a16,16,0,0,1-16,16H56a16,16,0,0,1-16-16V48A16,16,0,0,1,56,32H92.26a47.92,47.92,0,0,1,71.48,0H200A16,16,0,0,1,216,48ZM96,64h64a32,32,0,0,0-64,0ZM200,48H173.25A47.93,47.93,0,0,1,176,64v8a8,8,0,0,1-8,8H88a8,8,0,0,1-8-8V64a47.93,47.93,0,0,1,2.75-16H56V216H200Z"
-                      /></svg
+                    <span class="ico material-symbols-outlined" aria-hidden="true"
+                      >content_copy</span
                     >Copy to clipboard
                   </button>
                   <button class="action-btn" id="infer-btn" type="button">
-                    <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
-                      <path
-                        d="M174.63,81.37a80,80,0,1,0-93.26,93.26,80,80,0,1,0,93.26-93.26ZM224,160c0,1.52-.07,3-.18,4.51l-50-50A80,80,0,0,0,176,98,64.11,64.11,0,0,1,224,160Zm-13.47,39.21L157.91,146.6a80.5,80.5,0,0,0,9.93-15.44L219.7,183A64,64,0,0,1,210.53,199.21ZM183,219.7l-51.86-51.86a80.5,80.5,0,0,0,15.44-9.93l52.61,52.62A64,64,0,0,1,183,219.7ZM45.47,56.79,98.09,109.4a80.5,80.5,0,0,0-9.93,15.44L36.3,73A64,64,0,0,1,45.47,56.79ZM73,36.3l51.86,51.86a80.5,80.5,0,0,0-15.44,9.93L56.79,45.47A64,64,0,0,1,73,36.3ZM160,96a64.07,64.07,0,0,1-64,64A64.07,64.07,0,0,1,160,96Zm-2-16a80,80,0,0,0-16.49,2.13l-50-50C93,32.07,94.48,32,96,32A64.11,64.11,0,0,1,158,80.05ZM32,96c0-1.52.07-3,.18-4.51l50,50A80,80,0,0,0,80.05,158,64.11,64.11,0,0,1,32,96ZM98,176a80,80,0,0,0,16.49-2.13l50,50c-1.49.11-3,.18-4.51.18A64.11,64.11,0,0,1,98,176Z"
-                      /></svg
+                    <span class="ico material-symbols-outlined" aria-hidden="true"
+                      >auto_fix_high</span
                     >Infer only
                   </button>
                   <button class="action-btn" id="infer-write-btn" type="button">
-                    <svg class="ico" viewBox="0 0 256 256" fill="currentColor">
-                      <path
-                        d="M240,136v64a16,16,0,0,1-16,16H32a16,16,0,0,1-16-16V136a16,16,0,0,1,16-16H72a8,8,0,0,1,0,16H32v64H224V136H184a8,8,0,0,1,0-16h40A16,16,0,0,1,240,136Zm-117.66-2.34a8,8,0,0,0,11.32,0l48-48a8,8,0,0,0-11.32-11.32L136,108.69V24a8,8,0,0,0-16,0v84.69L85.66,74.34A8,8,0,0,0,74.34,85.66ZM200,168a12,12,0,1,0-12,12A12,12,0,0,0,200,168Z"
-                      /></svg
-                    >Infer and write
+                    <span class="ico material-symbols-outlined" aria-hidden="true">save</span>Infer
+                    and write
                   </button>
                 </div>
               </div>
@@ -1737,16 +1783,45 @@ applies those proposals to the document.</pre>
         </div>
 
         <section class="panel knowledge" id="scenario-panel">
-          <div class="panel-head">
-            <span
-              ><svg class="ico" viewBox="0 0 256 256" fill="currentColor">
-                <path
-                  d="M96,104a8,8,0,0,1,8-8h64a8,8,0,0,1,0,16H104A8,8,0,0,1,96,104Zm8,40h64a8,8,0,0,0,0-16H104a8,8,0,0,0,0,16Zm128,48a32,32,0,0,1-32,32H88a32,32,0,0,1-32-32V64a16,16,0,0,0-32,0c0,5.74,4.83,9.62,4.88,9.66h0A8,8,0,0,1,24,88a7.89,7.89,0,0,1-4.79-1.61h0C18.05,85.54,8,77.61,8,64A32,32,0,0,1,40,32H176a32,32,0,0,1,32,32V168h8a8,8,0,0,1,4.8,1.6C222,170.46,232,178.39,232,192ZM96.26,173.48A8.07,8.07,0,0,1,104,168h88V64a16,16,0,0,0-16-16H67.69A31.71,31.71,0,0,1,72,64V192a16,16,0,0,0,32,0c0-5.74-4.83-9.62-4.88-9.66A7.82,7.82,0,0,1,96.26,173.48ZM216,192a12.58,12.58,0,0,0-3.23-8h-94a26.92,26.92,0,0,1,1.21,8,31.82,31.82,0,0,1-4.29,16H200A16,16,0,0,0,216,192Z"
-                /></svg
-              >Scenario</span
+          <div class="panel-head" role="tablist" aria-label="Scenario and badges">
+            <button
+              class="diag-tab active"
+              data-group="scn"
+              data-tab="scenario"
+              type="button"
+              role="tab"
+              id="tab-scn-scenario"
+              aria-controls="panel-scn-scenario"
+              aria-selected="true"
+              tabindex="0"
             >
+              <span class="ico material-symbols-outlined" aria-hidden="true">description</span
+              >Scenario
+            </button>
+            <button
+              class="diag-tab"
+              data-group="scn"
+              data-tab="badges"
+              type="button"
+              role="tab"
+              id="tab-scn-badges"
+              aria-controls="panel-scn-badges"
+              aria-selected="false"
+              tabindex="-1"
+            >
+              <span class="ico material-symbols-outlined" aria-hidden="true">workspace_premium</span
+              >Badges
+            </button>
           </div>
-          <div class="panel-body">
+          <div
+            class="panel-body diag-view active"
+            data-group="scn"
+            data-view="scenario"
+            role="tabpanel"
+            id="panel-scn-scenario"
+            aria-labelledby="tab-scn-scenario"
+            tabindex="0"
+          >
             <div id="scenario-body"></div>
             <div class="quest">
               <div class="quest-title">Try this</div>
@@ -1780,6 +1855,17 @@ applies those proposals to the document.</pre>
                 <div class="badge-share-status" id="badge-share-status" hidden></div>
               </div>
             </div>
+          </div>
+          <div
+            class="panel-body diag-view"
+            data-group="scn"
+            data-view="badges"
+            role="tabpanel"
+            id="panel-scn-badges"
+            aria-labelledby="tab-scn-badges"
+            tabindex="0"
+          >
+            <ul class="badge-gallery" id="badge-gallery"></ul>
           </div>
         </section>
       </div>

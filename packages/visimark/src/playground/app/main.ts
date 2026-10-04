@@ -38,12 +38,13 @@ import type { FileStore } from "./store.js";
 import type { Terminal } from "./terminal.js";
 import type { Quest } from "./quest.js";
 import type { FailedFile } from "./sources.js";
-import type { Scenarios } from "./types.js";
+import type { BadgeManifest, Scenarios } from "./types.js";
 import {
   DATA_DEPENDENCIES,
   FILE_SOURCES,
   TUTORIAL_CHAPTERS,
   loadFiles,
+  loadBadges,
   loadScenarios,
 } from "./sources.js";
 import {
@@ -164,6 +165,14 @@ async function boot(): Promise<void> {
     // loadScenarios already names the path in its message.
     scenariosError = (e as Error).message;
   }
+  // Non-fatal like the scenarios: without the manifest no chapter has a badge.
+  let badgeManifest: BadgeManifest = {};
+  let badgesError = "";
+  try {
+    badgeManifest = await loadBadges();
+  } catch (e) {
+    badgesError = (e as Error).message;
+  }
 
   const cm = CodeMirror.fromTextArea(byId<HTMLTextAreaElement>("editor-ta"), {
     mode: "gfm",
@@ -186,7 +195,16 @@ async function boot(): Promise<void> {
   };
 
   const pipeline = createPipeline(VM, cm, store, terminal, quest);
-  const badges = createBadgeBoard(scenarios, TUTORIAL_CHAPTERS, () => store.current());
+  const badges = createBadgeBoard(
+    scenarios,
+    badgeManifest,
+    TUTORIAL_CHAPTERS,
+    () => store.current(),
+    (name) => {
+      // filesPanel is built after the board, and only clicked once boot is done.
+      void filesPanel.switchTo(name);
+    },
+  );
 
   const flashKnowledgeStatus = makeStatusFlasher(byId("knowledge-status"));
   const showAgentPopover = createAgentPopover(flashKnowledgeStatus);
@@ -247,6 +265,9 @@ async function boot(): Promise<void> {
   }
   if (!scenariosAvailable) {
     terminal.line(`playground: ${scenariosError} — no scenarios, quests or badges`, "err");
+  }
+  if (badgesError) {
+    terminal.line(`playground: ${badgesError} — no badges`, "err");
   }
   reportDiscarded(buffers, terminal);
   reportBlockedImages(terminal);

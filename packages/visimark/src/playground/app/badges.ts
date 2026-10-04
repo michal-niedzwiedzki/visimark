@@ -2,8 +2,9 @@
  * Badges: one per tutorial chapter, awarded the moment every quest step for
  * that chapter is checked off.
  *
- * Name, icon key and (first-person, share-ready) skill text live in
- * scenarios.json's per-chapter "badge" field — this module only supplies the
+ * Name, icon key and (first-person, share-ready) skill text live in the
+ * badges.json manifest; scenarios.json's per-chapter "badge" field names one by
+ * its slug — this module only supplies the
  * artwork an icon key points at, the localStorage persistence, and the share
  * handoff. Earned badges persist, so revisiting a chapter in a later session
  * still shows the badge it already unlocked.
@@ -13,7 +14,7 @@
  * use the closest available icon (beanie / bed / wrench) instead.
  */
 
-import type { Badge, RawScenario, Scenarios } from "./types.js";
+import type { Badge, BadgeManifest, RawScenario, Scenarios } from "./types.js";
 import { byId, hideInstant, revealFadeIn, showInstant } from "./dom.js";
 import { copyText } from "./clipboard.js";
 
@@ -86,24 +87,62 @@ export interface BadgeBoard {
 }
 
 /**
- * Built from each chapter's scenarios.json "badge" field rather than a
- * hardcoded list — scenarios.json is the single source of truth for scenario,
- * quest, reward and badge data; this module only renders it. A chapter with no
- * "badge" field (there should be none among TUTORIAL_CHAPTERS) is simply
- * awarded no badge.
+ * Built from the badges.json manifest and each chapter's scenarios.json
+ * "badge" slug rather than a hardcoded list — those two files are the source of
+ * truth for badge data; this module only renders it. A chapter with no "badge"
+ * field, or one naming a slug the manifest lacks (the data gate in
+ * test/playground/app/scenarios-data.test.ts rejects both among
+ * TUTORIAL_CHAPTERS), is simply awarded no badge.
  */
 export function createBadgeBoard(
   scenarios: Scenarios,
+  manifest: BadgeManifest,
   chapters: readonly string[],
   currentFile: () => string,
+  openFile: (name: string) => void,
 ): BadgeBoard {
   const byChapter: Record<string, Badge> = {};
-  chapters.forEach((name, i) => {
-    const badge = (scenarios[name] as RawScenario | undefined)?.badge;
-    if (badge) byChapter[name] = { id: `badge-${i + 1}`, ...badge };
-  });
+  for (const name of chapters) {
+    const slug = (scenarios[name] as RawScenario | undefined)?.badge;
+    const entry = slug === undefined ? undefined : manifest[slug];
+    if (slug !== undefined && entry) byChapter[name] = { slug, ...entry };
+  }
 
   const earnedBadges = loadEarned();
+  const galleryEl = document.getElementById("badge-gallery");
+
+  /** The BADGES tab: the whole manifest, in its order, earned ones
+   *  highlighted. Rebuilt whenever one is awarded — it is thirteen rows. */
+  function renderGallery(): void {
+    if (!galleryEl) return;
+    galleryEl.replaceChildren();
+    for (const [slug, badge] of Object.entries(manifest)) {
+      const earned = chapters.some((c) => byChapter[c]?.slug === slug && earnedBadges[c]);
+      const item = document.createElement("li");
+      item.className = earned ? "badge-gallery-item earned" : "badge-gallery-item";
+      const icon = document.createElement("span");
+      icon.className = "badge-gallery-icon";
+      icon.setAttribute("aria-hidden", "true");
+      icon.innerHTML = BADGE_ICONS[badge.icon] ?? "";
+      const text = document.createElement("span");
+      text.className = "badge-gallery-text";
+      const name = document.createElement("span");
+      name.className = "badge-gallery-name";
+      name.textContent = badge.name;
+      text.append(name);
+      if (!earned) {
+        const earn = document.createElement("button");
+        earn.type = "button";
+        earn.className = "badge-gallery-earn";
+        earn.textContent = "→ Earn this badge";
+        earn.addEventListener("click", () => openFile(badge.file));
+        text.append(earn);
+      }
+      item.append(icon, text);
+      galleryEl.append(item);
+    }
+  }
+  renderGallery();
 
   const awardEl = byId("badge-award");
   const iconEl = byId("badge-award-icon");
@@ -186,6 +225,7 @@ export function createBadgeBoard(
       if (!badge || earnedBadges[name]) return;
       earnedBadges[name] = true;
       saveEarned(earnedBadges);
+      renderGallery();
       fill(badge);
       revealFadeIn(awardEl);
     },

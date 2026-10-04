@@ -15,7 +15,7 @@
  * rest, and when.
  */
 
-import type { RawScenario, Scenarios } from "./types.js";
+import type { BadgeManifest, RawBadge, RawScenario, Scenarios } from "./types.js";
 
 /** The tutorial track, one concept per file — their SCENARIO-panel body and
  *  quest come from scenarios.json. */
@@ -77,6 +77,7 @@ Object.assign(FILE_SOURCES, {
 });
 
 export const SCENARIOS_PATH = "playground/scenarios.json";
+export const BADGES_PATH = "playground/badges.json";
 
 /** One document that could not be fetched, and why. */
 export interface FailedFile {
@@ -145,4 +146,21 @@ export async function loadScenarios(): Promise<Scenarios> {
     if (name !== "//") scenarios[name] = data[name] as RawScenario;
   }
   return scenarios;
+}
+
+const BADGES_TIMEOUT_MS = 5000;
+
+export async function loadBadges(): Promise<BadgeManifest> {
+  // Optional and awaited at boot: a stalled request must not hold the editor
+  // back, so it is abandoned after BADGES_TIMEOUT_MS and boot carries on
+  // with no badges.
+  const res = await fetch(BADGES_PATH, { signal: AbortSignal.timeout(BADGES_TIMEOUT_MS) });
+  if (!res.ok) throw new Error(`${BADGES_PATH}: HTTP ${res.status}`);
+  const data = (await res.json()) as Record<string, RawBadge | string>;
+  const badges: BadgeManifest = {};
+  for (const slug of Object.keys(data)) {
+    // "//" is the file's own documentation comment, not a badge.
+    if (slug !== "//") badges[slug] = data[slug] as RawBadge;
+  }
+  return badges;
 }

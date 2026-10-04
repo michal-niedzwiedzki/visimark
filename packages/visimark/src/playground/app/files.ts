@@ -127,7 +127,12 @@ export function createFilesPanel(
    * the page describing a document it is no longer displaying.
    */
   async function open(name: string): Promise<void> {
-    if (name === store.current()) return;
+    if (name === store.current()) {
+      // Already open: a badge pointing at this chapter still lands on its
+      // scenario, even if the visitor left the panel on BADGES.
+      tabs.select("scn", "scenario");
+      return;
+    }
     if (!store.loaded(name)) {
       // First opening of this document: it is fetched now rather than at boot
       // (review §2.5). The failure is reported where every other command
@@ -150,6 +155,9 @@ export function createFilesPanel(
       inferPanel.reset();
       quest().render(name);
       tabs.select("diag", "reasoning");
+      // A chapter's scenario is the first thing to read in it, even if the
+      // visitor left the panel on BADGES.
+      tabs.select("scn", "scenario");
     } catch (e) {
       report(`${name} opened with errors (${(e as Error).message})`);
     } finally {

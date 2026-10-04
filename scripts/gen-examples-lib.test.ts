@@ -12,16 +12,16 @@ const example: Example = {
   title: "A <chart> example",
   tags: ["Charts", "CI"],
   teaser: "Teaser.",
-  icon: "../assets/report.webp",
+  icon: "receipt_long",
   path: "../example-charts.md",
 };
 
 describe("renderExamplesListPage", () => {
   const html = renderExamplesListPage([example]);
 
-  test("links each card to its own page and resolves the icon under examples/", () => {
+  test("links each card to its own page and draws the icon as a Material Symbols ligature", () => {
     expect(html).toContain('href="examples/charts/"');
-    expect(html).toContain('src="examples/../assets/report.webp"');
+    expect(html).toContain('<span class="material-symbols-outlined">receipt_long</span>');
   });
 
   test("escapes the title", () => {

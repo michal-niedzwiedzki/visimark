@@ -1,0 +1,81 @@
+{
+  "//": "The badge manifest: every badge the playground can award, keyed by slug and listed in the order the BADGES tab shows them. scenarios.json refers to a badge by its slug only. `name` and `skill` are shown and shared once every quest step of the chapter that carries the badge is checked off; `file` is the chapter that awards the badge, which the BADGES tab links to; `icon` is a key into BADGE_ICONS in packages/visimark/src/playground/app/badges.ts — add an entry there before using a new icon name. `skill` is written first person, ready to post as-is on socials. Loaded at runtime by loadBadges().",
+  "rookie": {
+    "name": "Rookie",
+    "file": "01-tables.md",
+    "icon": "beanie",
+    "skill": "I have just started learning VisiMark, a verifiable calculations tool for Markdown."
+  },
+  "inference-practitioner": {
+    "name": "Inference Practitioner",
+    "file": "02-inference.md",
+    "icon": "plugs",
+    "skill": "Me now knows how to infer formulas in Markdown using VisiMark."
+  },
+  "sheet-adorer": {
+    "name": "Sheet Adorer",
+    "file": "03-sheets.md",
+    "icon": "bed",
+    "skill": "I have just created my 1st verifiable calculation in Markdown with VisiMark."
+  },
+  "anchored-editor": {
+    "name": "Anchored Editor",
+    "file": "04-anchors.md",
+    "icon": "anchor",
+    "skill": "I have just anchored verifiable computation to a text in Markdown."
+  },
+  "analytics-specialist": {
+    "name": "Analytics Specialist",
+    "file": "05-mappers.md",
+    "icon": "wrench",
+    "skill": "Me now knows how to add checked formulas to Markdown using VisiMark."
+  },
+  "synthesis-expert": {
+    "name": "Synthesis Expert",
+    "file": "06-aggregates.md",
+    "icon": "hammer",
+    "skill": "Mastered table data aggregation in Markdown using VisiMark."
+  },
+  "private-investigator": {
+    "name": "Private Investigator",
+    "file": "07-reasoning.md",
+    "icon": "magnifier",
+    "skill": "I learned how VisiMark reasons about verifiable knowledge in Markdown."
+  },
+  "studious": {
+    "name": "Studious",
+    "file": "08-knowledge.md",
+    "icon": "wand",
+    "skill": "Now I can extract computational knowledge from Markdown documents."
+  },
+  "scientist": {
+    "name": "Scientist",
+    "file": "09-units.md",
+    "icon": "gradcap",
+    "skill": "I have just learned about units propagation for Markdown validation with VisiMark."
+  },
+  "ied-consultant": {
+    "name": "IED Consultant",
+    "file": "10-assertions.md",
+    "icon": "bomb",
+    "skill": "I have just built my first Markdown math error detector with VisiMark."
+  },
+  "continuous-integrator": {
+    "name": "Continuous Integrator",
+    "file": "11-build-automation.md",
+    "icon": "megaphone",
+    "skill": "Learned how to shield git repo from computationally incorrect Markdown."
+  },
+  "maestro": {
+    "name": "Maestro",
+    "file": "12-charts.md",
+    "icon": "paintbrush",
+    "skill": "Me soon to be promoted to executive role thanks to their VisiMark charting skill."
+  },
+  "data-importer": {
+    "name": "Data Importer",
+    "file": "13-imports.md",
+    "icon": "stamp",
+    "skill": "I just imported a CSV file into Markdown as integrity-stamped sheet."
+  }
+}
