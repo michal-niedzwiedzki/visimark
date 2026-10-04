@@ -10,7 +10,7 @@
 | Barbara |    6 |     8 |  60% |     28.80 |
 
 ```vmark #people
-Available precision 2 = Days * Hours * Util
+Available = Days * Hours * Util
 
 available_total = SUM(Available)
 ```
@@ -27,7 +27,7 @@ available_total = SUM(Available)
 ```vmark #work
 committed = SUM(Estimate)
 
-headroom precision 2 = people.available_total - committed
+headroom = people.available_total - committed
 ```
 
 The team has **177.60**<!--vmark=people.available_total--> hours in this sprint

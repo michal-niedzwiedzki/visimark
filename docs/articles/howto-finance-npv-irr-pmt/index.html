@@ -111,10 +111,10 @@ payment precision 2 = PMT(rate, nper, principal)
 Payment   = payment
 Interest  precision 2 = (principal * (1 + rate) ^ (Period - 1) - payment * ((1 + rate) ^ (Period - 1) - 1) / rate) * rate
 Balance   precision 2 = principal * (1 + rate) ^ Period - payment * ((1 + rate) ^ Period - 1) / rate
-Principal precision 2 = Payment - Interest
+Principal = Payment - Interest
 
-total_paid     precision 2 = SUM(Payment)
-total_interest precision 2 = SUM(Interest)
+total_paid     = SUM(Payment)
+total_interest = SUM(Interest)
 </code></pre>
 <p>On a principal of <strong>18000.00</strong> PLN at <strong>6.0%</strong> a year over <strong>3</strong> years, the instalment <code>PMT</code> computes is <strong>6733.98</strong> PLN a year. Over the life of the loan that's <strong>20201.94</strong> PLN paid, of which <strong>2201.93</strong> PLN is interest.</p>
 <p>Look at the last row of <code>Balance</code>: <code>-0.01</code>, not <code>0.00</code>. That is not a bug in the example. <code>PMT</code> rounds its answer to the declared precision, two decimals, because this is money, and a payment rounded to the cent does not zero out a balance computed at full precision three years later. The same cent shows up as the gap between <code>total_interest</code> (2201.93) and <code>total_paid</code> minus <code>principal</code> (2201.94). Real banks patch this by rounding the final instalment up by whatever is left; a VisiMark schedule just shows you the residual instead of hiding it in a spreadsheet's floating-point noise.</p>

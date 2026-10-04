@@ -13,7 +13,7 @@ A batch makes 24 cookies.
 | Chocolate  | 0.4 | 14.00 |  5.60 |
 
 ```vmark #batch
-Cost precision 2 = Qty * Price
+Cost = Qty * Price
 
 batch_cost = SUM(Cost)
 ```
@@ -24,11 +24,11 @@ One batch costs **15.50**<!--vmark=batch.batch_cost--> to make.
 
 ```vmark #stall
 param price   precision 2 in [1.00, 5.00] lattice 0.50 = default 3.00
-param batches precision 0 integer in [1, 6] lattice 1 = default 2
+param batches integer in [1, 6] lattice 1 = default 2
 
-fee         precision 2 = 12.00
-piggy_bank  precision 2 = 60.00
-goal        precision 2 = 60.00
+fee         = 12.00
+piggy_bank  = 60.00
+goal        = 60.00
 
 baked   = batches * 24
 demand  = 160 - 30 * price

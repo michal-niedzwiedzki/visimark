@@ -6,7 +6,7 @@ the VisiMark tutorial: two levers a plan may adjust, each with a declared
 envelope of legal values, not just a declared width.
 
 ```vmark #levers
-param extra_hours  precision 0 integer in [0, 80] = default 40
+param extra_hours  integer in [0, 80] = default 40
 param prepay_share precision 2 in { 30%, 40%, 45%, 50% } = default 30%
 
 max_extra_hours = 80
