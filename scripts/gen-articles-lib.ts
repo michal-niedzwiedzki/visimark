@@ -89,6 +89,9 @@ export interface PageShellOptions {
   ogImage: string;
   ogImageDimensions: { width: number; height: number } | undefined;
   body: string;
+  /** A same-origin script under docs/, loaded at the end of <body>. When set,
+   *  the policy grants `script-src 'self'`. */
+  script?: string;
 }
 
 export function pageShell(opts: PageShellOptions): string {
@@ -105,6 +108,7 @@ export function pageShell(opts: PageShellOptions): string {
     ogImage,
     ogImageDimensions,
     body,
+    script,
   } = opts;
   const home = base === "" ? "./" : base;
   const ogImageDimensionTags = ogImageDimensions
@@ -127,7 +131,7 @@ export function pageShell(opts: PageShellOptions): string {
     <meta
       http-equiv="Content-Security-Policy"
       content="default-src 'none';
-               style-src 'self';
+               ${script ? "script-src 'self';\n               " : ""}style-src 'self';
                font-src 'self';
                img-src 'self';
                base-uri 'none';
@@ -170,7 +174,7 @@ export function pageShell(opts: PageShellOptions): string {
 
     <div class="wrap wrap-rest">
 ${body}
-    </div>
+    </div>${script ? `\n    <script src="${escapeHtml(script)}"></script>` : ""}
   </body>
 </html>
 `;
