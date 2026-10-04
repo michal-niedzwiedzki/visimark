@@ -96,16 +96,6 @@ const REFUSED: [string, string[], string][] = [
     "visimark: unknown option -- — to name a file that starts with -, write ./-name",
   ],
   [
-    "help",
-    ["check", invoice, "--help"],
-    "visimark: unknown option --help\nusage: visimark check FILE...",
-  ],
-  [
-    "ref help",
-    ["ref", "--help"],
-    "visimark: unknown option --help\nusage: visimark ref [NAME] [--json]",
-  ],
-  [
     "sheet off explain",
     ["check", invoice, "#lines"],
     "visimark: #lines is only valid with explain",

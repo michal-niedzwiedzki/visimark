@@ -9,6 +9,7 @@ import {
   cmdSimulate,
   type Writer,
 } from "./commands.js";
+import { usageLine } from "./args.js";
 import { readVersion } from "./version.js";
 
 const USAGE = `visimark — a document integrity layer for Markdown
@@ -43,11 +44,32 @@ export interface CliIO {
   now?: () => number;
 }
 
+const COMMANDS = ["check", "fmt", "infer", "eval", "explain", "ref", "simulate"] as const;
+
+function isCommand(c: string | undefined): c is (typeof COMMANDS)[number] {
+  return COMMANDS.some((name) => name === c);
+}
+
+/** `--help` / `-h` anywhere a flag may stand, up to a `--`; the word after `--get` or `--scenario` is a value, not a flag */
+function asksForHelp(args: string[]): boolean {
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i]!;
+    if (a === "--") return false;
+    if (a === "--help" || a === "-h") return true;
+    if (a === "--get" || a === "--scenario") i++;
+  }
+  return false;
+}
+
 export async function runCli(argv: string[], io: CliIO = {}): Promise<number> {
   const out = io.out ?? ((l: string) => process.stdout.write(l + "\n"));
   const err = io.err ?? ((l: string) => process.stderr.write(l + "\n"));
 
   const [command, ...rest] = argv;
+  if (isCommand(command) && asksForHelp(rest)) {
+    out(usageLine(command));
+    return 0;
+  }
   switch (command) {
     case "check":
       return cmdCheck(rest, out, err);

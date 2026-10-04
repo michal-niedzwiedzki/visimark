@@ -9,11 +9,22 @@ export interface ServerArgs {
   readonly allowWrite: boolean;
 }
 
-export type ArgsResult = { readonly args: ServerArgs } | { readonly usage: string };
+export type ArgsResult =
+  | { readonly args: ServerArgs }
+  | { readonly usage: string }
+  | { readonly help: string };
+
+const HELP = `usage: visimark-mcp [--allow-write]
+
+Runs the VisiMark MCP server on stdio.
+
+  --allow-write   open the flag half of the write gate
+  -h, --help      print this help and exit 0`;
 
 export function parseArgs(argv: readonly string[]): ArgsResult {
   let allowWrite = false;
   for (const token of argv) {
+    if (token === "--help" || token === "-h") return { help: HELP };
     if (token === "--allow-write") allowWrite = true;
     else return { usage: `visimark-mcp: unknown option ${token}` };
   }
