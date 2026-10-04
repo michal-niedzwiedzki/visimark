@@ -50,10 +50,11 @@ function isCommand(c: string | undefined): c is (typeof COMMANDS)[number] {
   return COMMANDS.some((name) => name === c);
 }
 
-/** `--help` / `-h` anywhere a flag may stand; the word after `--get` or `--scenario` is a value, not a flag */
+/** `--help` / `-h` anywhere a flag may stand, up to a `--`; the word after `--get` or `--scenario` is a value, not a flag */
 function asksForHelp(args: string[]): boolean {
   for (let i = 0; i < args.length; i++) {
     const a = args[i]!;
+    if (a === "--") return false;
     if (a === "--help" || a === "-h") return true;
     if (a === "--get" || a === "--scenario") i++;
   }

@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { parseArgs } from "../src/args.js";
+import { runServer } from "../src/main.js";
 
 test("no arguments means the write gate stays shut", () => {
   expect(parseArgs([])).toEqual({ args: { allowWrite: false } });
@@ -20,4 +21,16 @@ test("--help and -h ask for the help text, not a usage error", () => {
     const r = parseArgs([flag]);
     expect("help" in r && r.help).toContain("usage: visimark-mcp");
   }
+});
+
+test("runServer --help prints the help text and returns 0 without starting the transport", async () => {
+  const lines: string[] = [];
+  const log = console.log;
+  console.log = (l: string) => void lines.push(l);
+  try {
+    expect(await runServer(["--help"])).toBe(0);
+  } finally {
+    console.log = log;
+  }
+  expect(lines.join("\n")).toContain("usage: visimark-mcp");
 });

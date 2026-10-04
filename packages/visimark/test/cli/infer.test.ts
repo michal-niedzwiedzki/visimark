@@ -133,3 +133,8 @@ test("every command answers --help and -h with its usage line and exit 0", async
     }
   }
 });
+
+test("--help after -- is not a help request", async () => {
+  const c = capture();
+  expect(await runCli(["check", "--", "--help"], c.io)).toBe(2);
+});
