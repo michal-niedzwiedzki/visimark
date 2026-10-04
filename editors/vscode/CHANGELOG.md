@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 - 2026-10-04
 
 - A `lattice` clause on a `param` and a `report` statement are now understood: an impossible lattice, an unknown report name or a report option that does not match its grammar gets a diagnostic.
 - A `|unit` anchor (`**23300.00 PLN**<!--vmark=lines.net_total|unit-->`) is no longer flagged as an unknown display rule; a missing or wrong unit in it is a `STALE` that formatting repairs, and `|unit` on a value without a unit is a `TYPE` diagnostic. A plain anchor written `5 m^2` or `50 1/s` keeps its unit when formatted.

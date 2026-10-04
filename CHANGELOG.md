@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.2.0 - 2026-10-04
+
 ### Added
 
 - **`check` rejects a bare `report deltas` with nothing to read.** A `report
@@ -999,6 +1001,7 @@ record that the publish happened, and making the history read clean after the
 fact is the kind of underived edit this project exists to catch. There is no
 0.1.0 of the VS Code extension.
 
+[0.2.0]: https://github.com/michal-niedzwiedzki/visimark/releases/tag/v0.2.0
 [0.1.11]: https://github.com/michal-niedzwiedzki/visimark/releases/tag/v0.1.11
 [0.1.10]: https://github.com/michal-niedzwiedzki/visimark/releases/tag/v0.1.10
 [0.1.9]: https://github.com/michal-niedzwiedzki/visimark/releases/tag/v0.1.9

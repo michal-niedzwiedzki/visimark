@@ -41,7 +41,7 @@
     },
     "editors/vscode": {
       "name": "visimark-vscode",
-      "version": "0.1.11",
+      "version": "0.2.0",
       "dependencies": {
         "visimark": "workspace:*",
         "vscode-languageclient": "^10.1.1",
@@ -55,9 +55,9 @@
     },
     "packages/markdownlint-visimark": {
       "name": "markdownlint-rule-visimark",
-      "version": "0.1.11",
+      "version": "0.2.0",
       "dependencies": {
-        "visimark": "0.1.11",
+        "visimark": "0.2.0",
       },
       "devDependencies": {
         "markdownlint": "^0.41.1",
@@ -66,9 +66,9 @@
     },
     "packages/remark-visimark": {
       "name": "remark-lint-visimark",
-      "version": "0.1.11",
+      "version": "0.2.0",
       "dependencies": {
-        "visimark": "0.1.11",
+        "visimark": "0.2.0",
       },
       "devDependencies": {
         "@types/mdast": "^4.0.4",
@@ -82,7 +82,7 @@
     },
     "packages/visimark": {
       "name": "visimark",
-      "version": "0.1.11",
+      "version": "0.2.0",
       "bin": {
         "visimark": "bin/visimark",
       },
@@ -100,7 +100,7 @@
     },
     "packages/visimark-lsp": {
       "name": "visimark-lsp",
-      "version": "0.1.11",
+      "version": "0.2.0",
       "dependencies": {
         "visimark": "workspace:*",
         "vscode-jsonrpc": "^9.0.2",
@@ -110,13 +110,13 @@
     },
     "packages/visimark-mcp": {
       "name": "visimark-mcp",
-      "version": "0.1.11",
+      "version": "0.2.0",
       "bin": {
         "visimark-mcp": "bin/visimark-mcp",
       },
       "dependencies": {
         "@modelcontextprotocol/sdk": "1.30.1",
-        "visimark": "0.1.11",
+        "visimark": "0.2.0",
       },
     },
   },

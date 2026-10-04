@@ -1,6 +1,6 @@
 {
   "name": "visimark",
-  "version": "0.1.11",
+  "version": "0.2.0",
   "description": "A document integrity layer for Markdown: it checks that every number in a document still matches the formula that produced it, so an agent's correct formula can't ship with a wrong total.",
   "keywords": [
     "ai",
