@@ -41,7 +41,11 @@ export const audienceLabel = (a: string): string => {
 const uniqueSorted = (values: string[]): string[] =>
   [...new Set(values)].sort((a, b) => a.localeCompare(b, "en", { sensitivity: "base" }));
 
-function filterGroup(group: string, label: string, options: { value: string; text: string }[]): string {
+function filterGroup(
+  group: string,
+  label: string,
+  options: { value: string; text: string }[],
+): string {
   const buttons = [{ value: "", text: "All" }, ...options]
     .map(
       (o) =>

@@ -148,8 +148,13 @@ export async function loadScenarios(): Promise<Scenarios> {
   return scenarios;
 }
 
+const BADGES_TIMEOUT_MS = 5000;
+
 export async function loadBadges(): Promise<BadgeManifest> {
-  const res = await fetch(BADGES_PATH);
+  // Optional and awaited at boot: a stalled request must not hold the editor
+  // back, so it is abandoned after BADGES_TIMEOUT_MS and boot carries on
+  // with no badges.
+  const res = await fetch(BADGES_PATH, { signal: AbortSignal.timeout(BADGES_TIMEOUT_MS) });
   if (!res.ok) throw new Error(`${BADGES_PATH}: HTTP ${res.status}`);
   const data = (await res.json()) as Record<string, RawBadge | string>;
   const badges: BadgeManifest = {};
