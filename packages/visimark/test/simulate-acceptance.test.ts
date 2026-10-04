@@ -7,7 +7,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { elapsedText } from "../src/cli/commands.js";
+import { elapsedText } from "../src/report/simulate.js";
 import { runCli } from "../src/cli/main.js";
 
 const CLEAN = readFileSync(join(import.meta.dir, "fixtures", "simulation", "simulate.md"), "utf8");

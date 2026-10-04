@@ -37,6 +37,7 @@ import type { Quest } from "./quest.js";
 import type { Tabs } from "./tabs.js";
 import type { Terminal } from "./terminal.js";
 import type { InferPanel } from "./infer.js";
+import type { SimulatePanel } from "./simulate.js";
 import { byId } from "./dom.js";
 import { writeFileToUrl } from "./url.js";
 
@@ -62,7 +63,7 @@ export function createFilesPanel(
   terminal: Terminal,
   pipeline: Pipeline,
   tabs: Tabs,
-  inferPanel: InferPanel,
+  panels: (InferPanel | SimulatePanel)[],
   quest: () => Quest,
 ): FilesPanel {
   const listEl = byId("file-list");
@@ -152,7 +153,7 @@ export function createFilesPanel(
       setEditorName(name);
       writeFileToUrl(name);
       render();
-      inferPanel.reset();
+      for (const panel of panels) panel.reset();
       quest().render(name);
       tabs.select("diag", "reasoning");
       // A chapter's scenario is the first thing to read in it, even if the
@@ -183,6 +184,8 @@ export function createFilesPanel(
   /** The shared tail of both reset paths. The store has already put the
    *  restored text into the editor; this is everything downstream of that. */
   function reloadCurrent(): void {
+    // Readings were taken of the text that has just been replaced.
+    for (const panel of panels) panel.reset();
     render();
     pipeline.runNow();
   }

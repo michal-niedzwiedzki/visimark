@@ -7,9 +7,14 @@
  * .github/workflows/ci.yml, job examples-pages).
  */
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { basename, dirname, join } from "node:path";
+import { basename, dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
-import { renderExamplePage, renderExamplesListPage, type Example } from "./gen-examples-lib.js";
+import {
+  relativeToDocs,
+  renderExamplePage,
+  renderExamplesListPage,
+  type Example,
+} from "./gen-examples-lib.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const EXAMPLES_DIR = join(ROOT, "docs/examples");
@@ -21,7 +26,11 @@ const { examples } = JSON.parse(readFileSync(join(EXAMPLES_DIR, "examples.json")
 writeFileSync(join(ROOT, "docs/examples.html"), renderExamplesListPage(examples));
 
 for (const example of examples) {
-  const markdown = readFileSync(join(EXAMPLES_DIR, example.path), "utf8");
+  const mdPath = join(EXAMPLES_DIR, example.path);
+  const markdown = relativeToDocs(
+    readFileSync(mdPath, "utf8"),
+    relative(join(ROOT, "docs"), dirname(mdPath)),
+  );
   const outDir = join(EXAMPLES_DIR, example.slug);
   mkdirSync(outDir, { recursive: true });
   const attachments = (example.attachments ?? []).map((path) => ({

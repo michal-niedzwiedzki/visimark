@@ -18,7 +18,7 @@ import { createTabs } from "../../../src/playground/app/tabs.js";
 /** The strips docs/playground.html ships, in its order. */
 const STRIPS: Record<string, string[]> = {
   term: ["terminal", "build", "reference"],
-  diag: ["reasoning", "knowledge", "inference"],
+  diag: ["reasoning", "knowledge", "inference", "simulate"],
   scn: ["scenario", "badges"],
 };
 
@@ -144,7 +144,7 @@ describe("keyboard operation, per the APG", () => {
     const tabs = fixture();
     createTabs((a) => signals.push(a));
     press(tabs.diag![1]!, "End");
-    expect(selected(tabs.diag!)).toEqual(["inference"]);
+    expect(selected(tabs.diag!)).toEqual(["simulate"]);
     press(tabs.diag![2]!, "Home");
     expect(selected(tabs.diag!)).toEqual(["reasoning"]);
   });

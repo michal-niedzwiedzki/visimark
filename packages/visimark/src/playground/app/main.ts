@@ -66,6 +66,7 @@ import { createAgentPopover } from "./agents.js";
 import { createQuest } from "./quest.js";
 import { createTabs } from "./tabs.js";
 import { createInferPanel } from "./infer.js";
+import { createSimulatePanel } from "./simulate.js";
 import { createBuildPanel } from "./builder.js";
 import { createFilesPanel } from "./files.js";
 import { createKnowledgePanel } from "./knowledge.js";
@@ -222,9 +223,18 @@ async function boot(): Promise<void> {
 
   const tabs = createTabs((action) => quest().signal(action));
   const inferPanel = createInferPanel(VM, cm, store, terminal, pipeline, quest);
+  const simulatePanel = createSimulatePanel(VM, cm, store, terminal, tabs);
   createBuildPanel(VM, store, terminal, pipeline, quest);
   createKnowledgePanel(pipeline, flashKnowledgeStatus, showAgentPopover);
-  const filesPanel = createFilesPanel(cm, store, terminal, pipeline, tabs, inferPanel, quest);
+  const filesPanel = createFilesPanel(
+    cm,
+    store,
+    terminal,
+    pipeline,
+    tabs,
+    [inferPanel, simulatePanel],
+    quest,
+  );
 
   wireCopyButton(
     byId("reasoning-copy-btn"),
@@ -235,6 +245,11 @@ async function boot(): Promise<void> {
     byId("infer-copy-btn"),
     makeStatusFlasher(byId("infer-status")),
     inferPanel.bodyEl,
+  );
+  wireCopyButton(
+    byId("simulate-copy-btn"),
+    makeStatusFlasher(byId("simulate-status")),
+    simulatePanel.bodyEl,
   );
 
   pipeline.onSettled(() => {

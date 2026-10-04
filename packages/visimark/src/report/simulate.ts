@@ -36,6 +36,14 @@ function refText(r: Ref): string {
   return r.qualifier ? `${r.qualifier}.${r.name}` : r.name;
 }
 
+/** `412 ms`, `3.4 s`, `2 min 05 s`: elapsed wall time, to a reader's precision */
+export function elapsedText(ms: number): string {
+  if (ms < 1000) return `${Math.round(ms)} ms`;
+  if (ms < 60_000) return `${(ms / 1000).toFixed(1)} s`;
+  const s = Math.round(ms / 1000);
+  return `${Math.floor(s / 60)} min ${String(s % 60).padStart(2, "0")} s`;
+}
+
 export function renderBlocked(sheetId: string): string[] {
   return [`#${sheetId}`, "  (cannot start)"];
 }

@@ -6,7 +6,7 @@
  * since review §2.7 — which of them the visitor has changed.
  *
  * **The catalogue is not the set of loaded files** (review §2.5). Boot used to
- * fetch all twenty documents (~124 KB, 21 round trips) before the editor could
+ * fetch every bundled document (~124 KB, 21 round trips when it was twenty) before the editor could
  * initialise, in order to display one. Now `names()` comes from the static
  * FILE_SOURCES map, so the FILES panel is complete from the first paint, and
  * `ensure()` fetches a document the moment something needs its text: opening

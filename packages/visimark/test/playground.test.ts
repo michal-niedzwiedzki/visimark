@@ -46,6 +46,7 @@ test("the committed playground bundle assigns window.VisiMark without throwing",
     "formatInfer",
     "pgEval",
     "pgExplain",
+    "pgSimulate",
   ]) {
     expect(typeof VM[name]).toBe("function");
   }

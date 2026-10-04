@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Added
+
+- **A SIMULATION tab in the Playground.** Next to REASONING, KNOWLEDGE and
+  INFERENCE, a flask-icon tab with a Start Simulation button runs
+  `visimark simulate` on the open document. The readings fill the tab; the
+  question count, any sheet that could not start, and the elapsed time go to
+  TERMINAL, as they go to stderr on the command line.
+
 ## 0.2.0 - 2026-10-04
 
 ### Added

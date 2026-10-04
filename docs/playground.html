@@ -488,7 +488,7 @@
         font-style: normal;
         font-weight: 400;
         font-display: block;
-        src: url("fonts/material-symbols-outlined.ttf") format("truetype");
+        src: url("fonts/material-symbols-outlined.ttf?v=264d16e3") format("truetype");
       }
       .material-symbols-outlined {
         font-family: "Material Symbols Outlined";
@@ -1685,6 +1685,20 @@
                   <span class="ico material-symbols-outlined" aria-hidden="true">lightbulb</span
                   >Inference
                 </button>
+                <button
+                  class="diag-tab"
+                  data-group="diag"
+                  data-tab="simulate"
+                  type="button"
+                  role="tab"
+                  id="tab-diag-simulate"
+                  aria-controls="panel-diag-simulate"
+                  aria-selected="false"
+                  tabindex="-1"
+                >
+                  <span class="ico material-symbols-outlined" aria-hidden="true">science</span
+                  >Simulation
+                </button>
               </div>
 
               <div
@@ -1775,6 +1789,35 @@ applies those proposals to the document.</pre>
                   <button class="action-btn" id="infer-write-btn" type="button">
                     <span class="ico material-symbols-outlined" aria-hidden="true">save</span>Infer
                     and write
+                  </button>
+                </div>
+              </div>
+
+              <div
+                class="diag-view"
+                data-group="diag"
+                data-view="simulate"
+                role="tabpanel"
+                id="panel-diag-simulate"
+                aria-labelledby="tab-diag-simulate"
+                tabindex="0"
+              >
+                <div class="diag-scroll">
+                  <pre id="simulate-body">
+Click Start Simulation to ask this document every question its
+lattices declare, and read what its report sheets make of the
+answers. Nothing in the document is changed.</pre>
+                </div>
+                <div class="action-bar">
+                  <span class="action-status" id="simulate-status"></span>
+                  <button class="action-btn" id="simulate-copy-btn" type="button">
+                    <span class="ico material-symbols-outlined" aria-hidden="true"
+                      >content_copy</span
+                    >Copy to clipboard
+                  </button>
+                  <button class="action-btn" id="simulate-btn" type="button">
+                    <span class="ico material-symbols-outlined" aria-hidden="true">play_arrow</span
+                    >Start Simulation
                   </button>
                 </div>
               </div>
