@@ -95,6 +95,7 @@
       "icon": "../assets/dollars.webp",
       "banner": "kiln-bonus/the-kiln-bonus.webp",
       "path": "kiln-bonus/the-kiln-bonus.md",
+      "reposted": ["https://dev.to/holdmybear/the-kiln-bonus-1jpp"],
       "featured": true
     },
     {
