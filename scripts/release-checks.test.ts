@@ -126,9 +126,11 @@ describe("check-obsidian-engine-line", () => {
     expect(r.out).toContain("Bundles engine");
   });
 
-  test("passes on the real repository", () => {
-    expect(run("check-obsidian-engine-line.ts").code).toBe(0);
-  });
+  // No "passes on the real repository" case, on purpose: this check runs in
+  // obsidian-release.yml only, because a core-only bump leaves the plugin
+  // changelog one engine version behind until the plugin ships (releasing.md,
+  // "Release order"). Asserting it against the live tree turned ci red on the
+  // v0.2.0 release commit.
 });
 
 describe("changelog-section", () => {
