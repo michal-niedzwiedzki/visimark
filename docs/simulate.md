@@ -488,7 +488,8 @@ most profitable plan in this grid needs 400 people in a 300-seat venue.
 
 **Name what `deltas` reads.** `report deltas` with no `on` covers every
 non-param scalar of its own sheet. In a readings sheet, which has no scalars,
-it prints a heading and nothing under it. In a model sheet it prints every
+`check` refuses it, because it has nothing to read: name the values with
+`deltas on REF, …`. In a model sheet it prints every
 scalar, including constants that never move:
 
 ```text
@@ -538,6 +539,15 @@ The same line twice:
 ```
 
 Two `deltas` lines with different names are not duplicates.
+
+A bare `report deltas` in a sheet with no scalar that is not a param, such as
+`#readings` with only `report deltas` and `report gates`:
+
+```console
+  TYPE    readings.         `report deltas` has nothing to read: this sheet has no scalar that is not a param; name the values with `deltas on REF, …`
+```
+
+`simulate` then shows the sheet as `(cannot start)`.
 
 ---
 

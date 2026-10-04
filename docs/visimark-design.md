@@ -301,7 +301,7 @@ declaration. `lattice` is contextual: `lattice = 5` still binds a scalar.
 **`report` — a named reading.** A sheet block may carry `report NAME [OPTIONS]`,
 a statement beside `chart`. `NAME` is one of `ledger`, `deltas`, `gates`, `best`
 and `forbidden`, each with a closed option grammar. `check` parses the line,
-resolves its refs and counts them as reads, and never runs a question; `fmt`
+resolves its refs and counts them as reads, refuses a bare `deltas` in a sheet with no non-param scalar (it has nothing to read), and never runs a question; `fmt`
 leaves it alone. What each report computes is the `simulate` command's
 ([`design/add-a-simulate-command-spec.md`](design/add-a-simulate-command-spec.md)).
 `report` is contextual too: `report = 5` still binds a scalar.
@@ -725,7 +725,7 @@ justifies the project.
 | `DUP` | a name is bound twice in one scope, two header cells sharing a name, or a unit defined twice, or two identical `report` statements in one sheet | no |
 | `VECTOR` | foreign column outside an aggregate | no |
 | `CYCLE` | circular dependency, among bindings or among unit definitions | no |
-| `TYPE` | illegal operand types, a malformed call (name, arity, shape), or a display rule on a value of a type it does not accept (a date or a string for `percent`; a number or a date for `nbsp`; any value with a unit for those two, and any value without one for `unit`), or a chart/image, or a malformed or impossible `lattice` clause, or a malformed or unknown `report`, or a `report` ref that names a column | no |
+| `TYPE` | illegal operand types, a malformed call (name, arity, shape), or a display rule on a value of a type it does not accept (a date or a string for `percent`; a number or a date for `nbsp`; any value with a unit for those two, and any value without one for `unit`), or a chart/image, or a malformed or impossible `lattice` clause, or a malformed or unknown `report`, or a `report` ref that names a column, or a bare `report deltas` with no scalar to read | no |
 | `SHEET` | column rules with no table, an `assert` in a document-scope block, or a unit definition in a sheet block, or a `report` in a document-scope block | no |
 | `ANCHOR` | anchor with no rewritable target, an unrecognised display-rule name, a display-rule anchor with no delimited seed, a display rule that cannot render in a code span, or a string display rule whose rendering would not read back as the stored text | no |
 | `PRECISION` | a numeric binding with no declared width and none derivable, a value too large to carry the width it has ([§7](#7-numeric-semantics)), or a `percent` display rule on a binding whose width is below 2, or a `lattice` step with more decimals than its param declares | no |

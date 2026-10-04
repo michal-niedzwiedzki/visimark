@@ -205,3 +205,10 @@ test("`precision` as a bound name is a TYPE finding carrying the keyword message
     ["TYPE", "`precision` is a keyword — write `precision 2`, not `precision = 2`"],
   ]);
 });
+
+test("droppedLines marks a sheet whose block lost an unparseable line", () => {
+  const bad = locate("```vmark #readings\nx = (\n```\n");
+  expect(build(bad).sheets.get("readings")!.droppedLines).toBe(true);
+  const ok = locate("```vmark #readings\nx = 1\n```\n");
+  expect(build(ok).sheets.get("readings")!.droppedLines).toBe(false);
+});

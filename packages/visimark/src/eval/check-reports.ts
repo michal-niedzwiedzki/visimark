@@ -10,12 +10,35 @@ import { refText, resolve } from "./graph.js";
  * introduce a cycle. See
  * docs/design/lattice-on-param-and-report-statements-spec.md §3.3 and §4.2.
  *
+ * A bare `deltas` (no `on`) reads the scalars of its own sheet that are not
+ * params; in a sheet with none it has nothing to read and is `TYPE`. The rule
+ * stays silent for a sheet that lost a line to a parse error, which may have
+ * been that scalar. See docs/design/a-bare-report-deltas-in-a-sheet-with-no-spec.md.
+ *
  * It emits findings, so it keeps its position in the phase sequence —
  * `orderFindings` sorts on emit order.
  */
 export function checkReports(st: Pick<CheckState, "model" | "emit">): void {
   for (const sheet of st.model.sheets.values()) {
     for (const report of sheet.reports) {
+      if (
+        report.options.kind === "deltas" &&
+        report.options.on.length === 0 &&
+        !sheet.droppedLines &&
+        ![...sheet.scalars.values()].some((b) => b.param === undefined)
+      ) {
+        st.emit(
+          {
+            code: "TYPE",
+            sheetId: report.sheetId,
+            message:
+              "`report deltas` has nothing to read: this sheet has no scalar that is not a param; name the values with `deltas on REF, …`",
+            sourceOffset: report.span.start,
+            span: report.span,
+          },
+          { sheetId: report.sheetId },
+        );
+      }
       for (const ref of report.refs) {
         const res = resolve(st.model, report.sheetId, ref);
         if (res.kind === "unknown") {

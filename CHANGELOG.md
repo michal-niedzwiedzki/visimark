@@ -4,6 +4,10 @@
 
 ### Added
 
+- **`check` rejects a bare `report deltas` with nothing to read.** A `report
+  deltas` with no `on`, in a sheet with no scalar that is not a `param`, is a
+  `TYPE` finding instead of an empty reading with exit `0`. A sheet of
+  constants is unchanged. ([#333](https://github.com/michal-niedzwiedzki/visimark/issues/333))
 - **Guide pages share one stylesheet.** `docs/guide.css` replaces the CSS that
   was inlined in each of `tutorial.html`, `ci.html`, `mcp-server.html`, the new
   `simulate.html` and every example page, so those pages no longer need

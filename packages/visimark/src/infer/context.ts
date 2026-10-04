@@ -126,6 +126,7 @@ export function provisional(ctx: InferContext, extra: Binding[]): DocModel {
         assertions: [],
         charts: [],
         reports: [],
+        droppedLines: false,
         imported: null,
       });
     }
@@ -170,6 +171,7 @@ function cloneSheet(s: Sheet): Sheet {
     assertions: [...s.assertions],
     charts: [...s.charts],
     reports: [...s.reports],
+    droppedLines: s.droppedLines,
     imported: s.imported,
   };
 }

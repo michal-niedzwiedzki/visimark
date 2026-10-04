@@ -714,7 +714,8 @@ question that could be computed, including the ones that break your rules. The
 most profitable plan in this grid needs 400 people in a 300-seat venue.</p>
 <p><strong>Name what <code>deltas</code> reads.</strong> <code>report deltas</code> with no <code>on</code> covers every
 non-param scalar of its own sheet. In a readings sheet, which has no scalars,
-it prints a heading and nothing under it. In a model sheet it prints every
+<code>check</code> refuses it, because it has nothing to read: name the values with
+<code>deltas on REF, …</code>. In a model sheet it prints every
 scalar, including constants that never move:</p>
 <pre><code class="language-text">  event.venue_capacity  base 300
     low   300  (0)  attendees=100 ticket=60.00 sponsors=0
@@ -742,6 +743,11 @@ as a read.</p>
 <pre><code class="language-console">  DUP     readings.         report gates is declared twice in sheet readings
 </code></pre>
 <p>Two <code>deltas</code> lines with different names are not duplicates.</p>
+<p>A bare <code>report deltas</code> in a sheet with no scalar that is not a param, such as
+<code>#readings</code> with only <code>report deltas</code> and <code>report gates</code>:</p>
+<pre><code class="language-console">  TYPE    readings.         `report deltas` has nothing to read: this sheet has no scalar that is not a param; name the values with `deltas on REF, …`
+</code></pre>
+<p><code>simulate</code> then shows the sheet as <code>(cannot start)</code>.</p>
 <hr>
 <h1 id="part-4-running-and-reading">Part 4 — Running and reading</h1>
 <h2 id="15-the-first-run">15. The first run</h2>
