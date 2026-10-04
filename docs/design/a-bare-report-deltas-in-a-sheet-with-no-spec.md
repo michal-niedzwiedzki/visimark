@@ -126,3 +126,5 @@ The plan's final task:
 - `docs/cli-reference.md` and generated finding docs, if either lists `report` findings.
 - `CHANGELOG.md` under `## Unreleased`.
 - `docs/vocabulary-catalogue.md`: move the row out of section E into the Shipped register as `UNRELEASED`.
+
+<!--vmark:no-formulas-->
