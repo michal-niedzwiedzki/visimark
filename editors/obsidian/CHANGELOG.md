@@ -9,9 +9,28 @@ Each entry says which engine version the bundle carries.
 
 ## Unreleased
 
-Community-scanner cleanups with no behaviour change: reading mode builds its
-provenance spans with Obsidian's `createSpan`, and the vault index debounces
+## 0.3.0 - 2026-10-04
+
+Bundles the 0.2.0 engine, which adds units, `lattice` params and `report`
+statements to the language. The plugin's checks, hovers and sweep read them
+through the engine, so a note that uses them is analysed like any other.
+
+**Pre-1.0 break, from the engine.** A header ending in a bracket is now a name
+plus a unit: `Weight [kg]` is the column `Weight`, and a quoted `"Weight [kg]"`
+no longer resolves (it reports `UNDEF` with a hint). A header whose bracket is
+not a unit, such as `Revenue [1]`, is `UNIT`; write `Revenue \[1\]` to keep the
+bracket in the name. See the engine's changelog for the full list.
+
+- **Units.** Units that disagree get a `UNIT` finding. A `|unit` anchor
+  (`<!--vmark=lines.net_total|unit-->`) is checked and repaired by formatting.
+- **`NPV` and `IRR` are faster**, and `NPV` is correctly rounded at 40 digits,
+  so an unrounded value can print different trailing digits.
+
+Also, community-scanner cleanups with no behaviour change: reading mode builds
+its provenance spans with Obsidian's `createSpan`, and the vault index debounces
 with the window's timers (injected, so popout windows and tests are both fine).
+
+Bundles engine 0.2.0.
 
 ## 0.2.3 - 2026-09-30
 
