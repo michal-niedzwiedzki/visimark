@@ -10,6 +10,13 @@
   question count, any sheet that could not start, and the elapsed time go to
   TERMINAL, as they go to stderr on the command line.
 
+### Fixed
+
+- **`--help` exits `0` on every command.** `visimark check --help` (and `fmt`,
+  `infer`, `eval`, `explain`, `ref`, `simulate`) printed a refusal and exited
+  `2`; it now prints that command's usage line and exits `0`. `visimark-mcp
+  --help` does the same instead of refusing it as an unknown option.
+
 ## 0.2.0 - 2026-10-04
 
 ### Added

@@ -17,6 +17,10 @@ import { createServer } from "./server.js";
  */
 export async function runServer(argv: readonly string[]): Promise<number> {
   const parsed = parseArgs(argv);
+  if ("help" in parsed) {
+    console.log(parsed.help);
+    return 0;
+  }
   if ("usage" in parsed) {
     console.error(parsed.usage);
     return 2;

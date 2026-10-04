@@ -14,3 +14,10 @@ test("an unrecognised option is a usage error", () => {
   // opened stdio cannot report a usage error without corrupting the stream.
   expect(parseArgs(["--nope"])).toEqual({ usage: "visimark-mcp: unknown option --nope" });
 });
+
+test("--help and -h ask for the help text, not a usage error", () => {
+  for (const flag of ["--help", "-h"]) {
+    const r = parseArgs([flag]);
+    expect("help" in r && r.help).toContain("usage: visimark-mcp");
+  }
+});

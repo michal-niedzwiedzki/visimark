@@ -77,7 +77,9 @@ both exit `2`, before any file is read or written. Under `--json` the refusal is
 | `simulate` | `FILE...`, `--fail-on-fault`, `--progress`. No `--json`: `simulate --json` is refused with `visimark: simulate has no --json mode` |
 
 Only `--version`, `-v`, `version`, `--help`, `-h` and `help` in the command
-position are handled before this. The rules are in
+position are handled before this. `--help` or `-h` after a command (`visimark
+check --help`) prints that command's usage line and exits `0`; `visimark-mcp
+--help` does the same. The rules are in
 [`design/refuse-unrecognised-and-misplaced-cli-options-spec.md`](design/refuse-unrecognised-and-misplaced-cli-options-spec.md).
 
 ## Exit codes

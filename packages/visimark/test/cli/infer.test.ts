@@ -123,3 +123,13 @@ test("the usage text lists infer", async () => {
   await runCli(["--help"], c.io);
   expect(c.out()).toContain("visimark infer FILE... [--write]");
 });
+
+test("every command answers --help and -h with its usage line and exit 0", async () => {
+  for (const command of ["check", "fmt", "infer", "eval", "explain", "ref", "simulate"]) {
+    for (const flag of ["--help", "-h"]) {
+      const c = capture();
+      expect(await runCli([command, "a.md", flag], c.io)).toBe(0);
+      expect(c.out()).toContain(`usage: visimark ${command}`);
+    }
+  }
+});
