@@ -21,8 +21,11 @@ export type RawStep =
   | { kind: "text"; id?: string; text: string; contains: string }
   | { kind: "manual"; id?: string; text: string };
 
+/** One entry of docs/playground/badges.json. */
 export interface RawBadge {
   name: string;
+  /** the tutorial chapter whose quest awards it, as named in scenarios.json */
+  file: string;
   /** a key into BADGE_ICONS in ./badges.ts */
   icon: string;
   /** first-person and share-ready, posted verbatim by the share buttons */
@@ -41,13 +44,17 @@ export interface RawScenario {
   body: string;
   quest?: RawStep[];
   reward?: RawReward;
-  badge?: RawBadge;
+  /** a slug in docs/playground/badges.json */
+  badge?: string;
 }
 
 export type Scenarios = Record<string, RawScenario>;
 
-/** A badge, plus the id assigned from its chapter's position. */
-export type Badge = RawBadge & { id: string };
+/** The badge manifest, keyed by slug, in display order. */
+export type BadgeManifest = Record<string, RawBadge>;
+
+/** A badge, plus its manifest slug. */
+export type Badge = RawBadge & { slug: string };
 
 /** The internal step shape the quest engine runs on. Exactly one of
  *  `action`, `evalCheck`, `textContains` and `manual` is meaningful. */

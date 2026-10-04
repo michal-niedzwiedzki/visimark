@@ -17,7 +17,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { RawScenario } from "../../../src/playground/app/types.js";
+import type { RawBadge, RawScenario } from "../../../src/playground/app/types.js";
 import { BADGE_ICON_NAMES } from "../../../src/playground/app/badges.js";
 import { normalizeQuest } from "../../../src/playground/app/quest.js";
 import { FILE_SOURCES, TUTORIAL_CHAPTERS } from "../../../src/playground/app/sources.js";
@@ -25,6 +25,14 @@ import { FILE_SOURCES, TUTORIAL_CHAPTERS } from "../../../src/playground/app/sou
 const raw = JSON.parse(
   readFileSync(join(import.meta.dir, "../../../../../docs/playground/scenarios.json"), "utf8"),
 ) as Record<string, RawScenario | string>;
+
+const manifest = Object.fromEntries(
+  Object.entries(
+    JSON.parse(
+      readFileSync(join(import.meta.dir, "../../../../../docs/playground/badges.json"), "utf8"),
+    ) as Record<string, RawBadge | string>,
+  ).filter(([slug]) => slug !== "//"),
+) as Record<string, RawBadge>;
 
 // "//" is the file's own documentation comment, not a scenario — the same
 // exclusion loadScenarios() makes.
@@ -65,15 +73,12 @@ describe("every scenario in docs/playground/scenarios.json", () => {
     }
   });
 
-  test("names an icon that exists, when it carries a badge", () => {
-    // `BADGE_ICONS[badge.icon] ?? ""` renders nothing rather than failing, so
-    // a typo here is invisible until someone earns the badge.
+  test("names a badge that is in the manifest, when it carries one", () => {
     for (const name of names) {
-      const badge = scenario(name).badge;
-      if (!badge) continue;
-      expect(BADGE_ICON_NAMES, `${name}: unknown icon "${badge.icon}"`).toContain(badge.icon);
-      expect(badge.name, name).toBeTruthy();
-      expect(badge.skill, name).toBeTruthy();
+      const slug = scenario(name).badge;
+      if (slug === undefined) continue;
+      expect(typeof slug, `${name}: badge is a slug, not an inline object`).toBe("string");
+      expect(Object.keys(manifest), `${name}: unknown badge "${slug}"`).toContain(slug);
     }
   });
 
@@ -103,8 +108,38 @@ describe("the tutorial track", () => {
     }
   });
 
-  test("gives each chapter a distinct badge name", () => {
-    const badgeNames = TUTORIAL_CHAPTERS.map((c) => scenario(c).badge!.name);
-    expect(new Set(badgeNames).size).toBe(badgeNames.length);
+  test("gives each chapter a distinct badge", () => {
+    const slugs = TUTORIAL_CHAPTERS.map((c) => scenario(c).badge);
+    expect(new Set(slugs).size).toBe(slugs.length);
+  });
+});
+
+describe("every badge in docs/playground/badges.json", () => {
+  const entries = Object.entries(manifest);
+
+  test("names an icon that exists", () => {
+    // `BADGE_ICONS[badge.icon] ?? ""` renders nothing rather than failing, so
+    // a typo here is invisible until someone earns the badge.
+    for (const [slug, badge] of entries) {
+      expect(BADGE_ICON_NAMES, `${slug}: unknown icon "${badge.icon}"`).toContain(badge.icon);
+      expect(badge.name, slug).toBeTruthy();
+      expect(badge.skill, slug).toBeTruthy();
+    }
+  });
+
+  test("has a distinct name, and a slug that is a kebab-case word list", () => {
+    expect(new Set(entries.map(([, b]) => b.name)).size).toBe(entries.length);
+    for (const [slug] of entries) expect(slug).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
+  });
+
+  test("links to the chapter whose scenario awards it", () => {
+    for (const [slug, badge] of entries) {
+      expect(scenario(badge.file)?.badge, `${slug}: ${badge.file} does not award it`).toBe(slug);
+    }
+  });
+
+  test("is used by a chapter, so the BADGES tab cannot show one nobody can earn", () => {
+    const used = new Set(names.map((n) => scenario(n).badge));
+    for (const [slug] of entries) expect(used.has(slug), `${slug} is unused`).toBe(true);
   });
 });

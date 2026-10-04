@@ -28,6 +28,9 @@ const SELF_STYLED = ["playground.html", "preview.html"];
 const SANS = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
 const MONO = '"SF Mono", "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace';
 const HAND = '"Caveat", "Bradley Hand", "Comic Sans MS", cursive';
+/** The icon font is not a text stack: it is a ligature font, repeated by any
+ *  page that draws icons, loaded from the same docs/fonts/ file. */
+const ICONS = '"Material Symbols Outlined"';
 
 /** Every font stack a file declares, with the whitespace oxfmt may have
  *  wrapped it across collapsed away. */
@@ -49,7 +52,7 @@ describe("the type stacks", () => {
     // A page is free to use only some of them; what it may not do is use a
     // *different* one, which is how "the same font, almost" happens.
     for (const stack of stacks(read(page))) {
-      expect([SANS, MONO, HAND]).toContain(stack);
+      expect([SANS, MONO, HAND, ICONS]).toContain(stack);
     }
   });
 });
