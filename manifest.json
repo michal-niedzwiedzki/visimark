@@ -1,7 +1,7 @@
 {
   "id": "visimark",
   "name": "VisiMark",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "minAppVersion": "1.8.7",
   "description": "Checks that every number in a note still matches the formula that produced it, so a correct formula can't ship with a wrong total. The note stays ordinary Markdown outside the vault.",
   "author": "Michał Niedźwiedzki",
