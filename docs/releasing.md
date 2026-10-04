@@ -132,6 +132,16 @@ before core had shipped.
 Pushing a tag is the maintainer's action; an agent opens the PRs, watches the
 runs and verifies, and does not tag unless asked.
 
+**A core bump leaves the plugin changelog behind, on purpose.** Between step 2
+and step 5 the newest plugin entry still says "Bundles engine <previous>."
+while `packages/visimark` is already the new version.
+`scripts/check-obsidian-engine-line.ts` would fail on that tree, which is why
+it runs in `obsidian-release.yml` and nowhere else. Do not assert it against
+the live repository from a test or from `ci.yml`: a "passes on the real
+repository" case did exactly that and turned `ci` red on the v0.2.0 release
+commit (fixed in `3f15bd6`). Its synthetic-tree tests in
+`scripts/release-checks.test.ts` are the coverage.
+
 ## Releasing the Obsidian plugin
 
 **A separate, bare-version tag — not `vX.Y.Z`.** The plugin's version is its
