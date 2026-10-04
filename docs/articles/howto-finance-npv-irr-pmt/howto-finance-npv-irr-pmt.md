@@ -28,10 +28,10 @@ payment precision 2 = PMT(rate, nper, principal)
 Payment   = payment
 Interest  precision 2 = (principal * (1 + rate) ^ (Period - 1) - payment * ((1 + rate) ^ (Period - 1) - 1) / rate) * rate
 Balance   precision 2 = principal * (1 + rate) ^ Period - payment * ((1 + rate) ^ Period - 1) / rate
-Principal precision 2 = Payment - Interest
+Principal = Payment - Interest
 
-total_paid     precision 2 = SUM(Payment)
-total_interest precision 2 = SUM(Interest)
+total_paid     = SUM(Payment)
+total_interest = SUM(Interest)
 ```
 
 On a principal of **18000.00**<!--vmark=van.principal--> PLN at **6.0%**<!--vmark=van.rate|percent--> a year over **3**<!--vmark=van.nper--> years, the instalment `PMT` computes is **6733.98**<!--vmark=van.payment--> PLN a year. Over the life of the loan that's **20201.94**<!--vmark=van.total_paid--> PLN paid, of which **2201.93**<!--vmark=van.total_interest--> PLN is interest.

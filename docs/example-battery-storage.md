@@ -42,8 +42,8 @@ the lender wants that range swept. `check`, `fmt` and `eval` see only the
 defaults. `simulate` sees the whole grid: 4 × 4 × 4 × 3 × 3 = 576 questions.
 
 ```vmark #levers
-param power    [MW]      precision 0 integer in [40, 100] lattice 20 = default 60
-param duration [h]       precision 0 integer in [1, 4] lattice 1 = default 2
+param power    [MW]      integer in [40, 100] lattice 20 = default 60
+param duration [h]       integer in [1, 4] lattice 1 = default 2
 param spread   [EUR/MWh] precision 0 in [60, 120] lattice 20 = default 80
 param fade               precision 3 in [1.5%, 3.5%] lattice 1% = default 2.5%
 param gearing            precision 2 in [60%, 80%] lattice 10% = default 70%
@@ -66,12 +66,12 @@ it once.
 cycles                       = 400
 depth                        = 90%
 efficiency                   = 87%
-capacity_price [EUR/MW]      precision 2 = 45000.00
+capacity_price [EUR/MW]      = 45000.00
 full_derating  [h]           = 4
-capex_power    [EUR/MW]      precision 2 = 80000.00
-capex_energy   [EUR/MWh]     precision 2 = 150000.00
-opex_power     [EUR/MW]      precision 2 = 9000.00
-opex_energy    [EUR/MWh]     precision 2 = 2000.00
+capex_power    [EUR/MW]      = 80000.00
+capex_energy   [EUR/MWh]     = 150000.00
+opex_power     [EUR/MW]      = 9000.00
+opex_energy    [EUR/MWh]     = 2000.00
 grid_limit     [MW]          = 90
 life                         = 15
 wacc                         = 8%
@@ -88,12 +88,12 @@ connection offer is `grid_limit`. The cells are warranted for `life` years.
 
 ```vmark #asset
 energy [MWh]          = levers.power * levers.duration
-throughput [MWh]      precision 2 = energy * market.depth * market.cycles
-derating              precision 4 = IF(levers.duration >= market.full_derating, 1, levers.duration / market.full_derating)
+throughput [MWh]      = energy * market.depth * market.cycles
+derating              = IF(levers.duration >= market.full_derating, 1, levers.duration / market.full_derating)
 arbitrage_y1 [EUR]    precision 2 = throughput * market.efficiency * levers.spread
 capacity_y [EUR]      precision 2 = levers.power * market.capacity_price * derating
-opex_y [EUR]          precision 2 = levers.power * market.opex_power + energy * market.opex_energy
-capex [EUR]           precision 2 = levers.power * market.capex_power + energy * market.capex_energy
+opex_y [EUR]          = levers.power * market.opex_power + energy * market.opex_energy
+capex [EUR]           = levers.power * market.capex_power + energy * market.capex_energy
 soh_eol               precision 4 = 1 - levers.fade * market.life
 ```
 
@@ -114,10 +114,10 @@ the year the covenant is tested in.
 ```vmark #debt
 rate      = 6.5%
 tenor     = 12
-dscr_floor precision 2 = 1.30
+dscr_floor = 1.30
 amount [EUR]  precision 2 = asset.capex * levers.gearing
 service [EUR] precision 2 = PMT(rate, tenor, amount)
-cfads_tenor [EUR] precision 2 = asset.arbitrage_y1 * (1 - levers.fade * (tenor - 1)) + asset.capacity_y - asset.opex_y
+cfads_tenor [EUR] = asset.arbitrage_y1 * (1 - levers.fade * (tenor - 1)) + asset.capacity_y - asset.opex_y
 dscr_min precision 2 = cfads_tenor / service
 ```
 
@@ -152,12 +152,12 @@ equity share of capex in year 0.
 |   15 |    1 |            1954368.00 |           1350000.00 |       780000.00 |        2524368.00 |          0.00 |       2524368.00 |         2524368.00 |
 
 ```vmark #years
-Arbitrage precision 2 = asset.arbitrage_y1 * Live * (1 - levers.fade * (Year - 1))
-Capacity  precision 2 = asset.capacity_y * Live
-Opex      precision 2 = asset.opex_y * Live
-CFADS     precision 2 = Arbitrage + Capacity - Opex
-Service   precision 2 = IF(Live == 1, IF(Year <= debt.tenor, debt.service, 0), 0)
-Flow      precision 2 = CFADS - IF(Live == 1, 0, asset.capex)
+Arbitrage = asset.arbitrage_y1 * Live * (1 - levers.fade * (Year - 1))
+Capacity  = asset.capacity_y * Live
+Opex      = asset.opex_y * Live
+CFADS     = Arbitrage + Capacity - Opex
+Service   = IF(Live == 1, IF(Year <= debt.tenor, debt.service, 0), 0)
+Flow      = CFADS - IF(Live == 1, 0, asset.capex)
 Equity    precision 2 = Flow + IF(Live == 1, 0, debt.amount) - Service
 
 chart equity as bar of Equity labelled Year aspect 16:9

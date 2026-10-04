@@ -50,7 +50,7 @@ EUR, giving a total of **36100.50**<!--vmark=lines.gross_total--> EUR gross.
 Amount = ROUND(Share * lines.gross_total, 2)
 
 covered   [EUR]       = SUM(Amount)
-share_sum precision 2 = SUM(Share)
+share_sum = SUM(Share)
 
 assert share_sum == 1
 ```

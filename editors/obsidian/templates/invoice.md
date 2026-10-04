@@ -18,9 +18,9 @@ vat = 23%
 | Support retainer   | month |   1 | 300.00 |  300.00 |  69.00 |  369.00 |
 
 ```vmark #lines
-Net             = Qty * Rate
-VAT precision 2 = Net * vat
-Gross           = Net + VAT
+Net   = Qty * Rate
+VAT   = Net * vat
+Gross = Net + VAT
 
 net_total   = SUM(Net)
 vat_total   = SUM(VAT)

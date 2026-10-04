@@ -68,14 +68,14 @@ and one clause to `Added`; nothing else in the document changes.
 ```vmark #lines
 Added = IF(Lever == "extra_hours", levers.extra_hours, IF(Lever == "premium_hours", levers.premium_hours, IF(Lever == "crosssell_days", levers.crosssell_days, 0)))
 Qty   = Base + Added
-Net  precision 2 = Qty * Rate * (1 - levers.volume_disc)
-Cost precision 2 = Qty * UnitCost
+Net  = Qty * Rate * (1 - levers.volume_disc)
+Cost = Qty * UnitCost
 
 net_total                = SUM(Net)
 cost_total               = SUM(Cost)
 margin precision 4       = (net_total - cost_total) / net_total
-gross_total precision 2  = net_total * (1 + levers.vat)
-signature precision 2    = gross_total * levers.prepay_share
+gross_total              = net_total * (1 + levers.vat)
+signature                = gross_total * levers.prepay_share
 
 chart economics as bar of Net, Cost labelled Item aspect 16:9
 ```
@@ -219,8 +219,8 @@ Every run, read from `eval --json`:
 ```vmark #runs
 signature_target = 17000.00
 
-CashGap   precision 2 = Signature - signature_target
-MarginGap precision 4 = Margin - guardrails.min_margin
+CashGap   = Signature - signature_target
+MarginGap = Margin - guardrails.min_margin
 
 chart cash   as bar of CashGap   labelled Run aspect 16:9
 chart margin as bar of MarginGap labelled Run aspect 16:9
