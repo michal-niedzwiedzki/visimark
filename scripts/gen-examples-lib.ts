@@ -4,6 +4,7 @@
  * example's own page is a `renderDocPage` render of the Markdown file, the
  * same technique as docs/ci.html.
  */
+import { posix } from "node:path";
 import { escapeHtml } from "../packages/visimark/src/site/dom.js";
 import { renderTutorialPage } from "./gen-docs-lib.js";
 import { pageShell } from "./gen-articles-lib.js";
@@ -115,6 +116,22 @@ ${examples.map(card).join("\n")}
 export interface Attachment {
   name: string;
   content: string;
+}
+
+/**
+ * The Markdown with each relative link and image re-written to be relative to
+ * docs/, which is what {@link renderExamplePage} assumes of every file. An
+ * example that lives beside the guides (`docs/example-*.md`) already is; one
+ * that lives in a subdirectory (`docs/tutorial/runway-sweep.md` links
+ * `../tutorial.md`) is not, and would otherwise be re-pointed at the wrong
+ * place. `fromDir` is the file's directory relative to docs/, `""` for docs/.
+ */
+export function relativeToDocs(markdown: string, fromDir: string): string {
+  if (fromDir === "" || fromDir === ".") return markdown;
+  return markdown.replace(/(\]\()([^)\s]+)/g, (whole, open: string, target: string) => {
+    if (/^([a-z][a-z0-9+.-]*:|#|\/)/i.test(target)) return whole;
+    return open + posix.normalize(posix.join(fromDir, target));
+  });
 }
 
 /** The Markdown with each attachment appended under its own heading. The fence

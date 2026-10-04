@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   renderExamplePage,
   renderExamplesListPage,
+  relativeToDocs,
   withAttachments,
   type Example,
 } from "./gen-examples-lib.js";
@@ -84,5 +85,22 @@ describe("withAttachments", () => {
   test("outgrows a fence inside the content", () => {
     const md = withAttachments("", [{ name: "a.csv", content: "```\n" }]);
     expect(md).toContain("````csv");
+  });
+});
+
+describe("relativeToDocs", () => {
+  test("leaves a file that already sits in docs/ alone", () => {
+    expect(relativeToDocs("[a](x.md) ![c](charts/a.svg)", "")).toBe("[a](x.md) ![c](charts/a.svg)");
+  });
+
+  test("resolves links and images against the file's own directory", () => {
+    expect(relativeToDocs("[t](../tutorial.md#top) ![c](img/a.svg)", "simulate")).toBe(
+      "[t](tutorial.md#top) ![c](simulate/img/a.svg)",
+    );
+  });
+
+  test("leaves URLs, anchors and root-relative links alone", () => {
+    const md = "[a](https://x.dev/y) [b](#c) [d](/e) [f](mailto:a@b.c)";
+    expect(relativeToDocs(md, "tutorial")).toBe(md);
   });
 });
