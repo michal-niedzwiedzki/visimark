@@ -15,10 +15,11 @@ import type { FakeDocument, FakeElement } from "../../support/fake-dom.js";
 import { installFakeDom } from "../../support/fake-dom.js";
 import { createTabs } from "../../../src/playground/app/tabs.js";
 
-/** The two strips docs/playground.html ships, in its order. */
+/** The strips docs/playground.html ships, in its order. */
 const STRIPS: Record<string, string[]> = {
   term: ["terminal", "build", "reference"],
   diag: ["reasoning", "knowledge", "inference"],
+  scn: ["scenario", "badges"],
 };
 
 let dom: ReturnType<typeof installFakeDom>;

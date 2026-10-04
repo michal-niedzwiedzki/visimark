@@ -150,6 +150,9 @@ export function createFilesPanel(
       inferPanel.reset();
       quest().render(name);
       tabs.select("diag", "reasoning");
+      // A chapter's scenario is the first thing to read in it, even if the
+      // visitor left the panel on BADGES.
+      tabs.select("scn", "scenario");
     } catch (e) {
       report(`${name} opened with errors (${(e as Error).message})`);
     } finally {

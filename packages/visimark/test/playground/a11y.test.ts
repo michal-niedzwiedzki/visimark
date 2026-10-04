@@ -31,17 +31,19 @@ const attr = (tag: string, name: string): string | undefined =>
   new RegExp(`${name}="([^"]*)"`).exec(tag)?.[1];
 
 const tabTags = [...page.matchAll(/<button[^>]*class="diag-tab[^"]*"[^>]*>/g)].map((m) => m[0]);
-const panelTags = [...page.matchAll(/<div[^>]*class="diag-view[^"]*"[^>]*>/g)].map((m) => m[0]);
+const panelTags = [...page.matchAll(/<div[^>]*class="(?:[^"]* )?diag-view[^"]*"[^>]*>/g)].map(
+  (m) => m[0],
+);
 
 describe("the tab pattern", () => {
-  test("both tab strips are labelled tablists", () => {
+  test("every tab strip is a labelled tablist", () => {
     const tablists = [...page.matchAll(/<div class="panel-head" role="tablist"[^>]*>/g)];
-    expect(tablists).toHaveLength(2);
+    expect(tablists).toHaveLength(3);
     for (const [tag] of tablists) expect(attr(tag, "aria-label")).toBeTruthy();
   });
 
   test("every tab declares its role and the panel it controls", () => {
-    expect(tabTags).toHaveLength(6);
+    expect(tabTags).toHaveLength(8);
     for (const tag of tabTags) {
       expect(attr(tag, "role")).toBe("tab");
       expect(attr(tag, "id")).toBeTruthy();
@@ -51,7 +53,7 @@ describe("the tab pattern", () => {
   });
 
   test("every tab's aria-controls names a real panel, which names it back", () => {
-    expect(panelTags).toHaveLength(6);
+    expect(panelTags).toHaveLength(8);
     const panels = new Map(panelTags.map((tag) => [attr(tag, "id")!, tag]));
     for (const tag of tabTags) {
       const panel = panels.get(attr(tag, "aria-controls")!);
@@ -64,7 +66,7 @@ describe("the tab pattern", () => {
   });
 
   test("exactly one tab per group starts selected", () => {
-    for (const group of ["term", "diag"]) {
+    for (const group of ["term", "diag", "scn"]) {
       const inGroup = tabTags.filter((t) => attr(t, "data-group") === group);
       expect(inGroup.filter((t) => attr(t, "aria-selected") === "true")).toHaveLength(1);
       // roving tabindex: the selected one is the strip's only tab stop

@@ -1,5 +1,5 @@
 {
-  "//": "Declarative data for the SCENARIO panel + quest checklist in playground.html — the single source for every file's scenario, quest, reward and badge, keyed by FILES filename (see normalizeStep() in playground.html for the check-name vocabulary). A file with no entry here (e.g. a new blank file the visitor created) hides the SCENARIO panel entirely rather than falling back to placeholder content — see renderScenario(). `badge` is optional and only tutorial chapters (01-tables.md..13-imports.md) carry one: `name`/`skill` are shown and shared once every quest step is checked off, and `icon` is a key into playground.html's BADGE_ICONS dict — add an entry there before using a new icon name. `skill` is written first person, ready to post as-is on socials. Loaded at runtime by loadScenarios().",
+  "//": "Declarative data for the SCENARIO panel + quest checklist in playground.html — the single source for every file's scenario, quest, reward and badge, keyed by FILES filename (see normalizeStep() in playground.html for the check-name vocabulary). A file with no entry here (e.g. a new blank file the visitor created) hides the SCENARIO panel entirely rather than falling back to placeholder content — see renderScenario(). `badge` is optional and only tutorial chapters (01-tables.md..13-imports.md) carry one: it is the slug of an entry in badges.json, which holds the badge's name, icon and share text. Loaded at runtime by loadScenarios().",
 
   "demo.md": {
     "body": "Start here. This is the smallest useful VisiMark document — one vmark block computing a total from a table, and an assertion. In later chapters we will dive in each concept separately.",
@@ -49,11 +49,7 @@
       "kind": "link",
       "link": "https://visimark.dev/#installation-header"
     },
-    "badge": {
-      "name": "Rookie",
-      "icon": "beanie",
-      "skill": "I have just started learning VisiMark, a verifiable calculations tool for Markdown."
-    }
+    "badge": "rookie"
   },
 
   "02-inference.md": {
@@ -92,11 +88,7 @@
       "kind": "link",
       "link": "https://"
     },
-    "badge": {
-      "name": "Inference Practitioner",
-      "icon": "plugs",
-      "skill": "Me now knows how to infer formulas in Markdown using VisiMark."
-    }
+    "badge": "inference-practitioner"
   },
 
   "03-sheets.md": {
@@ -116,11 +108,7 @@
       "text": "Post it to Gist.",
       "kind": "gist"
     },
-    "badge": {
-      "name": "Sheet Adorer",
-      "icon": "bed",
-      "skill": "I have just created my 1st verifiable calculation in Markdown with VisiMark."
-    }
+    "badge": "sheet-adorer"
   },
 
   "04-anchors.md": {
@@ -151,11 +139,7 @@
       "text": "Post it to Gist.",
       "kind": "gist"
     },
-    "badge": {
-      "name": "Anchored Editor",
-      "icon": "anchor",
-      "skill": "I have just anchored verifiable computation to a text in Markdown."
-    }
+    "badge": "anchored-editor"
   },
 
   "05-mappers.md": {
@@ -176,11 +160,7 @@
       "text": "Post it to Gist.",
       "kind": "gist"
     },
-    "badge": {
-      "name": "Analytics Specialist",
-      "icon": "wrench",
-      "skill": "Me now knows how to add checked formulas to Markdown using VisiMark."
-    }
+    "badge": "analytics-specialist"
   },
 
   "06-aggregates.md": {
@@ -205,11 +185,7 @@
       "text": "Post it to Gist.",
       "kind": "gist"
     },
-    "badge": {
-      "name": "Synthesis Expert",
-      "icon": "hammer",
-      "skill": "Mastered table data aggregation in Markdown using VisiMark."
-    }
+    "badge": "synthesis-expert"
   },
 
   "07-reasoning.md": {
@@ -234,11 +210,7 @@
         "text": "Add tax = ROUND(grand_total * 0.2, 2) and find it appended to Reasoning, after grand_total"
       }
     ],
-    "badge": {
-      "name": "Private Investigator",
-      "icon": "magnifier",
-      "skill": "I learned how VisiMark reasons about verifiable knowledge in Markdown."
-    }
+    "badge": "private-investigator"
   },
 
   "08-knowledge.md": {
@@ -265,11 +237,7 @@
       "kind": "agent",
       "prompt": "I used VisiMark to extract those figures from a Markdown document. Can you guess what is in the document without looking?\n{json}"
     },
-    "badge": {
-      "name": "Studious",
-      "icon": "wand",
-      "skill": "Now I can extract computational knowledge from Markdown documents."
-    }
+    "badge": "studious"
   },
 
   "09-units.md": {
@@ -294,11 +262,7 @@
       "kind": "gist",
       "link": "https://"
     },
-    "badge": {
-      "name": "Scientist",
-      "icon": "gradcap",
-      "skill": "I have just learned about units propagation for Markdown validation with VisiMark."
-    }
+    "badge": "scientist"
   },
 
   "10-assertions.md": {
@@ -329,11 +293,7 @@
       "text": "Post it to Gist.",
       "kind": "gist"
     },
-    "badge": {
-      "name": "IED Consultant",
-      "icon": "bomb",
-      "skill": "I have just built my first Markdown math error detector with VisiMark."
-    }
+    "badge": "ied-consultant"
   },
 
   "11-build-automation.md": {
@@ -358,11 +318,7 @@
       "kind": "link",
       "link": "https://"
     },
-    "badge": {
-      "name": "Continuous Integrator",
-      "icon": "megaphone",
-      "skill": "Learned how to shield git repo from computationally incorrect Markdown."
-    }
+    "badge": "continuous-integrator"
   },
 
   "12-charts.md": {
@@ -393,11 +349,7 @@
       "kind": "gist",
       "link": "https://"
     },
-    "badge": {
-      "name": "Maestro",
-      "icon": "paintbrush",
-      "skill": "Me soon to be promoted to executive role thanks to their VisiMark charting skill."
-    }
+    "badge": "maestro"
   },
 
   "13-imports.csv": {
@@ -438,10 +390,6 @@
       "kind": "gist",
       "link": "https://"
     },
-    "badge": {
-      "name": "Data Importer",
-      "icon": "stamp",
-      "skill": "I just imported a CSV file into Markdown as integrity-stamped sheet."
-    }
+    "badge": "data-importer"
   }
 }

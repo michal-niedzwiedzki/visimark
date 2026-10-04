@@ -7,7 +7,12 @@
 // main.ts decides which of those are fatal.
 
 import { afterEach, describe, expect, test } from "bun:test";
-import { FILE_SOURCES, loadFiles, loadScenarios } from "../../../src/playground/app/sources.js";
+import {
+  FILE_SOURCES,
+  loadBadges,
+  loadFiles,
+  loadScenarios,
+} from "../../../src/playground/app/sources.js";
 
 const realFetch = globalThis.fetch;
 afterEach(() => {
@@ -77,5 +82,23 @@ describe("loadScenarios", () => {
     });
     const scenarios = await loadScenarios();
     expect(Object.keys(scenarios)).toEqual(["demo.md"]);
+  });
+});
+
+describe("loadBadges", () => {
+  test("rejects with the path, so the caller can name it", async () => {
+    stubFetch({});
+    expect(loadBadges()).rejects.toThrow("playground/badges.json: HTTP 404");
+  });
+
+  test('drops the "//" documentation key and keeps manifest order', async () => {
+    stubFetch({
+      "playground/badges.json": JSON.stringify({
+        "//": "what this file is",
+        rookie: { name: "Rookie", file: "01-tables.md", icon: "beanie", skill: "s" },
+        scientist: { name: "Scientist", file: "09-units.md", icon: "gradcap", skill: "s" },
+      }),
+    });
+    expect(Object.keys(await loadBadges())).toEqual(["rookie", "scientist"]);
   });
 });

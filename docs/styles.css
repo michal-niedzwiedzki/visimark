@@ -493,7 +493,35 @@ body {
   display: none;
 }
 
-/* Icons: the asset is 400x400; shown at the slide's height in the carousel
+/* Material Symbols Outlined, a subset of the glyphs the examples page and
+   the Playground use, self-hosted so the pages' CSP stays at 'self'. */
+@font-face {
+  font-family: "Material Symbols Outlined";
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url("fonts/material-symbols-outlined.ttf") format("truetype");
+}
+.material-symbols-outlined {
+  font-family: "Material Symbols Outlined";
+  font-weight: normal;
+  font-style: normal;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: nowrap;
+  direction: ltr;
+  -webkit-font-feature-settings: "liga";
+  font-feature-settings: "liga";
+}
+.articles-icon .material-symbols-outlined {
+  display: block;
+  text-align: center;
+  font-size: 96px;
+  color: #1b1b1b;
+}
+
+/* Icons: shown at the slide's height in the carousel
    and a little larger on articles.html. */
 .articles-icon {
   flex: none;

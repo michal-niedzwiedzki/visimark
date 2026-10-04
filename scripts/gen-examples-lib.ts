@@ -13,7 +13,7 @@ export interface Example {
   title: string;
   tags: string[];
   teaser: string;
-  /** A 400x400 icon, relative to docs/examples/. */
+  /** A Material Symbols Outlined ligature name, drawn from docs/fonts/. */
   icon?: string;
   /** The example's Markdown file, relative to docs/examples/. */
   path: string;
@@ -33,7 +33,7 @@ const exampleHref = (e: Example): string => `examples/${encodeURIComponent(e.slu
 function card(e: Example): string {
   const href = escapeHtml(exampleHref(e));
   const icon = e.icon
-    ? `<a class="articles-icon" href="${href}" tabindex="-1" aria-hidden="true"><img src="examples/${escapeHtml(e.icon)}" width="400" height="400" alt="" /></a>`
+    ? `<a class="articles-icon" href="${href}" tabindex="-1" aria-hidden="true"><span class="material-symbols-outlined">${escapeHtml(e.icon)}</span></a>`
     : "";
   return `        <article class="article-card">${icon}<div class="articles-text">
             <h2><a href="${href}">${escapeHtml(e.title)}</a></h2>
