@@ -105,7 +105,7 @@
       "title": "Runway plan: two assumptions swept",
       "tags": ["simulate", "assertions"],
       "teaser": "A startup's cash runway with the raise and the number of new hires declared as ranges. visimark simulate asks every combination, reports which ones break the twelve-month requirement, and how far each lever moves the answer.",
-      "icon": "flight_takeoff",
+      "icon": "experiment",
       "path": "../tutorial/runway-sweep.md",
       "audience": ["founders", "finance", "business"]
     },
@@ -114,7 +114,7 @@
       "title": "Conference budget: attendees, ticket price and sponsors",
       "tags": ["simulate", "assertions"],
       "teaser": "A one-day conference with three levers swept and three rules for what works: the room fits, the day profits, and sponsors stay under half the revenue. simulate prints the cheapest ticket that still clears them all.",
-      "icon": "groups",
+      "icon": "podium",
       "path": "../simulate/conference.md",
       "audience": ["business", "operations"]
     },
@@ -123,7 +123,7 @@
       "title": "Bakeoff stall: how many batches, at what price",
       "tags": ["simulate", "assertions"],
       "teaser": "A cookie stall with a budget, a profit goal and a limit on leftovers. The price and the number of batches are swept, and simulate names the combination that makes the goal and the ones that never can.",
-      "icon": "bakery_dining",
+      "icon": "cookie",
       "path": "../articles/bakeoff/bakeoff.md",
       "audience": ["business", "founders"]
     }
