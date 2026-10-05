@@ -1207,9 +1207,9 @@ Here is what that prints for a pull request that raises the catering price in
    chosen from 25 feasible of 64 questions
  
  report best scalar event.ticket direction min among feasible
-@@ -29,9 +29,9 @@
+@@ -29,10 +29,10 @@
  
- report deltas on event.profit, event.sponsor_share
+ report deltas on event.profit, event.sponsor_share among all
  
 -  event.profit  base 6975.00
 -    low   -11250.00  (-18225.00)  attendees=100 ticket=60.00 sponsors=0
@@ -1220,6 +1220,7 @@ Here is what that prints for a pull request that raises the catering price in
    event.sponsor_share  base 0.333
      low   0.000  (-0.333)  attendees=100 ticket=60.00 sponsors=0
      high  0.714  (+0.381)  attendees=100 ticket=60.00 sponsors=3
+   over 64 questions
 @@ -90,7 +90,7 @@
    47              300  120.00         2  yes
    48              300  120.00         3  yes
