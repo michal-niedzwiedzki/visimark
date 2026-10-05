@@ -48,7 +48,7 @@ With **2**<!--vmark=runway.new_hires--> new hires the company spends
 
 ```vmark #sweep
 report ledger assertions broken
-report deltas on runway.months
+report deltas on runway.months among all
 report gates
 report best scalar runway.new_hires direction max among feasible
 report forbidden

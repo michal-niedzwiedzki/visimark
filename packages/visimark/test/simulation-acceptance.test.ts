@@ -149,10 +149,10 @@ test("4b. every report finding in spec 4.2, and the silent cases", () => {
     "TYPE|s||`report gates` takes no options",
   ]);
   expect(shape(withScalars("report best scalar s.a direction up"))).toEqual([
-    "TYPE|s||`report best` takes: scalar REF direction max|min [among feasible]",
+    "TYPE|s||`report best` takes: scalar REF direction max|min among feasible|infeasible|all",
   ]);
-  expect(shape(withScalars("report deltas on s.nope"))).toEqual(["UNDEF|s||s.nope"]);
-  expect(shape("| c |\n|---|\n| 1 |\n\n" + fence("s", "report deltas on s.c"))).toEqual([
+  expect(shape(withScalars("report deltas on s.nope among all"))).toEqual(["UNDEF|s||s.nope"]);
+  expect(shape("| c |\n|---|\n| 1 |\n\n" + fence("s", "report deltas on s.c among all"))).toEqual([
     "TYPE|s||a report reads a scalar; s.c is a column",
   ]);
   expect(shape(fence(null, "report gates"))).toEqual([
@@ -162,7 +162,7 @@ test("4b. every report finding in spec 4.2, and the silent cases", () => {
     "DUP|s||report gates is declared twice in sheet s",
   ]);
   // silent: same report, different options; a default off its lattice; no table
-  expect(shape(withScalars("report deltas on s.a\nreport deltas on s.b"))).toEqual([]);
+  expect(shape(withScalars("report deltas on s.a among all\nreport deltas on s.b among all"))).toEqual([]);
   expect(shape(fence("s", "param x precision 0 in [0, 80] lattice 20 = default 7"))).toEqual([]);
   expect(shape(fence("s", "report gates"))).toEqual([]);
 });

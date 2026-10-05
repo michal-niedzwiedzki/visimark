@@ -11,7 +11,7 @@ assert margin >= 0
 assert hours <= 15
 
 report ledger assertions broken
-report deltas on plan.margin
+report deltas on plan.margin among all
 report gates
 report best scalar plan.margin direction max among feasible
 report forbidden

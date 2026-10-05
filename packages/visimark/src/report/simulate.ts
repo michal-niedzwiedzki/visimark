@@ -126,7 +126,7 @@ function body(sim: Simulation, r: Report): string[] {
       const id = sim.refIds.get(r.id)?.[0];
       return id === undefined
         ? []
-        : best(v, id, refText(r.options.scalar), r.options.direction, r.options.amongFeasible);
+        : best(v, id, refText(r.options.scalar), r.options.direction, r.options.among === "feasible");
     }
     case "forbidden":
       return forbidden(v);

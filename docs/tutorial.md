@@ -3282,7 +3282,7 @@ A sheet asks for readings with `report` lines:
 ````markdown
 ```vmark #sweep
 report ledger assertions broken
-report deltas on runway.months
+report deltas on runway.months among all
 report gates
 report best scalar runway.new_hires direction max among feasible
 report forbidden
@@ -3336,7 +3336,7 @@ report ledger assertions broken
   27         6.0%          5  no        months >= 12
   28         6.0%          6  no        months >= 12
 
-report deltas on runway.months
+report deltas on runway.months among all
 
   runway.months  base 13.1
     low   10.1  (-3.0)  raise=6.0% new_hires=6

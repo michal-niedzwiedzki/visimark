@@ -18,7 +18,7 @@ cost precision 0 = extra_hours * 100
 assert levers.prepay_share <= max_prepay
 
 report ledger assertions broken
-report deltas on levers.extra_hours, levers.volume_disc
+report deltas on levers.extra_hours, levers.volume_disc among all
 report gates
 report best scalar levers.cost direction min among feasible
 report forbidden

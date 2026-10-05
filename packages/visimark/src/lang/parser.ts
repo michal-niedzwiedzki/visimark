@@ -7,6 +7,7 @@ import {
   type Call,
   type Expr,
   type Ref,
+  type ReportAmong,
   type ReportDecl,
   type ReportOptions,
   REPORT_NAMES,
@@ -1049,9 +1050,9 @@ function parseChart(toks: Token[], kw: Token): ChartDecl {
 
 const REPORT_SYNOPSIS: Record<ReportName, string | null> = {
   ledger: "[assertions broken]",
-  deltas: "[on REF {, REF}]",
+  deltas: "[on REF {, REF}] among feasible|infeasible|all",
   gates: null,
-  best: "scalar REF direction max|min [among feasible]",
+  best: "scalar REF direction max|min among feasible|infeasible|all",
   forbidden: null,
 };
 
@@ -1118,7 +1119,20 @@ function parseReport(toks: Token[], kw: Token): ReportDecl {
   const pieces: string[] = [];
   let assertionsBroken = false;
   let direction: "max" | "min" = "max";
-  let amongFeasible = false;
+  const amongWord = (): ReportAmong => {
+    word("among");
+    const w = at();
+    if (
+      w.kind !== "ident" ||
+      (w.value !== "feasible" && w.value !== "infeasible" && w.value !== "all")
+    ) {
+      return bad();
+    }
+    i++;
+    pieces.push(`among ${w.value}`);
+    return w.value as ReportAmong;
+  };
+  let among: ReportAmong = "all";
   if (name === "ledger" && isWord("assertions")) {
     i++;
     word("broken");
@@ -1135,6 +1149,9 @@ function parseReport(toks: Token[], kw: Token): ReportDecl {
       break;
     }
     pieces.push(`on ${refs.map(refText).join(", ")}`);
+    among = amongWord();
+  } else if (name === "deltas") {
+    among = amongWord();
   } else if (name === "best") {
     word("scalar");
     refs.push(ref());
@@ -1144,21 +1161,16 @@ function parseReport(toks: Token[], kw: Token): ReportDecl {
     direction = dir.value as "max" | "min";
     i++;
     pieces.push(`scalar ${refText(refs[0]!)} direction ${dir.value}`);
-    if (isWord("among")) {
-      i++;
-      word("feasible");
-      amongFeasible = true;
-      pieces.push("among feasible");
-    }
+    among = amongWord();
   }
   if (at().kind !== "eof") bad();
   const options: ReportOptions =
     name === "ledger"
       ? { kind: "ledger", assertionsBroken }
       : name === "deltas"
-        ? { kind: "deltas", on: refs }
+        ? { kind: "deltas", on: refs, among }
         : name === "best"
-          ? { kind: "best", scalar: refs[0]!, direction, amongFeasible }
+          ? { kind: "best", scalar: refs[0]!, direction, among }
           : { kind: name };
   return {
     type: "report",
