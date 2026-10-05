@@ -23,14 +23,14 @@ under `docs/WIP/` are not (several are gitignored and session-local).
 | Where | Status | Notes |
 |---|---|---|
 | [npmjs.com/package/remark-lint-visimark](https://www.npmjs.com/package/remark-lint-visimark) | **Live**, automatic | Same release leg as above. |
-| unifiedjs/remark plugin list | Not researched | No submission prepared yet. |
+| [remarkjs/remark plugin list](https://github.com/remarkjs/remark/blob/main/doc/plugins.md) | **PR open**, 2026-10-05 | [PR #1504](https://github.com/remarkjs/remark/pull/1504), awaiting merge. One-line addition to `doc/plugins.md` after `remark-lint`. Requirements: `remark-` name, default export, `remark-plugin` keyword (all already met) and a `remark-plugin` GitHub topic (added for this submission). Deliberately not sent to remark-lint's "external rules" list: that is for `unified-lint-rule` packages, and ours is a plain unified plugin. |
 
 ## `markdownlint-rule-visimark` (npm)
 
 | Where | Status | Notes |
 |---|---|---|
 | [npmjs.com/package/markdownlint-rule-visimark](https://www.npmjs.com/package/markdownlint-rule-visimark) | **Live**, automatic | Same release leg as above. |
-| DavidAnson/markdownlint custom-rules list | Not researched | No submission prepared yet. |
+| markdownlint community rules (npm keyword) | **Live**, automatic, confirmed 2026-10-05 | markdownlint has no list or PR process; its custom-rules doc says community rules are discovered via the npm keyword [`markdownlint-rule`](https://www.npmjs.com/search?q=keywords:markdownlint-rule), which the package carries. Confirmed it appears in that search (634 downloads at the time). |
 
 ## `visimark-mcp` (npm + MCP directories)
 
