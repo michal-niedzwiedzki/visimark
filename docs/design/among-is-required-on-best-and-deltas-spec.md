@@ -211,7 +211,7 @@ report deltas on margin among infeasible
 
   margin  base 500.00
     low   -650.00  (-1150.00)  hours=20 disc=10%
-    high  -500.00   (-1000.00)  hours=20 disc=0%
+    high  -500.00  (-1000.00)  hours=20 disc=0%
   over 3 infeasible of 9 questions
 ```
 

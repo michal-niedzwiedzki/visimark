@@ -237,6 +237,7 @@ report deltas among all
   returns.equity_irr  base 0.1931
     low   -0.1811  (-0.3742)  power=40 duration=1 spread=60 fade=3.5% gearing=80%
     high   0.8006  (+0.6075)  power=40 duration=4 spread=120 fade=1.5% gearing=80%
+  over 524 questions
 #credit
 
 report gates
@@ -263,6 +264,7 @@ report deltas on debt.dscr_min, asset.soh_eol among all
   asset.soh_eol  base 0.6250
     low   0.4750  (-0.1500)  power=40 duration=1 spread=60 fade=3.5% gearing=70%
     high  0.7750  (+0.1500)  power=40 duration=1 spread=60 fade=1.5% gearing=70%
+  over 524 questions
 ```
 
 Read it top to bottom, the way a credit paper is read.

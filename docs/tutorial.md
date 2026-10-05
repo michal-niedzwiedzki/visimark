@@ -3341,6 +3341,7 @@ report deltas on runway.months among all
   runway.months  base 13.1
     low   10.1  (-3.0)  raise=6.0% new_hires=6
     high  15.5  (+2.4)  raise=0.0% new_hires=0
+  over 28 questions
 
 report gates
 
