@@ -108,7 +108,8 @@ describe("sheets that cannot start", () => {
   });
   test("a blocked sheet's REFs do not fault the questions a clean sheet reads", () => {
     const md =
-      FIXTURE + "\n```vmark #broken\nbad precision 2 = 1 / 0\nreport deltas on broken.bad among all\n```\n";
+      FIXTURE +
+      "\n```vmark #broken\nbad precision 2 = 1 / 0\nreport deltas on broken.bad among all\n```\n";
     const sim = simulate(md);
     expect(sim.blocked.map((b) => b.sheetId)).toEqual(["broken"]);
     expect(sim.answers.length).toBe(10);

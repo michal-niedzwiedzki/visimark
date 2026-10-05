@@ -247,9 +247,7 @@ function best(
   among: ReportAmong,
 ): string[] {
   if (v.sim.gridSize === 0) return [NO_GRID];
-  const candidates = v.grid.filter(
-    (a) => v.inPopulation(a, among) && v.numOf(a, id) !== undefined,
-  );
+  const candidates = v.grid.filter((a) => v.inPopulation(a, among) && v.numOf(a, id) !== undefined);
   if (candidates.length === 0) return [v.emptyPopulation(among)];
   let win = candidates[0]!;
   for (const a of candidates) {

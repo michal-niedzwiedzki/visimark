@@ -78,7 +78,9 @@ describe("report statement", () => {
     expect(fails("report deltas among all on a").message).toBe(DELTAS);
     expect(fails("report gates extra").message).toBe("`report gates` takes no options");
     expect(fails("report gates among all").message).toBe("`report gates` takes no options");
-    expect(fails("report ledger among all").message).toBe("`report ledger` takes: [assertions broken]");
+    expect(fails("report ledger among all").message).toBe(
+      "`report ledger` takes: [assertions broken]",
+    );
     expect(fails("report forbidden x").message).toBe("`report forbidden` takes no options");
     for (const bad of [
       "report best",

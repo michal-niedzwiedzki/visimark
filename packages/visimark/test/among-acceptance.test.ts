@@ -137,15 +137,9 @@ test("a missing among clause is seven synopsis TYPEs", async () => {
   const j = JSON.parse((await onVariant(md, ["check", "--json"])).out);
   expect(j.status).toBe("problems");
   expect(j.files[0].summary.errors).toBe(7);
-  expect(j.files[0].findings.map((f: { details: { message: string } }) => f.details.message)).toEqual([
-    BEST,
-    BEST,
-    BEST,
-    BEST,
-    DELTAS,
-    DELTAS,
-    DELTAS,
-  ]);
+  expect(
+    j.files[0].findings.map((f: { details: { message: string } }) => f.details.message),
+  ).toEqual([BEST, BEST, BEST, BEST, DELTAS, DELTAS, DELTAS]);
 });
 
 test("no lattice prints the no-grid line for every population", async () => {
@@ -153,7 +147,12 @@ test("no lattice prints the no-grid line for every population", async () => {
   const r = await onVariant(md, ["simulate"]);
   expect(r.code).toBe(0);
   expect(r.out).not.toContain("no feasible question");
-  const bodies = r.out.split("\n").filter((l) => l.trim() !== "" && !l.startsWith("#") && !l.startsWith("==>") && !l.startsWith("report "));
+  const bodies = r.out
+    .split("\n")
+    .filter(
+      (l) =>
+        l.trim() !== "" && !l.startsWith("#") && !l.startsWith("==>") && !l.startsWith("report "),
+    );
   expect(bodies.length).toBe(7);
   expect(bodies.every((l) => l === "  no grid: no param declares a lattice")).toBe(true);
 });
@@ -168,7 +167,9 @@ report best scalar margin direction max among feasible
 report deltas on margin among feasible`);
   const r = await onVariant(md, ["simulate"]);
   expect(r.code).toBe(0);
-  expect(r.out).toContain("report best scalar margin direction max among feasible\n\n  no feasible question");
+  expect(r.out).toContain(
+    "report best scalar margin direction max among feasible\n\n  no feasible question",
+  );
   expect(r.out).toContain("report deltas on margin among feasible\n\n  no feasible question");
 });
 
@@ -237,7 +238,9 @@ test("best on a string is no question evaluated", async () => {
   );
   const r = await onVariant(md, ["simulate"]);
   expect(r.code).toBe(0);
-  expect(r.out).toContain("report best scalar label direction max among all\n\n  no question evaluated");
+  expect(r.out).toContain(
+    "report best scalar label direction max among all\n\n  no question evaluated",
+  );
 });
 
 test("deltas among all in a param-only sheet is nothing to read", async () => {
@@ -259,9 +262,7 @@ test("two copies of the same deltas line are DUP", async () => {
   const md = withReports("report deltas on margin among all\nreport deltas on margin among all");
   const r = await onVariant(md, ["check"]);
   expect(r.code).toBe(1);
-  expect(r.out).toContain(
-    "DUP",
-  );
+  expect(r.out).toContain("DUP");
   expect(r.out).toContain("report deltas on margin among all is declared twice in sheet plan");
 });
 

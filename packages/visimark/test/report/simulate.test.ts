@@ -58,7 +58,10 @@ describe("review focus", () => {
     );
   });
   test("a percent REF prints as a decimal at its width; only lattice params print as percents", () => {
-    const md = FIXTURE.replace("report deltas on plan.margin among all", "report deltas on plan.disc among all");
+    const md = FIXTURE.replace(
+      "report deltas on plan.margin among all",
+      "report deltas on plan.disc among all",
+    );
     const lines = renderSheet(simulate(md), "plan");
     const at = lines.indexOf("report deltas on plan.disc among all");
     expect(lines.slice(at + 2, at + 6)).toEqual([

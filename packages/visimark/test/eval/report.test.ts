@@ -35,7 +35,9 @@ describe("report refs", () => {
   });
 
   test("a bare ref resolves to a document-scope scalar", () => {
-    const md = fence(null, "rate = 5") + fence("s", "x = 1\nreport best scalar rate direction max among feasible");
+    const md =
+      fence(null, "rate = 5") +
+      fence("s", "x = 1\nreport best scalar rate direction max among feasible");
     expect(brief(md)).toEqual([]);
   });
 
@@ -81,7 +83,10 @@ describe("report refs", () => {
 
   test("a report adds no dependency edge: no CYCLE from naming a binding", () => {
     const fs = run(
-      fence("s", "x = 1\nreport deltas on s.x among all\nreport best scalar s.x direction max among feasible"),
+      fence(
+        "s",
+        "x = 1\nreport deltas on s.x among all\nreport best scalar s.x direction max among feasible",
+      ),
     ).findings;
     expect(fs.filter((f) => f.code === "CYCLE")).toEqual([]);
   });

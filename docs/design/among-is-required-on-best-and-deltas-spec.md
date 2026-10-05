@@ -276,3 +276,5 @@ None. The pre-review's three questions are closed as follows.
 1. `F`, `I`, and `K` count questions in the population whose ranked scalar is a number. §3.
 2. `deltas` prints one count line for the report. An empty population is that one line and nothing else. A ref with no numeric value inside a non-empty population keeps its base line and omits low and high. §3.
 3. No lattice stays `no grid: no param declares a lattice` for every population. The empty-population lines apply only when the grid exists and the population is empty. §3.
+
+<!--vmark:no-formulas-->

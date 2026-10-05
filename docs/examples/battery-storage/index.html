@@ -555,13 +555,13 @@ equity_irr     precision 4 = IRR(years.Equity)
 
 report best scalar returns.equity_irr direction max among feasible
 report best scalar returns.npv direction max among feasible
-report deltas
+report deltas among all
 ```</pre><div class="out"><pre><code class="language-vmark">npv [EUR]      precision 2 = NPV(market.wacc, years.Flow)
 equity_irr     precision 4 = IRR(years.Equity)
 
 report best scalar returns.equity_irr direction max among feasible
 report best scalar returns.npv direction max among feasible
-report deltas
+report deltas among all
 </code></pre></div><pre class="src">At the defaults the project is worth **4215389.03 EUR**&lt;!--vmark=returns.npv|unit--&gt; at an
 8% cost of capital. The sponsor's equity returns
 **0.1931**&lt;!--vmark=returns.equity_irr--&gt; a year.</pre><div class="out"><p>At the defaults the project is worth <strong>4215389.03 EUR</strong> at an
@@ -574,7 +574,7 @@ assert levers.gearing &lt;= 75%
 
 report gates
 report forbidden
-report deltas on debt.dscr_min, asset.soh_eol
+report deltas on debt.dscr_min, asset.soh_eol among all
 ```</pre><div class="out"><pre><code class="language-vmark">assert debt.dscr_min >= debt.dscr_floor
 assert asset.soh_eol >= 60%
 assert levers.power &#x3C;= market.grid_limit
@@ -582,7 +582,7 @@ assert levers.gearing &#x3C;= 75%
 
 report gates
 report forbidden
-report deltas on debt.dscr_min, asset.soh_eol
+report deltas on debt.dscr_min, asset.soh_eol among all
 </code></pre></div><pre class="src">1. **Debt service cover.** CFADS in the last debt year must cover the
    instalment at least 1.30 times.
 2. **End-of-life health.** The cells must hold at least 60% of their capacity
@@ -625,7 +625,7 @@ report best scalar returns.npv direction max among feasible
   chosen from 159 feasible of 576 questions
   2 questions tie; the first in grid order is shown
 
-report deltas
+report deltas among all
 
   returns.npv [EUR]  base 4215389.03
     low   -9850576.57  (-14065965.60)  power=100 duration=1 spread=60 fade=3.5% gearing=70%
@@ -633,6 +633,7 @@ report deltas
   returns.equity_irr  base 0.1931
     low   -0.1811  (-0.3742)  power=40 duration=1 spread=60 fade=3.5% gearing=80%
     high   0.8006  (+0.6075)  power=40 duration=4 spread=120 fade=1.5% gearing=80%
+  over 524 questions
 #credit
 
 report gates
@@ -651,7 +652,7 @@ report forbidden
   gearing = 80%  every question with it breaks an assertion
   365 of 576 questions are infeasible
 
-report deltas on debt.dscr_min, asset.soh_eol
+report deltas on debt.dscr_min, asset.soh_eol among all
 
   debt.dscr_min  base 1.41
     low   0.52  (-0.89)  power=40 duration=1 spread=60 fade=3.5% gearing=80%
@@ -659,6 +660,7 @@ report deltas on debt.dscr_min, asset.soh_eol
   asset.soh_eol  base 0.6250
     low   0.4750  (-0.1500)  power=40 duration=1 spread=60 fade=3.5% gearing=70%
     high  0.7750  (+0.1500)  power=40 duration=1 spread=60 fade=1.5% gearing=70%
+  over 524 questions
 ```</pre><div class="out"><pre><code class="language-console">$ visimark simulate example-battery-storage.md
 simulate: example-battery-storage.md: 577 questions (5 lattice params)
 ==> example-battery-storage.md &#x3C;==
@@ -678,7 +680,7 @@ report best scalar returns.npv direction max among feasible
   chosen from 159 feasible of 576 questions
   2 questions tie; the first in grid order is shown
 
-report deltas
+report deltas among all
 
   returns.npv [EUR]  base 4215389.03
     low   -9850576.57  (-14065965.60)  power=100 duration=1 spread=60 fade=3.5% gearing=70%
@@ -686,6 +688,7 @@ report deltas
   returns.equity_irr  base 0.1931
     low   -0.1811  (-0.3742)  power=40 duration=1 spread=60 fade=3.5% gearing=80%
     high   0.8006  (+0.6075)  power=40 duration=4 spread=120 fade=1.5% gearing=80%
+  over 524 questions
 #credit
 
 report gates
@@ -704,7 +707,7 @@ report forbidden
   gearing = 80%  every question with it breaks an assertion
   365 of 576 questions are infeasible
 
-report deltas on debt.dscr_min, asset.soh_eol
+report deltas on debt.dscr_min, asset.soh_eol among all
 
   debt.dscr_min  base 1.41
     low   0.52  (-0.89)  power=40 duration=1 spread=60 fade=3.5% gearing=80%
@@ -712,6 +715,7 @@ report deltas on debt.dscr_min, asset.soh_eol
   asset.soh_eol  base 0.6250
     low   0.4750  (-0.1500)  power=40 duration=1 spread=60 fade=3.5% gearing=70%
     high  0.7750  (+0.1500)  power=40 duration=1 spread=60 fade=1.5% gearing=70%
+  over 524 questions
 </code></pre></div><pre class="src">Read it top to bottom, the way a credit paper is read.</pre><div class="out"><p>Read it top to bottom, the way a credit paper is read.</p></div><pre class="src">- **`best … among feasible`** looks only at questions that break no covenant.
   The equity winner is a small, long battery at the widest spread. The tie
   line is a finding in its own right. Every cost and revenue in this model is

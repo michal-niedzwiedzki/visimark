@@ -329,7 +329,7 @@ report gates
 report forbidden
 report best scalar event.profit direction max among feasible
 report best scalar event.ticket direction min among feasible
-report deltas on event.profit, event.sponsor_share
+report deltas on event.profit, event.sponsor_share among all
 ```
 
 ```vmark #ledger
@@ -612,7 +612,7 @@ report gates
 report forbidden
 report best scalar event.profit direction max among feasible
 report best scalar event.ticket direction min among feasible
-report deltas on event.profit, event.sponsor_share
+report deltas on event.profit, event.sponsor_share among all
 ```
 
 ```vmark #ledger
@@ -664,7 +664,7 @@ Markdown file can never make the tool run code it does not ship.</p>
 </tr>
 <tr>
 <td>How far does a value move across the grid?</td>
-<td><code>report deltas on X, Y</code></td>
+<td><code>report deltas on X, Y among all</code></td>
 <td>the base value, the lowest, the highest, and where</td>
 </tr>
 </tbody>
@@ -688,7 +688,7 @@ ticket".</p>
 </tr>
 <tr>
 <td><code>deltas</code></td>
-<td><code>[on REF {, REF}]</code></td>
+<td><code>[on REF {, REF}] among feasible|infeasible|all</code></td>
 </tr>
 <tr>
 <td><code>gates</code></td>
@@ -696,7 +696,7 @@ ticket".</p>
 </tr>
 <tr>
 <td><code>best</code></td>
-<td><code>scalar REF direction max|min [among feasible]</code></td>
+<td><code>scalar REF direction max|min among feasible|infeasible|all</code></td>
 </tr>
 <tr>
 <td><code>forbidden</code></td>
@@ -709,14 +709,18 @@ ticket".</p>
 anywhere. It cannot name a column.</p>
 <p><strong>A lever is a scalar too.</strong> <code>best scalar event.ticket direction min among feasible</code> asks <em>what is the lowest ticket price at which some plan still
 works?</em> Reading a lever directly is often the clearest way to ask about it.</p>
-<p><strong>Almost always write <code>among feasible</code>.</strong> Without it, <code>best</code> ranks every
-question that could be computed, including the ones that break your rules. The
-most profitable plan in this grid needs 400 people in a 300-seat venue.</p>
-<p><strong>Name what <code>deltas</code> reads.</strong> <code>report deltas</code> with no <code>on</code> covers every
-non-param scalar of its own sheet. In a readings sheet, which has no scalars,
-<code>check</code> refuses it, because it has nothing to read: name the values with
-<code>deltas on REF, …</code>. In a model sheet it prints every
-scalar, including constants that never move:</p>
+<p><strong>Write the population on the line.</strong> <code>best</code> and <code>deltas</code> end with
+<code>among feasible</code>, <code>among infeasible</code>, or <code>among all</code>. <code>among feasible</code> ranks
+the questions that meet every rule. <code>among all</code> ranks every question that
+could be computed, including the ones that break the rules. The most profitable
+plan in this grid needs 400 people in a 300-seat venue, so that plan is a
+reading under <code>among all</code>.</p>
+<p><strong>Name what <code>deltas</code> reads.</strong> <code>report deltas among feasible|infeasible|all</code>
+with no <code>on</code> covers every non-param scalar of its own sheet. In a readings
+sheet, which has no scalars, <code>check</code> refuses that line, because it has nothing
+to read: name the values with <code>deltas on REF, …</code>. A line that leaves out
+<code>among</code> fails the synopsis, and that finding is the synopsis alone. In a model
+sheet the no-<code>on</code> form prints every scalar, including constants that never move:</p>
 <pre><code class="language-text">  event.venue_capacity  base 300
     low   300  (0)  attendees=100 ticket=60.00 sponsors=0
     high  300  (0)  attendees=100 ticket=60.00 sponsors=0
@@ -726,25 +730,25 @@ scalar, including constants that never move:</p>
 as a read.</p>
 <h2 id="14-mistakes-in-a-report-line-and-what-they-report">14. Mistakes in a report line, and what they report</h2>
 <p>Each comes from changing one line of the example's <code>#readings</code> sheet.</p>
-<p>A misspelt name, <code>report deltas on event.proift</code>:</p>
+<p>A misspelt name, <code>report deltas on event.proift among all</code>:</p>
 <pre><code class="language-console">  UNDEF   readings.         unknown name `event.proift`
           did you mean `profit`?
 </code></pre>
-<p>A column, <code>report deltas on costs.Cost</code>:</p>
+<p>A column, <code>report deltas on costs.Cost among all</code>:</p>
 <pre><code class="language-console">  TYPE    readings.         a report reads a scalar; costs.Cost is a column
 </code></pre>
 <p>A report the tool does not ship, <code>report heatmap</code>:</p>
 <pre><code class="language-console">  TYPE    readings.         unknown report `heatmap`; the reports are ledger, deltas, gates, best, forbidden
 </code></pre>
 <p>Options that do not fit, <code>direction lowest</code>:</p>
-<pre><code class="language-console">  TYPE    readings.         `report best` takes: scalar REF direction max|min [among feasible]
+<pre><code class="language-console">  TYPE    readings.         `report best` takes: scalar REF direction max|min among feasible|infeasible|all
 </code></pre>
 <p>The same line twice:</p>
 <pre><code class="language-console">  DUP     readings.         report gates is declared twice in sheet readings
 </code></pre>
 <p>Two <code>deltas</code> lines with different names are not duplicates.</p>
-<p>A bare <code>report deltas</code> in a sheet with no scalar that is not a param, such as
-<code>#readings</code> with only <code>report deltas</code> and <code>report gates</code>:</p>
+<p>A <code>report deltas among all</code> in a sheet with no scalar that is not a param, such as
+<code>#readings</code> with only <code>report deltas among all</code> and <code>report gates</code>:</p>
 <pre><code class="language-console">  TYPE    readings.         `report deltas` has nothing to read: this sheet has no scalar that is not a param; name the values with `deltas on REF, …`
 </code></pre>
 <p><code>simulate</code> then shows the sheet as <code>(cannot start)</code>.</p>
@@ -854,7 +858,7 @@ the domain, step finer, and sweep again.</p>
 of 900 euros (chapter 23 shows how to read that). A winner at the edge of a
 rule is a winner with no margin.</p>
 <h2 id="19-reading-deltas">19. Reading <code>deltas</code></h2>
-<pre><code class="language-text">report deltas on event.profit, event.sponsor_share
+<pre><code class="language-text">report deltas on event.profit, event.sponsor_share among all
 
   event.profit  base 6975.00
     low   -11250.00  (-18225.00)  attendees=100 ticket=60.00 sponsors=0
@@ -862,16 +866,18 @@ rule is a winner with no margin.</p>
   event.sponsor_share  base 0.333
     low   0.000  (-0.333)  attendees=100 ticket=60.00 sponsors=0
     high  0.714  (+0.381)  attendees=100 ticket=60.00 sponsors=3
+  over 64 questions
 </code></pre>
 <p>For each value: its base, then the lowest and the highest it reaches across the
-grid, the change from base in brackets, and the first question that gets there.</p>
+grid, the change from base in brackets, and the first question that gets there.
+The last line counts the questions in that population that produced a number
+for at least one of the named values.</p>
 <p>Read it as <em>how exposed is this number?</em> Profit swings from an 11250-euro loss
 to a 34200-euro gain. That spread is the size of the bet the organisers are
 making.</p>
-<p><strong><code>deltas</code> ranges over every question, feasible or not.</strong> The 34200 high needs
-400 people, which <code>forbidden</code> just ruled out. That is on purpose: <code>deltas</code>
-shows how far a value <em>can</em> move, and <code>best … among feasible</code> shows how far it
-can move inside the rules. Read the two together.</p>
+<p><strong><code>among all</code> is the range over every question that is not faulted.</strong> The 34200
+high needs 400 people, which <code>forbidden</code> just ruled out. <strong><code>among feasible</code> is
+the range inside the rules.</strong> Read the two together.</p>
 <h2 id="20-reading-the-ledger">20. Reading the <code>ledger</code></h2>
 <p>The ledger is one row per question, base first. This is the start of it and a
 slice of the end; the 28 rows between were left out here.</p>
@@ -1162,7 +1168,7 @@ them is a change in the document, not in the tool.</li>
 <li class="task-list-item"><input type="checkbox" disabled> Every boundary you care about is a lattice point. (Chapter 7.)</li>
 <li class="task-list-item"><input type="checkbox" disabled> You read the question count, and it is the size you meant. (Chapter 8.)</li>
 <li class="task-list-item"><input type="checkbox" disabled> The assertions say what "works" means, all of them. (Chapter 9.)</li>
-<li class="task-list-item"><input type="checkbox" disabled> <code>best</code> says <code>among feasible</code>, and <code>deltas</code> says <code>on</code>. (Chapter 13.)</li>
+<li class="task-list-item"><input type="checkbox" disabled> <code>best</code> and <code>deltas</code> name the population with <code>among</code>. (Chapter 13.)</li>
 <li class="task-list-item"><input type="checkbox" disabled> Any <code>forbidden</code> point and any <code>faulted</code> question has been explained.
 (Chapters 17 and 21.)</li>
 <li class="task-list-item"><input type="checkbox" disabled> The winning question was looked at in full with <code>eval --scenario</code>.

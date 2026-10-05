@@ -162,7 +162,9 @@ test("4b. every report finding in spec 4.2, and the silent cases", () => {
     "DUP|s||report gates is declared twice in sheet s",
   ]);
   // silent: same report, different options; a default off its lattice; no table
-  expect(shape(withScalars("report deltas on s.a among all\nreport deltas on s.b among all"))).toEqual([]);
+  expect(
+    shape(withScalars("report deltas on s.a among all\nreport deltas on s.b among all")),
+  ).toEqual([]);
   expect(shape(fence("s", "param x precision 0 in [0, 80] lattice 20 = default 7"))).toEqual([]);
   expect(shape(fence("s", "report gates"))).toEqual([]);
 });

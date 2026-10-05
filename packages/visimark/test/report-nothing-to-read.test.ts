@@ -12,8 +12,7 @@ const FIXTURE = join(import.meta.dir, "fixtures", "simulation", "bare-deltas.md"
 const CLEAN = readFileSync(FIXTURE, "utf8");
 const MESSAGE =
   "`report deltas` has nothing to read: this sheet has no scalar that is not a param; name the values with `deltas on REF, …`";
-const DELTAS =
-  "`report deltas` takes: [on REF {, REF}] among feasible|infeasible|all";
+const DELTAS = "`report deltas` takes: [on REF {, REF}] among feasible|infeasible|all";
 
 async function run(args: string[]) {
   const out: string[] = [];
@@ -123,7 +122,9 @@ test("8. two bare deltas lines are two synopsis TYPEs", async () => {
 });
 
 test("9. a duplicate deltas among all is one nothing-to-read TYPE and one DUP", async () => {
-  const r = await onVariant(readings("report deltas among all\nreport deltas among all"), ["check"]);
+  const r = await onVariant(readings("report deltas among all\nreport deltas among all"), [
+    "check",
+  ]);
   expect(typeCount(r.out)).toBe(1);
   expect(r.out).toContain(MESSAGE);
   expect(r.out).toMatch(/DUP/);
