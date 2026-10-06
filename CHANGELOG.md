@@ -4,6 +4,13 @@
 
 ### Added
 
+- **Cookieless page analytics on the project site.** The documentation pages
+  now count visits with [GoatCounter](https://www.goatcounter.com): no cookies,
+  no stored identifier, no cross-site tracking. The counter script is vendored
+  at `docs/vendor/goatcounter-count.js`, so `script-src` stays `'self'`; the
+  only new grant is the collector at `visimark.goatcounter.com`. The Playground
+  is not counted.
+
 - **A SIMULATION tab in the Playground.** Next to REASONING, KNOWLEDGE and
   INFERENCE, a flask-icon tab with a Start Simulation button runs
   `visimark simulate` on the open document. The readings fill the tab; the
