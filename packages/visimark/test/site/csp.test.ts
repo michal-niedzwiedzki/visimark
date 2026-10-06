@@ -33,9 +33,23 @@ const source = (page: string): string => readFileSync(join(docs, page), "utf8");
  * for a plain `<a href>` (navigation, not a fetch) and must not be granted.
  * See packages/visimark/src/site/repo-scan.ts.
  */
+const GOATCOUNTER = "https://visimark.goatcounter.com";
+
+/** The playground is the one page that is not counted: it keeps its own,
+ *  tighter policy and handles documents the visitor typed. */
+const isCounted = (page: string): boolean => page !== "playground.html";
+
 const RUNTIME_FETCH_ORIGINS: Record<string, string[]> = {
   "index.html": ["https://api.github.com", "https://raw.githubusercontent.com"],
 };
+
+/** What a page reaches at runtime: its own list above, plus the analytics
+ *  collector on every counted page (count.js reports a hit by beacon, so it
+ *  never shows up as a markup subresource). */
+const runtimeOrigins = (page: string): string[] => [
+  ...(RUNTIME_FETCH_ORIGINS[page] ?? []),
+  ...(isCounted(page) ? [GOATCOUNTER] : []),
+];
 
 /** The page with its comments removed. Several of them quote the markup they
  *  are discussing, including the `<script>` this work took out. */
@@ -133,7 +147,7 @@ describe.each(pages)("%s", (page) => {
         // reached through one of the tags below it.
         .filter((origin) => origin !== "https://fonts.gstatic.com"),
     );
-    for (const origin of RUNTIME_FETCH_ORIGINS[page] ?? []) referenced.add(origin);
+    for (const origin of runtimeOrigins(page)) referenced.add(origin);
     for (const origin of referenced) {
       expect([...granted], `${page} loads from ${origin} without granting it`).toContain(origin);
     }
@@ -142,6 +156,24 @@ describe.each(pages)("%s", (page) => {
       if (origin === "https://fonts.gstatic.com") continue;
       expect([...referenced], `${page} grants ${origin}, which it never loads`).toContain(origin);
     }
+  });
+
+  test("counts the visit with the vendored, cookieless script — or, for the playground, not at all", () => {
+    const tags = [...markup(page).matchAll(/<script\b[^>]*\bdata-goatcounter=[^>]*>/gi)].map(
+      (m) => m[0],
+    );
+    if (!isCounted(page)) {
+      expect(tags).toEqual([]);
+      expect(policyOf(page)).not.toContain("goatcounter");
+      return;
+    }
+    expect(tags).toHaveLength(1);
+    // Same-origin, so `script-src` never needs a third-party origin.
+    expect(tags[0]).toMatch(/\bsrc="(?:\.\.\/)*vendor\/goatcounter-count\.js"/);
+    expect(tags[0]).toContain(`data-goatcounter="${GOATCOUNTER}/count"`);
+    // Beacon first, 1×1 image as the fallback: both need a grant.
+    expect(directive(page, "connect-src")).toContain(GOATCOUNTER);
+    expect(directive(page, "img-src")).toContain(GOATCOUNTER);
   });
 
   test("grants a font host only when it asks a stylesheet for fonts", () => {
