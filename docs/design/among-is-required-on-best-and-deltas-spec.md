@@ -247,9 +247,9 @@ There are four `best` lines and three `deltas` lines in the fixture. `check --js
 | `simulate.md`'s `deltas` line written `report deltas on plan.margin among all` | the low and high lines unchanged, then `  over 9 questions` |
 | delete every `lattice` | `best` and `deltas` each print `no grid: no param declares a lattice`; exit `0` |
 | `assert margin >= 2000`, then `best … among feasible` and `deltas on margin among feasible` | each body is exactly `no feasible question` |
-| `assert margin >= -100000`, then `best … among infeasible` and `deltas … among infeasible` | each body is exactly `no infeasible question` |
+| `assert margin >= -100000` and no `assert hours <= 15`, then `best … among infeasible` and `deltas … among infeasible` | each body is exactly `no infeasible question` |
 | add `per_hour precision 2 = margin / hours` and `assert per_hour >= 0`, then `best … direction max among all` | the three `hours=0` questions are faulted; the winner is `hours=10 disc=0%`, margin `500.00` `(0.00 against base)`, `chosen from 6 questions` |
-| the same fault, `among infeasible` | body `no infeasible question` (the `hours=20` questions fail asserts and also fail to verify `per_hour`, so they are faulted, not infeasible) |
+| the same fault, `among infeasible` | winner `hours=20 disc=0%`, margin `-500.00` `(-1000.00 against base)`, `chosen from 3 infeasible of 9 questions` (the `hours=20` questions verify `per_hour` as a negative number, so they stay infeasible; only the `hours=0` questions are faulted) |
 | `label = "east"` and `report deltas on label, margin among all` only | `label  base ?` and no low/high; `margin` low and high as `among all`; `  over 9 questions` |
 | `report best scalar label direction max among all` only | body `no question evaluated` |
 | `report deltas among all` in a sheet whose only bindings are params | the #333 nothing-to-read `TYPE`; `check` exit `1` |

@@ -29,7 +29,7 @@
 These are the readings a reasonable author will hit first. Each one has a test in Task 2.
 
 - A string scalar is a value, so the question is not faulted, and `best` on it still prints `no question evaluated` because nothing ranks. `deltas` on that string beside a number still counts the questions that have a number.
-- `hours = 0` makes `margin / hours` unverified. Those questions are faulted, so `among infeasible` is empty even though the asserts would have failed.
+- `hours = 0` makes `margin / hours` unverified. Those three questions are faulted, so they leave every population. The `hours=20` questions verify `per_hour` as a negative number, so they stay infeasible and `among infeasible` still shows three of them.
 - A file with no lattice prints `no grid: no param declares a lattice` for `feasible`, `infeasible`, and `all`. It does not print an empty-population line.
 - The same refs with a different population are two reports. Two copies of the same line are `DUP`.
 - `among` not last, or any other word, is the full synopsis. `report gates among all` stays `` `report gates` takes no options ``.
@@ -211,9 +211,9 @@ Add one test per further-case row in spec §6. Build each variant from `among.md
 |---|---|
 | delete every `lattice` line | `no grid: no param declares a lattice` on each `best` and each `deltas`; exit `0`; the output does not contain `no feasible question` |
 | `assert margin >= 2000`, then only `report best scalar margin direction max among feasible` and `report deltas on margin among feasible` | each body is exactly `no feasible question` |
-| `assert margin >= -100000`, then the `infeasible` pair | each body is exactly `no infeasible question` |
+| `assert margin >= -100000` and no `assert hours <= 15`, then the `infeasible` pair | each body is exactly `no infeasible question` |
 | add `per_hour precision 2 = margin / hours` and `assert per_hour >= 0`, `best … direction max among all` | `hours=10 disc=0%`, `500.00`, `(0.00 against base)`, `chosen from 6 questions` |
-| the same fault, `among infeasible` | the body is exactly `no infeasible question` |
+| the same fault, `among infeasible` | `hours=20 disc=0%`, `-500.00`, `(-1000.00 against base)`, `chosen from 3 infeasible of 9 questions` |
 | `label = "east"` and only `report deltas on label, margin among all` | `label  base ?`, no `low` under `label`, the `among all` margin low and high, `over 9 questions` |
 | only `report best scalar label direction max among all` | the body is exactly `no question evaluated` |
 | `report deltas among all` in a param-only sheet | the nothing-to-read `TYPE`; `check` exit `1` |
