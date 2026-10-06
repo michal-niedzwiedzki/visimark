@@ -154,7 +154,7 @@ report gates
 report forbidden
 report best scalar event.profit direction max among feasible
 report best scalar event.ticket direction min among feasible
-report deltas on event.profit, event.sponsor_share
+report deltas on event.profit, event.sponsor_share among all
 ```
 
 ```vmark #ledger
@@ -422,7 +422,7 @@ report gates
 report forbidden
 report best scalar event.profit direction max among feasible
 report best scalar event.ticket direction min among feasible
-report deltas on event.profit, event.sponsor_share
+report deltas on event.profit, event.sponsor_share among all
 ```
 
 ```vmark #ledger
@@ -456,7 +456,7 @@ Markdown file can never make the tool run code it does not ship.
 | Which rule bites, and where first? | `report gates` | one row per `assert`: how often it holds and fails |
 | Which lever values are out, whatever else I choose? | `report forbidden` | every lattice point at which no question works |
 | Which question does best at one value? | `report best scalar X direction max among feasible` | the winning question, and its value |
-| How far does a value move across the grid? | `report deltas on X, Y` | the base value, the lowest, the highest, and where |
+| How far does a value move across the grid? | `report deltas on X, Y among all` | the base value, the lowest, the highest, and where |
 
 A sensible first sheet is `gates`, `forbidden`, one `best` and one `deltas`,
 with the ledger on its own. That is the example. Add more `best` lines for each
@@ -468,9 +468,9 @@ The exact grammar:
 | Report | Options |
 |---|---|
 | `ledger` | `[assertions broken]` |
-| `deltas` | `[on REF {, REF}]` |
+| `deltas` | `[on REF {, REF}] among feasible\|infeasible\|all` |
 | `gates` | none |
-| `best` | `scalar REF direction max\|min [among feasible]` |
+| `best` | `scalar REF direction max\|min among feasible\|infeasible\|all` |
 | `forbidden` | none |
 
 ## 13. Choosing what `best` and `deltas` read
@@ -482,15 +482,19 @@ anywhere. It cannot name a column.
 feasible` asks *what is the lowest ticket price at which some plan still
 works?* Reading a lever directly is often the clearest way to ask about it.
 
-**Almost always write `among feasible`.** Without it, `best` ranks every
-question that could be computed, including the ones that break your rules. The
-most profitable plan in this grid needs 400 people in a 300-seat venue.
+**Write the population on the line.** `best` and `deltas` end with
+`among feasible`, `among infeasible`, or `among all`. `among feasible` ranks
+the questions that meet every rule. `among all` ranks every question that
+could be computed, including the ones that break the rules. The most profitable
+plan in this grid needs 400 people in a 300-seat venue, so that plan is a
+reading under `among all`.
 
-**Name what `deltas` reads.** `report deltas` with no `on` covers every
-non-param scalar of its own sheet. In a readings sheet, which has no scalars,
-`check` refuses it, because it has nothing to read: name the values with
-`deltas on REF, …`. In a model sheet it prints every
-scalar, including constants that never move:
+**Name what `deltas` reads.** `report deltas among feasible|infeasible|all`
+with no `on` covers every non-param scalar of its own sheet. In a readings
+sheet, which has no scalars, `check` refuses that line, because it has nothing
+to read: name the values with `deltas on REF, …`. A line that leaves out
+`among` fails the synopsis, and that finding is the synopsis alone. In a model
+sheet the no-`on` form prints every scalar, including constants that never move:
 
 ```text
   event.venue_capacity  base 300
@@ -507,14 +511,14 @@ as a read.
 
 Each comes from changing one line of the example's `#readings` sheet.
 
-A misspelt name, `report deltas on event.proift`:
+A misspelt name, `report deltas on event.proift among all`:
 
 ```console
   UNDEF   readings.         unknown name `event.proift`
           did you mean `profit`?
 ```
 
-A column, `report deltas on costs.Cost`:
+A column, `report deltas on costs.Cost among all`:
 
 ```console
   TYPE    readings.         a report reads a scalar; costs.Cost is a column
@@ -529,7 +533,7 @@ A report the tool does not ship, `report heatmap`:
 Options that do not fit, `direction lowest`:
 
 ```console
-  TYPE    readings.         `report best` takes: scalar REF direction max|min [among feasible]
+  TYPE    readings.         `report best` takes: scalar REF direction max|min among feasible|infeasible|all
 ```
 
 The same line twice:
@@ -540,8 +544,8 @@ The same line twice:
 
 Two `deltas` lines with different names are not duplicates.
 
-A bare `report deltas` in a sheet with no scalar that is not a param, such as
-`#readings` with only `report deltas` and `report gates`:
+A `report deltas among all` in a sheet with no scalar that is not a param, such as
+`#readings` with only `report deltas among all` and `report gates`:
 
 ```console
   TYPE    readings.         `report deltas` has nothing to read: this sheet has no scalar that is not a param; name the values with `deltas on REF, …`
@@ -697,7 +701,7 @@ rule is a winner with no margin.
 ## 19. Reading `deltas`
 
 ```text
-report deltas on event.profit, event.sponsor_share
+report deltas on event.profit, event.sponsor_share among all
 
   event.profit  base 6975.00
     low   -11250.00  (-18225.00)  attendees=100 ticket=60.00 sponsors=0
@@ -705,19 +709,21 @@ report deltas on event.profit, event.sponsor_share
   event.sponsor_share  base 0.333
     low   0.000  (-0.333)  attendees=100 ticket=60.00 sponsors=0
     high  0.714  (+0.381)  attendees=100 ticket=60.00 sponsors=3
+  over 64 questions
 ```
 
 For each value: its base, then the lowest and the highest it reaches across the
 grid, the change from base in brackets, and the first question that gets there.
+The last line counts the questions in that population that produced a number
+for at least one of the named values.
 
 Read it as *how exposed is this number?* Profit swings from an 11250-euro loss
 to a 34200-euro gain. That spread is the size of the bet the organisers are
 making.
 
-**`deltas` ranges over every question, feasible or not.** The 34200 high needs
-400 people, which `forbidden` just ruled out. That is on purpose: `deltas`
-shows how far a value *can* move, and `best … among feasible` shows how far it
-can move inside the rules. Read the two together.
+**`among all` is the range over every question that is not faulted.** The 34200
+high needs 400 people, which `forbidden` just ruled out. **`among feasible` is
+the range inside the rules.** Read the two together.
 
 ## 20. Reading the `ledger`
 
@@ -1063,7 +1069,7 @@ Before you trust a sweep:
 - [ ] Every boundary you care about is a lattice point. (Chapter 7.)
 - [ ] You read the question count, and it is the size you meant. (Chapter 8.)
 - [ ] The assertions say what "works" means, all of them. (Chapter 9.)
-- [ ] `best` says `among feasible`, and `deltas` says `on`. (Chapter 13.)
+- [ ] `best` and `deltas` name the population with `among`. (Chapter 13.)
 - [ ] Any `forbidden` point and any `faulted` question has been explained.
       (Chapters 17 and 21.)
 - [ ] The winning question was looked at in full with `eval --scenario`.

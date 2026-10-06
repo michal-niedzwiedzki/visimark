@@ -202,12 +202,12 @@ assert months >= 12
 <strong>153240.00</strong> PLN a month, so the cash lasts
 <strong>13.1</strong> months. The plan requires at least twelve.</p></div><pre class="src">## Sweep</pre><div class="out"><h2 id="sweep">Sweep</h2></div><pre class="src">```vmark #sweep
 report ledger assertions broken
-report deltas on runway.months
+report deltas on runway.months among all
 report gates
 report best scalar runway.new_hires direction max among feasible
 report forbidden
 ```</pre><div class="out"><pre><code class="language-vmark">report ledger assertions broken
-report deltas on runway.months
+report deltas on runway.months among all
 report gates
 report best scalar runway.new_hires direction max among feasible
 report forbidden

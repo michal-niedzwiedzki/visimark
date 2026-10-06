@@ -232,11 +232,9 @@ excluding the base.
 |---|---|
 | `ledger` | One row per question, base first, then `1…N`. Columns: `question`, each lattice param, `feasible` (`yes`, `no`, `faulted`). |
 | `ledger assertions broken` | As `ledger`, plus a `broken` column listing the false assertions' keys, joined with `; `. It is blank when none is false. |
-| `deltas on REF, …` | For each `REF` in the order written: the line `REF  base V`, then `low` and `high` lines. Each shows the lowest or highest value over the grid's questions that are not faulted, its signed delta from base in parentheses, and the first question in grid order that reaches it. |
-| `deltas` (no `on`) | As above for every scalar of the report's own sheet that is not a param, in document order. A sheet with no such scalar is a `TYPE` finding from `check` (#333), so the sheet is `(cannot start)` and never prints an empty body. |
+| `deltas [on REF, …] among feasible\|infeasible\|all` | The clause is required and last. With `on`, each named ref in the order written; with no `on`, every scalar of the report's own sheet that is not a param, in document order. A parsed `report deltas among <word>` with no `on`, in a sheet with no such scalar, is a `TYPE` finding from `check` (#333), so the sheet is `(cannot start)` and never prints an empty body. A line with no `among` fails the synopsis and does not also emit that sentence. For each ref: `REF  base V`, then `low` and `high` when at least one question in that population ranks the ref (its value is a number). Each shows the signed delta from base in parentheses and the first such question in grid order. A ref none of them ranks keeps the base line and omits `low` and `high`. After the last ref, one count: `over F feasible of N questions`, `over I infeasible of N questions`, or `over K questions`. `F`, `I`, and `K` count population questions that rank at least one ref on the line. |
 | `gates` | A line `N questions`, then one row per `assert` in document order. Columns: `assert`, `holds`, `fails`, `faulted` (counts over the grid), `base` (`holds`, `fails`, `faulted`), and `first failure` (the first grid question in which it is false, blank if none). |
-| `best scalar REF direction max\|min` | The winning question in prose, then `REF  V  (Δ against base)`, then `chosen from N questions`. The candidates are the grid's questions that are not faulted. |
-| `… among feasible` | Candidates are the feasible questions only. The last line reads `chosen from F feasible of N questions`. |
+| `best scalar REF direction max\|min among feasible\|infeasible\|all` | The winning question in prose, then `REF  V  (Δ against base)`, then `chosen from F feasible of N questions`, `chosen from I infeasible of N questions`, or `chosen from K questions`. Candidates are the questions in that population whose scalar is a number. `F`, `I`, and `K` count those candidates. |
 | `forbidden` | One line per lattice-param point at which every grid question is infeasible or faulted, in grid order: `NAME = V  every question with it breaks an assertion`. Then `I of N questions are infeasible`. With no such point, the first line reads `nothing is forbidden`. |
 
 **Ties.** `best`, `low` and `high` take the first question in grid order. When
@@ -247,10 +245,11 @@ more than one question reaches the winning value, `best` adds the line
 
 | Case | Body |
 |---|---|
-| `best … among feasible` with no feasible question | `no feasible question` |
-| `best`, `deltas` with every grid question faulted | `no question evaluated` |
+| `best` or `deltas` `among feasible`, and that population is empty | `no feasible question` |
+| `best` or `deltas` `among infeasible`, and that population is empty | `no infeasible question` |
+| `best` or `deltas` `among all`, and that population is empty | `no question evaluated` |
 | `deltas` on a REF that never changes | `low` and `high` both equal base, with delta `0.00` at that width, and the first question shown |
-| any report on a file with no lattice param (`N = 0`) | `ledger` prints only the base row. `gates` prints `0 questions` with the counts at `0` and `base` filled in. `deltas`, `best` and `forbidden` print `no grid: no param declares a lattice` |
+| any report on a file with no lattice param (`N = 0`) | `ledger` prints only the base row. `gates` prints `0 questions` with the counts at `0` and `base` filled in. `deltas` and `best` print `no grid: no param declares a lattice` for every population, and they do not print an empty-population line. `forbidden` prints the same no-grid line |
 
 ## 5. Behaviour table and acceptance
 
@@ -273,7 +272,7 @@ assert margin >= 0
 assert hours <= 15
 
 report ledger assertions broken
-report deltas on plan.margin
+report deltas on plan.margin among all
 report gates
 report best scalar plan.margin direction max among feasible
 report forbidden
@@ -304,11 +303,12 @@ report ledger assertions broken
   8            20    5%  no        margin >= 0; hours <= 15
   9            20   10%  no        margin >= 0; hours <= 15
 
-report deltas on plan.margin
+report deltas on plan.margin among all
 
   plan.margin  base 500.00
     low   -650.00  (-1150.00)  hours=20 disc=10%
     high  1500.00  (+1000.00)  hours=0 disc=0%
+  over 9 questions
 
 report gates
 
@@ -344,7 +344,7 @@ simulate: simulate.md: 1 of 1 sheets ran
 | 3 | `docs/example-invoice.md` (no `report`) | empty | `simulate: docs/example-invoice.md: no report statement` | `1` |
 | 4 | `simulate.md docs/example-invoice.md` | case 1's section only, with no `---` | case 1's lines, `…: no report statement`, `simulate: 1 of 1 sheets ran across 2 files` | `0` |
 | 5 | `simulate.md simulate.md` | case 1's section twice, separated by a blank line, `---` and a blank line | each file's lines, then `simulate: 2 of 2 sheets ran across 2 files` | `0` |
-| 6 | variant: `report deltas on plan.marginn` | `==> simulate.md <==`, `#plan`, `  (cannot start)` | count line, ``simulate: simulate.md: #plan cannot start: UNDEF: unknown name `plan.marginn` ``, `simulate: simulate.md: 0 of 1 sheets ran` | `0` |
+| 6 | variant: `report deltas on plan.marginn among all` | `==> simulate.md <==`, `#plan`, `  (cannot start)` | count line, ``simulate: simulate.md: #plan cannot start: UNDEF: unknown name `plan.marginn` ``, `simulate: simulate.md: 0 of 1 sheets ran` | `0` |
 | 7 | case 6 with `--fail-on-fault` | as case 6 | as case 6 | `1` |
 | 8 | variant: `lattice 3` on `hours` (does not reach 20) | as case 6 | `…: #plan cannot start: TYPE plan.hours: lattice step 3 does not reach the end of [0, 20]: 20 is not a multiple of 3 above 0` | `0` |
 | 9 | variant: add `per_hour precision 2 = margin / hours` and `assert per_hour >= 0` | the ledger's rows `1`–`3` read `faulted`. `gates` gains a `per_hour >= 0` row whose `faulted` is `3`. `best … among feasible` reads `hours=10 disc=0%`, `plan.margin  500.00  (0.00 against base)`, `chosen from 3 feasible of 9 questions` | as case 1 | `0` |

@@ -300,7 +300,7 @@ declaration. `lattice` is contextual: `lattice = 5` still binds a scalar.
 
 **`report` — a named reading.** A sheet block may carry `report NAME [OPTIONS]`,
 a statement beside `chart`. `NAME` is one of `ledger`, `deltas`, `gates`, `best`
-and `forbidden`, each with a closed option grammar. `check` parses the line,
+and `forbidden`, each with a closed option grammar. `best` and `deltas` require a trailing `among feasible|infeasible|all`. `check` parses the line,
 resolves its refs and counts them as reads, refuses a bare `deltas` in a sheet with no non-param scalar (it has nothing to read), and never runs a question; `fmt`
 leaves it alone. What each report computes is the `simulate` command's
 ([`design/add-a-simulate-command-spec.md`](design/add-a-simulate-command-spec.md)).

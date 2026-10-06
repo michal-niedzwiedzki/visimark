@@ -111,11 +111,14 @@ export interface ReportDecl extends Pos {
   text: string;
 }
 
+/** The population `best` and `deltas` rank. Required, and last, on both. */
+export type ReportAmong = "feasible" | "infeasible" | "all";
+
 /** A report's options by name. `deltas` with an empty `on` reads every
  *  non-param scalar of its sheet. See docs/design/add-a-simulate-command-spec.md §4. */
 export type ReportOptions =
   | { kind: "ledger"; assertionsBroken: boolean }
-  | { kind: "deltas"; on: Ref[] }
+  | { kind: "deltas"; on: Ref[]; among: ReportAmong }
   | { kind: "gates" }
-  | { kind: "best"; scalar: Ref; direction: "max" | "min"; amongFeasible: boolean }
+  | { kind: "best"; scalar: Ref; direction: "max" | "min"; among: ReportAmong }
   | { kind: "forbidden" };

@@ -25,22 +25,24 @@ const brief = (md: string) =>
 
 describe("report refs", () => {
   test("a ref that resolves to nothing is UNDEF, with no name", () => {
-    expect(brief(fence("s", "x = 1\nreport deltas on s.nope"))).toEqual([
+    expect(brief(fence("s", "x = 1\nreport deltas on s.nope among all"))).toEqual([
       { code: "UNDEF", sheetId: "s", name: undefined, raw: "s.nope", message: undefined },
     ]);
   });
 
   test("a bare ref resolves in the sheet", () => {
-    expect(brief(fence("s", "x = 1\nreport deltas on x"))).toEqual([]);
+    expect(brief(fence("s", "x = 1\nreport deltas on x among all"))).toEqual([]);
   });
 
   test("a bare ref resolves to a document-scope scalar", () => {
-    const md = fence(null, "rate = 5") + fence("s", "x = 1\nreport best scalar rate direction max");
+    const md =
+      fence(null, "rate = 5") +
+      fence("s", "x = 1\nreport best scalar rate direction max among feasible");
     expect(brief(md)).toEqual([]);
   });
 
   test("a ref to a column is TYPE", () => {
-    const md = "| a |\n|---|\n| 1 |\n\n" + fence("s", "report deltas on s.a") + "\n";
+    const md = "| a |\n|---|\n| 1 |\n\n" + fence("s", "report deltas on s.a among all") + "\n";
     expect(brief(md)).toEqual([
       {
         code: "TYPE",
@@ -57,19 +59,19 @@ describe("report refs", () => {
       brief(
         fence(
           "s",
-          "param x precision 0 integer in [0, 10] lattice 5 = default 5\nreport deltas on s.x",
+          "param x precision 0 integer in [0, 10] lattice 5 = default 5\nreport deltas on s.x among all",
         ),
       ),
     ).toEqual([]);
   });
 
   test("a scalar that only a report reads is not WARN", () => {
-    const fs = run(fence("s", "x = 1\nreport deltas on s.x")).findings;
+    const fs = run(fence("s", "x = 1\nreport deltas on s.x among all")).findings;
     expect(fs.filter((f) => f.code === "WARN")).toEqual([]);
   });
 
   test("a scalar nothing reads still is", () => {
-    const fs = run(fence("s", "x = 1\ny = 2\nreport deltas on s.x")).findings;
+    const fs = run(fence("s", "x = 1\ny = 2\nreport deltas on s.x among all")).findings;
     expect(fs.filter((f) => f.code === "WARN").map((f) => f.name)).toEqual(["y"]);
   });
 
@@ -81,7 +83,10 @@ describe("report refs", () => {
 
   test("a report adds no dependency edge: no CYCLE from naming a binding", () => {
     const fs = run(
-      fence("s", "x = 1\nreport deltas on s.x\nreport best scalar s.x direction max"),
+      fence(
+        "s",
+        "x = 1\nreport deltas on s.x among all\nreport best scalar s.x direction max among feasible",
+      ),
     ).findings;
     expect(fs.filter((f) => f.code === "CYCLE")).toEqual([]);
   });

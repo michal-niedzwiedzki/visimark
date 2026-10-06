@@ -114,14 +114,14 @@ list shipped with the tool; each name has a closed option grammar:
 | `NAME` | Options |
 |---|---|
 | `ledger` | `[assertions broken]` |
-| `deltas` | `[on REF {, REF}]` |
+| `deltas` | `[on REF {, REF}] among feasible\|infeasible\|all` |
 | `gates` | *(none)* |
-| `best` | `scalar REF direction max\|min [among feasible]` |
+| `best` | `scalar REF direction max\|min among feasible\|infeasible\|all` |
 | `forbidden` | *(none)* |
 
 `REF` is a name as written in an expression: bare (`margin`) or sheet-qualified
 (`lines.margin`). The words `assertions`, `broken`, `on`, `scalar`,
-`direction`, `max`, `min`, `among` and `feasible` are contextual, recognised
+`direction`, `max`, `min`, `among`, `feasible`, `infeasible` and `all` are contextual, recognised
 only inside a `report` line. The list of names grows only through its own
 catalogue row — the same closed-set model `chart`'s engine names use — and no
 document selects code to run: there is no `reports/` folder and no way to
@@ -243,11 +243,11 @@ The finding names the param (`location.name`), as every `param` finding does.
 |---|---|---|
 | `report` with no name | `TYPE` | `a report needs a name` |
 | a name outside the closed list | `TYPE` | `unknown report \`foo\`; the reports are ledger, deltas, gates, best, forbidden` |
-| options that do not match the report's grammar | `TYPE` | `` `report best` takes: scalar REF direction max\|min [among feasible] `` (the synopsis from §2.2 for that name; `` `report gates` takes no options `` for the optionless two) |
+| options that do not match the report's grammar | `TYPE` | `` `report best` takes: scalar REF direction max\|min among feasible\|infeasible\|all `` (the synopsis from §2.2 for that name; `` `report gates` takes no options `` for the optionless two) |
 | a `REF` that resolves to nothing | `UNDEF` | the message an unresolved name has today |
 | a `REF` that resolves to a column, not a scalar | `TYPE` | `a report reads a scalar; lines.price is a column` |
 | a `report` in a document-scope block (no sheet id) | `SHEET` | ``` `report` must be in a `#id` sheet block ``` |
-| a `report deltas` with no `on`, in a sheet with no scalar that is not a `param` (amended by #333) | `TYPE` | `` `report deltas` has nothing to read: this sheet has no scalar that is not a param; name the values with `deltas on REF, …` `` |
+| a parsed `report deltas among <word>` with no `on`, in a sheet with no scalar that is not a `param` (#333). A line with no `among` fails the synopsis instead (#351) | `TYPE` | `` `report deltas` has nothing to read: this sheet has no scalar that is not a param; name the values with `deltas on REF, …` `` |
 | two byte-identical `report` statements in one sheet, whitespace normalised | `DUP` | `report gates is declared twice in sheet runs` |
 
 The findings carry the sheet (`location.sheet`) and no `name`, as the existing
@@ -340,7 +340,7 @@ cost precision 0 = extra_hours * 100
 assert levers.prepay_share <= max_prepay
 
 report ledger assertions broken
-report deltas on levers.extra_hours, levers.volume_disc
+report deltas on levers.extra_hours, levers.volume_disc among all
 report gates
 report best scalar levers.cost direction min among feasible
 report forbidden

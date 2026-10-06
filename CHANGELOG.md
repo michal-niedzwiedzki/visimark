@@ -9,6 +9,10 @@
   `visimark simulate` on the open document. The readings fill the tab; the
   question count, any sheet that could not start, and the elapsed time go to
   TERMINAL, as they go to stderr on the command line.
+- **`report best` and `report deltas` require `among feasible|infeasible|all`.**
+  `all` is the range those reports used before. Omitting the clause is a
+  `TYPE` and fails `check`.
+  ([#351](https://github.com/michal-niedzwiedzki/visimark/issues/351))
 
 ### Fixed
 
