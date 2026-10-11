@@ -277,7 +277,7 @@ the same time.
 
 | Name | Kind | Request | Landed | Released | Decision |
 |------|------|---------|--------|----------|----------|
-| Published CodeMirror 6 extension (`codemirror-visimark`) | tooling | [#360](https://github.com/michal-niedzwiedzki/visimark/issues/360) | LANDED_PR | — | [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/360#issuecomment-6113324260) |
+| Published CodeMirror 6 extension (`codemirror-visimark`) | tooling | [#360](https://github.com/michal-niedzwiedzki/visimark/issues/360) | [#366](https://github.com/michal-niedzwiedzki/visimark/pull/366) | — | [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/360#issuecomment-6113324260) |
 | `among` required on `best` and `deltas` | language feature | [#351](https://github.com/michal-niedzwiedzki/visimark/issues/351) | [#354](https://github.com/michal-niedzwiedzki/visimark/pull/354) | — | [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/351#issuecomment-6004077852) |
 | `check` rejects a bare `report deltas` with nothing to read | language feature | [#333](https://github.com/michal-niedzwiedzki/visimark/issues/333) | [#342](https://github.com/michal-niedzwiedzki/visimark/pull/342) | [v0.2.0](https://github.com/michal-niedzwiedzki/visimark/releases/tag/v0.2.0) | [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/333#issuecomment-5979384325) |
 | `simulate` command | tooling | [#259](https://github.com/michal-niedzwiedzki/visimark/issues/259) | [#329](https://github.com/michal-niedzwiedzki/visimark/pull/329) | [v0.2.0](https://github.com/michal-niedzwiedzki/visimark/releases/tag/v0.2.0) | [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/259#issuecomment-5958948249) |
