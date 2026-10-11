@@ -55,9 +55,8 @@ export function createInferPanel(
       terminal.line(`${current}: nothing to write`);
     } else {
       const updated = VM.applyEdits(source, edits);
-      const cursor = cm.getCursor();
+      // the editor maps the cursor across the replaced span itself (#360)
       cm.setValue(updated);
-      cm.setCursor(cursor);
       store.setText(current, updated);
       // `setText` is memory; `persist` is the reload (review §2.7). Every
       // other writer to the buffer does both — the typing-settle in

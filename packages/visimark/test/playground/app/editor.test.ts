@@ -57,6 +57,16 @@ test("the cursor survives a setValue that rewrites text before it on the same li
   ed.view.destroy();
 });
 
+test("the cursor stays right after a value shortened on its own line", () => {
+  // `**612**` restored to `**6**` with the cursor after 612: it belongs after
+  // the 6, inside the bold, not past the closing ** (#360, spec P2)
+  const ed = createEditor(mount("x = **612**<!--vmark=s.b-->"));
+  ed.setCursor({ line: 0, ch: 9 });
+  ed.setValue("x = **6**<!--vmark=s.b-->");
+  expect(ed.getCursor()).toEqual({ line: 0, ch: 7 });
+  ed.view.destroy();
+});
+
 test("setCursor clamps to the document", () => {
   const ed = createEditor(mount("ab\ncd"));
   ed.setCursor({ line: 9, ch: 9 });

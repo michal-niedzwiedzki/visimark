@@ -373,9 +373,10 @@ export function createPipeline(
     terminal.clear();
     const result = runFmt();
     if (result?.changed) {
-      const cursor = cm.getCursor();
+      // setValue replaces only the span fmt changed, so the editor maps the
+      // cursor across it; restoring the old line/column here would undo that
+      // and drop the cursor past a shortened value (#360, spec P2)
       cm.setValue(result.output);
-      cm.setCursor(cursor);
       store.setText(store.current(), result.output);
       // A cell or anchor got rewritten — the visitor typed over a derived
       // value and fmt just overwrote it back. By the time refreshDerived()
