@@ -489,3 +489,5 @@ are fixed in the usual npm way, which is why [§2.2](#22-the-public-api) is clos
 ## 9. Open questions
 
 None.
+
+<!--vmark:no-formulas-->
