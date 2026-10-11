@@ -18,6 +18,7 @@
     "build": "bun esbuild.config.mjs"
   },
   "dependencies": {
+    "codemirror-visimark": "workspace:*",
     "visimark": "workspace:*"
   },
   "devDependencies": {

@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { analyse, analyseWithSnapshot } from "../src/analysis.js";
-import type { VaultRead } from "../src/snapshot.js";
+import type { ReadImport } from "../src/snapshot.js";
 
 /**
  * Review row 6, reproduced and closed. `benchmark.csv`'s `Time` column
@@ -19,7 +19,7 @@ import type { VaultRead } from "../src/snapshot.js";
 const fixtures = resolve(import.meta.dir, "../../../packages/visimark/test/fixtures/import");
 const csv = readFileSync(join(fixtures, "benchmark.csv"), "utf8");
 
-function vaultOf(entries: Record<string, string>): VaultRead {
+function vaultOf(entries: Record<string, string>): ReadImport {
   const files = new Map(Object.entries(entries));
   return (p) => Promise.resolve(files.get(p) ?? null);
 }
@@ -42,18 +42,17 @@ test("the reader-less analysis wrongly calls a disagreeing imported value comput
 
 test("the snapshot-backed analysis calls the same value disagrees", async () => {
   const read = vaultOf({ "benchmark.csv": csv });
-  const { result, decorations, report } = await analyseWithSnapshot(source, "note.md", read);
+  const { result, decorations } = await analyseWithSnapshot(source, "note.md", read);
   expect(result.findings.some((f) => f.code === "STALE")).toBe(true);
   const mark = decorations.find((d) => d.name === "benchmark.Mean");
   expect(mark?.mark).toBe("disagrees");
-  expect(report.problems.length).toBeGreaterThan(0);
 });
 
 test("concurrent calls for the same (path, source) share one fetch", async () => {
   // a source and path of its own — an earlier test's cache entry for
   // ("note.md", source) must not silently answer this one
   const own = `${source}\n<!-- test: concurrent -->\n`;
-  const countingRead = (): { read: VaultRead; calls: () => number } => {
+  const countingRead = (): { read: ReadImport; calls: () => number } => {
     let calls = 0;
     return {
       calls: () => calls,
@@ -91,9 +90,9 @@ test("two different readers for the same (path, source) do not share a snapshot"
   // instances in `api.test.ts` — could have the second caller's analysis
   // silently answer from the first caller's imported files.
   const own = `${source}\n<!-- test: distinct-readers -->\n`;
-  const readA: VaultRead = async (p) =>
+  const readA: ReadImport = async (p) =>
     p === "benchmark.csv" ? "Id,Time\n1,1.00\n2,1.00\n3,1.00\n" : null;
-  const readB: VaultRead = async (p) => (p === "benchmark.csv" ? csv : null);
+  const readB: ReadImport = async (p) => (p === "benchmark.csv" ? csv : null);
 
   const [a, b] = await Promise.all([
     analyseWithSnapshot(own, "shared-note.md", readA),
@@ -117,7 +116,7 @@ test("a failed read does not poison later calls to the same (path, source)", asy
   // by a promise an earlier test already resolved for (path, source)
   const own = `${source}\n<!-- test: failed-read -->\n`;
   let fail = true;
-  const read: VaultRead = async (p) => {
+  const read: ReadImport = async (p) => {
     if (fail) throw new Error("vault unavailable");
     return p === "benchmark.csv" ? csv : null;
   };
@@ -134,7 +133,7 @@ test("a settled successful call does not answer from a stale cache later", async
   // stays 12.47 the first time and drops to 11.00 the second
   const own = `${source}\n<!-- test: success-eviction -->\n`;
   let value = "12.3,10.1,15.0";
-  const read: VaultRead = async (p) =>
+  const read: ReadImport = async (p) =>
     p === "benchmark.csv"
       ? `Id,Time\n1,${value.split(",")[0]}\n2,${value.split(",")[1]}\n3,${value.split(",")[2]}\n`
       : null;

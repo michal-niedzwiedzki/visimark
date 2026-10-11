@@ -1,5 +1,6 @@
 import { MarkdownView, PluginSettingTab, Setting, type App } from "obsidian";
-import { editorViewOf, forceLivePreviewRecompute } from "./live-preview.js";
+import { refresh } from "codemirror-visimark";
+import { editorViewOf } from "./live-preview.js";
 import type VisiMarkPlugin from "./main.js";
 
 /**
@@ -53,7 +54,7 @@ export class VisiMarkSettingTab extends PluginSettingTab {
             this.app.workspace.iterateAllLeaves((leaf) => {
               if (!(leaf.view instanceof MarkdownView)) return;
               const cm = editorViewOf(leaf.view.editor);
-              cm?.dispatch({ effects: forceLivePreviewRecompute.of(undefined) });
+              cm?.dispatch({ effects: refresh.of(null) });
             });
           }),
       );

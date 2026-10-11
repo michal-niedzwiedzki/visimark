@@ -34,6 +34,7 @@ import { EXTERNALS, options } from "../esbuild.config.mjs";
 
 const here = resolve(import.meta.dir, "..");
 const engineSrc = resolve(here, "../../packages/visimark/src");
+const extensionSrc = resolve(here, "../../packages/codemirror-visimark/src");
 
 /** `import … from "x";` / `export … from "x";` / `import "x";`, oxfmt style */
 const FROM_RE = /^(?:import|export)\b[^;]*?\bfrom\s*"([^"]+)";/gm;
@@ -78,6 +79,16 @@ function graph(): Map<string, string> {
       // walk is the fourth. All four name packages/visimark/src/browser.ts.
       if (spec === "visimark") {
         queue.push(join(engineSrc, "browser.ts"));
+        continue;
+      }
+      // the extension's source, aliased exactly as the engine is (#360)
+      if (spec === "codemirror-visimark" || spec.startsWith("codemirror-visimark/")) {
+        const sub = spec.slice("codemirror-visimark".length);
+        queue.push(
+          sub === ""
+            ? join(extensionSrc, "index.ts")
+            : join(extensionSrc, sub.slice(1).replace(/\.js$/, ".ts")),
+        );
         continue;
       }
       if (!spec.startsWith(".")) continue;
@@ -177,6 +188,7 @@ test("the walk actually reaches the engine, not just the plugin's own few files"
   const files = [...graph().keys()].map(shortName);
   expect(files).toContain("packages/visimark/src/browser.ts");
   expect(files).toContain("packages/visimark/src/fs/gate.ts");
+  expect(files).toContain("packages/codemirror-visimark/src/analysis.ts");
   expect(files.length).toBeGreaterThan(20);
 });
 
@@ -324,4 +336,17 @@ test("tsconfig and esbuild resolve the engine specifier to the same file", () =>
     resolve(here, declared!),
     "tsconfig.json's paths and esbuild.config.mjs's alias name different files",
   ).toBe(resolve(options.alias["visimark"] ?? ""));
+});
+
+test("Obsidian never ships the lint extension (#176 constraint 6: no red)", async () => {
+  const text = await bundleText();
+  expect(text.includes("@codemirror/lint"), "main.js references @codemirror/lint").toBe(false);
+  const walked = [...graph().keys()].map(shortName);
+  expect(walked).not.toContain("packages/codemirror-visimark/src/lint.ts");
+});
+
+test("the engine's source graph is bundled once", () => {
+  const walked = [...graph().keys()].map(shortName);
+  const browserEntries = walked.filter((f) => f === "packages/visimark/src/browser.ts");
+  expect(browserEntries).toHaveLength(1);
 });

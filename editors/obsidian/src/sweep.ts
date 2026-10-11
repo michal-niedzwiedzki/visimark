@@ -1,5 +1,5 @@
 import { check } from "visimark";
-import { hasVmarkBlock, mightHaveBlock } from "./gate.js";
+import { hasVmarkBlock, mightHaveBlock } from "codemirror-visimark/gate.js";
 import { reportFor, type NoteReport } from "./report.js";
 import { readNote, type VaultRead } from "./snapshot.js";
 

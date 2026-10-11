@@ -72,3 +72,13 @@ export function importDependentNames(model: DocModel): ReadonlySet<string> {
   }
   return dependent;
 }
+
+/**
+ * Whether any sheet in the document is an imported one. A reader-less `check`
+ * of such a document reports every imported column as `UNDEF`, so the lint
+ * extension shows nothing for it until a snapshot-backed check has run.
+ */
+export function hasImportedSheet(model: DocModel): boolean {
+  for (const sheet of model.sheets.values()) if (sheet.imported !== null) return true;
+  return false;
+}

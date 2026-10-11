@@ -1,8 +1,8 @@
 import type { MarkdownPostProcessorContext } from "obsidian";
 import type { AnchorTargetKind } from "visimark";
 import { analyseWithSnapshot } from "./analysis.js";
-import { decorationsIn, type Decoration } from "./decorations.js";
-import { hasVmarkBlock } from "./gate.js";
+import { decorationsIn, type Decoration } from "codemirror-visimark/decorations.js";
+import { hasVmarkBlock } from "codemirror-visimark/gate.js";
 import type { VaultRead } from "./snapshot.js";
 
 /**

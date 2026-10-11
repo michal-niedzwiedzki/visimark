@@ -19,9 +19,14 @@ import { build } from "esbuild";
  * graph reaches `node:path` through `fs/gate.ts`, which uses it for string
  * work only. The playground lets that one builtin through because Bun's
  * browser build of it works. Obsidian mobile is not Electron and has no Node
- * to fall back on, so this build substitutes `src/browser-path.ts` and
+ * to fall back on, so this build substitutes
+ * `packages/codemirror-visimark/src/browser-path.ts` and
  * `test/bundle.test.ts` asserts that **no** `node:` specifier survives into
  * the output. There is no allowlist here; zero is the number.
+ *
+ * **`codemirror-visimark` resolves to its source** for the same reason the
+ * engine does (#360): the plugin is built from this checkout and must not
+ * depend on, or ship, a stale `dist/`.
  *
  * **Externals** are what Obsidian itself provides at run time. They must not
  * be bundled: a second copy of CodeMirror in a plugin is a second editor
@@ -30,6 +35,7 @@ import { build } from "esbuild";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const engineBrowserSrc = join(here, "..", "..", "packages", "visimark", "src", "browser.ts");
+const extensionSrc = join(here, "..", "..", "packages", "codemirror-visimark", "src");
 
 /** What Obsidian provides to a plugin at run time, and therefore never bundles. */
 export const EXTERNALS = [
@@ -66,7 +72,8 @@ export const options = {
   logLevel: "info",
   alias: {
     visimark: engineBrowserSrc,
-    "node:path": join(here, "src", "browser-path.ts"),
+    "codemirror-visimark": extensionSrc,
+    "node:path": join(extensionSrc, "browser-path.ts"),
   },
   external: EXTERNALS,
 };

@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    // `visimark` is the engine's browser-safe entry, from source, exactly as
+    // editors/obsidian/tsconfig.json maps it: the package bundles that graph
+    // and never resolves `visimark` from npm.
+    "paths": {
+      "visimark": ["../visimark/src/browser.ts"]
+    }
+  },
+  "include": ["src", "test", "build.ts"]
+}
