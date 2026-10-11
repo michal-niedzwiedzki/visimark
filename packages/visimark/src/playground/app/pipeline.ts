@@ -9,6 +9,7 @@
 
 import type { FmtResult } from "../../write/fmt.js";
 import type { PgEvalResult, VisiMarkApi } from "../browser-entry.js";
+import type { EditorPort } from "./editor.js";
 import type { FileStore } from "./store.js";
 import type { Quest } from "./quest.js";
 import type { Terminal } from "./terminal.js";
@@ -210,7 +211,7 @@ export interface Pipeline {
 
 export function createPipeline(
   VM: VisiMarkApi,
-  cm: CodeMirrorEditor,
+  cm: EditorPort,
   store: FileStore,
   terminal: Terminal,
   quest: () => Quest,
@@ -372,9 +373,10 @@ export function createPipeline(
     terminal.clear();
     const result = runFmt();
     if (result?.changed) {
-      const cursor = cm.getCursor();
+      // setValue replaces only the span fmt changed, so the editor maps the
+      // cursor across it; restoring the old line/column here would undo that
+      // and drop the cursor past a shortened value (#360, spec P2)
       cm.setValue(result.output);
-      cm.setCursor(cursor);
       store.setText(store.current(), result.output);
       // A cell or anchor got rewritten — the visitor typed over a derived
       // value and fmt just overwrote it back. By the time refreshDerived()

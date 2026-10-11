@@ -30,7 +30,7 @@
  * a missing scenarios.json costs the tutorial track and says so in the
  * SCENARIO panel; a malformed *step* costs one chapter's checklist and says so
  * there too (follow-up review §2.2 — it used to cost the whole page); a
- * missing engine, a missing CodeMirror or a missing starting document leaves
+ * missing engine or a missing starting document leaves
  * nothing to work in, and stops with a named overlay.
  */
 
@@ -58,6 +58,7 @@ import { byId, makeStatusFlasher } from "./dom.js";
 import type { BufferStore } from "./buffers.js";
 import { createBufferStore } from "./buffers.js";
 import { createStore } from "./store.js";
+import { createEditor } from "./editor.js";
 import { fileFromUrl, onUrlFileChange, writeFileToUrl } from "./url.js";
 import { createTerminal } from "./terminal.js";
 import { createPipeline } from "./pipeline.js";
@@ -79,7 +80,6 @@ import { wireCopyButton } from "./clipboard.js";
 function missingGlobals(): string[] {
   const missing: string[] = [];
   if (typeof window.VisiMark === "undefined") missing.push("vendor/visimark-browser.js");
-  if (typeof CodeMirror === "undefined") missing.push("CodeMirror (cdnjs.cloudflare.com)");
   if (typeof marked === "undefined") missing.push("marked (cdnjs.cloudflare.com)");
   return missing;
 }
@@ -175,13 +175,7 @@ async function boot(): Promise<void> {
     badgesError = (e as Error).message;
   }
 
-  const cm = CodeMirror.fromTextArea(byId<HTMLTextAreaElement>("editor-ta"), {
-    mode: "gfm",
-    lineNumbers: true,
-    lineWrapping: true,
-    viewportMargin: Infinity,
-    theme: "default",
-  });
+  const cm = createEditor(byId<HTMLTextAreaElement>("editor-ta"));
 
   // The store, not boot, puts the first document into the editor: it is the
   // thing that knows whether the visitor has a saved copy of it from a

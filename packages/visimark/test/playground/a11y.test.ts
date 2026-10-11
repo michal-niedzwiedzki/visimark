@@ -80,8 +80,8 @@ describe("the tab pattern", () => {
 });
 
 describe("the editor's accessible name", () => {
-  test("is set on the textarea CodeMirror actually hands to assistive tech", () => {
-    expect(files).toContain('cm.getInputField().setAttribute("aria-label"');
+  test("is set on the editable surface CodeMirror hands to assistive tech", () => {
+    expect(files).toContain("cm.setLabel(`Editor: ${name}`)");
   });
 
   test("tracks the file, in the same place the visible filename does", () => {

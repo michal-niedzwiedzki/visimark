@@ -31,6 +31,7 @@
  * above them.
  */
 
+import type { EditorPort } from "./editor.js";
 import type { FileStore } from "./store.js";
 import type { Pipeline } from "./pipeline.js";
 import type { Quest } from "./quest.js";
@@ -58,7 +59,7 @@ export interface FilesPanel {
 }
 
 export function createFilesPanel(
-  cm: CodeMirrorEditor,
+  cm: EditorPort,
   store: FileStore,
   terminal: Terminal,
   pipeline: Pipeline,
@@ -72,9 +73,9 @@ export function createFilesPanel(
   const resetBtn = byId<HTMLButtonElement>("reset-all-btn");
 
   /**
-   * CodeMirror 5 hands assistive technology a bare `<textarea>` it creates
-   * itself, and `#editor-ta` in the markup is replaced rather than labelled —
-   * so before review §2.3 the editor was announced with no name at all. The
+   * The editor replaces `#editor-ta` in the markup (./editor.ts), so the
+   * label goes on the editable surface CodeMirror hands assistive technology
+   * instead — before review §2.3 the editor was announced with no name at all. The
    * name has to track the file, which is the same thing `#editor-filename`
    * shows sighted visitors, so both are set in one place.
    */
@@ -86,7 +87,7 @@ export function createFilesPanel(
 
   function setEditorName(name: string): void {
     filenameEl.textContent = name;
-    cm.getInputField().setAttribute("aria-label", `Editor: ${name}`);
+    cm.setLabel(`Editor: ${name}`);
   }
 
   /**

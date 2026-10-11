@@ -9,6 +9,7 @@
  */
 
 import type { VisiMarkApi } from "../browser-entry.js";
+import type { EditorPort } from "./editor.js";
 import type { FileStore } from "./store.js";
 import type { Pipeline } from "./pipeline.js";
 import type { Quest } from "./quest.js";
@@ -24,7 +25,7 @@ export interface InferPanel {
 
 export function createInferPanel(
   VM: VisiMarkApi,
-  cm: CodeMirrorEditor,
+  cm: EditorPort,
   store: FileStore,
   terminal: Terminal,
   pipeline: Pipeline,
@@ -54,9 +55,8 @@ export function createInferPanel(
       terminal.line(`${current}: nothing to write`);
     } else {
       const updated = VM.applyEdits(source, edits);
-      const cursor = cm.getCursor();
+      // the editor maps the cursor across the replaced span itself (#360)
       cm.setValue(updated);
-      cm.setCursor(cursor);
       store.setText(current, updated);
       // `setText` is memory; `persist` is the reload (review §2.7). Every
       // other writer to the buffer does both — the typing-settle in

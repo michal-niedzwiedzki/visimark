@@ -20,6 +20,7 @@
 
 import type { BrowserCheckOptions, VisiMarkApi } from "../browser-entry.js";
 import type { BufferStore } from "./buffers.js";
+import type { EditorPort } from "./editor.js";
 import type { FailedFile } from "./sources.js";
 import { DATA_DEPENDENCIES, FILE_SOURCES, loadFile } from "./sources.js";
 
@@ -145,7 +146,7 @@ export interface FileStore {
  */
 export function createStore(
   VM: VisiMarkApi,
-  cm: CodeMirrorEditor,
+  cm: EditorPort,
   buffers: BufferStore,
   loaded: Record<string, string>,
   initial: string,
@@ -220,7 +221,7 @@ export function createStore(
     contents[name] = text;
   }
 
-  if (contents[initial] !== undefined) cm.setValue(contents[initial]);
+  if (contents[initial] !== undefined) cm.load(contents[initial]);
 
   /**
    * Requests that have gone out and not yet landed, by name.
@@ -305,7 +306,8 @@ export function createStore(
       setText(current, cm.getValue());
       persist(current);
       current = name;
-      cm.setValue(contents[name] ?? "");
+      // a fresh history: undo must not reach back into the file left behind
+      cm.load(contents[name] ?? "");
     },
     optsFor(name) {
       const doc = docFor(name);

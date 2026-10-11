@@ -11,6 +11,7 @@
 //
 // So all four are exercised here rather than the one that was broken.
 
+import type { EditorPort } from "../../../src/playground/app/editor.js";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import type { FakeDocument } from "../../support/fake-dom.js";
 import { installFakeDom } from "../../support/fake-dom.js";
@@ -28,23 +29,32 @@ const digest = (text: string): string => [...text].reverse().join("");
 
 /** Enough CodeMirror for the pipeline and the infer panel: a buffer, a
  *  cursor, and the two events they subscribe to. */
-function fakeEditor(initial = ""): CodeMirrorEditor & {
+function fakeEditor(initial = ""): EditorPort & {
   value: string;
+  cursorSets: number;
   type(text: string): void;
 } {
   const handlers: Record<string, ((...args: unknown[]) => void)[]> = {};
   const cm = {
     value: initial,
+    cursorSets: 0,
     getValue: () => cm.value,
     setValue: (v: string) => {
       cm.value = v;
       for (const h of handlers.change ?? []) h(cm, { origin: "setValue" });
     },
+    /** A file switch: a fresh document, and no change event. */
+    load: (v: string) => {
+      cm.value = v;
+    },
     getCursor: () => ({ line: 0, ch: 0 }),
-    setCursor: () => {},
+    setCursor: () => {
+      cm.cursorSets++;
+    },
     getScrollInfo: () => ({ top: 0, height: 0, clientHeight: 0 }),
     scrollTo: () => {},
-    getInputField: () => ({ setAttribute: () => {} }),
+    setLabel: () => {},
+    refreshMarks: () => {},
     on: (event: string, handler: (...args: unknown[]) => void) => {
       (handlers[event] ??= []).push(handler);
     },
@@ -54,7 +64,11 @@ function fakeEditor(initial = ""): CodeMirrorEditor & {
       for (const h of handlers.change ?? []) h(cm, { origin: "+input" });
     },
   };
-  return cm as unknown as CodeMirrorEditor & { value: string; type(text: string): void };
+  return cm as unknown as EditorPort & {
+    value: string;
+    cursorSets: number;
+    type(text: string): void;
+  };
 }
 
 const VM = {
@@ -151,6 +165,42 @@ describe("the four writers to the editor buffer", () => {
     expect(saved("demo.md", "# Demo")).toBe("# Demo typed");
   });
 
+  test("a fmt write-back leaves the cursor to the editor's own mapping (#360, spec P2)", async () => {
+    // setValue now replaces only the changed span, which moves the cursor
+    // correctly; putting back the old line/column afterwards undid that and
+    // dropped the cursor past a shortened value
+    const fixing = {
+      ...VM,
+      fmt: (source: string) => ({
+        changed: true,
+        output: `${source} fixed`,
+        unfixable: [],
+        artifacts: [],
+        cellsUpdated: 1,
+        anchorsUpdated: 0,
+        datesFixed: 0,
+      }),
+    } as unknown as VisiMarkApi;
+    const cm = fakeEditor("# Demo");
+    const store = createStore(fixing, cm, buffers, { "demo.md": "# Demo" }, "demo.md");
+    for (const id of [
+      "knowledge-body",
+      "reasoning-body",
+      "preview-body",
+      "build-flag",
+      "build-label",
+      "build-meta",
+    ]) {
+      doc.add("div", id);
+    }
+    (globalThis as { marked?: unknown }).marked = { parse: (s: string) => s };
+    createPipeline(fixing, cm, store, terminal, quest);
+    cm.type("# Demo typed");
+    await new Promise((r) => setTimeout(r, 700));
+    expect(cm.value).toBe("# Demo typed fixed");
+    expect(cm.cursorSets).toBe(0);
+  });
+
   test("Infer and write saves the block it wrote", () => {
     const cm = fakeEditor("# Quote\n");
     const store = createStore(VM, cm, buffers, { "demo.md": "# Quote\n" }, "demo.md");
@@ -177,5 +227,7 @@ describe("the four writers to the editor buffer", () => {
     expect(store.stored("demo.md")).toBe(written);
     // The one that was missing: what a reload would find.
     expect(saved("demo.md", "# Quote\n")).toBe(written);
+    // the editor maps the cursor across the write itself (#360, spec P2)
+    expect(cm.cursorSets).toBe(0);
   });
 });
