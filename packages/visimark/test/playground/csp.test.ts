@@ -86,7 +86,7 @@ describe("the playground's content security policy", () => {
 
   test("style-src still needs 'unsafe-inline', and says so out loud", () => {
     // Not a regression: the page's own 950 lines of CSS are inline and
-    // CodeMirror sets element styles as it lays out. Pinned so that removing
+    // CodeMirror 6 injects its theme at run time (#360). Pinned so that removing
     // the inline CSS one day is noticed as the chance to close this.
     expect(directive("style-src")).toContain("'unsafe-inline'");
     expect(page).toContain("style-src does still carry it");

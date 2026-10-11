@@ -11,6 +11,7 @@
 //
 // So all four are exercised here rather than the one that was broken.
 
+import type { EditorPort } from "../../../src/playground/app/editor.js";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import type { FakeDocument } from "../../support/fake-dom.js";
 import { installFakeDom } from "../../support/fake-dom.js";
@@ -28,7 +29,7 @@ const digest = (text: string): string => [...text].reverse().join("");
 
 /** Enough CodeMirror for the pipeline and the infer panel: a buffer, a
  *  cursor, and the two events they subscribe to. */
-function fakeEditor(initial = ""): CodeMirrorEditor & {
+function fakeEditor(initial = ""): EditorPort & {
   value: string;
   type(text: string): void;
 } {
@@ -44,7 +45,8 @@ function fakeEditor(initial = ""): CodeMirrorEditor & {
     setCursor: () => {},
     getScrollInfo: () => ({ top: 0, height: 0, clientHeight: 0 }),
     scrollTo: () => {},
-    getInputField: () => ({ setAttribute: () => {} }),
+    setLabel: () => {},
+    refreshMarks: () => {},
     on: (event: string, handler: (...args: unknown[]) => void) => {
       (handlers[event] ??= []).push(handler);
     },
@@ -54,7 +56,7 @@ function fakeEditor(initial = ""): CodeMirrorEditor & {
       for (const h of handlers.change ?? []) h(cm, { origin: "+input" });
     },
   };
-  return cm as unknown as CodeMirrorEditor & { value: string; type(text: string): void };
+  return cm as unknown as EditorPort & { value: string; type(text: string): void };
 }
 
 const VM = {

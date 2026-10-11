@@ -9,6 +9,7 @@
 
 import type { FmtResult } from "../../write/fmt.js";
 import type { PgEvalResult, VisiMarkApi } from "../browser-entry.js";
+import type { EditorPort } from "./editor.js";
 import type { FileStore } from "./store.js";
 import type { Quest } from "./quest.js";
 import type { Terminal } from "./terminal.js";
@@ -210,7 +211,7 @@ export interface Pipeline {
 
 export function createPipeline(
   VM: VisiMarkApi,
-  cm: CodeMirrorEditor,
+  cm: EditorPort,
   store: FileStore,
   terminal: Terminal,
   quest: () => Quest,

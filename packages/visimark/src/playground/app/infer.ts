@@ -9,6 +9,7 @@
  */
 
 import type { VisiMarkApi } from "../browser-entry.js";
+import type { EditorPort } from "./editor.js";
 import type { FileStore } from "./store.js";
 import type { Pipeline } from "./pipeline.js";
 import type { Quest } from "./quest.js";
@@ -24,7 +25,7 @@ export interface InferPanel {
 
 export function createInferPanel(
   VM: VisiMarkApi,
-  cm: CodeMirrorEditor,
+  cm: EditorPort,
   store: FileStore,
   terminal: Terminal,
   pipeline: Pipeline,

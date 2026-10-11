@@ -17,5 +17,11 @@
   "compilerOptions": {
     "lib": ["ES2023", "DOM", "DOM.Iterable"]
   },
-  "include": ["src/playground/app", "src/site", "test/playground/app", "test/site"]
+  "include": [
+    "src/playground/app",
+    "src/site",
+    "test/playground/app",
+    "test/site",
+    "build-playground.ts"
+  ]
 }

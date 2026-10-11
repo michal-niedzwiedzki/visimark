@@ -11,7 +11,7 @@
       directly under <meta charset>.
 
       Every origin below is one this page actually uses, and no others:
-      cdnjs for CodeMirror and marked, jsdelivr for canvas-confetti, Google
+      cdnjs for marked, jsdelivr for canvas-confetti, Google
       Fonts split across its stylesheet and font hosts. Each of those tags
       already carries integrity + crossorigin + referrerpolicy; this is the
       second lock on the same door — integrity says "this exact file", the
@@ -23,7 +23,9 @@
       to grant. A CSP that still needed it would buy almost nothing.
 
       style-src does still carry it: this page's 950 lines of CSS are inline,
-      and CodeMirror sets element styles as it lays out the editor. An
+      and CodeMirror 6 injects its theme as style rules at run time. Whether
+      a policy without it would still let those apply is untested (#360 spec
+      §8), so style-src does still carry it for both. An
       inline-style injection is a defacement, not code execution, so the
       trade is a different order of magnitude from the script one.
 
@@ -55,7 +57,7 @@
       http-equiv="Content-Security-Policy"
       content="default-src 'none';
                script-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net;
-               style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com;
+               style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
                font-src 'self' https://fonts.gstatic.com;
                img-src 'self' data:;
                connect-src 'self';
@@ -94,7 +96,9 @@
       The two local bundles are the largest things on the critical path (the
       engine alone is 288 KB) and the last to be discovered, because their
       <script> tags are at the end of <body>. Preloading starts them with the
-      stylesheets instead of after them.
+      stylesheets instead of after them. Since #360 the editor is bundled
+      into visimark-playground.js, so these two are the only scripts the page
+      waits on besides marked.
 
       Measured while doing review §2.5: with the twenty document fetches off
       the critical path, what remains between navigation and first render is
@@ -113,13 +117,6 @@
     <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&display=swap"
-    />
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css"
-      integrity="sha512-uf06llspW44/LZpHzHT6qBOIVODjWtv4MxCricRxkzvopAlSWnTf6hpZTFxuuZcuNE9CBQhqE0Seu1CoRk84nQ=="
-      crossorigin="anonymous"
-      referrerpolicy="no-referrer"
     />
     <style>
       *,
@@ -657,39 +654,6 @@
       .editor .panel-body {
         overflow: hidden;
         padding: 0;
-      }
-      .CodeMirror {
-        height: 100%;
-        background: transparent;
-        color: #e6e6e6;
-        font-family: "SF Mono", "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
-        font-size: 0.82rem;
-        line-height: 1.55;
-      }
-      .CodeMirror-gutters {
-        background: transparent;
-        border-right: 1px solid rgba(255, 255, 255, 0.08);
-      }
-      .CodeMirror-linenumber {
-        color: #5c5c5c;
-      }
-      .CodeMirror-cursor {
-        border-left-color: #ff453a;
-      }
-      .cm-s-default .cm-header {
-        color: #7ee787;
-      }
-      .cm-s-default .cm-comment {
-        color: #7d7d7d;
-      }
-      .cm-s-default .cm-string {
-        color: #79c0ff;
-      }
-      .cm-s-default .cm-variable-2 {
-        color: #ffb454;
-      }
-      .CodeMirror-selected {
-        background: rgba(255, 69, 58, 0.25) !important;
       }
 
       /* PREVIEW — 35%, #FAF9F6 */
@@ -1914,36 +1878,6 @@ answers. Nothing in the document is changed.</pre>
       </div>
     </div>
 
-    <script
-      src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"
-      integrity="sha512-OeZ4Yrb/W7d2W4rAMOO0HQ9Ro/aWLtpW9BUSR2UOWnSV2hprXLkkYnnCGc9NeLUxxE4ZG7zN16UuT1Elqq8Opg=="
-      crossorigin="anonymous"
-      referrerpolicy="no-referrer"
-    ></script>
-    <script
-      src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"
-      integrity="sha512-LarNmzVokUmcA7aUDtqZ6oTS+YXmUKzpGdm8DxC46A6AHu+PQiYCUlwEGWidjVYMo/QXZMFMIadZtrkfApYp/g=="
-      crossorigin="anonymous"
-      referrerpolicy="no-referrer"
-    ></script>
-    <script
-      src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/markdown/markdown.min.js"
-      integrity="sha512-DmMao0nRIbyDjbaHc8fNd3kxGsZj9PCU6Iu/CeidLQT9Py8nYVA5n0PqXYmvqNdU+lCiTHOM/4E7bM/G8BttJg=="
-      crossorigin="anonymous"
-      referrerpolicy="no-referrer"
-    ></script>
-    <script
-      src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/mode/overlay.min.js"
-      integrity="sha512-SNwKDMYQwymOPjleeZy1xbdlK1PAjJ6EAplvx0CvNFJbW/pF5ec3h0mAdDl1yySq9r3Qont4STM4W3le7FTm9w=="
-      crossorigin="anonymous"
-      referrerpolicy="no-referrer"
-    ></script>
-    <script
-      src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/gfm/gfm.min.js"
-      integrity="sha512-9gBvOWzR4i5GyhEfJbHXWa0jmCUiT/trH9Q72JbKU2IswWMWKN3Gfzi05IWbsOUzM8Ob+z65I8Ah4EoIQHfkeg=="
-      crossorigin="anonymous"
-      referrerpolicy="no-referrer"
-    ></script>
     <script
       src="https://cdnjs.cloudflare.com/ajax/libs/marked/18.0.11/lib/marked.umd.min.js"
       integrity="sha512-spWXz/aNScpDSOz0auQxbzVBx6LmlxjgH7zilyCenKLGEyBje0iSJiLGsdPlrfNqFitWXRDdAXo1Bi7bonkZ6A=="
