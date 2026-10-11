@@ -32,12 +32,14 @@ const digest = (text: string): string => [...text].reverse().join("");
 function fakeEditor(initial = ""): EditorPort & {
   value: string;
   cursorSets: number;
+  refreshes: number;
   type(text: string): void;
 } {
   const handlers: Record<string, ((...args: unknown[]) => void)[]> = {};
   const cm = {
     value: initial,
     cursorSets: 0,
+    refreshes: 0,
     getValue: () => cm.value,
     setValue: (v: string) => {
       cm.value = v;
@@ -54,7 +56,9 @@ function fakeEditor(initial = ""): EditorPort & {
     getScrollInfo: () => ({ top: 0, height: 0, clientHeight: 0 }),
     scrollTo: () => {},
     setLabel: () => {},
-    refreshMarks: () => {},
+    refreshMarks: () => {
+      cm.refreshes++;
+    },
     on: (event: string, handler: (...args: unknown[]) => void) => {
       (handlers[event] ??= []).push(handler);
     },
@@ -67,6 +71,7 @@ function fakeEditor(initial = ""): EditorPort & {
   return cm as unknown as EditorPort & {
     value: string;
     cursorSets: number;
+    refreshes: number;
     type(text: string): void;
   };
 }
@@ -199,6 +204,25 @@ describe("the four writers to the editor buffer", () => {
     await new Promise((r) => setTimeout(r, 700));
     expect(cm.value).toBe("# Demo typed fixed");
     expect(cm.cursorSets).toBe(0);
+  });
+
+  test("every pass ends by refreshing the marks (#360)", () => {
+    const cm = fakeEditor("# Demo");
+    const store = createStore(VM, cm, buffers, { "demo.md": "# Demo" }, "demo.md");
+    for (const id of [
+      "knowledge-body",
+      "reasoning-body",
+      "preview-body",
+      "build-flag",
+      "build-label",
+      "build-meta",
+    ]) {
+      doc.add("div", id);
+    }
+    (globalThis as { marked?: unknown }).marked = { parse: (s: string) => s };
+    const pipeline = createPipeline(VM, cm, store, terminal, quest);
+    pipeline.runNow();
+    expect(cm.refreshes).toBe(1);
   });
 
   test("Infer and write saves the block it wrote", () => {

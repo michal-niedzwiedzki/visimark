@@ -59,6 +59,7 @@ import type { BufferStore } from "./buffers.js";
 import { createBufferStore } from "./buffers.js";
 import { createStore } from "./store.js";
 import { createEditor } from "./editor.js";
+import { refresh, visimark } from "codemirror-visimark";
 import { fileFromUrl, onUrlFileChange, writeFileToUrl } from "./url.js";
 import { createTerminal } from "./terminal.js";
 import { createPipeline } from "./pipeline.js";
@@ -175,12 +176,26 @@ async function boot(): Promise<void> {
     badgesError = (e as Error).message;
   }
 
-  const cm = createEditor(byId<HTMLTextAreaElement>("editor-ta"));
+  // The extension asks the store which file is open and what it imports; the
+  // store needs the editor to exist first, so the extension reads it through
+  // this reference, which is set before anything can recompute (#360).
+  let storeRef: FileStore | null = null;
+  const cm = createEditor(byId<HTMLTextAreaElement>("editor-ta"), {
+    extensions: [
+      visimark({
+        path: () => (storeRef === null ? null : storeRef.enginePath(storeRef.current())),
+        readImport: async (path) => storeRef?.readImport(path) ?? null,
+        recompute: "on-refresh",
+      }),
+    ],
+    refresh: (view) => view.dispatch({ effects: refresh.of(null) }),
+  });
 
   // The store, not boot, puts the first document into the editor: it is the
   // thing that knows whether the visitor has a saved copy of it from a
   // previous session (review §2.7).
   const store = createStore(VM, cm, buffers, files, initial);
+  storeRef = store;
   const terminal = createTerminal();
 
   let questRef: Quest | null = null;
