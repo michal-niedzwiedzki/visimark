@@ -337,3 +337,16 @@ test("tsconfig and esbuild resolve the engine specifier to the same file", () =>
     "tsconfig.json's paths and esbuild.config.mjs's alias name different files",
   ).toBe(resolve(options.alias["visimark"] ?? ""));
 });
+
+test("Obsidian never ships the lint extension (#176 constraint 6: no red)", async () => {
+  const text = await bundleText();
+  expect(text.includes("@codemirror/lint"), "main.js references @codemirror/lint").toBe(false);
+  const walked = [...graph().keys()].map(shortName);
+  expect(walked).not.toContain("packages/codemirror-visimark/src/lint.ts");
+});
+
+test("the engine's source graph is bundled once", () => {
+  const walked = [...graph().keys()].map(shortName);
+  const browserEntries = walked.filter((f) => f === "packages/visimark/src/browser.ts");
+  expect(browserEntries).toHaveLength(1);
+});
