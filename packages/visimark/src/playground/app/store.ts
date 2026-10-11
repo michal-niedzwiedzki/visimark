@@ -137,6 +137,14 @@ export interface FileStore {
   /** Reverts every changed bundled document; returns how many. Files the
    *  visitor created are left alone — see ./files.ts for why. */
   revertAll(): number;
+  /**
+   * The path codemirror-visimark should give the engine for `name` — the
+   * READER_FS key without its leading `/` — or null for a file that gets no
+   * reader (every file but the imports chapter; see READER_FS above).
+   */
+  enginePath(name: string): string | null;
+  /** The text of a reader-served file, by the path enginePath gave, or null. */
+  readImport(path: string): string | null;
 }
 
 /**
@@ -308,6 +316,14 @@ export function createStore(
       current = name;
       // a fresh history: undo must not reach back into the file left behind
       cm.load(contents[name] ?? "");
+    },
+    enginePath(name) {
+      for (const path of Object.keys(READER_FS)) if (READER_FS[path] === name) return path.slice(1);
+      return null;
+    },
+    readImport(path) {
+      const name = READER_FS["/" + path];
+      return name === undefined ? null : (text(name) ?? null);
     },
     optsFor(name) {
       const doc = docFor(name);
