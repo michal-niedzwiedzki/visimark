@@ -137,7 +137,7 @@ constraint 4, the closed extension point).
 | **A mark** | `Decoration.mark` over the value's source span. `class` is `visimark-computed`, or `visimark-computed visimark-disagrees`. Attributes: `data-vmark` (qualified name), `data-vmark-row` (only for a table cell), `data-vmark-path` (only when `path` returned non-null), `tabindex="0"` (only when `focusableMarks`). These classes and attributes are the documented styling contract; the package ships no theme. |
 | **Local phase** | Synchronous: `locate` + `build` + `check` with no reader. A mark on a name `importDependentNames` reports is withheld rather than asserted. |
 | **Snapshot phase** | Runs when the local phase withheld a mark **or** the document has an imported sheet (so lint, [§2.4](#24-what-visimarklint-does), has a snapshot-backed finding set to show), **and** `path` is non-null **and** `readImport` is given. Fetches what the engine asks for to a fixed point (`snapshot.ts`, unchanged in substance), re-checks with the snapshot reader, and replaces the marks and findings — applied only if the view is alive, `active` is still true and the document is byte-identical to the one the phase started on. A failed read leaves the withheld marks withheld. |
-| **`recompute: "debounced"`** | A document change maps existing marks through the change at once; the local phase reruns 400 ms after the last change; the snapshot phase is debounced at the same 400 ms. Today's Obsidian behaviour. |
+| **`recompute: "debounced"`** | A document change maps existing marks through the change at once; the local phase reruns 400 ms after the last change, and the snapshot phase it needs starts immediately after it (the pause has already been waited for). At construction and on an `active` transition the snapshot phase is debounced at 400 ms. |
 | **`recompute: "on-refresh"`** | A document change only maps existing marks. Recompute happens at construction, on `refresh`, and on an `active` transition; the snapshot phase starts immediately after such a recompute, with no debounce. |
 | **Findings** | Each recompute also stores the finding set it produced in an internal `StateField`, mapped through later changes, for `visimarkLint()` to read. One engine run feeds both. |
 | **Nothing writes** | No transaction the extension dispatches changes the document. |
@@ -251,11 +251,12 @@ as today plus `refreshMarks()` and `setLabel()` below, and the fake editors in
 |---|---|
 | `getValue()` | `view.state.doc.toString()` |
 | `setValue(text)` | one transaction replacing only the differing middle (longest common prefix and suffix), annotated as programmatic. `fmt` and infer write back through it unchanged: `FmtResult` carries no edits, and the other consumers that want edits (the LSP's formatting, Obsidian's repairs) already call `planFmt` on a model they hold, so adding `edits` to `FmtResult` would serve the playground alone. The cursor maps through the change; marks are recomputed at the end of the same pass (below) |
-| `getCursor()` / `setCursor(pos)` | `{line, ch}` ↔ offset through `doc.line()`, clamped to the document |
+| `getCursor()` / `setCursor(pos)` | `{line, ch}` ↔ offset through `doc.line()`, clamped to the document. The `fmt` and infer write-backs no longer save and restore the cursor: `setValue`'s narrow replacement lets CodeMirror map it (row P2) |
 | `on("change", fn)` | an update listener; `change.origin` is `"setValue"` for an annotated transaction, else `"+input"` |
 | `on("scroll", fn)` | a `scroll` listener on `view.scrollDOM` |
 | `getScrollInfo()` / `scrollTo(null, y)` | `scrollDOM.scrollTop`, `scrollHeight`, `clientHeight` |
 | `getInputField()` | replaced by `setLabel(text)`, which sets `aria-label` on `view.contentDOM`; `files.ts`'s `setEditorName` calls it |
+| `load(text)` (new) | a fresh `EditorState` with the same extensions: the store's initial document and `switchTo` use it, so a file switch is not an undoable edit of the file it replaced. Revert keeps `setValue`, so it can be undone |
 
 Extensions: `lineNumbers()`, `history()`, `search()`,
 `keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap])`,
@@ -480,8 +481,9 @@ are fixed in the usual npm way, which is why [§2.2](#22-the-public-api) is clos
 - A published `visimark/browser` subpath (#201's deferral stands).
 - Removing `style-src 'unsafe-inline'` from the playground — a follow-up issue,
   needing a real-browser test.
-- Per-file undo history in the playground — CodeMirror 5 shared one history
-  across file switches, and so does this.
+- Per-file undo history in the playground. A file switch starts a fresh
+  history (`load`, below), so undo cannot reach into the previous file, but
+  returning to a file does not bring its old history back.
 - Fixing the LSP's severity fallback for `PRECISION` and `COVERAGE`.
 - Sharing one engine build across the playground's `fmt`, `pgEval` and
   `pgExplain` (the catalogue row "Shared build across the document phases").
