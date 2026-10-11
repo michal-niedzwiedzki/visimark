@@ -167,24 +167,27 @@ export function visimarkExtension(o: ResolvedOptions): Extension {
       };
       const scheduleSnapshot = debounce(runSnapshot, RECOMPUTE_DEBOUNCE_MS);
 
-      const recompute = (state: EditorState): Local => {
+      /** `settled`: the caller already waited for typing to pause (the
+       *  debounced recompute, or on-refresh), so the snapshot starts now
+       *  rather than a second debounce later. */
+      const recompute = (state: EditorState, settled: boolean): Local => {
         const local = localFor(state, o);
         const path = o.path(state);
         if (local.needsSnapshot && path !== null && o.readImport !== undefined) {
           const source = state.doc.toString();
-          if (o.recompute === "debounced") scheduleSnapshot(source, path, o.readImport);
-          else runSnapshot(source, path, o.readImport);
+          if (settled || o.recompute === "on-refresh") runSnapshot(source, path, o.readImport);
+          else scheduleSnapshot(source, path, o.readImport);
         }
         return local;
       };
 
       const scheduleRecompute = debounce((doc: Text) => {
         if (destroyed || view.state.doc !== doc) return;
-        const local = recompute(view.state);
+        const local = recompute(view.state, true);
         publish(local.decorations, local.findings);
       }, RECOMPUTE_DEBOUNCE_MS);
 
-      const initial = recompute(view.state);
+      const initial = recompute(view.state, false);
       publishFindingsSoon(initial.findings, view.state.doc);
 
       const value = {
@@ -199,7 +202,7 @@ export function visimarkExtension(o: ResolvedOptions): Extension {
             tr.effects.some((e) => e.is(refreshEffect)),
           );
           if (switched || forced) {
-            const local = recompute(update.state);
+            const local = recompute(update.state, false);
             this.decorations = local.decorations;
             publishFindingsSoon(local.findings, update.state.doc);
             return;

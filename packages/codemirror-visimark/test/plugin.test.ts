@@ -202,3 +202,17 @@ test("Review 5: deleting the last vmark block clears every mark on the next reco
   expect(marks(view)).toHaveLength(0);
   view.destroy();
 });
+
+test("debounced: a pause in typing does not wait a second debounce for the snapshot", async () => {
+  // CodeRabbit on #363: the recompute is already debounced, so the snapshot it
+  // needs must start at once, not 400 ms later with the marks withheld meanwhile
+  const view = viewOver(importsAnchored, { path: () => IMPORT_PATH, readImport: repoRead });
+  await wait(600);
+  expect(named(view, GRAND)).toHaveLength(1);
+  // typed at the end: the chapter opens with its fence, so text typed at the
+  // start would turn the block into prose
+  view.dispatch({ changes: { from: view.state.doc.length, insert: "x" } });
+  await wait(550); // past the 400 ms recompute, well short of a second 400 ms
+  expect(named(view, GRAND)).toHaveLength(1);
+  view.destroy();
+});
