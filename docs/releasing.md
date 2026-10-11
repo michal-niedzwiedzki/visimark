@@ -248,7 +248,8 @@ What the scanner looks at, learned from 0.2.0 to 0.2.2:
    packages/remark-visimark/package.json       # its own version AND its visimark dependency pin
    packages/markdownlint-visimark/package.json # its own version AND its visimark dependency pin
    packages/visimark-mcp/package.json          # its own version AND its visimark dependency pin
-   bun.lock                                    # the same six "version"s and three visimark pins, mirrored
+   packages/codemirror-visimark/package.json   # its own version only — it bundles the engine
+   bun.lock                                    # the same seven "version"s and three visimark pins, mirrored
    ```
    They must match each other and the tag exactly. `action.yml` is in the list
    because its default is what a consumer's `npx` installs: leave it behind and
