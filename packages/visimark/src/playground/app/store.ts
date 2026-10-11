@@ -221,7 +221,7 @@ export function createStore(
     contents[name] = text;
   }
 
-  if (contents[initial] !== undefined) cm.setValue(contents[initial]);
+  if (contents[initial] !== undefined) cm.load(contents[initial]);
 
   /**
    * Requests that have gone out and not yet landed, by name.
@@ -306,7 +306,8 @@ export function createStore(
       setText(current, cm.getValue());
       persist(current);
       current = name;
-      cm.setValue(contents[name] ?? "");
+      // a fresh history: undo must not reach back into the file left behind
+      cm.load(contents[name] ?? "");
     },
     optsFor(name) {
       const doc = docFor(name);

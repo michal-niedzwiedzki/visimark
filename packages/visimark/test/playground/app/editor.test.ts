@@ -78,3 +78,26 @@ test("refreshMarks calls the host's refresh with the view", () => {
   expect(seen).toBe(ed.view);
   ed.view.destroy();
 });
+
+test("load starts a fresh history, so undo cannot pull in the previous file", async () => {
+  // CodeRabbit on #364: a file switch must not be an undoable edit of the
+  // file it replaced
+  const { undo } = await import("@codemirror/commands");
+  const ed = createEditor(mount("first file"));
+  ed.view.dispatch({ changes: { from: 0, insert: "typed " } });
+  ed.load("second file");
+  undo(ed.view);
+  expect(ed.getValue()).toBe("second file");
+  ed.view.destroy();
+});
+
+test("load keeps the editor's extensions and reports no change", () => {
+  let changes = 0;
+  const ed = createEditor(mount("a"));
+  ed.on("change", () => changes++);
+  ed.load("b\nc");
+  expect(ed.getValue()).toBe("b\nc");
+  expect(changes).toBe(0);
+  expect(ed.view.dom.querySelector(".cm-lineNumbers")).not.toBeNull();
+  ed.view.destroy();
+});

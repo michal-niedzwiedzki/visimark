@@ -11,6 +11,11 @@ import { tags } from "@lezer/highlight";
  * store, pipeline and panels used to call on CodeMirror 5 — so none of them,
  * and none of their test fakes, had to learn a new editor.
  *
+ * **A file switch is a fresh state, not an edit.** `load` starts a new
+ * history, so undo after switching files cannot restore the previous file's
+ * text into this one (CodeRabbit, #364). CodeMirror 5 shared one history
+ * across switches; that was a bug, not a feature to keep.
+ *
  * **`setValue` replaces only what changed.** `fmt` and infer hand back the
  * whole document; replacing it whole would drop the cursor to the top and
  * every mark with it. The longest common prefix and suffix bound the one
@@ -29,6 +34,12 @@ export interface EditorPosition {
 export interface EditorPort {
   getValue(): string;
   setValue(text: string): void;
+  /**
+   * Show a different document: a fresh editor state, so undo cannot reach
+   * back into the file that was showing before. Reports no change — nothing
+   * was edited.
+   */
+  load(text: string): void;
   getCursor(): EditorPosition;
   setCursor(pos: EditorPosition): void;
   getScrollInfo(): { top: number; height: number; clientHeight: number };
@@ -112,22 +123,20 @@ export function createEditor(
     for (const handler of changeHandlers) handler(port, { origin });
   });
 
+  const extensions: Extension[] = [
+    lineNumbers(),
+    history(),
+    search(),
+    keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap]),
+    EditorView.lineWrapping,
+    markdown({ base: markdownLanguage }),
+    syntaxHighlighting(highlight),
+    theme,
+    ...(setup.extensions ?? []),
+    listener,
+  ];
   const view = new EditorView({
-    state: EditorState.create({
-      doc: textarea.value,
-      extensions: [
-        lineNumbers(),
-        history(),
-        search(),
-        keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap]),
-        EditorView.lineWrapping,
-        markdown({ base: markdownLanguage }),
-        syntaxHighlighting(highlight),
-        theme,
-        ...(setup.extensions ?? []),
-        listener,
-      ],
-    }),
+    state: EditorState.create({ doc: textarea.value, extensions }),
     parent: textarea.parentElement ?? document.body,
   });
   textarea.remove();
@@ -139,6 +148,9 @@ export function createEditor(
       const change = minimalChange(view.state.doc.toString(), text);
       if (change === null) return;
       view.dispatch({ changes: change, annotations: programmatic.of(true) });
+    },
+    load(text) {
+      view.setState(EditorState.create({ doc: text, extensions }));
     },
     getCursor() {
       const head = view.state.selection.main.head;

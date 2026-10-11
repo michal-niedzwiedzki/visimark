@@ -46,6 +46,9 @@ function fakeEditor(initial = ""): EditorPort & { value: string } {
     setValue: (v: string) => {
       cm.value = v;
     },
+    load: (v: string) => {
+      cm.value = v;
+    },
     setLabel: () => {},
     refreshMarks: () => {},
   };

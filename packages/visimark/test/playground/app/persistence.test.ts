@@ -41,6 +41,10 @@ function fakeEditor(initial = ""): EditorPort & {
       cm.value = v;
       for (const h of handlers.change ?? []) h(cm, { origin: "setValue" });
     },
+    /** A file switch: a fresh document, and no change event. */
+    load: (v: string) => {
+      cm.value = v;
+    },
     getCursor: () => ({ line: 0, ch: 0 }),
     setCursor: () => {},
     getScrollInfo: () => ({ top: 0, height: 0, clientHeight: 0 }),
