@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { EditorState, StateEffect, StateField } from "@codemirror/state";
+import { Compartment, EditorState, StateEffect, StateField } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { check, build, locate } from "visimark";
 import { refresh, visimark, type VisimarkOptions } from "../src/index.js";
@@ -165,20 +165,41 @@ test("E9: focusableMarks puts tabindex on every mark; the default puts it on non
   focusable.destroy();
 });
 
-test("Review 3: destroying the view while a read is in flight dispatches nothing", async () => {
+test("Review 3: a plugin removed while its read is in flight dispatches nothing", async () => {
+  // Dispatching on a destroyed *view* is a silent no-op in CodeMirror 6, so the
+  // case that matters is a plugin torn down while its view lives on — Obsidian
+  // reconfiguring its editor extensions, say. Its late answer must not reach
+  // the live view.
   let release!: () => void;
   const gate = new Promise<void>((r) => (release = r));
-  const view = viewOver(importsAnchored, {
-    path: () => IMPORT_PATH,
-    readImport: async (p) => {
-      await gate;
-      return repoRead(p);
-    },
-    recompute: "on-refresh",
+  const slot = new Compartment();
+  let late = 0;
+  const watch = EditorView.updateListener.of((u) => {
+    for (const tr of u.transactions) if (tr.effects.length > 0) late++;
   });
-  view.destroy();
+  const state = EditorState.create({
+    doc: importsAnchored,
+    extensions: [
+      watch,
+      slot.of(
+        visimark({
+          path: () => IMPORT_PATH,
+          readImport: async (p) => {
+            await gate;
+            return repoRead(p);
+          },
+          recompute: "on-refresh",
+        }),
+      ),
+    ],
+  });
+  const view = new EditorView({ state, parent: document.body });
+  view.dispatch({ effects: slot.reconfigure([]) });
+  late = 0;
   release();
-  await wait(50); // a dispatch on a destroyed view would throw here
+  await wait(50);
+  expect(late).toBe(0);
+  view.destroy();
 });
 
 test("Review 4: a reader that rejects or returns null leaves withheld marks withheld", async () => {
