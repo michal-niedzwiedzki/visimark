@@ -1,6 +1,8 @@
 import { expect, test } from "bun:test";
 import { build, locate } from "visimark";
-import { importDependentNames } from "../src/import-deps.js";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { hasImportedSheet, importDependentNames } from "../src/import-deps.js";
 
 /**
  * Review row 6's Live Preview half. `resolveImports` (the engine's own
@@ -54,4 +56,14 @@ test("a local sheet with no import in its dependency chain is not import-depende
 test("a document with no imported sheet returns an empty set", () => {
   const model = build(locate(LOCAL_SHEET));
   expect(importDependentNames(model)).toEqual(new Set());
+});
+
+test("hasImportedSheet is true only for a document that declares an import", () => {
+  const plain = build(locate("```vmark #s\na = 1\n```\n"));
+  expect(hasImportedSheet(plain)).toBe(false);
+  const imports = readFileSync(
+    join(import.meta.dir, "../../../docs/playground/tutorial/13-imports.md"),
+    "utf8",
+  );
+  expect(hasImportedSheet(build(locate(imports)))).toBe(true);
 });

@@ -14,9 +14,9 @@ import {
   type ViewUpdate,
 } from "@codemirror/view";
 import { analyse, analyseWithSnapshot } from "./analysis.js";
-import type { Decoration as VmarkDecoration } from "./decorations.js";
-import { hasVmarkBlock } from "./gate.js";
-import { importDependentNames } from "./import-deps.js";
+import type { Decoration as VmarkDecoration } from "codemirror-visimark/decorations.js";
+import { hasVmarkBlock } from "codemirror-visimark/gate.js";
+import { importDependentNames } from "codemirror-visimark/import-deps.js";
 import type { VaultRead } from "./snapshot.js";
 
 /**

@@ -14,10 +14,10 @@ import {
 import { artifactsFor, check, evalValues } from "visimark";
 import { analyseWithSnapshot } from "./analysis.js";
 import { writeCharts } from "./chart.js";
-import type { Decoration } from "./decorations.js";
+import type { Decoration } from "codemirror-visimark/decorations.js";
 import { safeTemplateInsertion } from "./template-insert.js";
 import { FINDINGS_VIEW, FindingsView } from "./findings-view.js";
-import { hasVmarkBlock } from "./gate.js";
+import { hasVmarkBlock } from "codemirror-visimark/gate.js";
 import { createApi, explainBinding, type VisiMarkApi } from "./api.js";
 import { nameAt } from "./at-cursor.js";
 import { ExplainModal } from "./explain-modal.js";

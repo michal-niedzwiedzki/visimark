@@ -24,6 +24,7 @@
     "editors/obsidian": {
       "name": "visimark-obsidian",
       "dependencies": {
+        "codemirror-visimark": "workspace:*",
         "visimark": "workspace:*",
       },
       "devDependencies": {
