@@ -12,6 +12,7 @@ const FILES = [
   "packages/remark-visimark/package.json",
   "packages/markdownlint-visimark/package.json",
   "packages/visimark-mcp/package.json",
+  "packages/codemirror-visimark/package.json",
   "action.yml",
   "scripts/precommit-visimark-check.sh",
   "bun.lock",
@@ -117,6 +118,7 @@ describe("prepare-release", () => {
       "packages/remark-visimark",
       "packages/markdownlint-visimark",
       "packages/visimark-mcp",
+      "packages/codemirror-visimark",
     ]) {
       const block =
         new RegExp(`"${workspace}": \\{[\\s\\S]*?\\n    \\},?\\n`).exec(lock)?.[0] ?? "";

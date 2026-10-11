@@ -60,6 +60,8 @@ import { createBufferStore } from "./buffers.js";
 import { createStore } from "./store.js";
 import { createEditor } from "./editor.js";
 import { refresh, visimark } from "codemirror-visimark";
+import { visimarkLint } from "codemirror-visimark/lint.js";
+import { forceLinting } from "@codemirror/lint";
 import { fileFromUrl, onUrlFileChange, writeFileToUrl } from "./url.js";
 import { createTerminal } from "./terminal.js";
 import { createPipeline } from "./pipeline.js";
@@ -187,8 +189,12 @@ async function boot(): Promise<void> {
         readImport: async (path) => storeRef?.readImport(path) ?? null,
         recompute: "on-refresh",
       }),
+      visimarkLint(),
     ],
-    refresh: (view) => view.dispatch({ effects: refresh.of(null) }),
+    refresh: (view) => {
+      view.dispatch({ effects: refresh.of(null) });
+      forceLinting(view);
+    },
   });
 
   // The store, not boot, puts the first document into the editor: it is the

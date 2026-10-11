@@ -1,5 +1,5 @@
 /**
- * Prepares the release commit for a core version: bumps the eight
+ * Prepares the release commit for a core version: bumps the
  * version-carrying files and turns the changelogs over.
  *
  * docs/releasing.md ("Before you tag", steps 3 and 4) lists what to touch by
@@ -155,8 +155,9 @@ if (rank[level] > rank[ceiling]) {
   );
 }
 
-// The six package manifests: own version, and the exact `visimark` pin where
-// there is one (the lsp and the extension use `workspace:*`, which stays).
+// The seven package manifests: own version, and the exact `visimark` pin where
+// there is one (the lsp and the extension use `workspace:*`, which stays;
+// codemirror-visimark bundles the engine and has none).
 const manifests: Array<[string, boolean]> = [
   [engineFile, false],
   ["packages/visimark-lsp/package.json", false],
@@ -164,6 +165,7 @@ const manifests: Array<[string, boolean]> = [
   ["packages/remark-visimark/package.json", true],
   ["packages/markdownlint-visimark/package.json", true],
   ["packages/visimark-mcp/package.json", true],
+  ["packages/codemirror-visimark/package.json", false],
 ];
 for (const [file, pinsEngine] of manifests) {
   edit(file, /^(\s*"version": ")[^"]+(",?)$/m, `$1${version}$2`, 'a top-level "version"');

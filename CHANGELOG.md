@@ -4,6 +4,13 @@
 
 ### Added
 
+- **`codemirror-visimark`, the editor marks as a CodeMirror 6 extension.** A
+  new npm package: `visimark()` marks every computed value in a Markdown
+  document and flags the ones that disagree with their formulas;
+  `codemirror-visimark/lint` adds diagnostics in the CLI's words. The Obsidian
+  plugin now uses it for Live Preview, with no visible change.
+  ([#360](https://github.com/michal-niedzwiedzki/visimark/issues/360))
+
 - **Cookieless page analytics on the project site.** The documentation pages
   now count visits with [GoatCounter](https://www.goatcounter.com): no cookies,
   no stored identifier, no cross-site tracking. The counter script is vendored
@@ -20,6 +27,14 @@
   `all` is the range those reports used before. Omitting the clause is a
   `TYPE` and fails `check`.
   ([#351](https://github.com/michal-niedzwiedzki/visimark/issues/351))
+
+### Changed
+
+- **The Playground editor is CodeMirror 6.** It now marks computed values,
+  underlines values that disagree with their formulas, shows findings as
+  diagnostics, and has its own search on Ctrl/Cmd+F. CodeMirror is bundled
+  instead of loaded from a CDN.
+  ([#360](https://github.com/michal-niedzwiedzki/visimark/issues/360))
 
 ### Fixed
 

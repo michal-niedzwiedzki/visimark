@@ -492,6 +492,11 @@ files into a vault —
 [`editors/obsidian/README.md`](editors/obsidian/README.md) has the steps and
 says what each feature does.
 
+The same Live Preview marks are published as
+[`codemirror-visimark`](packages/codemirror-visimark/README.md), a CodeMirror 6
+extension for any editor built on it, with lint diagnostics in the CLI's words
+on a separate `codemirror-visimark/lint` import. The playground uses both.
+
 Releases are tag-driven: pushing a `vX.Y.Z` tag publishes the engine to npm and
 the extension to both the VS Code Marketplace and Open VSX. The workflow needs
 three repository secrets — `NPM_TOKEN`, `VSCE_PAT` and `OVSX_PAT`. The checklist
