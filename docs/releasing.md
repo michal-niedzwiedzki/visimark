@@ -106,7 +106,7 @@ gh workflow run release.yml -f tag=vX.Y.Z -f dry_run=true
 ```
 
 It builds, tests, runs the tag checks above, runs `npm publish --dry-run` for
-the four packages, packages the `.vsix` and extracts the release notes. It
+the five packages, packages the `.vsix` and extracts the release notes. It
 publishes nothing, cuts no GitHub Release, closes no issues, and skips **every
 leg must have landed** (there is nothing to land); a *dry run verdict* step
 fails the run if any rehearsed step did not succeed. It runs `npm publish`
@@ -226,7 +226,7 @@ What the scanner looks at, learned from 0.2.0 to 0.2.2:
    run on every push to `master`. Wait for both before tagging — `release.yml`
    checks out the tag, not your working tree, so an unpushed or red commit
    cannot be in the release.
-3. **Bump the version** to the same `X.Y.Z` in all nine version-carrying files.
+3. **Bump the version** to the same `X.Y.Z` in all version-carrying files.
    `bun scripts/prepare-release.ts [FIX|MINOR|MAJOR|X.Y.Z]` does this and step 4's
    changelog turnover in one go; omitting the argument defaults to `FIX`. A bump
    word computes the next version from the one in `packages/visimark/package.json`
@@ -302,7 +302,7 @@ What the scanner looks at, learned from 0.2.0 to 0.2.2:
 ```mermaid
 flowchart LR
   local[Green locally] --> ci[Green CI on master]
-  ci --> bump[Bump all eight version-carrying files]
+  ci --> bump[Bump all version-carrying files]
   bump --> cl[Write the changelog]
   cl --> promo[Fill Shipped Released cells]
   promo --> commit[Commit and push]
@@ -365,7 +365,7 @@ scripts/verify-release.sh vX.Y.Z
 
 It is read-only, and needs only `curl`, `gh` and `node` or Bun. It checks:
 
-- all four npm packages are at that version **and** carry a provenance
+- all five npm packages are at that version **and** carry a provenance
   attestation (`dist.attestations`). CI proves the version number matches the
   manifests; only npm proves it was ever published, and `visimark@0.1.0` is the
   standing reminder that those are different questions;
@@ -402,7 +402,7 @@ gh workflow run release.yml -f tag=vX.Y.Z
 With `tag`, it checks that tag out, so the versions it publishes are the tagged
 ones and the GitHub Release and the request-issue bookkeeping are backfilled
 too. Without `tag` it runs from the default branch against the versions
-currently in the manifests, repairs the **publish** legs only — the four npm
+currently in the manifests, repairs the **publish** legs only — the five npm
 packages, the MCP registry entry, the Marketplace and Open VSX — and warns in
 the log that it skipped the two tag-gated ones, the GitHub Release and the
 request-issue bookkeeping. **Never bump the version just to
@@ -423,6 +423,11 @@ retried under a different number. Check before you tag, not after:
 ```bash
 npm view <name> version    # "npm error 404" is what you want to see
 ```
+
+`codemirror-visimark`
+([#360](https://github.com/michal-niedzwiedzki/visimark/issues/360)) went
+through this list: its name was free on 2026-10-11, it pins nothing so point 3
+does not apply, and its leg runs after the MCP server's.
 
 **2. A leg that depends on another must run after it.** `release.yml` publishes
 in dependency order — engine, then the remark plugin, the markdownlint rule and

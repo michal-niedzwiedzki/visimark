@@ -104,16 +104,20 @@ editors/
     versions.json      minAppVersion history, required by the community registry
     src/
       main.ts          the Plugin subclass: lifecycle, commands, settings
-      snapshot.ts      the vault-backed ReaderPort (§2.6)
       api.ts           the public plugin API (§2.7)
       findings.ts      the audience-B finding vocabulary (§3.2)
       reading.ts       the Markdown post-processor (reading mode)
-      live.ts          the CodeMirror 6 ViewPlugin (Live Preview)
+      live-preview.ts  host wiring for codemirror-visimark's extension (Live Preview)
       sweep.ts         the vault health sweep
     test/
       bundle.test.ts   the graph guard (§2.2)
     esbuild.config.mjs
 ```
+
+The analysis, the gate, the decorations and the vault snapshot live in
+`packages/codemirror-visimark` since
+[#360](https://github.com/michal-niedzwiedzki/visimark/issues/360); the plugin
+bundles them from source.
 
 It depends on the engine as `"visimark": "workspace:*"`, exactly as
 `packages/visimark-lsp` and `editors/vscode` do, and it imports one engine
@@ -374,6 +378,11 @@ Four in v1; six since v1.1 rows 14 and 17. The defaults are still the spec.
 | Fix unambiguous dates | off | **v1.1 row 17.** Mirrors the CLI's `fmt --fix-dates`, default included: on, Format also rewrites a `DATE` finding whose ISO form is decidable. `report.ts`'s `ReportOptions.fixDates` threads it into `planFmt`; `findings.ts`'s `actionFor` still restricts the per-row repair button to `STALE`, so this is whole-note only, the same shape the CLI flag has. |
 
 ### 2.6 The vault reader — the one piece the engine does not supply
+
+Since [#360](https://github.com/michal-niedzwiedzki/visimark/issues/360) the
+snapshot is `packages/codemirror-visimark/src/snapshot.ts`, where any
+CodeMirror host can use it; the plugin's `VaultRead` is its `ReadImport`. What
+follows, the symlink limitation included, still describes it.
 
 This is the load-bearing part of the spec, and the one place the "thin client"
 claim needed checking rather than repeating.
@@ -668,7 +677,7 @@ script, this is the contract.
 
 | Thing | Before | After |
 |---|---|---|
-| The published npm packages (`visimark`, `visimark-lsp`, `visimark-mcp`, `remark-visimark`, `markdownlint-visimark`) | five packages | unchanged. The plugin is not published to npm |
+| The published npm packages (`visimark`, `visimark-mcp`, `remark-lint-visimark`, `markdownlint-rule-visimark`) | four packages | unchanged by this spec; `codemirror-visimark` joined them in [#360](https://github.com/michal-niedzwiedzki/visimark/issues/360). The plugin is not published to npm |
 | [`.agents/rules/runtime-parity.md`](../../.agents/rules/runtime-parity.md) | a published package with no `bin` gains no launcher and no second CI job | unchanged, and it applies: `editors/obsidian` has no `bin`, so no `sh` launcher, no `acceptance-node` leg, no `smoke-bun` leg |
 | Workspace root | `packages/*`, `editors/*` | `editors/obsidian` is picked up by the existing globs; `bun test` walks it |
 | `ci.yml` | builds and tests the workspace | **nothing.** `bun run build` and `bun run typecheck` are `--filter '*'` and `bun test` walks the tree, so the package joins all three by existing. Row 1 confirmed it: no workflow edit, no new job, no added step |
