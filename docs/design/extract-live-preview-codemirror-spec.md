@@ -54,7 +54,7 @@ a document would then depend on something outside itself
 | `type` | `module` |
 | `exports` | `"."` → `./dist/index.js` + `./dist/index.d.ts`; `"./lint"` → `./dist/lint.js` + `./dist/lint.d.ts` |
 | `files` | `dist`, `README.md`, `LICENSE` |
-| `peerDependencies` | `@codemirror/state` `^6.5.2`, `@codemirror/view` `^6.36.2`, `@codemirror/lint` `^6.2.0` |
+| `peerDependencies` | `@codemirror/state` `^6.5.2`, `@codemirror/view` `^6.36.2`, `@codemirror/lint` `^6.4.0` |
 | `peerDependenciesMeta` | `@codemirror/lint`: `{ "optional": true }` |
 | `dependencies` | none |
 | `visimark` | **not named in `package.json` at all.** The engine is bundled from source; nothing resolves it at install time, so there is no pin to keep in lockstep |
@@ -65,8 +65,8 @@ a document would then depend on something outside itself
 are the floors `editors/obsidian/package.json` already declares; Obsidian's own
 typings for its `minAppVersion` (1.8.7) say only `^6.0.0`, so the plugin's
 floor is the tightest statement the repository has made. `@codemirror/lint`
-`6.2.0` is the first release with `linter`'s `needsRefresh` option, which [§2.4](#24-what-visimarklint-does)
-uses.
+`6.4.0` is the first release with the `"hint"` severity [§2.4](#24-what-visimarklint-does)
+gives `WARN`; `needsRefresh` (6.2.0) and `forEachDiagnostic` (6.1.0) are older.
 
 **The build** is a `Bun.build` script, `packages/codemirror-visimark/build.ts`:
 ESM, `target: "browser"`, `splitting: true` (so `index.js` and `lint.js` share
@@ -136,7 +136,7 @@ constraint 4, the closed extension point).
 | **`active`** | Read on every recompute. False → no marks and an empty finding set. A change in `active(startState) !== active(state)` across a transaction recomputes immediately, in either `recompute` mode. |
 | **A mark** | `Decoration.mark` over the value's source span. `class` is `visimark-computed`, or `visimark-computed visimark-disagrees`. Attributes: `data-vmark` (qualified name), `data-vmark-row` (only for a table cell), `data-vmark-path` (only when `path` returned non-null), `tabindex="0"` (only when `focusableMarks`). These classes and attributes are the documented styling contract; the package ships no theme. |
 | **Local phase** | Synchronous: `locate` + `build` + `check` with no reader. A mark on a name `importDependentNames` reports is withheld rather than asserted. |
-| **Snapshot phase** | Runs when the local phase withheld a mark **and** `path` is non-null **and** `readImport` is given. Fetches what the engine asks for to a fixed point (`snapshot.ts`, unchanged in substance), re-checks with the snapshot reader, and replaces the marks and findings — applied only if the view is alive, `active` is still true and the document is byte-identical to the one the phase started on. A failed read leaves the withheld marks withheld. |
+| **Snapshot phase** | Runs when the local phase withheld a mark **or** the document has an imported sheet (so lint, [§2.4](#24-what-visimarklint-does), has a snapshot-backed finding set to show), **and** `path` is non-null **and** `readImport` is given. Fetches what the engine asks for to a fixed point (`snapshot.ts`, unchanged in substance), re-checks with the snapshot reader, and replaces the marks and findings — applied only if the view is alive, `active` is still true and the document is byte-identical to the one the phase started on. A failed read leaves the withheld marks withheld. |
 | **`recompute: "debounced"`** | A document change maps existing marks through the change at once; the local phase reruns 400 ms after the last change; the snapshot phase is debounced at the same 400 ms. Today's Obsidian behaviour. |
 | **`recompute: "on-refresh"`** | A document change only maps existing marks. Recompute happens at construction, on `refresh`, and on an `active` transition; the snapshot phase starts immediately after such a recompute, with no debounce. |
 | **Findings** | Each recompute also stores the finding set it produced in an internal `StateField`, mapped through later changes, for `visimarkLint()` to read. One engine run feeds both. |
@@ -360,7 +360,7 @@ Obsidian (`O`), playground (`P`), CI (`C`).
 | P5 | Accessible name | switch files | `contentDOM`'s `aria-label` reads `Editor: <name>` |
 | P6 | Bundle size | `browser-graph.test.ts`'s size check, extended | `docs/vendor/visimark-playground.js` under a ceiling 10% above the baseline recorded when this lands; `visimark-browser.js`'s existing ceiling still holds |
 | C1 | Pack job | `ci.yml` `pack` | packs `packages/codemirror-visimark`, uploads `${{ runner.temp }}/codemirror-visimark-*.tgz` with the other tarballs, and copies `scripts/codemirror-smoke.mjs` into the `mcp-handshake` artifact beside `plugins-smoke.mjs` |
-| C2 | Smoke under Node, at the peer floor | `smoke-node` (matrix `lts/*`, `latest`): a scratch project, `npm i "$cm_tgz" @codemirror/state@6.5.2 @codemirror/view@6.36.2 @codemirror/lint@6.2.0 @happy-dom/global-registrator`; asserts the installed `package.json` bytes equal the packed ones; `node codemirror-smoke.mjs` | prints `codemirror-visimark ok — 2 marks, 1 disagrees, 1 diagnostic`; exit 0 |
+| C2 | Smoke under Node, at the peer floor | `smoke-node` (matrix `lts/*`, `latest`): a scratch project, `npm i "$cm_tgz" @codemirror/state@6.5.2 @codemirror/view@6.36.2 @codemirror/lint@6.4.0 @happy-dom/global-registrator@20`; asserts the installed `package.json` bytes equal the packed ones; `node codemirror-smoke.mjs` | prints `codemirror-visimark ok — 2 marks, 1 disagrees, 1 diagnostic`; exit 0 |
 | C3 | Smoke under Bun, at the latest peers | `smoke-bun`: the same scratch project with `bun add` and no peer versions; `bun codemirror-smoke.mjs` | the same line; exit 0 |
 | C4 | Versions agree | `ci.yml` "every version-carrying file must agree" | fails unless `packages/codemirror-visimark/package.json`'s `version` and its `bun.lock` workspace block equal the engine's |
 
