@@ -119,3 +119,5 @@ The plugin adds a core rule, wraps `md.renderer.render`, and wraps
 ## License
 
 MIT
+
+<!--vmark:no-formulas-->
