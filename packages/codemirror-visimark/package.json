@@ -1,10 +1,11 @@
 {
   "name": "codemirror-visimark",
   "version": "0.2.0",
-  "description": "A CodeMirror 6 extension for VisiMark: marks every computed value in a Markdown document, flags the ones that disagree with their formulas, and reports findings as lint diagnostics.",
+  "description": "A CodeMirror 6 extension for VisiMark: marks every computed value in a Markdown document, flags the ones that disagree with their formulas, reports findings as lint diagnostics, and highlights `vmark` blocks.",
   "keywords": [
     "codemirror",
     "codemirror6",
+    "highlighting",
     "lint",
     "markdown",
     "visimark"
@@ -32,6 +33,10 @@
     "./lint": {
       "types": "./dist/lint.d.ts",
       "default": "./dist/lint.js"
+    },
+    "./highlight": {
+      "types": "./dist/highlight.d.ts",
+      "default": "./dist/highlight.js"
     }
   },
   "scripts": {
@@ -41,17 +46,23 @@
     "prepublishOnly": "bun run typecheck && bun test && bun run build"
   },
   "devDependencies": {
+    "@codemirror/lang-markdown": "^6.5.2",
+    "@codemirror/language": "^6.13.1",
     "@codemirror/lint": "^6.9.7",
     "@codemirror/state": "^6.7.6",
     "@codemirror/view": "^6.43.14",
     "@happy-dom/global-registrator": "^20.14.5"
   },
   "peerDependencies": {
+    "@codemirror/language": "^6.3.0",
     "@codemirror/lint": "^6.4.0",
     "@codemirror/state": "^6.5.2",
     "@codemirror/view": "^6.36.2"
   },
   "peerDependenciesMeta": {
+    "@codemirror/language": {
+      "optional": true
+    },
     "@codemirror/lint": {
       "optional": true
     }

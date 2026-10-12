@@ -278,6 +278,11 @@ visimark({
 visimarkLint(),
 ```
 
+_Superseded for `vmark` blocks by
+[#367](https://github.com/michal-niedzwiedzki/visimark/issues/367): the
+playground now passes `codeLanguages` and highlights them; see
+[`syntax-highlighting-for-vmark-blocks-spec.md`](syntax-highlighting-for-vmark-blocks-spec.md)._
+
 `store.enginePath(name)` returns the `READER_FS` path without its leading `/`
 for a file that map lists, and null otherwise — so exactly the documents that
 get a reader today get one here, and `12-charts.md` still gets none.

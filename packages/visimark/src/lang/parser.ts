@@ -678,7 +678,8 @@ function parseParamInner(line: string, toks: Token[], kw: Token, nameTok: Token)
 
 export const PARAM_DOMAIN_LITERAL_MESSAGE = "a param domain bound must be a number literal";
 export const PARAM_DOMAIN_MALFORMED_MESSAGE = "malformed param domain clause";
-const PARAM_DOMAIN_PRESETS = new Set<PresetName>(["integer", "positive", "natural"]);
+// module export for codemirror-visimark's drift test (#367); not package API
+export const PARAM_DOMAIN_PRESETS = new Set<PresetName>(["integer", "positive", "natural"]);
 
 /**
  * `[PRESET] [in DOMAIN-EXPR]`, the optional clause on a `param` header

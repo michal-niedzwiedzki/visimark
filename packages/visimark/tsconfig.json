@@ -1,5 +1,14 @@
 {
   "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // Bun reads this file's paths at test time: editor.ts imports
+    // codemirror-visimark/highlight.js (#367), resolved to source as
+    // tsconfig.app.json and build-playground.ts resolve it. Nothing this
+    // program typechecks imports the package.
+    "paths": {
+      "codemirror-visimark/*": ["../codemirror-visimark/src/*"]
+    }
+  },
   "include": ["src", "test", "bench"],
   // The browser UI needs the DOM lib and is typechecked by tsconfig.app.json.
   "exclude": ["src/playground/app", "src/site", "test/playground/app", "test/site"]

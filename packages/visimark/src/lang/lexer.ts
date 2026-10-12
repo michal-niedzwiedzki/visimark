@@ -1,7 +1,9 @@
 import { DELIMS, GLYPH_IDENTS, POSITIVE_INTEGER_GLYPH } from "./notation.js";
 import { LangError, type Token, type TokenKind } from "./token.js";
 
-const WORD_OPS = new Set(["and", "or", "not"]);
+// WORD_OPS, SYMBOL_OPS and RESERVED_WORDS are module exports for
+// codemirror-visimark's drift test (#367); they are not part of the package API.
+export const WORD_OPS = new Set(["and", "or", "not"]);
 const DATE_RE = /^\d{4}-\d{2}-\d{2}/;
 
 const BOOLEAN_LITERAL_MESSAGE =
@@ -12,7 +14,10 @@ const isIdentStart = (c: string) => /[A-Za-z_]/.test(c);
 const isIdentPart = (c: string) => /[A-Za-z0-9_]/.test(c);
 
 /** Longest-match operator table, longest first. Word operators handled separately. */
-const SYMBOL_OPS = ["==", "!=", "<=", ">=", "^", "*", "/", "+", "-", "<", ">", "="];
+export const SYMBOL_OPS = ["==", "!=", "<=", ">=", "^", "*", "/", "+", "-", "<", ">", "="];
+
+/** Statement keywords, reserved everywhere: each lexes as its own token kind. */
+export const RESERVED_WORDS = ["assert", "chart", "precision", "is"] as const;
 
 export function lex(src: string): Token[] {
   const tokens: Token[] = [];
@@ -185,26 +190,19 @@ export function lex(src: string): Token[] {
       }
       if (WORD_OPS.has(text)) {
         push("op", text, start, i);
-      } else if (text === "chart") {
-        // `chart` is a statement keyword, like `assert`. See the design doc,
-        // section 4 and the generated-artifacts section.
-        push("chart", text, start, i);
-      } else if (text === "assert") {
-        // `assert` is a statement keyword — recognised anywhere it is written,
-        // rejected by the parser wherever a statement is not expected. See the
-        // design doc, section 17.
-        push("assert", text, start, i);
-      } else if (text === "precision") {
-        // `precision` declares a binding's write precision: `total precision 2
-        // = SUM(Net)`. Reserved everywhere, like `is`/`chart`/`assert`, and
-        // matched case-sensitively so a `Precision` column header is unaffected.
-        // See docs/design/declared-precision-spec.md.
-        push("precision", text, start, i);
-      } else if (text === "is") {
-        // `is` introduces a column-alias declaration: `"Header" is symbol`.
-        // Reserved everywhere, like `chart`/`assert`. See
-        // docs/design/human-readable-column-aliases-spec.md.
-        push("is", text, start, i);
+      } else if ((RESERVED_WORDS as readonly string[]).includes(text)) {
+        // Each reserved word is recognised anywhere it is written, matched
+        // case-sensitively, and rejected by the parser wherever its statement
+        // is not expected:
+        // - `chart`: a statement keyword, like `assert`. See the design doc,
+        //   section 4 and the generated-artifacts section.
+        // - `assert`: a statement keyword. See the design doc, section 17.
+        // - `precision`: declares a binding's write precision, `total
+        //   precision 2 = SUM(Net)`; a `Precision` column header is unaffected.
+        //   See docs/design/declared-precision-spec.md.
+        // - `is`: introduces a column-alias declaration, `"Header" is symbol`.
+        //   See docs/design/human-readable-column-aliases-spec.md.
+        push(text as TokenKind, text, start, i);
       } else {
         push("ident", text, start, i);
       }

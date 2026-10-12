@@ -21,15 +21,19 @@ test("the manifest names no engine and no runtime dependency", () => {
 
 test("the peer floors are the spec's", () => {
   expect(manifest.peerDependencies).toEqual({
+    "@codemirror/language": "^6.3.0",
     "@codemirror/lint": "^6.4.0",
     "@codemirror/state": "^6.5.2",
     "@codemirror/view": "^6.36.2",
   });
-  expect(manifest.peerDependenciesMeta).toEqual({ "@codemirror/lint": { optional: true } });
+  expect(manifest.peerDependenciesMeta).toEqual({
+    "@codemirror/language": { optional: true },
+    "@codemirror/lint": { optional: true },
+  });
 });
 
-test("the exports are exactly the root and ./lint", () => {
-  expect(Object.keys(manifest.exports)).toEqual([".", "./lint"]);
+test("the exports are exactly the root, ./lint and ./highlight", () => {
+  expect(Object.keys(manifest.exports)).toEqual([".", "./lint", "./highlight"]);
 });
 
 test("a DOM is registered for the editor tests", () => {

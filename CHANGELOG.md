@@ -4,6 +4,14 @@
 
 ### Added
 
+- **`codemirror-visimark/highlight`, syntax highlighting for `vmark` blocks.**
+  `visimarkLanguage` colours a fence's keywords, names, functions, numbers,
+  units and comments when a host passes it to `markdown({ codeLanguages })`,
+  with `isVmarkFence` picking the fence. The package still ships no colours:
+  the host styles the standard highlight tags. `@codemirror/language` is a new
+  optional peer, needed only by this subpath. The Playground uses it.
+  ([#367](https://github.com/michal-niedzwiedzki/visimark/issues/367))
+
 - **`codemirror-visimark`, the editor marks as a CodeMirror 6 extension.** A
   new npm package: `visimark()` marks every computed value in a Markdown
   document and flags the ones that disagree with their formulas;

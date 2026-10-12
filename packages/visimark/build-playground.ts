@@ -12,7 +12,7 @@ import { resolve } from "node:path";
  *   bundled a second time.
  *
  * And it refuses a bundle with two copies of @codemirror/state: an extension
- * built by one copy is not recognised by the other.
+ * built by one copy is not recognised by the other. Likewise @codemirror/language.
  */
 
 const here = import.meta.dir;
@@ -52,6 +52,15 @@ const text = await result.outputs[0]!.text();
 const copies = text.split("multiple instances of @codemirror/state are loaded").length - 1;
 if (copies !== 1) {
   console.error(`visimark-playground.js holds ${copies} copies of @codemirror/state; expected 1`);
+  process.exit(1);
+}
+// and @codemirror/language once (#367): a second copy brings its own tag
+// objects, which the editor's HighlightStyle would never match
+const languageCopies = text.split("Unknown highlighting tag").length - 1;
+if (languageCopies !== 1) {
+  console.error(
+    `visimark-playground.js holds ${languageCopies} copies of @codemirror/language; expected 1`,
+  );
   process.exit(1);
 }
 await Bun.write(out, text);
