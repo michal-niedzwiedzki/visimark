@@ -6,10 +6,7 @@ import visimark from "../src/index.js";
 
 const fixtures = join(import.meta.dir, "fixtures");
 const source = readFileSync(join(fixtures, "three-anchors.md"), "utf8");
-const expected = readFileSync(join(fixtures, "three-anchors.html"), "utf8").replace(
-  ' data-vmark-info="#s"',
-  "",
-);
+const expected = readFileSync(join(fixtures, "three-anchors.html"), "utf8");
 const plain = (src: string, html = true): string => new MarkdownIt({ html }).render(src);
 const marked = (
   opts?: Parameters<typeof visimark>[1],

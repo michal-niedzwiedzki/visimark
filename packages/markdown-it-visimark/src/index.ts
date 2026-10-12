@@ -1,3 +1,4 @@
+import { wrapFence } from "./fence.js";
 import { passCache } from "./pass.js";
 import { place } from "./place.js";
 import type { MarkdownItLike, MarkdownItVisimarkOptions, Token, TokenCtor } from "./types.js";
@@ -46,4 +47,6 @@ export default function markdownItVisimark(
     }
     return render.call(this, out, opts, env);
   };
+
+  wrapFence(md);
 }
