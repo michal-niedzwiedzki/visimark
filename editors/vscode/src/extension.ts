@@ -8,6 +8,7 @@ import {
   type LanguageClientOptions,
   type ServerOptions,
 } from "vscode-languageclient/node";
+import { extendMarkdownIt } from "./preview.js";
 import { StatusBar, type Status } from "./status.js";
 import { show, TextProvider } from "./virtualDocs.js";
 
@@ -17,7 +18,13 @@ let statusBar: StatusBar | undefined;
 const EXPLAIN_SCHEME = "visimark-explain";
 const REPORT_SCHEME = "visimark-report";
 
-export async function activate(context: vscode.ExtensionContext): Promise<void> {
+// Re-exported so the test host can reach the preview hook without a running
+// language server; VS Code itself takes it from `activate`'s return value.
+export { extendMarkdownIt } from "./preview.js";
+
+export async function activate(
+  context: vscode.ExtensionContext,
+): Promise<{ extendMarkdownIt: typeof extendMarkdownIt }> {
   const configured = vscode.workspace.getConfiguration("visimark").get<string>("server.path", "");
   const module =
     configured && configured.length > 0
@@ -55,6 +62,15 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.workspace.registerTextDocumentContentProvider(REPORT_SCHEME, report),
     vscode.window.onDidChangeActiveTextEditor(() => statusBar?.refresh()),
     vscode.workspace.onDidCloseTextDocument((d) => statusBar?.forget(d.uri.toString())),
+
+    // The preview's markdown-it instance is built once and kept; a toggle
+    // has to rebuild it to reach previews that are already open.
+    vscode.workspace.onDidChangeConfiguration((e) => {
+      if (!e.affectsConfiguration("visimark.preview.enable")) return;
+      void Promise.resolve(vscode.commands.executeCommand("markdown.api.reloadPlugins")).catch(
+        () => undefined,
+      );
+    }),
 
     // `onWillSave` rather than `onDidSave`: the edits are folded into the
     // content being written, so the file lands on disk correct and the
@@ -118,6 +134,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   client.onNotification("visimark/status", (s: Status) => {
     statusBar?.record(s);
   });
+
+  return { extendMarkdownIt };
 }
 
 /**

@@ -50,7 +50,11 @@ export interface Host {
    * the handlers called — so a save nobody acted on resolves to `[]`.
    */
   save(doc: FakeDocument, reason?: number): Promise<unknown[][]>;
+  /** set a setting and fire `onDidChangeConfiguration` for it */
+  changeConfig(key: string, value: unknown): void;
 }
+
+type ConfigChange = { affectsConfiguration(section: string): boolean };
 
 export function fakeUri(value: string): FakeUri {
   const colon = value.indexOf(":");
@@ -67,6 +71,7 @@ export function createHost(): Host {
   const shown: FakeDocument[] = [];
   const config = new Map<string, unknown>();
   const willSave: ((e: unknown) => void)[] = [];
+  const configListeners: ((e: ConfigChange) => void)[] = [];
   const providers = new Map<string, { provideTextDocumentContent(uri: FakeUri): string }>();
   const disposable = { dispose(): void {} };
 
@@ -168,6 +173,10 @@ export function createHost(): Host {
           return config.has(full) ? config.get(full) : d;
         },
       }),
+      onDidChangeConfiguration: (fn: (e: ConfigChange) => void) => {
+        configListeners.push(fn);
+        return disposable;
+      },
       onWillSaveTextDocument: (fn: (e: unknown) => void) => {
         willSave.push(fn);
         return disposable;
@@ -259,6 +268,13 @@ export function createHost(): Host {
       return providers.get(u.scheme)?.provideTextDocumentContent(u) ?? "";
     },
     config,
+    changeConfig(key: string, value: unknown): void {
+      config.set(key, value);
+      const event = {
+        affectsConfiguration: (s: string) => key === s || key.startsWith(s + "."),
+      };
+      for (const fn of configListeners) fn(event);
+    },
     async save(doc: FakeDocument, reason = 1): Promise<unknown[][]> {
       const offered: Promise<unknown>[] = [];
       const event = {
@@ -279,11 +295,21 @@ export function createHost(): Host {
  * real server from here, so activation is expected to fail *after* the
  * commands are registered; the failure is returned rather than thrown.
  */
-export async function activateExtension(): Promise<{ activationError: unknown }> {
+/**
+ * Load the built bundle afresh. The bundle resolves `vscode` once, when it is
+ * first evaluated, so a cached copy would stay bound to whichever host an
+ * earlier test file created; `bun test` runs every file in one process.
+ */
+export function loadExtension(): Record<string, unknown> {
   const require_ = createRequire(import.meta.url);
   const bundle = join(root, "dist", "extension.js");
-  const ext = require_(bundle) as {
-    activate(ctx: unknown): Promise<void>;
+  delete require_.cache[bundle];
+  return require_(bundle) as Record<string, unknown>;
+}
+
+export async function activateExtension(): Promise<{ activationError: unknown }> {
+  const ext = loadExtension() as {
+    activate(ctx: unknown): Promise<unknown>;
   };
   const context = {
     subscriptions: [] as unknown[],
