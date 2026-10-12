@@ -1,4 +1,8 @@
+import { Glob } from "bun";
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { locate } from "../../visimark/src/index.js";
 import { isVmarkFence, tokenizeLine, type Kind } from "../src/tokenize.js";
 
 const spans = (line: string): [string, Kind][] =>
@@ -306,5 +310,47 @@ describe("isVmarkFence (H4)", () => {
     ["js", false],
   ] as const)("%p → %p", (info, want) => {
     expect(isVmarkFence(info)).toBe(want);
+  });
+});
+
+// H2 and H3 run over every `vmark` fence body in the worked examples and the
+// playground's own documents. The engine's `locate` finds the fences, so a
+// fence nested inside a wider outer fence is not mistaken for one.
+const root = join(import.meta.dir, "..", "..", "..");
+const CORPUS: { where: string; line: string }[] = [];
+for (const pattern of ["docs/example-*.md", "docs/playground/**/*.md"]) {
+  for (const rel of new Glob(pattern).scanSync({ cwd: root })) {
+    const source = readFileSync(join(root, rel), "utf8");
+    for (const block of locate(source).blocks) {
+      const lines = source.slice(block.span.start, block.span.end).split("\n");
+      const offset = source.slice(0, block.span.start).split("\n").length;
+      lines.slice(1, -1).forEach((line, k) => {
+        CORPUS.push({ where: `${rel}:${offset + 1 + k}`, line });
+      });
+    }
+  }
+}
+
+describe("the corpus", () => {
+  test("is not empty", () => {
+    expect(CORPUS.length).toBeGreaterThan(100);
+  });
+
+  test("H2: every non-whitespace character lies inside a span", () => {
+    const bare: string[] = [];
+    for (const { where, line } of CORPUS) {
+      const covered = Array.from({ length: line.length }, () => false);
+      for (const s of tokenizeLine(line)) covered.fill(true, s.from, s.to);
+      for (let i = 0; i < line.length; i++) {
+        if (!covered[i] && !/\s/.test(line[i]!)) bare.push(`${where} col ${i + 1}: ${line}`);
+      }
+    }
+    expect(bare).toEqual([]);
+  });
+
+  test("H3: tokenizeLine never throws on any prefix of any line", () => {
+    for (const { line } of CORPUS) {
+      for (let k = 0; k <= line.length; k++) tokenizeLine(line.slice(0, k));
+    }
   });
 });
