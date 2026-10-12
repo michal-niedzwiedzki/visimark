@@ -1,10 +1,11 @@
 {
   "name": "codemirror-visimark",
   "version": "0.2.0",
-  "description": "A CodeMirror 6 extension for VisiMark: marks every computed value in a Markdown document, flags the ones that disagree with their formulas, and reports findings as lint diagnostics.",
+  "description": "A CodeMirror 6 extension for VisiMark: marks every computed value in a Markdown document, flags the ones that disagree with their formulas, reports findings as lint diagnostics, and highlights `vmark` blocks.",
   "keywords": [
     "codemirror",
     "codemirror6",
+    "highlighting",
     "lint",
     "markdown",
     "visimark"

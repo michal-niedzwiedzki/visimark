@@ -432,7 +432,10 @@ One version across `packages/visimark`, `packages/visimark-lsp`,
   in this document's v1 is a dependency of it.
 - Incremental reparse.
 - Completion — column names, function names, refs inside a `vmark` block.
-- Semantic tokens / highlighting for the expression grammar.
+- Semantic tokens / highlighting for the expression grammar. The CodeMirror 6
+  extension highlights `vmark` blocks since
+  [#367](https://github.com/michal-niedzwiedzki/visimark/issues/367); the LSP
+  still has none.
 - Rename: propagating a column-name change across sheets that reference it.
 - Workspace-wide check (all VisiMark files at once, a project diagnostic).
 - `ANCHOR` and `WARN` quick fixes (insert a placeholder value; remove or rename
