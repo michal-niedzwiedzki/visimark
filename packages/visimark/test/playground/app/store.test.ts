@@ -11,6 +11,7 @@
 // the current file — so loading the editor from it is a no-op that looks like
 // a file switch. That is exactly what the page did.
 
+import type { EditorPort } from "../../../src/playground/app/editor.js";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import type { VisiMarkApi } from "../../../src/playground/browser-entry.js";
 import { createBufferStore } from "../../../src/playground/app/buffers.js";
@@ -38,15 +39,20 @@ function stubFetch(missing: string[] = []): void {
 
 /** Just enough CodeMirror for the store: it only ever reads and writes the
  *  buffer. */
-function fakeEditor(initial = ""): CodeMirrorEditor & { value: string } {
+function fakeEditor(initial = ""): EditorPort & { value: string } {
   const cm = {
     value: initial,
     getValue: () => cm.value,
     setValue: (v: string) => {
       cm.value = v;
     },
+    load: (v: string) => {
+      cm.value = v;
+    },
+    setLabel: () => {},
+    refreshMarks: () => {},
   };
-  return cm as unknown as CodeMirrorEditor & { value: string };
+  return cm as unknown as EditorPort & { value: string };
 }
 
 const VM = {
@@ -395,5 +401,19 @@ describe("a file the visitor created, named in the URL", () => {
     expect(store.current()).toBe("scratch.md");
     expect(cm.value).toBe("# mine");
     expect(store.names()).toContain("scratch.md");
+  });
+});
+
+describe("the paths codemirror-visimark reads through (#360)", () => {
+  test("enginePath names only reader-served files, and readImport reads them", () => {
+    const csvText = "Item,Qty\nA,1\n";
+    const store = build(
+      { "13-imports.md": "# imports", "13-imports.csv": csvText, "12-charts.md": "# charts" },
+      "13-imports.md",
+    );
+    expect(store.enginePath("13-imports.md")).toBe("tutorial/13-imports.md");
+    expect(store.enginePath("12-charts.md")).toBeNull();
+    expect(store.readImport("tutorial/13-imports.csv")).toBe(csvText);
+    expect(store.readImport("tutorial/elsewhere.csv")).toBeNull();
   });
 });

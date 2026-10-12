@@ -1,4 +1,4 @@
-import { hasVmarkBlock } from "./gate.js";
+import { hasVmarkBlock } from "codemirror-visimark/gate.js";
 
 /**
  * Where a template lands in a note, and what it takes with it — review row

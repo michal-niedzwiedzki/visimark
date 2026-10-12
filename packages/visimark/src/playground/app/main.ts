@@ -30,7 +30,7 @@
  * a missing scenarios.json costs the tutorial track and says so in the
  * SCENARIO panel; a malformed *step* costs one chapter's checklist and says so
  * there too (follow-up review §2.2 — it used to cost the whole page); a
- * missing engine, a missing CodeMirror or a missing starting document leaves
+ * missing engine or a missing starting document leaves
  * nothing to work in, and stops with a named overlay.
  */
 
@@ -58,6 +58,10 @@ import { byId, makeStatusFlasher } from "./dom.js";
 import type { BufferStore } from "./buffers.js";
 import { createBufferStore } from "./buffers.js";
 import { createStore } from "./store.js";
+import { createEditor } from "./editor.js";
+import { refresh, visimark } from "codemirror-visimark";
+import { visimarkLint } from "codemirror-visimark/lint.js";
+import { forceLinting } from "@codemirror/lint";
 import { fileFromUrl, onUrlFileChange, writeFileToUrl } from "./url.js";
 import { createTerminal } from "./terminal.js";
 import { createPipeline } from "./pipeline.js";
@@ -79,7 +83,6 @@ import { wireCopyButton } from "./clipboard.js";
 function missingGlobals(): string[] {
   const missing: string[] = [];
   if (typeof window.VisiMark === "undefined") missing.push("vendor/visimark-browser.js");
-  if (typeof CodeMirror === "undefined") missing.push("CodeMirror (cdnjs.cloudflare.com)");
   if (typeof marked === "undefined") missing.push("marked (cdnjs.cloudflare.com)");
   return missing;
 }
@@ -175,18 +178,30 @@ async function boot(): Promise<void> {
     badgesError = (e as Error).message;
   }
 
-  const cm = CodeMirror.fromTextArea(byId<HTMLTextAreaElement>("editor-ta"), {
-    mode: "gfm",
-    lineNumbers: true,
-    lineWrapping: true,
-    viewportMargin: Infinity,
-    theme: "default",
+  // The extension asks the store which file is open and what it imports; the
+  // store needs the editor to exist first, so the extension reads it through
+  // this reference, which is set before anything can recompute (#360).
+  let storeRef: FileStore | null = null;
+  const cm = createEditor(byId<HTMLTextAreaElement>("editor-ta"), {
+    extensions: [
+      visimark({
+        path: () => (storeRef === null ? null : storeRef.enginePath(storeRef.current())),
+        readImport: async (path) => storeRef?.readImport(path) ?? null,
+        recompute: "on-refresh",
+      }),
+      visimarkLint(),
+    ],
+    refresh: (view) => {
+      view.dispatch({ effects: refresh.of(null) });
+      forceLinting(view);
+    },
   });
 
   // The store, not boot, puts the first document into the editor: it is the
   // thing that knows whether the visitor has a saved copy of it from a
   // previous session (review §2.7).
   const store = createStore(VM, cm, buffers, files, initial);
+  storeRef = store;
   const terminal = createTerminal();
 
   let questRef: Quest | null = null;

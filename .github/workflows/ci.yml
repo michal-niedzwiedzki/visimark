@@ -23,8 +23,8 @@ jobs:
           bun-version: latest
       - run: bun install --frozen-lockfile
 
-      # Twenty files/fields carry the version and all twenty must agree. The six
-      # package manifests have to match because one tag publishes all of them, and a
+      # Twenty-two files/fields carry the version and all twenty-two must agree.
+      # The seven package manifests have to match because one tag publishes all of them, and a
       # mismatch ships a release under the wrong number or fails a leg midway
       # with the others already out. action.yml joins them because its `version`
       # default is what a consumer's `npx` actually installs: leave it behind
@@ -44,7 +44,10 @@ jobs:
       # would let a published server pair with an engine it was never tested
       # against — and its envelope reports the engine version it loaded, which
       # would then be a number no CI run ever saw.
-      # bun.lock mirrors all six manifests' "version" and the three exact
+      # packages/codemirror-visimark/package.json joins on its own `version` only:
+      # it bundles the engine rather than depending on it, so there is no pin
+      # (#360).
+      # bun.lock mirrors all seven manifests' "version" and the three exact
       # "visimark" pins in its own "workspaces" block, for bookkeeping. Bun
       # links a workspace-named dependency locally no matter what the pin
       # text says, so --frozen-lockfile never refuses over this drifting —
@@ -73,6 +76,7 @@ jobs:
           markdownlint_dep=$(bun -e 'console.log(require("./packages/markdownlint-visimark/package.json").dependencies.visimark)')
           mcp_version=$(bun -e 'console.log(require("./packages/visimark-mcp/package.json").version)')
           mcp_dep=$(bun -e 'console.log(require("./packages/visimark-mcp/package.json").dependencies.visimark)')
+          cm_version=$(bun -e 'console.log(require("./packages/codemirror-visimark/package.json").version)')
           # bun.lock is not JSON (it allows trailing commas), so it is read with
           # plain string search rather than `bun -e require(...)`. Each lookup
           # is scoped to the one workspace block, found by substring match on
@@ -103,7 +107,8 @@ jobs:
           lock_markdownlint_dep=$(lock_field "packages/markdownlint-visimark" visimark)
           lock_mcp_version=$(lock_field "packages/visimark-mcp" version)
           lock_mcp_dep=$(lock_field "packages/visimark-mcp" visimark)
-          echo "engine=$engine lsp=$lsp vscode=$ext action.yml=$pinned precommit-hook=$precommit_versions remark-plugin=$remark_version remark-plugin-dep=$remark_dep markdownlint-rule=$markdownlint_version markdownlint-rule-dep=$markdownlint_dep mcp-server=$mcp_version mcp-server-dep=$mcp_dep bun.lock=$lock_engine,$lock_lsp,$lock_ext,$lock_remark_version,$lock_remark_dep,$lock_markdownlint_version,$lock_markdownlint_dep,$lock_mcp_version,$lock_mcp_dep"
+          lock_cm_version=$(lock_field "packages/codemirror-visimark" version)
+          echo "engine=$engine lsp=$lsp vscode=$ext action.yml=$pinned precommit-hook=$precommit_versions remark-plugin=$remark_version remark-plugin-dep=$remark_dep markdownlint-rule=$markdownlint_version markdownlint-rule-dep=$markdownlint_dep mcp-server=$mcp_version mcp-server-dep=$mcp_dep codemirror-extension=$cm_version bun.lock=$lock_engine,$lock_lsp,$lock_ext,$lock_remark_version,$lock_remark_dep,$lock_markdownlint_version,$lock_markdownlint_dep,$lock_mcp_version,$lock_mcp_dep,$lock_cm_version"
           if [ -z "$pinned" ]; then
             echo "::error::could not read the version default out of action.yml. The version input or its default line moved; fix this check rather than deleting it."
             exit 1
@@ -115,7 +120,7 @@ jobs:
           # itself is missing, and that has to fail loudly rather than be
           # skipped by the "$got" is empty" guard the comparison loop below
           # uses for $precommit.
-          for lock_check in "packages/visimark version:$lock_engine" "packages/visimark-lsp version:$lock_lsp" "editors/vscode version:$lock_ext" "packages/remark-visimark version:$lock_remark_version" "packages/remark-visimark visimark dep:$lock_remark_dep" "packages/markdownlint-visimark version:$lock_markdownlint_version" "packages/markdownlint-visimark visimark dep:$lock_markdownlint_dep" "packages/visimark-mcp version:$lock_mcp_version" "packages/visimark-mcp visimark dep:$lock_mcp_dep"; do
+          for lock_check in "packages/visimark version:$lock_engine" "packages/visimark-lsp version:$lock_lsp" "editors/vscode version:$lock_ext" "packages/remark-visimark version:$lock_remark_version" "packages/remark-visimark visimark dep:$lock_remark_dep" "packages/markdownlint-visimark version:$lock_markdownlint_version" "packages/markdownlint-visimark visimark dep:$lock_markdownlint_dep" "packages/visimark-mcp version:$lock_mcp_version" "packages/visimark-mcp visimark dep:$lock_mcp_dep" "packages/codemirror-visimark version:$lock_cm_version"; do
             name=${lock_check%%:*}; val=${lock_check#*:}
             if [ -z "$val" ]; then
               echo "::error file=bun.lock::could not find $name in bun.lock — the workspace block or the field moved. Fix this check or bun.lock — see docs/releasing.md."
@@ -129,7 +134,7 @@ jobs:
           else
             precommit=$precommit_versions
           fi
-          for pair in "packages/visimark-lsp/package.json:$lsp" "editors/vscode/package.json:$ext" "action.yml:$pinned" "scripts/precommit-visimark-check.sh:$precommit" "packages/remark-visimark/package.json (version):$remark_version" "packages/remark-visimark/package.json (visimark dep):$remark_dep" "packages/markdownlint-visimark/package.json (version):$markdownlint_version" "packages/markdownlint-visimark/package.json (visimark dep):$markdownlint_dep" "packages/visimark-mcp/package.json (version):$mcp_version" "packages/visimark-mcp/package.json (visimark dep):$mcp_dep" "bun.lock (packages/visimark version):$lock_engine" "bun.lock (packages/visimark-lsp version):$lock_lsp" "bun.lock (editors/vscode version):$lock_ext" "bun.lock (packages/remark-visimark version):$lock_remark_version" "bun.lock (packages/remark-visimark visimark dep):$lock_remark_dep" "bun.lock (packages/markdownlint-visimark version):$lock_markdownlint_version" "bun.lock (packages/markdownlint-visimark visimark dep):$lock_markdownlint_dep" "bun.lock (packages/visimark-mcp version):$lock_mcp_version" "bun.lock (packages/visimark-mcp visimark dep):$lock_mcp_dep"; do
+          for pair in "packages/visimark-lsp/package.json:$lsp" "editors/vscode/package.json:$ext" "action.yml:$pinned" "scripts/precommit-visimark-check.sh:$precommit" "packages/remark-visimark/package.json (version):$remark_version" "packages/remark-visimark/package.json (visimark dep):$remark_dep" "packages/markdownlint-visimark/package.json (version):$markdownlint_version" "packages/markdownlint-visimark/package.json (visimark dep):$markdownlint_dep" "packages/visimark-mcp/package.json (version):$mcp_version" "packages/visimark-mcp/package.json (visimark dep):$mcp_dep" "packages/codemirror-visimark/package.json (version):$cm_version" "bun.lock (packages/visimark version):$lock_engine" "bun.lock (packages/visimark-lsp version):$lock_lsp" "bun.lock (editors/vscode version):$lock_ext" "bun.lock (packages/remark-visimark version):$lock_remark_version" "bun.lock (packages/remark-visimark visimark dep):$lock_remark_dep" "bun.lock (packages/markdownlint-visimark version):$lock_markdownlint_version" "bun.lock (packages/markdownlint-visimark visimark dep):$lock_markdownlint_dep" "bun.lock (packages/visimark-mcp version):$lock_mcp_version" "bun.lock (packages/visimark-mcp visimark dep):$lock_mcp_dep" "bun.lock (packages/codemirror-visimark version):$lock_cm_version"; do
             file=${pair%%:*}; got=${pair#*:}
             if [ -n "$got" ] && [ "$got" != "$engine" ]; then
               echo "::error file=$file::$file says $got but packages/visimark/package.json says $engine. Bump every version-carrying file in the release commit — see docs/releasing.md (bun scripts/prepare-release.ts does bun.lock too)."
@@ -324,7 +329,7 @@ jobs:
           lts=$(node -p "process.versions.node.split('.')[0]")
           echo "current LTS major: $lts"
           fail=0
-          for manifest in packages/visimark/package.json packages/visimark-mcp/package.json packages/remark-visimark/package.json packages/markdownlint-visimark/package.json; do
+          for manifest in packages/visimark/package.json packages/visimark-mcp/package.json packages/remark-visimark/package.json packages/markdownlint-visimark/package.json packages/codemirror-visimark/package.json; do
             declared=$(node -p "require('./$manifest').engines?.node ?? ''")
             floor=$(printf '%s' "$declared" | sed -n 's/^>=\([0-9][0-9]*\).*/\1/p')
             if [ -z "$floor" ]; then
@@ -476,6 +481,12 @@ jobs:
       - name: pack the markdownlint rule tarball
         working-directory: packages/markdownlint-visimark
         run: npm pack --pack-destination "$RUNNER_TEMP"
+      # codemirror-visimark has no `bin`; packed to prove the tarball imports and
+      # renders as a library at both ends of its peer ranges (#360). Its name
+      # does not match `visimark-*`, so the engine/MCP shapes stay unambiguous.
+      - name: pack the CodeMirror extension tarball
+        working-directory: packages/codemirror-visimark
+        run: npm pack --pack-destination "$RUNNER_TEMP"
       - uses: actions/upload-artifact@v7
         with:
           name: visimark-tarball
@@ -487,6 +498,7 @@ jobs:
             ${{ runner.temp }}/visimark-*.tgz
             ${{ runner.temp }}/remark-lint-visimark-*.tgz
             ${{ runner.temp }}/markdownlint-rule-visimark-*.tgz
+            ${{ runner.temp }}/codemirror-visimark-*.tgz
           if-no-files-found: error
       # The smoke jobs have no checkout — they are deliberately bare
       # single-runtime environments — so the handshake driver rides along with
@@ -494,12 +506,14 @@ jobs:
       - run: |
           cp scripts/mcp-handshake.mjs "$RUNNER_TEMP/handshake.mjs"
           cp scripts/plugins-smoke.mjs "$RUNNER_TEMP/plugins-smoke.mjs"
+          cp scripts/codemirror-smoke.mjs "$RUNNER_TEMP/codemirror-smoke.mjs"
       - uses: actions/upload-artifact@v7
         with:
           name: mcp-handshake
           path: |
             ${{ runner.temp }}/handshake.mjs
             ${{ runner.temp }}/plugins-smoke.mjs
+            ${{ runner.temp }}/codemirror-smoke.mjs
           if-no-files-found: error
 
   smoke-node:
@@ -610,6 +624,22 @@ jobs:
           [ "$packed" = "$installed" ] || { echo "::error::the engine under test is not the packed one"; exit 1; }
           cp ../plugins-smoke.mjs .
           node plugins-smoke.mjs
+
+      - name: the CodeMirror extension renders under Node only, at its peer floor
+        run: |
+          set -e
+          # The floor of every peer range, exactly: an API the extension uses
+          # that is newer than its declared floor fails here, not for a user
+          # (#360 spec §6). smoke-bun runs the same script at the latest peers.
+          cm_tgz="$(pwd)/$(ls codemirror-visimark-*.tgz)"
+          mkdir cm && cd cm
+          printf '{"name":"cm","private":true,"type":"module"}' > package.json
+          npm i "$cm_tgz" @codemirror/state@6.5.2 @codemirror/view@6.36.2 @codemirror/lint@6.4.0 @codemirror/language@6.3.0 @happy-dom/global-registrator@20
+          packed=$(tar -xzOf "$cm_tgz" package/package.json | tr -d ' \n')
+          installed=$(tr -d ' \n' < node_modules/codemirror-visimark/package.json)
+          [ "$packed" = "$installed" ] || { echo "::error::the extension under test is not the packed one"; exit 1; }
+          cp ../codemirror-smoke.mjs .
+          node codemirror-smoke.mjs
 
   smoke-bun:
     needs: pack
@@ -737,3 +767,20 @@ jobs:
           [ "$packed" = "$installed" ] || { echo "::error::the engine under test is not the packed one"; exit 1; }
           cp ../plugins-smoke.mjs .
           bun plugins-smoke.mjs
+
+      - name: the CodeMirror extension renders under Bun only, at the latest peers
+        run: |
+          set -e
+          export PATH="$(bun pm bin -g):/usr/local/bin:/usr/bin:/bin"
+          if command -v node >/dev/null 2>&1; then
+            echo "::error::node still on PATH; smoke-bun must be Bun-only"; exit 1
+          fi
+          cm_tgz="$(pwd)/$(ls codemirror-visimark-*.tgz)"
+          mkdir cm && cd cm
+          printf '{"name":"cm","private":true,"type":"module"}' > package.json
+          bun add "$cm_tgz" @codemirror/state @codemirror/view @codemirror/lint @codemirror/language @happy-dom/global-registrator@20
+          packed=$(tar -xzOf "$cm_tgz" package/package.json | tr -d ' \n')
+          installed=$(tr -d ' \n' < node_modules/codemirror-visimark/package.json)
+          [ "$packed" = "$installed" ] || { echo "::error::the extension under test is not the packed one"; exit 1; }
+          cp ../codemirror-smoke.mjs .
+          bun codemirror-smoke.mjs

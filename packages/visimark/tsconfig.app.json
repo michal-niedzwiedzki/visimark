@@ -15,7 +15,21 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "lib": ["ES2023", "DOM", "DOM.Iterable"]
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    // codemirror-visimark from source, and `visimark` as its source types —
+    // the bundle swaps the runtime for ./src/playground/app/engine-global.ts
+    // (build-playground.ts), the types stay the engine's own (#360)
+    "paths": {
+      "visimark": ["./src/browser.ts"],
+      "codemirror-visimark": ["../codemirror-visimark/src/index.ts"],
+      "codemirror-visimark/*": ["../codemirror-visimark/src/*"]
+    }
   },
-  "include": ["src/playground/app", "src/site", "test/playground/app", "test/site"]
+  "include": [
+    "src/playground/app",
+    "src/site",
+    "test/playground/app",
+    "test/site",
+    "build-playground.ts"
+  ]
 }

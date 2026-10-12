@@ -31,7 +31,7 @@ bad() { echo "FAIL  $*"; fail=1; }
 
 # The npm registry's HTTP API rather than the `npm` CLI, so this runs on a
 # machine that has only Bun (runtime-parity rule).
-for pkg in visimark remark-lint-visimark markdownlint-rule-visimark visimark-mcp; do
+for pkg in visimark remark-lint-visimark markdownlint-rule-visimark visimark-mcp codemirror-visimark; do
   # Prints "listed", plus "attested" when dist.attestations is present. A version
   # published without --provenance has no attestations at all.
   state="$(curl -sS -f "https://registry.npmjs.org/$pkg/$version" 2>/dev/null \

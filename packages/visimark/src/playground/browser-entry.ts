@@ -46,7 +46,7 @@ import { build } from "../model/build.js";
 import { isProblem, type DocModel } from "../model/types.js";
 import { describeFunction, functionNames, precisionPhrase } from "../lang/reference.js";
 import { locate } from "../parse/document.js";
-import { formatCheck } from "../report/format.js";
+import { describeFinding, formatCheck } from "../report/format.js";
 import { formatInfer } from "../report/infer.js";
 import { nonParams, paramLines, params } from "../report/params.js";
 import { fmt as fmtDoc, type FmtOptions, type FmtResult } from "../write/fmt.js";
@@ -187,6 +187,7 @@ const api = {
   applyEdits,
   topoOrder,
   formatCheck,
+  describeFinding,
   formatInfer,
   pgEval,
   pgExplain,

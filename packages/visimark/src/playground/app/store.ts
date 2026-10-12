@@ -20,6 +20,7 @@
 
 import type { BrowserCheckOptions, VisiMarkApi } from "../browser-entry.js";
 import type { BufferStore } from "./buffers.js";
+import type { EditorPort } from "./editor.js";
 import type { FailedFile } from "./sources.js";
 import { DATA_DEPENDENCIES, FILE_SOURCES, loadFile } from "./sources.js";
 
@@ -136,6 +137,14 @@ export interface FileStore {
   /** Reverts every changed bundled document; returns how many. Files the
    *  visitor created are left alone — see ./files.ts for why. */
   revertAll(): number;
+  /**
+   * The path codemirror-visimark should give the engine for `name` — the
+   * READER_FS key without its leading `/` — or null for a file that gets no
+   * reader (every file but the imports chapter; see READER_FS above).
+   */
+  enginePath(name: string): string | null;
+  /** The text of a reader-served file, by the path enginePath gave, or null. */
+  readImport(path: string): string | null;
 }
 
 /**
@@ -145,7 +154,7 @@ export interface FileStore {
  */
 export function createStore(
   VM: VisiMarkApi,
-  cm: CodeMirrorEditor,
+  cm: EditorPort,
   buffers: BufferStore,
   loaded: Record<string, string>,
   initial: string,
@@ -220,7 +229,7 @@ export function createStore(
     contents[name] = text;
   }
 
-  if (contents[initial] !== undefined) cm.setValue(contents[initial]);
+  if (contents[initial] !== undefined) cm.load(contents[initial]);
 
   /**
    * Requests that have gone out and not yet landed, by name.
@@ -305,7 +314,16 @@ export function createStore(
       setText(current, cm.getValue());
       persist(current);
       current = name;
-      cm.setValue(contents[name] ?? "");
+      // a fresh history: undo must not reach back into the file left behind
+      cm.load(contents[name] ?? "");
+    },
+    enginePath(name) {
+      for (const path of Object.keys(READER_FS)) if (READER_FS[path] === name) return path.slice(1);
+      return null;
+    },
+    readImport(path) {
+      const name = READER_FS["/" + path];
+      return name === undefined ? null : (text(name) ?? null);
     },
     optsFor(name) {
       const doc = docFor(name);

@@ -8,7 +8,7 @@ import {
   type WorkspaceLeaf,
 } from "obsidian";
 import { check, type Edit, type Finding } from "visimark";
-import { hasVmarkBlock } from "./gate.js";
+import { hasVmarkBlock } from "codemirror-visimark/gate.js";
 import { isClean, reportFor, type FindingRow, type NoteReport } from "./report.js";
 import { readNote } from "./snapshot.js";
 import { vaultRead } from "./vault.js";

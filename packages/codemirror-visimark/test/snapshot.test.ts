@@ -7,7 +7,7 @@ import { build, check, locate, type Finding } from "visimark";
 // deliberately absent from the browser entry point the rest of the plugin
 // imports (#201), which is exactly the property under test.
 import { onDisk } from "../../../packages/visimark/src/index.js";
-import { readNote, toVaultPath, vaultSnapshot, type VaultRead } from "../src/snapshot.js";
+import { readNote, toVaultPath, vaultSnapshot, type ReadImport } from "../src/snapshot.js";
 
 /**
  * **What this proves.** A note read out of a vault must produce the same
@@ -46,7 +46,7 @@ function vaultOf(dir: string, prefix = ""): Map<string, string> {
 }
 
 const vault = vaultOf(docs);
-const readFromVault: VaultRead = (p) => Promise.resolve(vault.get(p) ?? null);
+const readFromVault: ReadImport = (p) => Promise.resolve(vault.get(p) ?? null);
 
 /** what a finding is, for comparison: code, message and where it points */
 const shape = (f: Finding): string => `${f.code} ${f.name ?? ""} ${f.message}`;
@@ -168,20 +168,20 @@ test("the recorded set is what the note reads, and nothing else", async () => {
   expect(held).toEqual(["example-invoice-csv-import.csv"]);
 });
 
-test("VaultRead owns the catching, and the snapshot does not swallow", async () => {
+test("ReadImport owns the catching, and the snapshot does not swallow", async () => {
   // The contract is `null` for anything unreadable, and the caller is what
   // turns a rejected `vault.adapter.read` into one. Asserted rather than
   // assumed, because the tempting alternative — catching in here — would turn
   // a vault that has gone away into a note that silently reports every import
   // as missing, which reads exactly like a real IMPORT finding.
-  const angry: VaultRead = () => Promise.reject(new Error("permission denied"));
+  const angry: ReadImport = () => Promise.reject(new Error("permission denied"));
   const note = "example-invoice-csv-import.md";
   await expect(vaultSnapshot(build(locate(vault.get(note)!)), note, angry)).rejects.toThrow(
     "permission denied",
   );
 
   // and the shape the plugin actually passes: catching at the boundary
-  const safe: VaultRead = () => Promise.reject(new Error("nope")).catch((): string | null => null);
+  const safe: ReadImport = () => Promise.reject(new Error("nope")).catch((): string | null => null);
   const { snapshot } = await readNote(vault.get(note)!, note, safe);
   expect(snapshot.held.size).toBe(0);
   expect([...snapshot.asked]).toContain("/example-invoice-csv-import.csv");

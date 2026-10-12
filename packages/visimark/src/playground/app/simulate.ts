@@ -9,6 +9,7 @@
  */
 
 import type { VisiMarkApi } from "../browser-entry.js";
+import type { EditorPort } from "./editor.js";
 import type { FileStore } from "./store.js";
 import type { Tabs } from "./tabs.js";
 import type { Terminal } from "./terminal.js";
@@ -22,7 +23,7 @@ export interface SimulatePanel {
 
 export function createSimulatePanel(
   VM: VisiMarkApi,
-  cm: CodeMirrorEditor,
+  cm: EditorPort,
   store: FileStore,
   terminal: Terminal,
   tabs: Tabs,

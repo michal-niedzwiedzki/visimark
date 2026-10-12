@@ -126,11 +126,16 @@ both are enforced by `editors/obsidian/test/bundle.test.ts`:
 - **No `node:` specifier may reach `main.js`.** Not one — the playground's
   `node:path` allowance does not transfer, because Obsidian mobile is not
   Electron and has no Node to fall back on. The build substitutes
-  `editors/obsidian/src/browser-path.ts`.
+  `packages/codemirror-visimark/src/browser-path.ts`.
 - **The plugin enters the engine at `packages/visimark/src/browser.ts`**, its
   browser-safe entry point, and never at `src/index.ts` — which reaches
   `node:fs`, `node:crypto`, `node:module` and `node:url` and cannot be bundled
   for a browser at all.
+
+The Live Preview marks come from `packages/codemirror-visimark`, which the
+plugin bundles from source through the same kind of alias as the engine —
+`esbuild.config.mjs` and `tsconfig.json` both map it. The plugin never imports
+`codemirror-visimark/lint`; `bundle.test.ts` checks that too.
 
 The plugin's version lives in `manifest.json` only, and is deliberately **not**
 one of the numbers `ci.yml`'s version-agreement step keeps in lockstep: an
@@ -212,7 +217,7 @@ and `articles-pages` enforce the same checks in CI either way.
 | `bun run gen:docs` | Regenerates the function reference from the engine's own registry |
 | `bun run gen:mcp` | Regenerates the MCP server's served skill and doc copies |
 | `bun run gen:obsidian-templates` | Regenerates the Obsidian plugin's templates module from `editors/obsidian/templates/*.md` |
-| `bun run --filter visimark build:playground` | Rebuilds the browser bundles committed under `docs/vendor/` |
+| `bun run --filter visimark build:playground` | Rebuilds the browser bundles committed under `docs/vendor/`. The application bundle is built by `packages/visimark/build-playground.ts`, which also bundles CodeMirror 6 and `codemirror-visimark` |
 | `bun run serve` | Serves `docs/` on `http://localhost:8080` — needed for the playground and the tutorial pages, which fetch their content and cannot run from `file://` |
 | `bun run vscode-install` | Builds, packages and installs the VS Code extension locally |
 
@@ -274,8 +279,10 @@ in production) would answer differently than the CLI for the same document.
 Fix: this is a real bug, not something to silence — find why the two hosts
 disagree, and fix the engine or the `ReaderPort` boundary, never the check.
 
-**Every version-carrying file must agree.** Eleven fields carry the version —
-six package manifests (three of which also pin `visimark` as a dependency),
+**Every version-carrying file must agree.** Thirteen fields carry the version —
+seven package manifests (three of which also pin `visimark` as a dependency;
+`codemirror-visimark` carries only its own version, because it bundles the
+engine),
 `action.yml`'s pinned `version` default and `scripts/precommit-visimark-check.sh`.
 One tag publishes all of them, the Action's default is what a consumer's `npx`
 actually installs, and an exact `visimark` pin is what stops a published plugin
@@ -302,9 +309,13 @@ section.
 ## The repository eats its own cooking
 
 `dogfood.yml` runs the shipped GitHub Action against this repository's own
-documents — the worked examples, the tutorial, the CI guide, the design doc, the
-README and the changelog. If your pull request touches one of them and the
-numbers in it stop agreeing with its formulas, the build goes red.
+documents: every tracked Markdown file, package READMEs and editor plugins
+included. The exceptions are `docs/WIP/`, the vendored skills under
+`.agents/skills/<name>/`, the engine's test fixtures, and the drift examples
+that fail on purpose. If your pull request touches one of them and the numbers
+in it stop agreeing with its formulas, the build goes red. `bun test` runs the
+same check (`scripts/doc-set.test.ts`), so it fails locally too, with or
+without the pre-commit hook installed.
 
 There are two findings you are likely to meet, and each has exactly one correct
 response.

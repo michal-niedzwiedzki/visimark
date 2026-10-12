@@ -1,5 +1,5 @@
 import type { CheckResult, DocModel } from "visimark";
-import { decorationsFor } from "./decorations.js";
+import { decorationsFor } from "codemirror-visimark/decorations.js";
 
 /**
  * What name is the cursor on?
