@@ -307,7 +307,10 @@ export function loadExtension(): Record<string, unknown> {
   return require_(bundle) as Record<string, unknown>;
 }
 
-export async function activateExtension(): Promise<{ activationError: unknown }> {
+export async function activateExtension(): Promise<{
+  activationError: unknown;
+  exports?: unknown;
+}> {
   const ext = loadExtension() as {
     activate(ctx: unknown): Promise<unknown>;
   };
@@ -316,8 +319,8 @@ export async function activateExtension(): Promise<{ activationError: unknown }>
     asAbsolutePath: (p: string) => join(root, p),
   };
   try {
-    await ext.activate(context);
-    return { activationError: undefined };
+    const exports = await ext.activate(context);
+    return { activationError: undefined, exports };
   } catch (e) {
     return { activationError: e };
   }

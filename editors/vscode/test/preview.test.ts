@@ -2,7 +2,7 @@ import { beforeAll, expect, test } from "bun:test";
 import MarkdownIt from "markdown-it";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { activateExtension, createHost, fakeUri, loadExtension, type Host } from "./host.js";
+import { activateExtension, createHost, fakeUri, type Host } from "./host.js";
 
 const root = join(import.meta.dir, "..");
 const repo = join(root, "..", "..");
@@ -11,13 +11,14 @@ const csvPath = join(repo, "docs", "example-invoice-csv-import.md");
 
 let host: Host;
 let api: { extendMarkdownIt<T>(md: T): T };
+let activation: { activationError: unknown; exports?: unknown };
 
 beforeAll(async () => {
   host = createHost();
-  // registers the configuration listener; the language client's start fails
-  // under this host, which is why the API is read off the module below
-  await activateExtension();
-  api = loadExtension() as unknown as typeof api;
+  // The language client's start fails under this host, as it does in VS Code
+  // when the server cannot start; the preview must not depend on it.
+  activation = await activateExtension();
+  api = activation.exports as typeof api;
 });
 
 test("the manifest contributes the preview plugin, its stylesheet and the setting", () => {
@@ -26,9 +27,9 @@ test("the manifest contributes the preview plugin, its stylesheet and the settin
   expect(pkg.contributes.configuration.properties["visimark.preview.enable"].default).toBe(true);
 });
 
-test("activate returns extendMarkdownIt", () => {
-  const src = readFileSync(join(root, "src", "extension.ts"), "utf8");
-  expect(src).toContain("return { extendMarkdownIt };");
+test("activate returns extendMarkdownIt even when the language server fails to start", () => {
+  expect(activation.activationError).toBeUndefined();
+  expect(typeof api?.extendMarkdownIt).toBe("function");
 });
 
 test("extendMarkdownIt marks a preview rendered VS Code's way", () => {

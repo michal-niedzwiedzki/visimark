@@ -28,7 +28,13 @@ import markdownItVisimark from "markdown-it-visimark";
 
 const md = new MarkdownIt({ html: true }).use(markdownItVisimark, {
   path: (env) => env?.path ?? null,
-  readImport: (absolutePath) => readFileSync(absolutePath, "utf8"),
+  readImport: (absolutePath) => {
+    try {
+      return readFileSync(absolutePath, "utf8");
+    } catch {
+      return null; // a missing file withholds only the values that read it
+    }
+  },
 });
 
 md.render(source, { path: "/notes/invoice.md" });
@@ -53,7 +59,8 @@ renders separately, as VS Code does, passes the path on the render call.
 `codemirror-visimark`'s `readImport` has the same meaning and is asynchronous.
 It receives an absolute path that the engine has already checked: a relative
 `.csv` path inside the document's own folder. Return the file's text, or `null`
-to refuse the read. On Windows the path uses forward slashes
+to refuse the read. Return `null` rather than throwing: a `readImport` (or a
+`path`) that throws leaves the whole render unmarked. On Windows the path uses forward slashes
 (`C:/notes/rows.csv`). Without `path` or without `readImport`, imports are not
 read.
 

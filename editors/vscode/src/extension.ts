@@ -18,10 +18,6 @@ let statusBar: StatusBar | undefined;
 const EXPLAIN_SCHEME = "visimark-explain";
 const REPORT_SCHEME = "visimark-report";
 
-// Re-exported so the test host can reach the preview hook without a running
-// language server; VS Code itself takes it from `activate`'s return value.
-export { extendMarkdownIt } from "./preview.js";
-
 export async function activate(
   context: vscode.ExtensionContext,
 ): Promise<{ extendMarkdownIt: typeof extendMarkdownIt }> {
@@ -129,11 +125,19 @@ export async function activate(
     }),
   );
 
-  await client.start();
-
-  client.onNotification("visimark/status", (s: Status) => {
-    statusBar?.record(s);
-  });
+  // A server that fails to start must not take the preview marks with it:
+  // VS Code only calls `extendMarkdownIt` when `activate` resolves, and
+  // `visimark.preview.enable` is independent of the server (#373).
+  try {
+    await client.start();
+    client.onNotification("visimark/status", (s: Status) => {
+      statusBar?.record(s);
+    });
+  } catch (e) {
+    void vscode.window.showErrorMessage(
+      `VisiMark: the language server did not start (${e instanceof Error ? e.message : String(e)}). Reload the window to try again.`,
+    );
+  }
 
   return { extendMarkdownIt };
 }
