@@ -1,6 +1,6 @@
 import { createRequire } from "node:module";
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, join } from "node:path";
 
 /**
@@ -60,7 +60,8 @@ export function fakeUri(value: string): FakeUri {
   const colon = value.indexOf(":");
   const scheme = value.slice(0, colon);
   const rest = value.slice(colon + 1);
-  const path = decodeURIComponent(rest.startsWith("//") ? rest.replace(/^\/\/[^/]*/, "") : rest);
+  const path =
+    scheme === "file" && rest.startsWith("//") ? fileURLToPath(value) : decodeURIComponent(rest);
   return { scheme, path, fsPath: path, toString: () => value };
 }
 
@@ -85,7 +86,7 @@ export function createHost(): Host {
     env: { language: "en" },
     Uri: {
       parse: fakeUri,
-      file: (p: string) => fakeUri(`file://${p}`),
+      file: (p: string) => fakeUri(pathToFileURL(p).href),
     },
     ViewColumn: { Beside: 2 },
     Position: class {
@@ -229,7 +230,7 @@ export function createHost(): Host {
   function fileDocument(path: string): FakeDocument {
     const text = readFileSync(path, "utf8");
     return {
-      uri: fakeUri(`file://${path}`),
+      uri: fakeUri(pathToFileURL(path).href),
       languageId: path.endsWith(".md") ? "markdown" : "plaintext",
       getText: () => text,
     };

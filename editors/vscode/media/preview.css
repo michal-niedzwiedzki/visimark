@@ -2,5 +2,6 @@
   text-decoration: underline dotted;
 }
 .visimark-disagrees {
+  text-decoration-style: wavy;
   text-decoration-color: red;
 }

@@ -2,6 +2,7 @@ import { beforeAll, expect, test } from "bun:test";
 import MarkdownIt from "markdown-it";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { activateExtension, createHost, fakeUri, type Host } from "./host.js";
 
 const root = join(import.meta.dir, "..");
@@ -37,7 +38,7 @@ test("extendMarkdownIt marks a preview rendered VS Code's way", () => {
   const source = readFileSync(csvPath, "utf8");
   const tokens = md.parse(source, { currentDocument: undefined });
   const out = md.renderer.render(tokens, md.options, {
-    currentDocument: fakeUri("file://" + csvPath),
+    currentDocument: fakeUri(pathToFileURL(csvPath).href),
   });
   expect(out).toContain("visimark-computed");
   expect(out).toContain(`data-vmark-path="${csvPath}"`);

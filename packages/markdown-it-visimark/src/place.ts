@@ -154,7 +154,9 @@ export function place(
 
     if (cells !== null && inBody && out[i - 1]?.type === "td_open") {
       const hit = cells.find((c) => c.d.row === row && c.d.column === column);
-      if (hit !== undefined && hit.source === t.content.trim()) {
+      // t.content is the source; a core rule may have rewritten the children after it
+      const shown = (t.children ?? []).map((c) => c.content).join("");
+      if (hit !== undefined && hit.source === t.content.trim() && hit.source === shown.trim()) {
         const c = own();
         const [open, close] = wrap(Tok, hit.d, path);
         c.children = [open, ...c.children!, close];

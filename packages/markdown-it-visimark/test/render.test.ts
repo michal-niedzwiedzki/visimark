@@ -89,8 +89,8 @@ test("a value whose rendered text no longer matches its source is left unmarked"
   const out = md.render(source);
   expect(out).not.toContain('data-vmark="s.sub"');
   expect(out).toContain('data-vmark="s.total"');
-  // a cell is addressed by position and its inline content is still the source's
-  expect(out).toContain('data-vmark="s.Net"');
+  // the cell's children were rewritten too, so the displayed value is not the computed one
+  expect(out).not.toContain('data-vmark="s.Net"');
 });
 
 test("path() or readImport throwing renders the host's own HTML", () => {
