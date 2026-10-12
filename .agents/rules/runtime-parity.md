@@ -23,9 +23,8 @@ launcher shim, so a `#!/usr/bin/env node` shebang makes the kernel hunt for
   it is executed as an argument (`node bin/visimark.js`, or by the launcher),
   never as the `bin` target. `acceptance-node` calls it with `node`.
 - A published package with no `bin` — `remark-visimark`,
-  `markdownlint-visimark`, `codemirror-visimark`, `visimark-lsp`, the VS Code
-  extension — has nothing
-  to launch. Do not add a `bin` whose target starts with a `node` shebang.
+  `markdownlint-visimark`, `codemirror-visimark`, `markdown-it-visimark`,
+  `visimark-lsp`, the VS Code extension — has nothing to launch. Do not add a `bin` whose target starts with a `node` shebang.
   Those packages do not gain an `sh` launcher or a second CI job until they
   gain a `bin`.
 - Write the install line and the "run it without installing" line for a
