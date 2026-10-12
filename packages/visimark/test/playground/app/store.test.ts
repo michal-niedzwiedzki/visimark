@@ -403,3 +403,17 @@ describe("a file the visitor created, named in the URL", () => {
     expect(store.names()).toContain("scratch.md");
   });
 });
+
+describe("the paths codemirror-visimark reads through (#360)", () => {
+  test("enginePath names only reader-served files, and readImport reads them", () => {
+    const csvText = "Item,Qty\nA,1\n";
+    const store = build(
+      { "13-imports.md": "# imports", "13-imports.csv": csvText, "12-charts.md": "# charts" },
+      "13-imports.md",
+    );
+    expect(store.enginePath("13-imports.md")).toBe("tutorial/13-imports.md");
+    expect(store.enginePath("12-charts.md")).toBeNull();
+    expect(store.readImport("tutorial/13-imports.csv")).toBe(csvText);
+    expect(store.readImport("tutorial/elsewhere.csv")).toBeNull();
+  });
+});

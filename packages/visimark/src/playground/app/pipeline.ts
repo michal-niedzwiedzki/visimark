@@ -345,6 +345,10 @@ export function createPipeline(
     } catch (e) {
       previewEl.textContent = `error: ${(e as Error).message}`;
     }
+
+    // the marks (and, with lint, the diagnostics) follow the text this pass
+    // just settled on — never a cell fmt is about to overwrite (#360)
+    cm.refreshMarks();
   }
 
   /** Times `run` and files the result under the document it was run over.

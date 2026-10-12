@@ -44,3 +44,21 @@ test("B4: no shipped declaration imports the engine", () => {
     expect(text(f).includes('"visimark"'), `${f} imports visimark`).toBe(false);
   }
 });
+
+test("B1: lint.js and lint.d.ts are built, and share a chunk with index.js", () => {
+  const files = readdirSync(dist);
+  expect(files).toContain("lint.js");
+  expect(files).toContain("lint.d.ts");
+  expect(files.some((f) => f.startsWith("chunk-"))).toBe(true);
+  const chunkOf = (f: string): string[] =>
+    [...text(f).matchAll(/"\.\/(chunk-[^"]+\.js)"/g)].map((m) => m[1]!);
+  const shared = chunkOf("index.js").filter((c) => chunkOf("lint.js").includes(c));
+  expect(shared.length).toBeGreaterThan(0);
+});
+
+test("only lint.js imports @codemirror/lint", () => {
+  for (const f of js()) {
+    if (f === "lint.js") continue;
+    expect(text(f).includes("@codemirror/lint"), `${f} imports @codemirror/lint`).toBe(false);
+  }
+});
