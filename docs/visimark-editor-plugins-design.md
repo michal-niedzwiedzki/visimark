@@ -333,6 +333,7 @@ Contributed under `visimark.*`:
 | Setting | Type | Default | Effect |
 |---------|------|---------|--------|
 | `visimark.enable` | boolean | `true` | master switch; `false` stops the server |
+| `visimark.preview.enable` | boolean | `true` | mark computed values in the built-in Markdown preview (#373); independent of `visimark.enable` |
 | `visimark.check.debounce` | number (ms) | `300` | delay after a keystroke before re-checking |
 | `visimark.format.fixDates` | boolean | `false` | `fmt` also rewrites decidable non-ISO dates |
 | `visimark.inlayHints.enable` | boolean | `true` | show the stale-value inlay hints |
@@ -364,6 +365,14 @@ continue to work for anyone who prefers to drive it that way.
 - Register commands: `visimark.fixAllStale`, `visimark.fixSheet`,
   `visimark.explainSheet`, `visimark.showReport`, `visimark.restartServer`.
 - Virtual document providers for `visimark-explain:` and `visimark-report:`.
+- **Markdown preview marks** (#373): contribute `markdown.markdownItPlugins`
+  and a `markdown.previewStyles` stylesheet, and return `{ extendMarkdownIt }`
+  from `activate`, which applies `markdown-it-visimark` unless
+  `visimark.preview.enable` is false. VS Code builds its markdown-it instance
+  once, so a change to that setting runs `markdown.api.reloadPlugins`. The
+  plugin reads the path from the render env's `currentDocument` (a `file`
+  URI only) and imports from disk next to the previewed file, refusing a
+  symlink at the final component.
 - Bundle with esbuild: `editors/vscode/dist/extension.js` and
   `.../server.js`, both including the engine. No `node_modules` in the VSIX.
 - `engines.vscode`: `^1.91.0` (the floor `vscode-languageclient` 10 requires).
@@ -373,7 +382,9 @@ No syntax highlighting, no snippets, no language contribution in v1.
 ## 10. Distribution and CI
 
 One version across `packages/visimark`, `packages/visimark-lsp`,
-`editors/vscode`, bumped together.
+`editors/vscode`, bumped together. `packages/markdown-it-visimark` carries the
+same version as its own only, since it bundles the engine rather than pinning
+it; [`docs/releasing.md`](releasing.md) is the procedure.
 
 - **`.github/workflows/ci.yml`** — on push and PR: `bun install`; `bun test`
   (all workspaces, the engine suite plus the new server tests); `bun run

@@ -1,8 +1,8 @@
 # Where VisiMark is listed
 
-VisiMark ships five separate published artifacts (the `visimark` CLI/library,
-two lint-rule plugins, the MCP server, the VS Code extension, and the
-Obsidian plugin). Each artifact has its own set of registries and
+VisiMark ships eight separate published artifacts (the `visimark` CLI/library,
+two lint-rule plugins, the MCP server, the CodeMirror extension, the
+markdown-it plugin, the VS Code extension, and the Obsidian plugin). Each artifact has its own set of registries and
 third-party directories it can appear in. This page is the one place that
 tracks, per artifact, what is **automatic** (fed by `release.yml` on every
 tag, per [`docs/releasing.md`](releasing.md)), what is a **one-time manual
@@ -56,6 +56,19 @@ sibling list) is out of scope too: it's for remote/hosted-URL-only servers
 with no installable package, and `visimark-mcp` ships an installable npm
 package with a stdio transport, so it belongs in `awesome-mcp-servers`
 above, not that list.
+
+## `codemirror-visimark` (npm)
+
+| Where | Status | Notes |
+|---|---|---|
+| [npmjs.com/package/codemirror-visimark](https://www.npmjs.com/package/codemirror-visimark) | **Automatic** once the first tag that contains it ships | Same release leg as the other npm packages ([#360](https://github.com/michal-niedzwiedzki/visimark/issues/360)). |
+
+## `markdown-it-visimark` (npm)
+
+| Where | Status | Notes |
+|---|---|---|
+| [npmjs.com/package/markdown-it-visimark](https://www.npmjs.com/package/markdown-it-visimark) | **Automatic** once the first tag that contains it ships | Same release leg as the other npm packages ([#373](https://github.com/michal-niedzwiedzki/visimark/issues/373)). |
+| markdown-it plugins (npm keyword) | **Automatic** | markdown-it has no plugin list or PR process; its README sends readers to the npm keyword [`markdown-it-plugin`](https://www.npmjs.com/search?q=keywords:markdown-it-plugin), which the package carries. No other directory is in scope for #373. |
 
 ## `visimark-vscode` (VS Code extension)
 
