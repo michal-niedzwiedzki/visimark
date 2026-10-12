@@ -77,19 +77,15 @@ export function place(
   // Anchors, in document order, each still waiting for its comment token.
   const byValue = new Map<number, Decoration>();
   for (const d of decorations) if (d.kind === "anchor") byValue.set(d.span.start, d);
-  const anchors = pass.model.located.anchors.flatMap((a) => {
-    const d = a.value === null ? undefined : byValue.get(a.value.start);
-    return d === undefined
-      ? []
-      : [
-          {
-            comment: text(a.commentSpan),
-            line: lineOf(starts, a.commentSpan.start),
-            d,
-            done: false,
-          },
-        ];
-  });
+  // Every located anchor takes part in matching, marked or not (spec §2.4:
+  // the kth comment is the kth located anchor), so a refused or image anchor
+  // consumes its own comment instead of a later one with the same text.
+  const anchors = pass.model.located.anchors.map((a) => ({
+    comment: text(a.commentSpan),
+    line: lineOf(starts, a.commentSpan.start),
+    d: a.value === null ? undefined : byValue.get(a.value.start),
+    done: false,
+  }));
 
   // Cells, by the source line of the document table they sit in. A sheet
   // whose table came from a CSV is not in `located.tables` and is skipped.
@@ -174,6 +170,7 @@ export function place(
       );
       if (a === undefined) continue;
       a.done = true;
+      if (a.d === undefined) continue;
       const want = text(a.d.span);
       const children = own().children!;
       let j = children.indexOf(comment) - 1;

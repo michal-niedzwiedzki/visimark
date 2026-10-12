@@ -104,3 +104,16 @@ test("path() or readImport throwing renders the host's own HTML", () => {
   const csv = readFileSync(csvPath, "utf8");
   expect(bare(marked({ path: () => csvPath, readImport: boom }).render(csv))).toBe(plain(csv));
 });
+
+test("a refused anchor before a valid one with the same comment does not steal its mark", () => {
+  // the first comment follows bare prose the engine refuses as a target; the
+  // second follows a value it binds. Matching walks every located anchor, so
+  // the first comment consumes the refused anchor, not the valid one.
+  const doc = source.replace(
+    "subtotal 10.00<!--vmark=s.sub-->",
+    "subtotal about ten<!--vmark=s.sub--> or exactly **10.00**<!--vmark=s.sub-->",
+  );
+  expect(marked().render(doc)).toContain(
+    '<strong class="visimark-computed" data-vmark="s.sub">10.00</strong>',
+  );
+});
