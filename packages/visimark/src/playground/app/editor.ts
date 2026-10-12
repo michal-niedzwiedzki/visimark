@@ -5,6 +5,8 @@ import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { search, searchKeymap } from "@codemirror/search";
 import { tags } from "@lezer/highlight";
+import { isVmarkFence, visimarkLanguage } from "codemirror-visimark/highlight.js";
+import { VMARK_PALETTE } from "./highlight-palette.js";
 
 /**
  * The editor (#360): CodeMirror 6, bundled, behind the same small surface the
@@ -103,9 +105,15 @@ const theme = EditorView.theme(
 
 const highlight = HighlightStyle.define([
   { tag: tags.heading, color: "#7ee787" },
-  { tag: tags.comment, color: "#7d7d7d" },
+  { tag: tags.comment, color: VMARK_PALETTE.comment },
   { tag: [tags.url, tags.link, tags.monospace], color: "#79c0ff" },
   { tag: tags.list, color: "#ffb454" },
+  // the inside of a vmark fence (#367)
+  { tag: [tags.keyword, tags.operatorKeyword, tags.atom], color: VMARK_PALETTE.keyword },
+  { tag: [tags.function(tags.variableName), tags.typeName], color: VMARK_PALETTE.callable },
+  { tag: [tags.number, tags.literal, tags.unit], color: VMARK_PALETTE.literal },
+  { tag: tags.string, color: VMARK_PALETTE.text, fontStyle: "italic" },
+  { tag: tags.definition(tags.variableName), color: VMARK_PALETTE.text, fontWeight: "600" },
 ]);
 
 export function createEditor(
@@ -129,7 +137,10 @@ export function createEditor(
     search(),
     keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap]),
     EditorView.lineWrapping,
-    markdown({ base: markdownLanguage }),
+    markdown({
+      base: markdownLanguage,
+      codeLanguages: (info) => (isVmarkFence(info) ? visimarkLanguage : null),
+    }),
     syntaxHighlighting(highlight),
     theme,
     ...(setup.extensions ?? []),

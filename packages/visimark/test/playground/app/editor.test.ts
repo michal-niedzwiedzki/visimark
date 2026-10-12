@@ -111,3 +111,12 @@ test("load keeps the editor's extensions and reports no change", () => {
   expect(ed.view.dom.querySelector(".cm-lineNumbers")).not.toBeNull();
   ed.view.destroy();
 });
+
+test("a vmark fence is tokenized as the vmark language (#367)", async () => {
+  const { ensureSyntaxTree } = await import("@codemirror/language");
+  const doc = "# t\n\n```vmark #s\ntotal = SUM(Net)\n```\n";
+  const ed = createEditor(mount(doc));
+  const tree = ensureSyntaxTree(ed.view.state, doc.length, 5000)!;
+  expect(tree.resolveInner(doc.indexOf("SUM") + 1, 1).name).toBe("variableName.function");
+  ed.view.destroy();
+});
