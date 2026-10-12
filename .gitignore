@@ -1,6 +1,7 @@
 node_modules
 dist
 packages/codemirror-visimark/.types/
+packages/markdown-it-visimark/.types/
 *.vsix
 *.log
 .env

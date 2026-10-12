@@ -3,7 +3,10 @@
   "compilerOptions": {
     "types": ["node", "vscode"],
     "module": "ESNext",
-    "moduleResolution": "Bundler"
+    "moduleResolution": "Bundler",
+    "paths": {
+      "markdown-it-visimark": ["../../packages/markdown-it-visimark/src/index.ts"]
+    }
   },
   "include": ["src"]
 }

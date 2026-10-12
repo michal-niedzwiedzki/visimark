@@ -22,6 +22,9 @@
   // Their shape comes entirely from gen-articles-lib.ts's and gen-docs-lib.ts's
   // template functions; formatting the generated HTML fights every future generator
   // run the same way formatting docs/vendor/** would fight the next bundle rebuild.
+  //
+  // packages/markdown-it-visimark/test/fixtures/*.html is markdown-it's exact
+  // output, compared byte for byte by the package's render tests (#373).
   "ignorePatterns": [
     "**/*.md",
     ".vscode/**",
@@ -34,6 +37,7 @@
     "docs/ci.html",
     "docs/tutorial.html",
     "docs/simulate.html",
-    "docs/mcp-server.html"
+    "docs/mcp-server.html",
+    "packages/markdown-it-visimark/test/fixtures/*.html"
   ]
 }

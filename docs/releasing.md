@@ -22,6 +22,8 @@ directories still prepared but not sent — see
 | `remark-lint-visimark` on npm, with a provenance attestation | `packages/remark-visimark/package.json` | `npm view remark-lint-visimark@<v>` — skip if already there |
 | `markdownlint-rule-visimark` on npm, with a provenance attestation | `packages/markdownlint-visimark/package.json` | `npm view markdownlint-rule-visimark@<v>` — skip if already there |
 | `visimark-mcp` on npm, with a provenance attestation | `packages/visimark-mcp/package.json` | `npm view visimark-mcp@<v>` — skip if already there |
+| `codemirror-visimark` on npm, with a provenance attestation | `packages/codemirror-visimark/package.json` | `npm view codemirror-visimark@<v>` — skip if already there |
+| `markdown-it-visimark` on npm, with a provenance attestation | `packages/markdown-it-visimark/package.json` | `npm view markdown-it-visimark@<v>` — skip if already there |
 | `io.github.michal-niedzwiedzki/visimark` on the MCP registry | `server.json`, rewritten from the tag | `GET /v0/servers?search=visimark` — skip if this version is listed; runs only if the npm leg succeeded, since the entry points at the npm package, then waits (up to ~9 minutes) for npm to actually list the version — the registry validates against npm and refuses an entry npm cannot yet serve — and retries a 5xx from the registry, never a 4xx |
 | `visimark-vscode` on the VS Code Marketplace | `editors/vscode/package.json` | `vsce show` — skip if the version is listed |
 | `visimark-vscode` on Open VSX | `editors/vscode/package.json` | Open VSX API — skip if the version is there; create the namespace only if it is genuinely missing |
@@ -53,7 +55,7 @@ attestation and the GitHub Release.
 flowchart LR
   tag[Push tag vX.Y.Z] --> run[release.yml]
   run --> npm[npm visimark]
-  run --> npmplugins[npm remark/markdownlint/mcp]
+  run --> npmplugins[npm remark/markdownlint/mcp/codemirror/markdown-it]
   run --> mcpreg[MCP registry]
   run --> vsce[VS Code Marketplace]
   run --> ovsx[Open VSX]
@@ -106,7 +108,7 @@ gh workflow run release.yml -f tag=vX.Y.Z -f dry_run=true
 ```
 
 It builds, tests, runs the tag checks above, runs `npm publish --dry-run` for
-the five packages, packages the `.vsix` and extracts the release notes. It
+the six npm packages, packages the `.vsix` and extracts the release notes. It
 publishes nothing, cuts no GitHub Release, closes no issues, and skips **every
 leg must have landed** (there is nothing to land); a *dry run verdict* step
 fails the run if any rehearsed step did not succeed. It runs `npm publish`
@@ -249,7 +251,8 @@ What the scanner looks at, learned from 0.2.0 to 0.2.2:
    packages/markdownlint-visimark/package.json # its own version AND its visimark dependency pin
    packages/visimark-mcp/package.json          # its own version AND its visimark dependency pin
    packages/codemirror-visimark/package.json   # its own version only — it bundles the engine
-   bun.lock                                    # the same seven "version"s and three visimark pins, mirrored
+   packages/markdown-it-visimark/package.json  # its own version only — it bundles the engine
+   bun.lock                                    # the same eight "version"s and three visimark pins, mirrored
    ```
    They must match each other and the tag exactly. `action.yml` is in the list
    because its default is what a consumer's `npx` installs: leave it behind and
@@ -366,7 +369,7 @@ scripts/verify-release.sh vX.Y.Z
 
 It is read-only, and needs only `curl`, `gh` and `node` or Bun. It checks:
 
-- all five npm packages are at that version **and** carry a provenance
+- all six npm packages are at that version **and** carry a provenance
   attestation (`dist.attestations`). CI proves the version number matches the
   manifests; only npm proves it was ever published, and `visimark@0.1.0` is the
   standing reminder that those are different questions;
@@ -403,7 +406,7 @@ gh workflow run release.yml -f tag=vX.Y.Z
 With `tag`, it checks that tag out, so the versions it publishes are the tagged
 ones and the GitHub Release and the request-issue bookkeeping are backfilled
 too. Without `tag` it runs from the default branch against the versions
-currently in the manifests, repairs the **publish** legs only — the five npm
+currently in the manifests, repairs the **publish** legs only — the six npm
 packages, the MCP registry entry, the Marketplace and Open VSX — and warns in
 the log that it skipped the two tag-gated ones, the GitHub Release and the
 request-issue bookkeeping. **Never bump the version just to
@@ -429,6 +432,11 @@ npm view <name> version    # "npm error 404" is what you want to see
 ([#360](https://github.com/michal-niedzwiedzki/visimark/issues/360)) went
 through this list: its name was free on 2026-10-11, it pins nothing so point 3
 does not apply, and its leg runs after the MCP server's.
+
+`markdown-it-visimark`
+([#373](https://github.com/michal-niedzwiedzki/visimark/issues/373)) went
+through it too: its name was free on 2026-10-12, it pins nothing, and its leg
+runs after the CodeMirror extension's.
 
 **2. A leg that depends on another must run after it.** `release.yml` publishes
 in dependency order — engine, then the remark plugin, the markdownlint rule and
@@ -476,7 +484,7 @@ proves it *starts*.
 | Rule | Consequence if ignored |
 |------|------------------------|
 | The tag is the only publisher. No hand-run `npm publish` / `vsce publish` / `ovsx publish`. | npm keeps the version number forever on the first publish it sees. `visimark@0.1.0` is a mis-publish that can never be reissued. |
-| All six `package.json` versions equal the tag, exactly — and the three `dependencies.visimark` pins with them. | One tag then publishes mismatched version numbers, or a leg fails mid-release with the others already out. |
+| All eight `package.json` versions equal the tag, exactly — and the three `dependencies.visimark` pins with them. | One tag then publishes mismatched version numbers, or a leg fails mid-release with the others already out. |
 | `bun.lock`'s mirrored versions and pins equal the tag too. | `--frozen-lockfile` does not catch this — Bun links a workspace-named dependency locally regardless of the pin text — so it drifted silently for two releases (`0.1.8` through v0.1.9 and v0.1.10) before `ci.yml` learned to check it. |
 | The changelog entry is written, dated and merged **before** the tag. | The GitHub Release body is that version's section of `CHANGELOG.md` at the tagged commit — a tag ahead of the changelog has no section to extract, and the release step fails. |
 | Each changelog has a dated `## X.Y.Z - YYYY-MM-DD` heading for the release's version, in the release commit. | `ci.yml`'s "every release must have a changelog entry" step fails the release commit. Without the entry the GitHub Release body ships the previous version's notes, or the Marketplace page silently skips the version. The check proves the heading exists, not that the entry is accurate. |

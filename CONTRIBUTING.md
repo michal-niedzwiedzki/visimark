@@ -221,6 +221,13 @@ and `articles-pages` enforce the same checks in CI either way.
 | `bun run serve` | Serves `docs/` on `http://localhost:8080` — needed for the playground and the tutorial pages, which fetch their content and cannot run from `file://` |
 | `bun run vscode-install` | Builds, packages and installs the VS Code extension locally |
 
+The extension's Markdown preview marks (#373) have one check no test reaches,
+because it needs VS Code itself. After `bun run vscode-install`, open
+`docs/example-invoice-drift.md` and run **Markdown: Open Preview to the Side**:
+the stale values are flagged on the first render, with no refresh. Set
+`visimark.preview.enable` to false and the marks leave the open preview without
+a window reload; set it back and they return.
+
 ## Before you push
 
 Run these, in this order. It is the same ground CI covers, and it is much faster
@@ -279,10 +286,10 @@ in production) would answer differently than the CLI for the same document.
 Fix: this is a real bug, not something to silence — find why the two hosts
 disagree, and fix the engine or the `ReaderPort` boundary, never the check.
 
-**Every version-carrying file must agree.** Thirteen fields carry the version —
-seven package manifests (three of which also pin `visimark` as a dependency;
-`codemirror-visimark` carries only its own version, because it bundles the
-engine),
+**Every version-carrying file must agree.** Fourteen fields carry the version —
+eight package manifests (three of which also pin `visimark` as a dependency;
+`codemirror-visimark` and `markdown-it-visimark` carry only their own version,
+because they bundle the engine),
 `action.yml`'s pinned `version` default and `scripts/precommit-visimark-check.sh`.
 One tag publishes all of them, the Action's default is what a consumer's `npx`
 actually installs, and an exact `visimark` pin is what stops a published plugin

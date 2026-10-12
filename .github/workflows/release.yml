@@ -217,6 +217,25 @@ jobs:
             npm publish --provenance --access public
           fi
 
+      # markdown-it-visimark bundles the engine rather than pinning it, so it
+      # does not depend on the engine leg having landed; it follows the
+      # CodeMirror leg only to keep the npm legs in one place (#373).
+      - name: Publish the markdown-it plugin to npm
+        id: markdown-it-plugin
+        continue-on-error: true
+        working-directory: packages/markdown-it-visimark
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          if [ "$DRY_RUN" = true ]; then
+            npm publish --dry-run --access public
+          elif npm view "markdown-it-visimark@$ENGINE_VERSION" version >/dev/null 2>&1; then
+            echo "markdown-it-visimark@$ENGINE_VERSION is already on npm; skipping."
+          else
+            npm publish --provenance --access public
+          fi
+
       # The official MCP registry is how an agent discovers this server at all;
       # npm is only where the bytes live. The namespace is proven by GitHub
       # login and is independent of the `visimark_` tool-name prefix, so a
@@ -418,6 +437,7 @@ jobs:
           MARKDOWNLINT_RULE_OUTCOME: ${{ steps.markdownlint-rule.outcome }}
           MCP_SERVER_OUTCOME: ${{ steps.mcp-server.outcome }}
           CODEMIRROR_OUTCOME: ${{ steps.codemirror-extension.outcome }}
+          MARKDOWN_IT_OUTCOME: ${{ steps.markdown-it-plugin.outcome }}
           PACKAGE_OUTCOME: ${{ steps.package.outcome }}
           NOTES_OUTCOME: ${{ steps.notes.outcome }}
           TAG: ${{ steps.tag.outputs.tag }}
@@ -429,6 +449,7 @@ jobs:
             "npm publish --dry-run (markdownlint-rule-visimark)=$MARKDOWNLINT_RULE_OUTCOME" \
             "npm publish --dry-run (visimark-mcp)=$MCP_SERVER_OUTCOME" \
             "npm publish --dry-run (codemirror-visimark)=$CODEMIRROR_OUTCOME" \
+            "npm publish --dry-run (markdown-it-visimark)=$MARKDOWN_IT_OUTCOME" \
             "Package the extension=$PACKAGE_OUTCOME" \
             "Extract the release notes=$NOTES_OUTCOME"; do
             # Anything but success fails: a skipped leg is a leg that did not
@@ -471,6 +492,7 @@ jobs:
           MARKDOWNLINT_RULE_OUTCOME: ${{ steps.markdownlint-rule.outcome }}
           MCP_SERVER_OUTCOME: ${{ steps.mcp-server.outcome }}
           CODEMIRROR_OUTCOME: ${{ steps.codemirror-extension.outcome }}
+          MARKDOWN_IT_OUTCOME: ${{ steps.markdown-it-plugin.outcome }}
           MCP_REGISTRY_OUTCOME: ${{ steps.mcp-registry.outcome }}
           PACKAGE_OUTCOME: ${{ steps.package.outcome }}
           MARKETPLACE_OUTCOME: ${{ steps.marketplace.outcome }}
@@ -491,6 +513,7 @@ jobs:
             "Publish the markdownlint rule to npm=$MARKDOWNLINT_RULE_OUTCOME" \
             "Publish the MCP server to npm=$MCP_SERVER_OUTCOME" \
             "Publish the CodeMirror extension to npm=$CODEMIRROR_OUTCOME" \
+            "Publish the markdown-it plugin to npm=$MARKDOWN_IT_OUTCOME" \
             "Publish to the MCP registry=$MCP_REGISTRY_OUTCOME" \
             "Package the extension=$PACKAGE_OUTCOME" \
             "Publish to the VS Code Marketplace=$MARKETPLACE_OUTCOME" \
@@ -530,6 +553,7 @@ jobs:
           on_npm_markdownlint() { npm view "markdownlint-rule-visimark@$ENGINE_VERSION" version >/dev/null 2>&1; }
           on_npm_mcp() { npm view "visimark-mcp@$ENGINE_VERSION" version >/dev/null 2>&1; }
           on_npm_codemirror() { npm view "codemirror-visimark@$ENGINE_VERSION" version >/dev/null 2>&1; }
+          on_npm_markdown_it() { npm view "markdown-it-visimark@$ENGINE_VERSION" version >/dev/null 2>&1; }
           on_mcp_registry() {
             curl -sS "https://registry.modelcontextprotocol.io/v0/servers?search=visimark" \
               | grep -q "\"version\"[[:space:]]*:[[:space:]]*\"$ENGINE_VERSION\""
@@ -572,6 +596,13 @@ jobs:
             echo "npm has codemirror-visimark@$ENGINE_VERSION."
           else
             echo "::error::npm still does not have codemirror-visimark@$ENGINE_VERSION after ~10 minutes of retries — this is absence, not lag. Fix the CodeMirror extension leg and re-run this workflow; do not publish by hand (see docs/releasing.md)."
+            fail=1
+          fi
+
+          if retry on_npm_markdown_it; then
+            echo "npm has markdown-it-visimark@$ENGINE_VERSION."
+          else
+            echo "::error::npm still does not have markdown-it-visimark@$ENGINE_VERSION after ~10 minutes of retries — this is absence, not lag. Fix the markdown-it plugin leg and re-run this workflow; do not publish by hand (see docs/releasing.md)."
             fail=1
           fi
 

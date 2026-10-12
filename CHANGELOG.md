@@ -4,6 +4,15 @@
 
 ### Added
 
+- **`markdown-it-visimark`, VisiMark marks in rendered HTML.** A new npm
+  package: `md.use(markdownItVisimark)` wraps each computed value with
+  `visimark-computed` (and `visimark-disagrees` when it no longer matches its
+  formula), carries `codemirror-visimark`'s `data-vmark*` attributes, and puts
+  the fence's info string on the rendered `vmark` block as `data-vmark-info`.
+  No CSS and no dependency. The VS Code extension uses it for the built-in
+  Markdown preview, switched by the new `visimark.preview.enable` setting.
+  ([#373](https://github.com/michal-niedzwiedzki/visimark/issues/373))
+
 - **`codemirror-visimark/highlight`, syntax highlighting for `vmark` blocks.**
   `visimarkLanguage` colours a fence's keywords, names, functions, numbers,
   units and comments when a host passes it to `markdown({ codeLanguages })`,

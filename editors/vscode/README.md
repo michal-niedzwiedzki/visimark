@@ -80,6 +80,13 @@ too, and drifts with it.
   fixing that sheet or explaining it.
 - **Quick fixes** for the rest: rewrite an unambiguous date to ISO, wrap a
   column reference in `SUM(...)`, correct a misspelled name.
+- **Marked preview.** The built-in Markdown preview underlines every value the
+  document computes, and colours the ones that no longer match their formula.
+  Imports (`from rows.csv`) are read from the previewed file's own folder; an
+  untitled file has none, so values that depend on an import are left
+  unmarked. A file reached through a symlinked folder inside that folder is
+  still read; only a symlink to the file itself is refused. Turn the marks
+  off with `visimark.preview.enable` — the language server keeps running.
 
 ## Written by an agent, checked by a machine
 
@@ -100,7 +107,7 @@ that contradicts itself, add `visimark check` to CI.
 **Commands:** Fix All Stale Values · Fix Sheet · Explain Sheet · Show Report ·
 Restart Server.
 
-**Settings:** `visimark.enable`, `visimark.format.fixOnSave`,
+**Settings:** `visimark.enable`, `visimark.preview.enable`, `visimark.format.fixOnSave`,
 `visimark.format.fixDates`, `visimark.inlayHints.enable`,
 `visimark.codeLens.enable`, `visimark.statusBar.enable`.
 

@@ -1,0 +1,22 @@
+<p>Total <strong class="visimark-computed" data-vmark="s.total">12.50</strong><!--vmark=s.total-->, subtotal <span class="visimark-computed" data-vmark="s.sub">10.00</span><!--vmark=s.sub--> and tax <code class="visimark-computed" data-vmark="s.tax">2.50</code><!--vmark=s.tax-->.</p>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th style="text-align:right">Qty</th>
+<th style="text-align:right">Net</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>pen</td>
+<td style="text-align:right">2</td>
+<td style="text-align:right"><span class="visimark-computed" data-vmark="s.Net" data-vmark-row="0">10.00</span></td>
+</tr>
+</tbody>
+</table>
+<pre data-vmark-info="#s"><code class="language-vmark">Net precision 2 = Qty * 5
+sub precision 2 = SUM(Net)
+tax precision 2 = sub * 0.25
+total precision 2 = sub + tax
+</code></pre>
