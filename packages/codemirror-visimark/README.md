@@ -27,12 +27,13 @@ npm i @codemirror/lint
 bun add @codemirror/lint
 ```
 
-For highlighting, add `@codemirror/language`. Any editor that already uses
-`@codemirror/lang-markdown` has it:
+For highlighting, add `@codemirror/language`, and `@codemirror/lang-markdown`
+for the Markdown language the example below passes it to. An editor that
+already uses `@codemirror/lang-markdown` has both:
 
 ```bash
-npm i @codemirror/language
-bun add @codemirror/language
+npm i @codemirror/language @codemirror/lang-markdown
+bun add @codemirror/language @codemirror/lang-markdown
 ```
 
 The VisiMark engine is bundled into this package, so there is nothing else to
