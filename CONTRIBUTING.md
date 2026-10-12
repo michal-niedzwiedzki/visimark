@@ -309,9 +309,13 @@ section.
 ## The repository eats its own cooking
 
 `dogfood.yml` runs the shipped GitHub Action against this repository's own
-documents — the worked examples, the tutorial, the CI guide, the design doc, the
-README and the changelog. If your pull request touches one of them and the
-numbers in it stop agreeing with its formulas, the build goes red.
+documents: every tracked Markdown file, package READMEs and editor plugins
+included. The exceptions are `docs/WIP/`, the vendored skills under
+`.agents/skills/<name>/`, the engine's test fixtures, and the drift examples
+that fail on purpose. If your pull request touches one of them and the numbers
+in it stop agreeing with its formulas, the build goes red. `bun test` runs the
+same check (`scripts/doc-set.test.ts`), so it fails locally too, with or
+without the pre-commit hook installed.
 
 There are two findings you are likely to meet, and each has exactly one correct
 response.

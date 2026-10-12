@@ -62,6 +62,8 @@ jobs:
             "docs/example-lunch-split-drift.md"
             "docs/design/presentation-only-percent-display-sigil-plan.md"
             "docs/design/presentation-only-percent-display-sigil-spec.md"
+            # gen:mcp's copy of the drift invoice, failing for the same reason
+            "packages/visimark-mcp/docs/example-invoice-drift.md"
           )
           # A default (non-glob-magic) git pathspec doesn't set FNM_PATHNAME,
           # so a bare `*` already crosses `/` — `docs/*.md` is already
@@ -69,7 +71,13 @@ jobs:
           # literal `/` after the `**`, so it silently skipped every file
           # directly under docs/ (docs/ci.md, docs/distribution.md, and
           # docs/example-deal-desk.md itself — the file that started this).
-          files=$(git ls-files 'docs/*.md' README.md CHANGELOG.md CONTRIBUTING.md skills/visimark/SKILL.md | grep -v '^docs/WIP/')
+          # Every tracked Markdown file, so a new package's README is checked
+          # the day it lands. Excluded wholesale: docs/WIP/, the vendored
+          # skills under .agents/skills/<name>/ (pinned by hash in
+          # skills-lock.json), and the engine's test fixtures, which fail on
+          # purpose. .pre-commit-config.yaml selects the same set;
+          # scripts/doc-set.test.ts keeps the two in step.
+          files=$(git ls-files '*.md' | grep -vE '^(docs/WIP/|\.agents/skills/[^/]+/|packages/visimark/test/fixtures/)')
           for f in "${exclude[@]}"; do
             files=$(echo "$files" | grep -vxF "$f")
           done
