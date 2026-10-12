@@ -124,7 +124,7 @@ An anchor is found by its comment. Inside the inline token whose `map` covers th
 
 A computed cell whose source is `**10.00**` renders as `<td …><span class="visimark-computed" …><strong>10.00</strong></span></td>`. The `<strong>` does not also receive the class.
 
-Tables are paired with model tables by source span when the table token has `map`. Otherwise they are paired in document order. A fence that is not the next block still marks, because the marks come from the engine model.
+A rendered table is paired with a model table when its `table_open.map[0]` is the source line of that table's span; a table token with no `map` is not marked. A table the engine read from a CSV has no source and is never paired. A table separated from its fence by anything but blank lines is not the sheet's table at all — [§3](../visimark-design.md#3-document-model)'s table association makes that a `SHEET` error — so there is no decoration to place, and that case needs no rule here.
 
 A decoration is placed only where the rendered text matches the source: the split-off suffix of a text token, the text between a `strong_open`/`em_open` and its close, a `code_inline` token's content, or a cell's `inline` content must equal the source text of the decoration's span (for a cell and for inline code, after markdown-it's own trimming). A decoration the mapper cannot place is skipped. The other marks and `data-vmark-info` still apply. The plugin does not throw for a miss.
 
@@ -159,7 +159,7 @@ The `ReaderPort` is the engine's own `memoryReader` (exported by `packages/visim
 
 `memoryReader`'s `realpath` returns its input, so the gate's symlink-escape check does not see a link. The plugin does not open with `O_NOFOLLOW`. A host that must not follow a symlink returns null from `readImport` for that path. The engine then reports `IMPORT` (`imported file not found`), and section 2.3 withholds import-dependent marks. This is the specified behaviour. The VS Code host does that refusal itself (section 2.7).
 
-The published bundle replaces `node:path` with a local shim, `packages/markdown-it-visimark/src/browser-path.ts`, that exports the four names `gate.ts` imports: `dirname`, `isAbsolute`, `resolve`, and `sep`. Unlike `codemirror-visimark`'s POSIX-only shim (Obsidian hands it vault paths), this one receives real host paths, so it accepts an absolute POSIX path and an absolute Windows path with a drive letter (`C:\notes\note.md` and `C:/notes/note.md`). `isAbsolute` is true for both. `dirname` and `resolve` agree with `node:path.win32` on drive-letter paths and with `node:path.posix` on every other path the tests feed them. `sep` is `\` for a drive-letter path and `/` otherwise, matching the module `dirname` and `resolve` follow. It is not chosen by scanning the original string for a backslash: `win32.resolve("C:/notes/note.md")` returns `C:\notes\note.md`, and containment has to use `\`. A relative `path()` result is resolved against `/`, the same fallback as `codemirror-visimark`'s shim. The VS Code extension does not use this shim: it bundles the plugin from source for Node, where `node:path` is the real module.
+The published bundle replaces `node:path` with a local shim, `packages/markdown-it-visimark/src/browser-path.ts`, that exports the four names `gate.ts` imports: `dirname`, `isAbsolute`, `resolve`, and `sep`. Unlike `codemirror-visimark`'s POSIX-only shim (Obsidian hands it vault paths), this one receives real host paths, so it accepts an absolute POSIX path and an absolute Windows path with a drive letter (`C:\notes\note.md` and `C:/notes/note.md`). `isAbsolute` is true for both. `sep` is a single constant the gate's `contains` reads, so it cannot follow the path: it is `/`, and a drive-letter path is normalised to `/` separators instead. `dirname` and `resolve` on a drive-letter path return what `node:path.win32` returns with every `\` replaced by `/` (`resolve("C:\\notes", "sub\\rows.csv")` is `C:/notes/sub/rows.csv`), and agree with `node:path.posix` on every other path the tests feed them. `readImport` therefore receives `C:/notes/rows.csv` on Windows, which every Windows file API accepts; the README says so. A relative `path()` result is resolved against `/`, the same fallback as `codemirror-visimark`'s shim. The VS Code extension does not use this shim: it bundles the plugin from source for Node, where `node:path` is the real module.
 
 The shim is tested against those two Node path modules on the calls the gate makes: `dirname(resolve(doc.path))`, `resolve(base, "rows.csv")`, `isAbsolute`, and `sep`.
 
@@ -223,7 +223,7 @@ Each open question from the pre-review on #373 is settled as follows.
 
 | Fork | Settlement |
 |---|---|
-| 1 | Section 2.4 and 2.8. `html: false` is unchanged. Anchors are found by their comment, in order, inside the inline token covering their line. Strong, emphasis and inline code take the attributes on the element; bare text is split and wrapped in `<span>`. Cells wrap inner HTML. A separated fence still marks. |
+| 1 | Section 2.4 and 2.8. `html: false` is unchanged. Anchors are found by their comment, in order, inside the inline token covering their line. Strong, emphasis and inline code take the attributes on the element; bare text is split and wrapped in `<span>`. Cells wrap inner HTML. A table separated from its fence is a `SHEET` error with nothing to mark. |
 | 2 | Section 2.6 and 2.7. The root is the file's directory; section 2.7 says why the discussion's workspace-folder root reduces to it. Untitled and non-file paths withhold imports. Restricted Mode does not activate the extension. |
 | 3 | Section 2.6. A single-entry cache keyed on (source, path), held in the plugin's closure, never on `md`. |
 | 4 | Section 2.4 and 2.5. Acceptance round-trips `"`, `<`, `&`, and `'`. |
@@ -333,7 +333,7 @@ The stale variant (`9.00`) uses `class="visimark-computed visimark-disagrees"` o
 
 `html: false`, with or without the plugin, is the unmarked string above except each comment is escaped, `&lt;!--vmark=s.total--&gt;` and so on.
 
-A fence whose info string is `vmark #s "a<b>&'"` renders `data-vmark-info="#s &quot;a&lt;b&gt;&amp;'"`, and reading that attribute back with an HTML parser (`@happy-dom/global-registrator`, a devDependency here as it is in `codemirror-visimark`) gives `#s "a<b>&'"`.
+A fence whose info string is `vmark #s "a<b>&'"` renders `data-vmark-info="#s &quot;a&lt;b&gt;&amp;'&quot;"`, and reading that attribute back with an HTML parser (`@happy-dom/global-registrator`, a devDependency here as it is in `codemirror-visimark`) gives `#s "a<b>&'"`.
 
 Further acceptance, each with an assertion:
 
@@ -348,7 +348,7 @@ Further acceptance, each with an assertion:
 | Two documents rendered alternately on one `md` instance | Each render's marks are only that document's. |
 | The same (source, path) rendered twice in a row | The engine runs once (a counting `readImport` is called on the first render only). A changed source or a changed path runs it again. |
 | Default, `typographer: true`, `linkify: true`, and `md.use(markdownItFootnote)` before and after the plugin | The fixture's four marks and `data-vmark-info="#s"` still land. |
-| A paragraph between the table and the fence | The Net cell is still marked. |
+| An unrelated table earlier in the document, before the sheet's table | The Net mark lands in the sheet's table only; the earlier table has no mark. |
 | A document with no `vmark` fence | Byte-identical to markdown-it without the plugin. |
 | `dist/` | No `node:` specifier. |
 | Packed tarball under `smoke-node` and `smoke-bun` | Imports, renders the fixture, and sees `visimark-computed`, `data-vmark="s.total"`, `data-vmark="s.sub"`, and `data-vmark-info="#s"`, once against `markdown-it@14.3.2` and once against `markdown-it@latest`. |
