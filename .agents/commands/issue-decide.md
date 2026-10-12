@@ -413,3 +413,5 @@ commit the revised spec (and plan / implementation if present) onto it rather
 than opening a second PR. A row already condensed into the Shipped register
 stays there — the re-decision edits it in place, never restores a section-table
 row.
+
+<!--vmark:no-formulas-->
