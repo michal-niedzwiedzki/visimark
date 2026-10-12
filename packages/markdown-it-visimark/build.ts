@@ -1,5 +1,5 @@
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 
 /**
  * The published build (#373). One ESM file for any markdown-it host, the
@@ -35,6 +35,14 @@ const result = await Bun.build({
       setup(build) {
         build.onResolve({ filter: /^visimark$/ }, () => ({ path: engineBrowser }));
         build.onResolve({ filter: /^node:path$/ }, () => ({ path: pathShim }));
+        // The engine's Markdown parser decodes character references through
+        // `decode-named-character-reference`, whose `browser` export builds a
+        // DOM element at import time. A markdown-it host is as often Node or
+        // an Electron main process as a browser, so take its DOM-free entry —
+        // the one the same import resolves to outside a browser build.
+        build.onResolve({ filter: /^decode-named-character-reference$/ }, (args) => ({
+          path: Bun.resolveSync(args.path, dirname(args.importer)),
+        }));
       },
     },
   ],
