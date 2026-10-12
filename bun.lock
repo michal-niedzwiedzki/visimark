@@ -58,17 +58,21 @@
       "name": "codemirror-visimark",
       "version": "0.2.0",
       "devDependencies": {
+        "@codemirror/lang-markdown": "^6.5.2",
+        "@codemirror/language": "^6.13.1",
         "@codemirror/lint": "^6.9.7",
         "@codemirror/state": "^6.7.6",
         "@codemirror/view": "^6.43.14",
         "@happy-dom/global-registrator": "^20.14.5",
       },
       "peerDependencies": {
+        "@codemirror/language": "^6.3.0",
         "@codemirror/lint": "^6.4.0",
         "@codemirror/state": "^6.5.2",
         "@codemirror/view": "^6.36.2",
       },
       "optionalPeers": [
+        "@codemirror/language",
         "@codemirror/lint",
       ],
     },
@@ -149,8 +153,10 @@
     },
   },
   "overrides": {
+    "@codemirror/language": "6.13.1",
     "@codemirror/state": "6.7.6",
     "@codemirror/view": "6.43.13",
+    "@lezer/highlight": "1.2.5",
   },
   "packages": {
     "@azu/format-text": ["@azu/format-text@1.0.2", "", {}, "sha512-Swi4N7Edy1Eqq82GxgEECXSSLyn6GOb5htRFPzBDdUkECGXtlf12ynO5oJSpWKPwCaUssOu7NfhDcCWpIC6Ywg=="],

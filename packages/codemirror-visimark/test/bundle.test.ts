@@ -62,3 +62,30 @@ test("only lint.js imports @codemirror/lint", () => {
     expect(text(f).includes("@codemirror/lint"), `${f} imports @codemirror/lint`).toBe(false);
   }
 });
+
+// specifiers of the static imports in a minified ESM file or a declaration file
+const specifiers = (f: string): string[] =>
+  [...text(f).matchAll(/(?:from|import)\s*"([^"]+)"/g)].map((m) => m[1]!).sort();
+
+test("H8: highlight.js and highlight.d.ts are built", () => {
+  const files = readdirSync(dist);
+  expect(files).toContain("highlight.js");
+  expect(files).toContain("highlight.d.ts");
+});
+
+test("H8: highlight.js imports @codemirror/language and nothing else, not even a chunk", () => {
+  expect([...new Set(specifiers("highlight.js"))]).toEqual(["@codemirror/language"]);
+});
+
+test("H8: highlight.d.ts imports only @codemirror/language", () => {
+  expect([...new Set(specifiers("highlight.d.ts"))]).toEqual(["@codemirror/language"]);
+});
+
+test("H8: only highlight.js imports @codemirror/language", () => {
+  for (const f of js()) {
+    if (f === "highlight.js") continue;
+    expect(text(f).includes("@codemirror/language"), `${f} imports @codemirror/language`).toBe(
+      false,
+    );
+  }
+});
