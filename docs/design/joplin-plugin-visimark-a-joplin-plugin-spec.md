@@ -208,7 +208,7 @@ computed values export plain.
 ### 2.6 The build
 
 `build.ts` runs esbuild three times. All three builds share these options:
-`bundle: true`, `format: "cjs"`, `platform: "browser"`, `target: "es2020"`,
+`bundle: true`, `platform: "browser"`, `target: "es2020"`,
 `minify: true`, `metafile: true`, and these aliases:
 
 | Specifier | Resolves to |
@@ -223,16 +223,18 @@ Each package resolves to its source rather than its `exports`, for the same
 reason `editors/obsidian/esbuild.config.mjs` gives: the plugin must not ship a
 stale `dist/`.
 
-| Entry | Output | `external` |
-|---|---|---|
-| `src/index.ts` | `dist/index.js` | none |
-| `src/codemirrorContentScript.ts` | `dist/codemirrorContentScript.js` | `@codemirror/*`, `@lezer/*` |
-| `src/markdownItContentScript.ts` | `dist/markdownItContentScript.js` | none |
+| Entry | Output | `format` | `external` |
+|---|---|---|---|
+| `src/index.ts` | `dist/index.js` | `iife` | none |
+| `src/codemirrorContentScript.ts` | `dist/codemirrorContentScript.js` | `cjs` | `@codemirror/*`, `@lezer/*` |
+| `src/markdownItContentScript.ts` | `dist/markdownItContentScript.js` | `cjs` | none |
 
 The editor script's externals are what Joplin's `codeMirrorRequire` provides
 to CodeMirror content scripts at run time: a second copy of CodeMirror would be
 a second editor state. CommonJS output gives each content script the
-`module.exports.default` shape Joplin loads.
+`module.exports.default` shape Joplin loads. The entry point is a plain script
+that uses the `joplin` global and touches no `module`, because Joplin documents
+`module.exports` only for content scripts.
 
 After the three builds, `build.ts` writes `dist/manifest.json` (§2.3), copies
 `src/visimark.css` to `dist/`, and calls the packer.
