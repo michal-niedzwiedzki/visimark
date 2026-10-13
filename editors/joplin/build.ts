@@ -5,9 +5,9 @@ import { fileURLToPath } from "node:url";
 import { ustar } from "./pack.js";
 
 /**
- * The Joplin plugin build (#378, spec §2.6). Three CommonJS bundles — Joplin
- * loads a content script as `require(file).default` — then a manifest stamped
- * with the engine's version, the stylesheet, and the `.jpl`.
+ * The Joplin plugin build (#378, spec §2.6). A plain-script entry point and two
+ * CommonJS content scripts — Joplin loads one as `require(file).default` — then
+ * a manifest stamped with the engine's version, the stylesheet, and the `.jpl`.
  *
  * Every workspace package resolves to its **source**, for the reason
  * `editors/obsidian/esbuild.config.mjs` gives: the plugin must not ship a stale
@@ -19,13 +19,16 @@ const packages = join(here, "..", "..", "packages");
 
 export const ENTRIES: readonly {
   name: "index" | "codemirrorContentScript" | "markdownItContentScript";
+  format: "iife" | "cjs";
   external: string[];
 }[] = [
-  { name: "index", external: [] },
+  // The entry point runs as a plain script with the `joplin` global; nothing
+  // promises it a `module`, so it must not touch one.
+  { name: "index", format: "iife", external: [] },
   // What Joplin's `codeMirrorRequire` hands a CodeMirror content script. A
   // second copy of CodeMirror would be a second editor state.
-  { name: "codemirrorContentScript", external: ["@codemirror/*", "@lezer/*"] },
-  { name: "markdownItContentScript", external: [] },
+  { name: "codemirrorContentScript", format: "cjs", external: ["@codemirror/*", "@lezer/*"] },
+  { name: "markdownItContentScript", format: "cjs", external: [] },
 ];
 
 export const JPL_ORDER = [
@@ -41,7 +44,7 @@ export function options(entry: (typeof ENTRIES)[number], outDir: string): BuildO
     entryPoints: [join(here, "src", `${entry.name}.ts`)],
     outfile: join(outDir, `${entry.name}.js`),
     bundle: true,
-    format: "cjs",
+    format: entry.format,
     platform: "browser",
     target: "es2020",
     minify: true,

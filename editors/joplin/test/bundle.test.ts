@@ -39,3 +39,11 @@ test("A4: the entry point and the viewer script import nothing", () => {
   expect(imports(metas.index!).filter((i) => i.external)).toEqual([]);
   expect(imports(metas.markdownItContentScript!).filter((i) => i.external)).toEqual([]);
 });
+
+test("the entry point is a plain script: no module, exports or require", async () => {
+  const entry = ENTRIES.find((e) => e.name === "index")!;
+  const r = await build({ ...options(entry, out), write: false, logLevel: "silent" });
+  const js = r.outputFiles![0]!.text;
+  expect(js).toContain("joplin.plugins.register");
+  expect(js).not.toMatch(/\bmodule\b|\bexports\b|\brequire\(/);
+});
