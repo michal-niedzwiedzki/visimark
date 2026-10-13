@@ -67,6 +67,18 @@ $ echo $?
 
 Exit code 1. The call never happens. The harness tells the agent the budget would be exhausted at the next step: summarise what it has and stop, or ping Dana for more money. The cap lives in a command that exits 1, which is a poor audience for sunk cost. If a harness bug ever lets a call through anyway, the same file fails `check` the next morning.
 
+Dana's wrapper and this ledger can both exit 1. They check different things.
+
+The wrapper totals tokens from a vendor log and tries to refuse the next call. VisiMark is narrower, and the check lives in the file. A formula sits with the number. A program outside the session runs it again and proves the stored figure still agrees. When it does not, CI fails, the editor shows the diagnostic, and the MCP tools fail the same way. `fmt` can rewrite a stale number on demand. The agent may write the formula and a candidate number. The checker is not in the agent's context window. On this ledger the harness writes the rows and the agent cannot open the file. The document stays plain Markdown, so a change to a vendor's log fields does not silence the check.
+
+| Aspect | Dana's wrapper | VisiMark |
+| --- | --- | --- |
+| What is checked | Cumulative tokens / cost from logs | Agreement between formula and stored number in a document |
+| Where it lives | Outside the agent session | Inside the artifact (Markdown) + external checker |
+| Fragility | Breaks when log schema changes | Breaks only if the document's own syntax is wrong |
+| Enforcement | Attempts to gate further spend | Fails checks, shows diagnostics, can repair on demand |
+| Domain | Runtime agent spend control | Document numerical integrity |
+
 The prompt still says two dollars. This time, so does breakfast.
 
 ## Disclosure
