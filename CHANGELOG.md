@@ -4,6 +4,14 @@
 
 ### Added
 
+- **`report slack`, the nearest miss on each assertion.** A sixth `simulate`
+  reading. For each `assert` it prints the least room among the questions that
+  work and the smallest miss among the questions that break only that rule,
+  as an exact distance labelled `room` or `miss`, with tie lines and pool
+  counts. A rule that is not one numeric comparison says so instead.
+  `check` refuses a `report slack` in a file with no `assert`.
+  ([#352](https://github.com/michal-niedzwiedzki/visimark/issues/352))
+
 - **`markdown-it-visimark`, VisiMark marks in rendered HTML.** A new npm
   package: `md.use(markdownItVisimark)` wraps each computed value with
   `visimark-computed` (and `visimark-disagrees` when it no longer matches its
