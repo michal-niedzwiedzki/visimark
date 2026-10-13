@@ -1,4 +1,4 @@
-import type { TarEntry } from "../pack.ts";
+import type { TarEntry } from "../pack.js";
 
 const dec = new TextDecoder();
 const field = (h: Uint8Array, from: number, len: number): string =>

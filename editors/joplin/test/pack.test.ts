@@ -2,8 +2,8 @@ import { expect, test } from "bun:test";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { ustar } from "../pack.ts";
-import { untar } from "./untar.ts";
+import { ustar } from "../pack.js";
+import { untar } from "./untar.js";
 
 const enc = new TextEncoder();
 const two = [
