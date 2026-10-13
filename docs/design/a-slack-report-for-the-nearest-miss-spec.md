@@ -132,7 +132,7 @@ All of these are readings. `simulate`'s exit code does not change (simulate spec
 
 ## 4. Type rules and errors
 
-No new finding code. Every failure is an existing [§10](../visimark-design.md#10-error-taxonomy) code, reported by `check` and therefore by `simulate` as a sheet that cannot start (simulate spec §3.4).
+No new finding code. Every failure is an existing [§10](../visimark-design.md#10-error-taxonomy) code, reported by `check`. A line that fails the grammar is dropped at parse, as any malformed `report` line is, so `simulate` does not see it. A line that parses but has nothing to read makes its sheet `(cannot start)` (simulate spec §3.4).
 
 | Input | Finding | Message |
 |---|---|---|
@@ -324,7 +324,7 @@ The other variants:
 | Variant | Expected |
 |---|---|
 | the fixture with every `lattice` clause removed | the body is `no grid: no param declares a lattice`; exit `0` |
-| `report slack among all` | `check` exits `1` with `` TYPE … `report slack` takes no options ``; `simulate` prints `#r` and `(cannot start)` |
+| `report slack among all` | `check` exits `1` with `` TYPE … `report slack` takes no options ``. The line is dropped at parse, so `simulate` prints nothing on stdout and `simulate: FILE: no report statement` on stderr, and exits `1` |
 | a file whose only sheet is `#r` with `report slack`, and no `assert` | `check` exits `1` with `` TYPE … `report slack` has nothing to read: this document has no `assert` `` |
 | the same, with a parse error on another line of the file | no nothing-to-read finding; only the parse error |
 | `report slack` twice in `#r` | `DUP` |
