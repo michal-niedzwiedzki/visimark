@@ -4,6 +4,11 @@
 
 ### Added
 
+- **A Joplin plugin, built but not published.** `editors/joplin` adds
+  `codemirror-visimark`'s marks and lint to Joplin's Markdown editor and
+  `markdown-it-visimark`'s marks to its viewer. Desktop only, Joplin 3.7.1 and
+  up. CI uploads it as the `visimark-joplin` artifact for installing from a
+  file. ([#378](https://github.com/michal-niedzwiedzki/visimark/issues/378))
 - **`markdown-it-visimark`, VisiMark marks in rendered HTML.** A new npm
   package: `md.use(markdownItVisimark)` wraps each computed value with
   `visimark-computed` (and `visimark-disagrees` when it no longer matches its
@@ -11,6 +16,7 @@
   the fence's info string on the rendered `vmark` block as `data-vmark-info`.
   No CSS and no dependency. The VS Code extension uses it for the built-in
   Markdown preview, switched by the new `visimark.preview.enable` setting.
+  Supported from markdown-it 13.0.2, the version Joplin uses.
   ([#373](https://github.com/michal-niedzwiedzki/visimark/issues/373))
 
 - **`codemirror-visimark/highlight`, syntax highlighting for `vmark` blocks.**
