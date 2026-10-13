@@ -21,6 +21,22 @@
         "unified": "^11.0.5",
       },
     },
+    "editors/joplin": {
+      "name": "joplin-plugin-visimark",
+      "dependencies": {
+        "codemirror-visimark": "workspace:*",
+        "markdown-it-visimark": "workspace:*",
+        "visimark": "workspace:*",
+      },
+      "devDependencies": {
+        "@codemirror/language": "^6.13.1",
+        "@codemirror/lint": "^6.9.7",
+        "@codemirror/state": "^6.7.6",
+        "@codemirror/view": "^6.43.14",
+        "esbuild": "^0.28.2",
+        "markdown-it": "^15.0.2",
+      },
+    },
     "editors/obsidian": {
       "name": "visimark-obsidian",
       "dependencies": {
@@ -1190,6 +1206,8 @@
     "istextorbinary": ["istextorbinary@9.5.0", "", { "dependencies": { "binaryextensions": "^6.11.0", "editions": "^6.21.0", "textextensions": "^6.11.0" } }, "sha512-5mbUj3SiZXCuRf9fT3ibzbSSEWiy63gFfksmGfdOzujPjW3k+z8WvIBxcJHBoQNlaZaiyB25deviif2+osLmLw=="],
 
     "iterator.prototype": ["iterator.prototype@1.1.5", "", { "dependencies": { "define-data-property": "^1.1.4", "es-object-atoms": "^1.0.0", "get-intrinsic": "^1.2.6", "get-proto": "^1.0.0", "has-symbols": "^1.1.0", "set-function-name": "^2.0.2" } }, "sha512-H0dkQoCa3b2VEeKQBOxFph+JAbcrQdE7KC0UkqwpLmv2EC4P41QXP+rqo9wYodACiG5/WM5s9oDApTU8utwj9g=="],
+
+    "joplin-plugin-visimark": ["joplin-plugin-visimark@workspace:editors/joplin"],
 
     "jose": ["jose@6.2.12", "", {}, "sha512-9NiFmJEex0sy2Dk58j2UGBSHgUs2ypF9eZSu4L6vjOX3Dp96Sw1F3uL+H+D1sx02jZZdzUT0HgvCy59CuvXcWw=="],
 
