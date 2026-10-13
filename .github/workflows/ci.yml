@@ -184,6 +184,13 @@ jobs:
         with:
           name: visimark-vsix
           path: editors/vscode/visimark.vsix
+      # editors/joplin is build-only (#378): this artifact is how a Joplin
+      # user gets the plugin. Nothing publishes it.
+      - uses: actions/upload-artifact@v7
+        with:
+          name: visimark-joplin
+          path: editors/joplin/publish/com.visimark.joplin.jpl
+          if-no-files-found: error
 
   # docs/vendor/visimark-browser.js is a committed build artifact. pages.yml
   # uploads docs/ verbatim with no build step, so nothing else in this pipeline
