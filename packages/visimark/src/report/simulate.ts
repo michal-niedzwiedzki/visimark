@@ -142,6 +142,8 @@ function body(sim: Simulation, r: Report): string[] {
     }
     case "forbidden":
       return forbidden(v);
+    case "slack":
+      return [];
   }
 }
 

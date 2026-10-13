@@ -24,7 +24,8 @@ function fails(line: string): LangError {
 }
 
 describe("report statement", () => {
-  test("the five shipped forms", () => {
+  test("the six shipped forms", () => {
+    expect(report("report slack").text).toBe("report slack");
     expect(report("report ledger assertions broken").text).toBe("report ledger assertions broken");
     expect(report("report ledger").text).toBe("report ledger");
     expect(report("report gates").refs).toEqual([]);
@@ -63,7 +64,7 @@ describe("report statement", () => {
 
   test("an unknown name lists the shipped ones", () => {
     expect(fails("report foo").message).toBe(
-      "unknown report `foo`; the reports are ledger, deltas, gates, best, forbidden",
+      "unknown report `foo`; the reports are ledger, deltas, gates, best, forbidden, slack",
     );
   });
 
@@ -82,6 +83,7 @@ describe("report statement", () => {
       "`report ledger` takes: [assertions broken]",
     );
     expect(fails("report forbidden x").message).toBe("`report forbidden` takes no options");
+    expect(fails("report slack among all").message).toBe("`report slack` takes no options");
     for (const bad of [
       "report best",
       "report best scalar",
@@ -131,6 +133,9 @@ describe("report options (add-a-simulate-command-spec.md §4)", () => {
   test("gates and forbidden", () => {
     expect(report("report gates").options).toEqual({ kind: "gates" });
     expect(report("report forbidden").options).toEqual({ kind: "forbidden" });
+  });
+  test("slack (a-slack-report-for-the-nearest-miss-spec.md §2)", () => {
+    expect(report("report slack").options).toEqual({ kind: "slack" });
   });
   test("best", () => {
     const max = report("report best scalar s.m direction max among all").options;
