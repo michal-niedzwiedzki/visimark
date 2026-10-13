@@ -86,3 +86,5 @@ The prompt still says two dollars. This time, so does breakfast.
 I wrote this article with AI. VisiMark is a MIT-licensed project with no business model or sales team behind it.
 
 The [Playground](https://visimark.dev/playground.html) runs the tool in your browser with nothing to install. The [repository](https://github.com/michal-niedzwiedzki/visimark) and the [project site](https://visimark.dev/) have the rest.
+
+<!--vmark:no-formulas-->
