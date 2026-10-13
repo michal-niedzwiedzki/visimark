@@ -129,3 +129,29 @@ test("9. a duplicate deltas among all is one nothing-to-read TYPE and one DUP", 
   expect(r.out).toContain(MESSAGE);
   expect(r.out).toMatch(/DUP/);
 });
+
+// docs/design/a-slack-report-for-the-nearest-miss-spec.md §4
+const SLACK = "`report slack` has nothing to read: this document has no `assert`";
+const slackDoc = (extra: string) => `# Slack\n\n${extra}\`\`\`vmark #r\nreport slack\n\`\`\`\n`;
+const PLAN = "```vmark #plan\nparam x integer in [0, 2] lattice 1 = default 1\ny = x + 1\n";
+
+test("slack 1. no assert anywhere: one TYPE on the slack line, exit 1", async () => {
+  const r = await onVariant(slackDoc(""), ["check"]);
+  expect(r.code).toBe(1);
+  expect(r.out).toContain(`  TYPE    r.                ${SLACK}`);
+  expect(typeCount(r.out)).toBe(1);
+  const s = await onVariant(slackDoc(""), ["simulate"]);
+  expect(s.out).toBe(`==> ${s.path} <==\n#r\n  (cannot start)`);
+});
+
+test("slack 2. an assert in another sheet: no finding", async () => {
+  const r = await onVariant(slackDoc(`${PLAN}assert y >= 1\n\`\`\`\n\n`), ["check"]);
+  expect(r.code).toBe(0);
+  expect(r.out).not.toContain("nothing to read");
+});
+
+test("slack 3. a dropped line elsewhere silences the rule", async () => {
+  const r = await onVariant(slackDoc(`${PLAN}z = = 1\n\`\`\`\n\n`), ["check"]);
+  expect(r.code).toBe(1);
+  expect(r.out).not.toContain("nothing to read");
+});
