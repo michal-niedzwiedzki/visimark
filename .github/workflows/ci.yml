@@ -492,8 +492,8 @@ jobs:
         working-directory: packages/codemirror-visimark
         run: npm pack --pack-destination "$RUNNER_TEMP"
       # markdown-it-visimark has no `bin`; packed to prove the tarball imports
-      # and renders under each runtime, at markdown-it 14.3.2 (VS Code's) and
-      # latest (#373). Its name does not match `visimark-*`.
+      # and renders under each runtime, at markdown-it 13.0.2 (Joplin's, #378),
+      # 14.3.2 (VS Code's) and latest (#373). Its name does not match `visimark-*`.
       - name: pack the markdown-it plugin tarball
         working-directory: packages/markdown-it-visimark
         run: npm pack --pack-destination "$RUNNER_TEMP"
@@ -654,14 +654,14 @@ jobs:
           cp ../codemirror-smoke.mjs .
           node codemirror-smoke.mjs
 
-      - name: the markdown-it plugin renders under Node only, at 14.3.2 and latest
+      - name: the markdown-it plugin renders under Node only, at 13.0.2, 14.3.2 and latest
         run: |
           set -e
-          # 14.3.2 is the markdown-it VS Code's built-in Markdown extension
-          # locks; latest is what a new host installs (#373). smoke-bun runs
-          # the same two under Bun.
+          # 13.0.2 is the markdown-it Joplin's renderer pins (#378); 14.3.2 is
+          # the one VS Code's built-in Markdown extension locks; latest is what
+          # a new host installs (#373). smoke-bun runs the same three under Bun.
           mi_tgz="$(pwd)/$(ls markdown-it-visimark-*.tgz)"
-          for v in 14.3.2 latest; do
+          for v in 13.0.2 14.3.2 latest; do
             rm -rf mi && mkdir mi && cd mi
             printf '{"name":"mi","private":true,"type":"module"}' > package.json
             npm i "$mi_tgz" "markdown-it@$v"
@@ -817,7 +817,7 @@ jobs:
           cp ../codemirror-smoke.mjs .
           bun codemirror-smoke.mjs
 
-      - name: the markdown-it plugin renders under Bun only, at 14.3.2 and latest
+      - name: the markdown-it plugin renders under Bun only, at 13.0.2, 14.3.2 and latest
         run: |
           set -e
           export PATH="$(bun pm bin -g):/usr/local/bin:/usr/bin:/bin"
@@ -825,7 +825,7 @@ jobs:
             echo "::error::node still on PATH; smoke-bun must be Bun-only"; exit 1
           fi
           mi_tgz="$(pwd)/$(ls markdown-it-visimark-*.tgz)"
-          for v in 14.3.2 latest; do
+          for v in 13.0.2 14.3.2 latest; do
             rm -rf mi && mkdir mi && cd mi
             printf '{"name":"mi","private":true,"type":"module"}' > package.json
             bun add "$mi_tgz" "markdown-it@$v"
