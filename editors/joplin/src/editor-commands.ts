@@ -11,18 +11,27 @@ import {
   type Finding,
 } from "visimark";
 import { hasVmarkBlock } from "codemirror-visimark/gate.js";
+import type { Text } from "@codemirror/state";
 import { nameAt } from "visimark-editor-shared/at-cursor.js";
 import { explainBinding } from "visimark-editor-shared/explain.js";
+import { describePreview, isEmpty, previewInfer } from "visimark-editor-shared/infer-plan.js";
 import { planRepairs } from "visimark-editor-shared/repairs.js";
+import { safeTemplateInsertion } from "visimark-editor-shared/template-insert.js";
+import { TEMPLATES } from "visimark-editor-shared/templates.js";
 import { valueRows } from "visimark-editor-shared/values.js";
 import { importScope } from "./imports.js";
 import type {
+  ApplyArgs,
+  ApplyReply,
   CheckArgs,
   CheckReply,
   EvaluateReply,
   ExplainReply,
   FormatArgs,
   FormatReply,
+  InferPreviewReply,
+  InsertTemplateArgs,
+  InsertTemplateReply,
 } from "./protocol.js";
 
 /**
@@ -67,6 +76,14 @@ function problemCount(findings: readonly Finding[]): number {
 
 export function editorCommands(view: EditorView, options: EditorCommandsOptions = {}) {
   const run = options.analyse ?? analyse;
+
+  /**
+   * The last Infer preview and the document it read. CodeMirror's `Text` is
+   * immutable, so the document is unchanged exactly when it is the same
+   * object — `apply` needs no edit counter to know its offsets still hold.
+   */
+  let previewed: { version: number; doc: Text } | null = null;
+  let previews = 0;
 
   /** The gate and the analysis, or the reply that stops the command. */
   const note = (): ({ kind: "ok" } & Analysis) | { kind: "no-block" | "failed" } => {
@@ -156,6 +173,65 @@ export function editorCommands(view: EditorView, options: EditorCommandsOptions 
       } catch {
         return { kind: "failed" };
       }
+    },
+
+    /** Infer, scoped to the selection when there is one. Not gated on a block. */
+    inferPreview(): InferPreviewReply {
+      try {
+        const { from, to } = view.state.selection.main;
+        const doc = view.state.doc;
+        const preview = previewInfer(
+          doc.toString(),
+          from < to ? { start: from, end: to } : undefined,
+        );
+        previewed = { version: ++previews, doc };
+        return {
+          kind: "preview",
+          version: previewed.version,
+          description: describePreview(preview),
+          empty: isEmpty(preview),
+          removesMarker: preview.removesMarker,
+          edits: preview.inserts.map((e) => ({ start: e.start, end: e.end, text: e.text })),
+        };
+      } catch {
+        return { kind: "failed" };
+      }
+    },
+
+    apply({ version, edits }: ApplyArgs): ApplyReply {
+      if (previewed === null || previewed.version !== version || previewed.doc !== view.state.doc) {
+        return { kind: "changed" };
+      }
+      previewed = null;
+      try {
+        view.dispatch({
+          changes: edits.map((e) => ({ from: e.start, to: e.end, insert: e.text })),
+          userEvent: "input.infer",
+        });
+      } catch {
+        return { kind: "failed" };
+      }
+      return { kind: "applied" };
+    },
+
+    /** A starter template at the cursor, refused when the note has a block. */
+    insertTemplate({ id }: InsertTemplateArgs): InsertTemplateReply {
+      const template = TEMPLATES.find((t) => t.id === id);
+      if (template === undefined) return { kind: "failed" };
+      const source = view.state.doc.toString();
+      // a second block would declare every name the template declares again
+      if (hasVmarkBlock(source)) return { kind: "has-block" };
+      const placed = safeTemplateInsertion(source, view.state.selection.main.head, template.body);
+      if (placed === null) return { kind: "no-place" };
+      try {
+        view.dispatch({
+          changes: { from: placed.at, insert: placed.text },
+          userEvent: "input.template",
+        });
+      } catch {
+        return { kind: "failed" };
+      }
+      return { kind: "inserted" };
     },
   };
 }

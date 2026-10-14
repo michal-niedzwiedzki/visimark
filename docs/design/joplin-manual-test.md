@@ -50,6 +50,13 @@ note with the body of `docs/example-invoice-drift.md`.
 | M-1.6 | A note with no block, every command | "This note has no VisiMark block, so there is nothing to check in it yet."; nothing changes |
 | M-1.7 | The Rich Text editor, every command | "VisiMark commands work in the Markdown editor. Switch to it and try again."; the note is unchanged |
 
+## #384, group 2: authoring
+
+| # | Do this | Required |
+|---|---|---|
+| M-2.1 | Paste a plain table with a computed column, select it, **Infer the formulas** | The preview dialog; **Apply** writes one block, and one Ctrl+Z removes it |
+| M-2.2 | Each template in an empty note, then again in the same note | Inserted; then "This note already has a VisiMark block. Insert the template into a new note instead." |
+
 ## Recording
 
 | Row | Joplin version | Date | Observed |

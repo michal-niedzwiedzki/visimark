@@ -11,6 +11,10 @@ export interface FakeJoplin {
   readonly messages: string[];
   /** every dialog's HTML at the moment it opened */
   readonly dialogs: string[];
+  /** the buttons each opened dialog showed, by id */
+  readonly buttons: string[][];
+  /** the button the next dialog is closed with */
+  answer: string;
   /** the editor commands the main script asked for */
   readonly editorCalls: { name: string; args: unknown[] }[];
   /** what the plugin passed to `joplin.plugins.register` */
@@ -30,6 +34,8 @@ export function installFakeJoplin(): FakeJoplin {
     contentScripts: [],
     messages: [],
     dialogs: [],
+    buttons: [],
+    answer: "ok",
     editorCalls: [],
     settings: { "editor.codeView": true },
     note: { id: "n1", title: "example-invoice-drift.md" },
@@ -41,6 +47,7 @@ export function installFakeJoplin(): FakeJoplin {
     },
   };
   const html = new Map<string, string>();
+  const buttons = new Map<string, string[]>();
   (globalThis as Record<string, unknown>).joplin = {
     plugins: {
       register: async (s: { onStart(): Promise<void> }) => void (fake.onStart = s.onStart),
@@ -76,10 +83,15 @@ export function installFakeJoplin(): FakeJoplin {
           return id;
         },
         setHtml: async (h: string, body: string) => void html.set(h, body),
-        setButtons: async () => {},
+        setButtons: async (h: string, b: { id: string }[]) =>
+          void buttons.set(
+            h,
+            b.map((x) => x.id),
+          ),
         open: async (h: string) => {
           fake.dialogs.push(html.get(h) ?? "");
-          return { id: "ok" };
+          fake.buttons.push(buttons.get(h) ?? []);
+          return { id: fake.answer };
         },
         showMessageBox: async (m: string) => {
           fake.messages.push(m);
