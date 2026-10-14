@@ -177,7 +177,8 @@ Read these as candidates, not decisions. Each one needs its own issue.
 4. **Hover content differs.** VS Code's hover covers function signatures,
    binding lines, computed-column cells and anchored prose values. Obsidian's
    covers a marked value's formula and nothing else, but works by tap and
-   keyboard too. Joplin has none.
+   keyboard too. Joplin's covers a marked value's formula in the viewer only,
+   as a plain tooltip; its editor has no hover.
 5. **Fix-on-save defaults differ.** VS Code is on by default; Obsidian is off
    and keyed to the Ctrl/Cmd+S keystroke because Obsidian exposes no explicit
    save event. A new editor has to pick one.
