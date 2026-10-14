@@ -133,7 +133,9 @@ holds `model` and `result`. It now also runs
 `planFmt(model, result, { noArtifacts: true, fixDates: true })` and attaches
 each edit's text to the finding with the same span, as an internal `fix`
 field on the entries of `findingsField`. The field's span mapping carries
-`fix` across edits unchanged. `findingsField`'s type is internal and not
+each finding across an edit and marks it as moved. A moved finding gets no
+action until the next recompute replaces the set, because its replacement
+was planned against the old text (#387 review). `findingsField`'s type is internal and not
 exported, so the published surface does not change. The cost is one `planFmt`
 per recompute.
 

@@ -14,7 +14,8 @@ import { SEVERITY } from "./severity.js";
  * Each diagnostic carries the quick fixes `visimark-lsp` offers for the same
  * finding (#384): update a stale value, rewrite a decidable date, take the
  * did-you-mean, wrap a column in `SUM`. Each is one transaction over the
- * diagnostic's current span, so one undo reverts it.
+ * diagnostic's current span, so one undo reverts it. A finding carried across
+ * an edit offers none until the next recompute replaces it.
  *
  * Obsidian does not use this — #176's constraint 6 forbids red and finding
  * codes in its UI.
@@ -68,6 +69,7 @@ function fixFor(f: LintFinding): { name: string; text: string } | null {
 }
 
 function actionsFor(f: LintFinding): Action[] {
+  if (f.moved) return []; // planned against an older document
   const fix = fixFor(f);
   if (fix === null) return [];
   return [

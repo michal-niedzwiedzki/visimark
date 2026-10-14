@@ -123,11 +123,12 @@ function withFixes(
   } catch {
     return result.findings;
   }
+  const bySpan = new Map<string, string>();
+  for (const e of planned) bySpan.set(`${e.start}:${e.end}`, e.text);
   return result.findings.map((f) => {
-    const span = f.span;
-    if (span === undefined) return f;
-    const edit = planned.find((e) => e.start === span.start && e.end === span.end);
-    return edit === undefined ? f : { ...f, fix: edit.text };
+    if (f.span === undefined) return f;
+    const text = bySpan.get(`${f.span.start}:${f.span.end}`);
+    return text === undefined ? f : { ...f, fix: text };
   });
 }
 

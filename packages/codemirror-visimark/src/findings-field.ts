@@ -17,9 +17,13 @@ export type FindingSet = readonly LintFinding[] | null;
  * A finding plus, for a `STALE` with a span, the text `fmt` would write over
  * that span — the lint quick fix's replacement (#384). Internal: the field's
  * type is not exported from the package, so this adds no public surface.
- * The span mapping below carries `fix` across edits unchanged.
+ *
+ * `moved` marks a finding the span mapping below carried across an edit. Its
+ * replacement text was planned against the old document — the user may have
+ * typed in the span, or changed an input — so the lint offers no quick fix
+ * for it until the next recompute publishes a fresh set.
  */
-export type LintFinding = Finding & { readonly fix?: string };
+export type LintFinding = Finding & { readonly fix?: string; readonly moved?: true };
 
 export const setFindings = StateEffect.define<FindingSet>();
 
@@ -33,7 +37,7 @@ export const findingsField = StateField.define<FindingSet>({
       if (f.span === undefined) return f;
       const start = tr.changes.mapPos(f.span.start, 1);
       const end = Math.max(start, tr.changes.mapPos(f.span.end, -1));
-      return { ...f, span: { start, end } };
+      return { ...f, span: { start, end }, moved: true };
     });
   },
 });

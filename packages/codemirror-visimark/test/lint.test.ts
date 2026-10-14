@@ -185,6 +185,22 @@ test("L6: every update is one transaction, and inverting it restores the documen
   v.destroy();
 });
 
+test("an edit withdraws every quick fix until the next recompute", async () => {
+  const v = view(drift);
+  const row = at(v, "| On-call support");
+  const from = at(v, "3120.00", row);
+  expect(names(onSpan(await diagnostics(v), from))).toEqual(["Update to 5200.00"]);
+  // type into the stale cell: its planned text no longer fits what is there
+  v.dispatch({ changes: { from, insert: "9" } });
+  const moved = await diagnostics(v);
+  expect(moved.length).toBeGreaterThan(0);
+  for (const d of moved) expect(names(d)).toEqual([]);
+  v.dispatch({ changes: { from, to: from + 1 } });
+  v.dispatch({ effects: refresh.of(null) });
+  expect(names(onSpan(await diagnostics(v), from))).toEqual(["Update to 5200.00"]);
+  v.destroy();
+});
+
 test("other findings carry no action", async () => {
   const v = view(drift);
   const fixable = new Set(["Update to", "Rewrite to", "Change to", "Wrap in SUM("]);
