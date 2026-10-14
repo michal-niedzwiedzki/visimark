@@ -52,8 +52,8 @@ Editors covered:
 | Format / fix | ● Fix All Stale Values; Fix Sheet (the lens target, but it fixes the whole document) | ● Format this note | ● Format this note |
 | Evaluate (every name and its value) | ○ | ● dialog, with copy as JSON | ● dialog |
 | Explain one value or sheet | ● Explain Sheet, whole sheet | ● Explain this value, one value | ● Explain this value, also in the editor's context menu |
-| Infer formulas from a pasted table | ○ | ● with a preview | ○ |
-| Insert a starter template | ○ | ● invoice, monthly budget, team capacity, experiment log | ○ |
+| Infer formulas from a pasted table | ○ | ● with a preview | ● with a preview, scoped to the selection |
+| Insert a starter template | ○ | ● invoice, monthly budget, team capacity, experiment log | ● the same four, refused when the note has a block |
 | Vault or workspace sweep | ○ | ● pane, cancellable, optional on open | ○ |
 | Restart the engine | ● Restart Server | — no server | — |
 
@@ -63,7 +63,7 @@ Editors covered:
 |---|---|---|---|
 | Status bar item with stale and error counts | ● click opens the report | ● click opens the findings view; desktop only | ○ |
 | Ribbon icon | — | ● opens the sweep | — |
-| Command palette entries | ● 5 | ● 5 plus 4 templates plus sweep | ● 4, also under Tools → VisiMark |
+| Command palette entries | ● 5 | ● 5 plus 4 templates plus sweep | ● 5 plus 4 templates, also under Tools → VisiMark |
 | Settings | ● 10 | ● 5 | ○ none |
 | Public API for other plugins or extensions | ○ | ● `plugins.plugins["visimark"].api`: check, evaluate, get, explain | ○ |
 
@@ -122,8 +122,8 @@ first group for free.
 - **Infer with a preview modal** and selection scoping: highlight part of a
   table and only that part is inferred.
 - **Evaluate dialog** with copy-values-as-JSON.
-- **Starter templates**, one palette command each. They are not gated on the
-  note already having a block.
+- **Starter templates**, one palette command each. A note that already has a
+  block is refused, since a second block would declare the same names again.
 - **Activation gate.** Reading surfaces stay silent in a note with no `vmark`
   block, so an ordinary vault looks identical with the plugin installed.
 - **Tooltip or tap-to-explain** in the same delegated listener across pop-out
@@ -143,6 +143,8 @@ first group for free.
   the editor's content script, which the commands reach through
   `editor.execCommand`. Format writes one transaction. They work in the
   Markdown editor only, and drop whatever depends on an import.
+- **Infer and the four templates** (#384 group 2). Infer's dialog previews
+  the blocks, and Apply is refused if the note changed in between.
 - **Legacy CodeMirror 5 editor is skipped** with no error.
 - **Print and PDF export rules** in the stylesheet.
 - **One shared stylesheet** shipped as a content-script asset.
@@ -160,9 +162,9 @@ integrated editor except the playground currently gets block highlighting.
 
 Read these as candidates, not decisions. Each one needs its own issue.
 
-1. **Joplin has no settings, authoring commands, findings panel or sweep
-   yet.** Check, Format, Evaluate and Explain are in (#384 group 1); the rest
-   is #384's groups 2–4. The plugin has no file path, so `path` stays null and
+1. **Joplin has no settings, findings panel or sweep yet.** Check, Format,
+   Evaluate, Explain, Infer and the templates are in (#384 groups 1–2); the
+   rest is #384's groups 3–4. The plugin has no file path, so `path` stays null and
    imports stay out of reach.
 2. **Obsidian has no inline diagnostics.** `codemirror-visimark/lint` exists
    and Joplin uses it. Obsidian shows findings only in its own pane.
