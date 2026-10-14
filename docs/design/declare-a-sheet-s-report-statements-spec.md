@@ -248,3 +248,5 @@ Each is a test in `packages/visimark/test/` that runs `check` on an inline docum
 ## 9. Open questions
 
 None.
+
+<!--vmark:no-formulas-->
