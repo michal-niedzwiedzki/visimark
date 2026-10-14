@@ -24,7 +24,9 @@
       "visimark": ["../../packages/visimark/src/browser.ts"],
       // The extension's source, never its dist — the same rule as the engine (#360).
       "codemirror-visimark": ["../../packages/codemirror-visimark/src/index.ts"],
-      "codemirror-visimark/*": ["../../packages/codemirror-visimark/src/*"]
+      "codemirror-visimark/*": ["../../packages/codemirror-visimark/src/*"],
+      // The editor logic shared with the Joplin plugin (#384): source, no build.
+      "visimark-editor-shared/*": ["../shared/src/*"]
     }
   },
   "include": ["src", "test", "esbuild.config.mjs"]

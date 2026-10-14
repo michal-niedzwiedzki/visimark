@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["bun", "node"],
+    "lib": ["ES2023", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    // The same three-way agreement as editors/obsidian/tsconfig.json: the
+    // engine's browser-safe entry point and the extension's source, never a
+    // dist/. Every consumer bundles this package from source.
+    "paths": {
+      "visimark": ["../../packages/visimark/src/browser.ts"],
+      "codemirror-visimark": ["../../packages/codemirror-visimark/src/index.ts"],
+      "codemirror-visimark/*": ["../../packages/codemirror-visimark/src/*"]
+    }
+  },
+  "include": ["src", "test"]
+}

@@ -19,7 +19,8 @@
   },
   "dependencies": {
     "codemirror-visimark": "workspace:*",
-    "visimark": "workspace:*"
+    "visimark": "workspace:*",
+    "visimark-editor-shared": "workspace:*"
   },
   "devDependencies": {
     "@codemirror/state": "^6.5.2",
