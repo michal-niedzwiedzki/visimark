@@ -155,6 +155,7 @@ report forbidden
 report best scalar event.profit direction max among feasible
 report best scalar event.ticket direction min among feasible
 report deltas on event.profit, event.sponsor_share among all
+report slack
 ```
 
 ```vmark #ledger
@@ -423,6 +424,7 @@ report forbidden
 report best scalar event.profit direction max among feasible
 report best scalar event.ticket direction min among feasible
 report deltas on event.profit, event.sponsor_share among all
+report slack
 ```
 
 ```vmark #ledger
@@ -445,9 +447,9 @@ Each question is evaluated once, however many reports read it.
 in it. It never runs one. A report must be in a `#id` block; a document-scope
 block is a `SHEET` error.
 
-## 12. The five reports, and the question each answers
+## 12. The six reports, and the question each answers
 
-The list is closed. A document can ask for these five and nothing else, so a
+The list is closed. A document can ask for these six and nothing else, so a
 Markdown file can never make the tool run code it does not ship.
 
 | You want to know | Ask for | It prints |
@@ -457,9 +459,10 @@ Markdown file can never make the tool run code it does not ship.
 | Which lever values are out, whatever else I choose? | `report forbidden` | every lattice point at which no question works |
 | Which question does best at one value? | `report best scalar X direction max among feasible` | the winning question, and its value |
 | How far does a value move across the grid? | `report deltas on X, Y among all` | the base value, the lowest, the highest, and where |
+| How close does each rule come to breaking? | `report slack` | per `assert`: the least room among working questions, and the smallest miss among questions that break only that rule |
 
-A sensible first sheet is `gates`, `forbidden`, one `best` and one `deltas`,
-with the ledger on its own. That is the example. Add more `best` lines for each
+A sensible first sheet is `gates`, `forbidden`, one `best`, one `deltas` and
+`slack`, with the ledger on its own. That is the example. Add more `best` lines for each
 separate question you have: the example asks two, "most profit" and "cheapest
 ticket".
 
@@ -472,6 +475,7 @@ The exact grammar:
 | `gates` | none |
 | `best` | `scalar REF direction max\|min among feasible\|infeasible\|all` |
 | `forbidden` | none |
+| `slack` | none |
 
 ## 13. Choosing what `best` and `deltas` read
 
@@ -607,7 +611,9 @@ grid's 64.
 A lever prints at its width. A percent lever prints as a percent. A derived
 value prints at its own width, so `sponsor_share` prints as `0.333`, not 33.3%.
 
-The next five chapters read each report of the example's output in turn.
+The next five chapters read each report of the example's output in turn;
+chapter 18 reads `slack` beside `best`, because it answers what `best` leaves
+out.
 
 ## 16. Reading `gates`
 
@@ -696,7 +702,50 @@ the domain, step finer, and sweep again.
 
 **`best` does not say how much room is left.** The 60-euro plan makes a profit
 of 900 euros (chapter 23 shows how to read that). A winner at the edge of a
-rule is a winner with no margin.
+rule is a winner with no margin. `slack` is the report that says how much.
+
+### How close each rule comes: `slack`
+
+```text
+report slack
+
+  attendees <= venue_capacity
+    inside   room    0  attendees=300 ticket=60.00 sponsors=2
+    outside  miss  100  attendees=400 ticket=60.00 sponsors=1
+    13 questions tie inside; the first in grid order is shown
+    15 questions tie outside; the first in grid order is shown
+    from 25 feasible and 15 failing only this, of 64 questions
+  profit >= 0
+    inside   room  900.00  attendees=200 ticket=60.00 sponsors=2
+    outside  miss  100.00  attendees=200 ticket=80.00 sponsors=1
+    from 25 feasible and 16 failing only this, of 64 questions
+  sponsor_share <= 50%
+    inside   room  0.000  attendees=100 ticket=100.00 sponsors=2
+    outside  miss  0.056  attendees=100 ticket=80.00 sponsors=2
+    3 questions tie outside; the first in grid order is shown
+    from 25 feasible and 6 failing only this, of 64 questions
+```
+
+One block per assertion, in document order. Each block has two lines:
+
+- **`inside`** is the working question that comes closest to breaking the rule,
+  and its **room**: how far it is from the bound. A room of `0` means the rule
+  binds: a full venue, or a sponsor share of exactly 50%.
+- **`outside`** looks only at questions that break this rule and nothing else,
+  and shows the one that **misses** it by the least. Waive that one rule and the
+  question works.
+
+`room` and `miss` read the same way on `<=` and `>=` rules. The distance is the
+plain difference of the two sides, never rounded, at the width of the wider
+side: `0.556 − 0.50` prints as `0.056`. The last line of each block counts the
+two pools, so you know whether a reading is one candidate or fifty.
+
+Read it next to `best`. The cheapest working ticket has 900.00 euros of
+profit to spare, and nothing closer to break-even works. The cheapest loss is
+100 euros short. Seats, euros and a share are not one unit, so `slack` never
+adds rules together. An `assert` that is not one comparison, such as one using
+`and` or `!=`, prints `no single boundary`; a comparison of dates prints
+`not a numeric comparison`.
 
 ## 19. Reading `deltas`
 
@@ -906,7 +955,8 @@ params:
 
 Now the margin is visible: a profit of **900** euros, and a sponsor share of
 45.5%, close to the 50% limit. That is a plan that works on paper and has
-almost no room. The same plan with a third sponsor fails, as the ledger said:
+almost no room. `slack` (chapter 18) had already put the profit margin at
+900.00. The same plan with a third sponsor fails, as the ledger said:
 
 ```console
 $ cat three.json
@@ -918,6 +968,12 @@ $ visimark eval --scenario three.json conference.md --get event.sponsor_share
 $ echo $?
 1
 ```
+
+`slack` saw this too. Its `sponsor_share` outside line reads `miss  0.056`, a
+share of 0.556 against 50%. It lands on `attendees=100 ticket=80.00 sponsors=2`,
+not on this plan: three questions miss by exactly 0.056, and its tie line says
+so. This plan, `attendees=200 ticket=60.00 sponsors=3`, is the third of them in
+grid order.
 
 ### Adopting the answer
 
@@ -1070,6 +1126,8 @@ Before you trust a sweep:
 - [ ] You read the question count, and it is the size you meant. (Chapter 8.)
 - [ ] The assertions say what "works" means, all of them. (Chapter 9.)
 - [ ] `best` and `deltas` name the population with `among`. (Chapter 13.)
+- [ ] You know each rule's margin from `slack`, not only that it holds.
+      (Chapter 18.)
 - [ ] Any `forbidden` point and any `faulted` question has been explained.
       (Chapters 17 and 21.)
 - [ ] The winning question was looked at in full with `eval --scenario`.
@@ -1084,8 +1142,8 @@ Before you trust a sweep:
    before you read a single report.
 3. **A sweep only sees its points.** Put a point on every boundary, and narrow
    before you step finer.
-4. **`best` is a ranking, not a margin.** Look at the winner with
-   `eval --scenario` before you act on it.
+4. **`best` is a ranking, not a margin.** `slack` gives the margin. Look at
+   the winner with `eval --scenario` before you act on it.
 5. **A false assertion is a reading.** `simulate` exits `0`. Keep `check` as
    the gate.
 
@@ -1095,7 +1153,7 @@ Before you trust a sweep:
 |---|---|
 | [`simulate/conference.md`](simulate/conference.md) | The example from this guide, to run yourself |
 | [`tutorial.md`](tutorial.md) | Chapters 29–31: `param`, scenarios and `simulate`, on a runway plan |
-| [`example-battery-storage.md`](example-battery-storage.md) | A larger model: five levers, 577 questions, four lender covenants, every report |
+| [`example-battery-storage.md`](example-battery-storage.md) | A larger model: five levers, 577 questions, four lender covenants, five of the six reports |
 | [`ci.md`](ci.md) | Chapter 21: the sweep in CI, in full |
 | [`cli-reference.md`](cli-reference.md) | Every command, option and exit code |
 | [`design/add-a-simulate-command-spec.md`](design/add-a-simulate-command-spec.md) | The exact contract: questions, output layout, every report's body |

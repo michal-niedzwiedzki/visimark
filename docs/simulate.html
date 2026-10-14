@@ -122,7 +122,7 @@
 <a href="#10-mistakes-in-the-declaration-and-what-they-report" data-level="2">10. Mistakes in the declaration, and what they report</a>
 <a href="#part-3-designing-the-report" data-level="1">Part 3 — Designing the report</a>
 <a href="#11-where-reports-live" data-level="2">11. Where reports live</a>
-<a href="#12-the-five-reports-and-the-question-each-answers" data-level="2">12. The five reports, and the question each answers</a>
+<a href="#12-the-six-reports-and-the-question-each-answers" data-level="2">12. The six reports, and the question each answers</a>
 <a href="#13-choosing-what-best-and-deltas-read" data-level="2">13. Choosing what best and deltas read</a>
 <a href="#14-mistakes-in-a-report-line-and-what-they-report" data-level="2">14. Mistakes in a report line, and what they report</a>
 <a href="#part-4-running-and-reading" data-level="1">Part 4 — Running and reading</a>
@@ -130,6 +130,7 @@
 <a href="#16-reading-gates" data-level="2">16. Reading gates</a>
 <a href="#17-reading-forbidden" data-level="2">17. Reading forbidden</a>
 <a href="#18-reading-best" data-level="2">18. Reading best</a>
+<a href="#how-close-each-rule-comes-slack" data-level="3">How close each rule comes: slack</a>
 <a href="#19-reading-deltas" data-level="2">19. Reading deltas</a>
 <a href="#20-reading-the-ledger" data-level="2">20. Reading the ledger</a>
 <a href="#21-faulted-questions" data-level="2">21. Faulted questions</a>
@@ -331,6 +332,7 @@ report forbidden
 report best scalar event.profit direction max among feasible
 report best scalar event.ticket direction min among feasible
 report deltas on event.profit, event.sponsor_share among all
+report slack
 ```
 
 ```vmark #ledger
@@ -614,6 +616,7 @@ report forbidden
 report best scalar event.profit direction max among feasible
 report best scalar event.ticket direction min among feasible
 report deltas on event.profit, event.sponsor_share among all
+report slack
 ```
 
 ```vmark #ledger
@@ -631,8 +634,8 @@ Each question is evaluated once, however many reports read it.</p>
 <p><code>check</code> reads every <code>report</code> line, checks its options and resolves every name
 in it. It never runs one. A report must be in a <code>#id</code> block; a document-scope
 block is a <code>SHEET</code> error.</p>
-<h2 id="12-the-five-reports-and-the-question-each-answers">12. The five reports, and the question each answers</h2>
-<p>The list is closed. A document can ask for these five and nothing else, so a
+<h2 id="12-the-six-reports-and-the-question-each-answers">12. The six reports, and the question each answers</h2>
+<p>The list is closed. A document can ask for these six and nothing else, so a
 Markdown file can never make the tool run code it does not ship.</p>
 <table>
 <thead>
@@ -668,10 +671,15 @@ Markdown file can never make the tool run code it does not ship.</p>
 <td><code>report deltas on X, Y among all</code></td>
 <td>the base value, the lowest, the highest, and where</td>
 </tr>
+<tr>
+<td>How close does each rule come to breaking?</td>
+<td><code>report slack</code></td>
+<td>per <code>assert</code>: the least room among working questions, and the smallest miss among questions that break only that rule</td>
+</tr>
 </tbody>
 </table>
-<p>A sensible first sheet is <code>gates</code>, <code>forbidden</code>, one <code>best</code> and one <code>deltas</code>,
-with the ledger on its own. That is the example. Add more <code>best</code> lines for each
+<p>A sensible first sheet is <code>gates</code>, <code>forbidden</code>, one <code>best</code>, one <code>deltas</code> and
+<code>slack</code>, with the ledger on its own. That is the example. Add more <code>best</code> lines for each
 separate question you have: the example asks two, "most profit" and "cheapest
 ticket".</p>
 <p>The exact grammar:</p>
@@ -701,6 +709,10 @@ ticket".</p>
 </tr>
 <tr>
 <td><code>forbidden</code></td>
+<td>none</td>
+</tr>
+<tr>
+<td><code>slack</code></td>
 <td>none</td>
 </tr>
 </tbody>
@@ -788,7 +800,9 @@ called <strong>base</strong>. It is always asked, first, and it is never counted
 grid's 64.</p>
 <p>A lever prints at its width. A percent lever prints as a percent. A derived
 value prints at its own width, so <code>sponsor_share</code> prints as <code>0.333</code>, not 33.3%.</p>
-<p>The next five chapters read each report of the example's output in turn.</p>
+<p>The next five chapters read each report of the example's output in turn;
+chapter 18 reads <code>slack</code> beside <code>best</code>, because it answers what <code>best</code> leaves
+out.</p>
 <h2 id="16-reading-gates">16. Reading <code>gates</code></h2>
 <pre><code class="language-text">report gates
 
@@ -857,7 +871,45 @@ two sponsors, or with 300 people and two or three. The ledger (chapter 20) shows
 the domain, step finer, and sweep again.</p>
 <p><strong><code>best</code> does not say how much room is left.</strong> The 60-euro plan makes a profit
 of 900 euros (chapter 23 shows how to read that). A winner at the edge of a
-rule is a winner with no margin.</p>
+rule is a winner with no margin. <code>slack</code> is the report that says how much.</p>
+<h3 id="how-close-each-rule-comes-slack">How close each rule comes: <code>slack</code></h3>
+<pre><code class="language-text">report slack
+
+  attendees &#x3C;= venue_capacity
+    inside   room    0  attendees=300 ticket=60.00 sponsors=2
+    outside  miss  100  attendees=400 ticket=60.00 sponsors=1
+    13 questions tie inside; the first in grid order is shown
+    15 questions tie outside; the first in grid order is shown
+    from 25 feasible and 15 failing only this, of 64 questions
+  profit >= 0
+    inside   room  900.00  attendees=200 ticket=60.00 sponsors=2
+    outside  miss  100.00  attendees=200 ticket=80.00 sponsors=1
+    from 25 feasible and 16 failing only this, of 64 questions
+  sponsor_share &#x3C;= 50%
+    inside   room  0.000  attendees=100 ticket=100.00 sponsors=2
+    outside  miss  0.056  attendees=100 ticket=80.00 sponsors=2
+    3 questions tie outside; the first in grid order is shown
+    from 25 feasible and 6 failing only this, of 64 questions
+</code></pre>
+<p>One block per assertion, in document order. Each block has two lines:</p>
+<ul>
+<li><strong><code>inside</code></strong> is the working question that comes closest to breaking the rule,
+and its <strong>room</strong>: how far it is from the bound. A room of <code>0</code> means the rule
+binds: a full venue, or a sponsor share of exactly 50%.</li>
+<li><strong><code>outside</code></strong> looks only at questions that break this rule and nothing else,
+and shows the one that <strong>misses</strong> it by the least. Waive that one rule and the
+question works.</li>
+</ul>
+<p><code>room</code> and <code>miss</code> read the same way on <code>&#x3C;=</code> and <code>>=</code> rules. The distance is the
+plain difference of the two sides, never rounded, at the width of the wider
+side: <code>0.556 − 0.50</code> prints as <code>0.056</code>. The last line of each block counts the
+two pools, so you know whether a reading is one candidate or fifty.</p>
+<p>Read it next to <code>best</code>. The cheapest working ticket has 900.00 euros of
+profit to spare, and nothing closer to break-even works. The cheapest loss is
+100 euros short. Seats, euros and a share are not one unit, so <code>slack</code> never
+adds rules together. An <code>assert</code> that is not one comparison, such as one using
+<code>and</code> or <code>!=</code>, prints <code>no single boundary</code>; a comparison of dates prints
+<code>not a numeric comparison</code>.</p>
 <h2 id="19-reading-deltas">19. Reading <code>deltas</code></h2>
 <pre><code class="language-text">report deltas on event.profit, event.sponsor_share among all
 
@@ -1025,7 +1077,8 @@ params:
 </code></pre>
 <p>Now the margin is visible: a profit of <strong>900</strong> euros, and a sponsor share of
 45.5%, close to the 50% limit. That is a plan that works on paper and has
-almost no room. The same plan with a third sponsor fails, as the ledger said:</p>
+almost no room. <code>slack</code> (chapter 18) had already put the profit margin at
+900.00. The same plan with a third sponsor fails, as the ledger said:</p>
 <pre><code class="language-console">$ cat three.json
 { "attendees": "200", "ticket": "60.00", "sponsors": "3" }
 $ visimark eval --scenario three.json conference.md --get event.sponsor_share
@@ -1035,6 +1088,11 @@ $ visimark eval --scenario three.json conference.md --get event.sponsor_share
 $ echo $?
 1
 </code></pre>
+<p><code>slack</code> saw this too. Its <code>sponsor_share</code> outside line reads <code>miss  0.056</code>, a
+share of 0.556 against 50%. It lands on <code>attendees=100 ticket=80.00 sponsors=2</code>,
+not on this plan: three questions miss by exactly 0.056, and its tie line says
+so. This plan, <code>attendees=200 ticket=60.00 sponsors=3</code>, is the third of them in
+grid order.</p>
 <h3 id="adopting-the-answer">Adopting the answer</h3>
 <p>When the organisers decide, the decision goes into the document the normal
 way: edit the defaults, run <code>fmt</code>, and commit the diff for review.</p>
@@ -1170,6 +1228,8 @@ them is a change in the document, not in the tool.</li>
 <li class="task-list-item"><input type="checkbox" disabled> You read the question count, and it is the size you meant. (Chapter 8.)</li>
 <li class="task-list-item"><input type="checkbox" disabled> The assertions say what "works" means, all of them. (Chapter 9.)</li>
 <li class="task-list-item"><input type="checkbox" disabled> <code>best</code> and <code>deltas</code> name the population with <code>among</code>. (Chapter 13.)</li>
+<li class="task-list-item"><input type="checkbox" disabled> You know each rule's margin from <code>slack</code>, not only that it holds.
+(Chapter 18.)</li>
 <li class="task-list-item"><input type="checkbox" disabled> Any <code>forbidden</code> point and any <code>faulted</code> question has been explained.
 (Chapters 17 and 21.)</li>
 <li class="task-list-item"><input type="checkbox" disabled> The winning question was looked at in full with <code>eval --scenario</code>.
@@ -1184,8 +1244,8 @@ nothing. A decision goes back in as a reviewed edit.</li>
 before you read a single report.</li>
 <li><strong>A sweep only sees its points.</strong> Put a point on every boundary, and narrow
 before you step finer.</li>
-<li><strong><code>best</code> is a ranking, not a margin.</strong> Look at the winner with
-<code>eval --scenario</code> before you act on it.</li>
+<li><strong><code>best</code> is a ranking, not a margin.</strong> <code>slack</code> gives the margin. Look at
+the winner with <code>eval --scenario</code> before you act on it.</li>
 <li><strong>A false assertion is a reading.</strong> <code>simulate</code> exits <code>0</code>. Keep <code>check</code> as
 the gate.</li>
 </ol>
@@ -1208,7 +1268,7 @@ the gate.</li>
 </tr>
 <tr>
 <td><a href="example-battery-storage.md"><code>example-battery-storage.md</code></a></td>
-<td>A larger model: five levers, 577 questions, four lender covenants, every report</td>
+<td>A larger model: five levers, 577 questions, four lender covenants, five of the six reports</td>
 </tr>
 <tr>
 <td><a href="ci.html"><code>ci.md</code></a></td>

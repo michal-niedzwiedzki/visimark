@@ -11,7 +11,7 @@ import {
 } from "../model/types.js";
 import { locate } from "../parse/document.js";
 import { formatUnit } from "../lang/unit-expr.js";
-import { check, type CheckResult } from "./check.js";
+import { check, type AssertionSides, type CheckResult, type ComparisonOp } from "./check.js";
 import { dependencies, resolve } from "./graph.js";
 import { applyScenario, listParams, type ParamInfo } from "./scenario.js";
 import type { Value } from "./value.js";
@@ -49,6 +49,8 @@ export interface Answer {
   scalars: Map<string, Value>;
   /** one per `assert`, document order; `null` when it could not be verified */
   holds: (boolean | null)[];
+  /** one per `assert`: both sides of a comparison, where it was verified */
+  sides: (AssertionSides | undefined)[];
   faulted: boolean;
 }
 
@@ -72,8 +74,9 @@ export interface Simulation {
   reportSheets: string[];
   reports: Map<string, Report[]>;
   blocked: Blocked[];
-  /** one per `assert`, document order; `key` is its source after `assert` */
-  assertions: { sheetId: string; key: string }[];
+  /** one per `assert`, document order; `key` is its source after `assert`;
+   *  `comparison` is its top-level operator when it is one comparison */
+  assertions: { sheetId: string; key: string; comparison: ComparisonOp | undefined }[];
   /** binding id → the width it writes at, from the base evaluation */
   scalarPrecision: Map<string, number>;
   /** binding id → its unit as eval prints it, `EUR`; absent when it has none */
@@ -255,6 +258,7 @@ export function simulate(source: string, opts: SimulateOptions = {}): Simulation
   const assertions = base.assertions.map((a) => ({
     sheetId: a.sheetId,
     key: assertionKey(a.source),
+    comparison: a.comparison,
   }));
   const units = new Map<string, string>();
   for (const [k, u] of base.unitMaps) units.set(k, formatUnit(u.map));
@@ -301,7 +305,8 @@ export function simulate(source: string, opts: SimulateOptions = {}): Simulation
     for (const [k, v] of r.values) scalars.set(k, v);
     const holds = r.assertions.map((a) => a.holds);
     const faulted = holds.some((h) => h === null) || [...readIds].some((id) => !scalars.has(id));
-    sim.answers.push({ question: q, scalars, holds, faulted });
+    const sides = r.assertions.map((a) => a.sides);
+    sim.answers.push({ question: q, scalars, holds, sides, faulted });
     opts.onQuestion?.(i + 1, n);
   });
   return sim;

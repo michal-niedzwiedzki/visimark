@@ -15,12 +15,31 @@ import { refText, resolve } from "./graph.js";
  * stays silent for a sheet that lost a line to a parse error, which may have
  * been that scalar. See docs/design/a-bare-report-deltas-in-a-sheet-with-no-spec.md.
  *
+ * `slack` reads the file's assertions; in a file with none it is `TYPE`, and
+ * the rule stays silent when any sheet lost a line, which may have been the
+ * `assert`. See docs/design/a-slack-report-for-the-nearest-miss-spec.md §4.
+ *
  * It emits findings, so it keeps its position in the phase sequence —
  * `orderFindings` sorts on emit order.
  */
 export function checkReports(st: Pick<CheckState, "model" | "emit">): void {
-  for (const sheet of st.model.sheets.values()) {
+  const sheets = [...st.model.sheets.values()];
+  const noAssert =
+    !sheets.some((s) => s.assertions.length > 0) && !sheets.some((s) => s.droppedLines);
+  for (const sheet of sheets) {
     for (const report of sheet.reports) {
+      if (report.options.kind === "slack" && noAssert) {
+        st.emit(
+          {
+            code: "TYPE",
+            sheetId: report.sheetId,
+            message: "`report slack` has nothing to read: this document has no `assert`",
+            sourceOffset: report.span.start,
+            span: report.span,
+          },
+          { sheetId: report.sheetId },
+        );
+      }
       if (
         report.options.kind === "deltas" &&
         report.options.on.length === 0 &&

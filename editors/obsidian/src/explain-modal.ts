@@ -1,5 +1,5 @@
 import { Modal, type App } from "obsidian";
-import type { Explanation } from "./api.js";
+import type { Explanation } from "visimark-editor-shared/explain.js";
 
 /**
  * One name, what it is worked out from, and what it currently comes to —

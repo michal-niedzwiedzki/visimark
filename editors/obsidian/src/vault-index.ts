@@ -1,7 +1,6 @@
-import { check } from "visimark";
 import { hasVmarkBlock } from "codemirror-visimark/gate.js";
-import { reportFor, type NoteReport } from "./report.js";
-import { readNote, type VaultRead } from "./snapshot.js";
+import { noteChecker } from "./note-check.js";
+import type { VaultRead } from "./snapshot.js";
 import type { SweepResult, SweptNote } from "./sweep.js";
 
 /**
@@ -280,16 +279,11 @@ export class LiveVaultIndex implements VaultIndex {
   ): Promise<{ kind: "problem"; note: SweptNote } | { kind: "advice" } | null> {
     if (!hasVmarkBlock(text)) return null;
     try {
-      const { model, snapshot } = await readNote(text, path, this.read);
-      const doc = { path: snapshot.path, reader: snapshot.reader };
-      const report: NoteReport = reportFor(model, check(model, { doc }), doc);
-      if (report.problems.length === 0) {
-        return report.advice.length > 0 ? { kind: "advice" } : null;
-      }
-      return {
-        kind: "problem",
-        note: { path, problems: report.problems.length, advice: report.advice.length, report },
-      };
+      // the sweep's own checker, so an incremental verdict is exactly what a
+      // full sweep would say about this note
+      const note = await noteChecker(this.read)(text, path);
+      if (note.problems === 0) return note.advice > 0 ? { kind: "advice" } : null;
+      return { kind: "problem", note: { path, ...note } };
     } catch {
       // never a wrong "clean" for a note that could not be checked — see the
       // module note on what this index does and does not claim

@@ -94,7 +94,7 @@ export interface AliasDecl extends Pos {
 
 /** the closed list of reports the tool ships; the list grows only through its
  *  own catalogue row. See docs/design/lattice-on-param-and-report-statements-spec.md §2.2. */
-export const REPORT_NAMES = ["ledger", "deltas", "gates", "best", "forbidden"] as const;
+export const REPORT_NAMES = ["ledger", "deltas", "gates", "best", "forbidden", "slack"] as const;
 export type ReportName = (typeof REPORT_NAMES)[number];
 
 /** A `report <name> [options]` statement. Binds nothing and stores nothing; it
@@ -121,4 +121,5 @@ export type ReportOptions =
   | { kind: "deltas"; on: Ref[]; among: ReportAmong }
   | { kind: "gates" }
   | { kind: "best"; scalar: Ref; direction: "max" | "min"; among: ReportAmong }
-  | { kind: "forbidden" };
+  | { kind: "forbidden" }
+  | { kind: "slack" };
