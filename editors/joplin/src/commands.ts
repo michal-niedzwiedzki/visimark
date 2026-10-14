@@ -55,10 +55,16 @@ async function inEditor<T>(name: string, args?: object): Promise<T | null> {
     await say(MESSAGES.R1);
     return null;
   }
-  const reply = await joplin.commands.execute("editor.execCommand", {
-    name,
-    args: args === undefined ? [] : [args],
-  });
+  let reply;
+  try {
+    reply = await joplin.commands.execute("editor.execCommand", {
+      name,
+      args: args === undefined ? [] : [args],
+    });
+  } catch {
+    await say(MESSAGES.F2);
+    return null;
+  }
   if (reply === undefined || reply === null) {
     await say(MESSAGES.R1);
     return null;

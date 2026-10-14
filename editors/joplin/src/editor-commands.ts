@@ -85,7 +85,7 @@ export function editorCommands(view: EditorView, options: EditorCommandsOptions 
       if (n.kind !== "ok") return { kind: n.kind };
       try {
         const imports = importScope(n.model, n.result.findings);
-        const findings = n.result.findings.filter((f) => !imports.finding(f));
+        const findings = [...imports.kept];
         return {
           kind: "checked",
           text: formatCheck(title, findings),
@@ -112,9 +112,16 @@ export function editorCommands(view: EditorView, options: EditorCommandsOptions 
       if (edits.length === 0) return { kind: "clean", importsDropped };
       // planned from the document as it is now: this runs synchronously
       // inside one editor command, so nothing can move in between
-      view.dispatch({
-        changes: edits.map((e) => ({ from: e.start, to: e.end, insert: e.text })),
-      });
+      try {
+        view.dispatch({
+          changes: edits.map((e) => ({ from: e.start, to: e.end, insert: e.text })),
+          // not a joinable event, so history keeps Format as its own undo step
+          // even right after typing beside the value it repairs
+          userEvent: "input.format",
+        });
+      } catch {
+        return { kind: "failed" };
+      }
       return { kind: "applied", repairs: edits.length, importsDropped };
     },
 

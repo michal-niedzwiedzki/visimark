@@ -2,6 +2,7 @@ import { afterEach, expect, test } from "bun:test";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { history, undo } from "@codemirror/commands";
 import { EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import codemirror from "../src/codemirrorContentScript.js";
@@ -128,6 +129,76 @@ test("J4: imports are dropped, and everything else is checked and repaired", () 
     importsDropped: true,
   });
   expect(view.state.doc.toString()).toBe(mixed.replace("11.00", "10.00"));
+});
+
+// A constant declared inside the imported block still has a value without a
+// reader, so its prose anchor can be stale — and the engine counts it in the
+// collapsed anchor group, which carries no name of its own (#384 review I-1).
+const constant = [
+  "# Constant",
+  "",
+  "Rate **2**<!--vmark=order.x-->.",
+  "",
+  "```vmark #order from order.csv labelled Item, Qty, Price, Total",
+  "x = 1",
+  "```",
+  "",
+  "| Item | Qty | Net |",
+  "|------|----:|----:|",
+  "| pen  |  2  | 11.00 |",
+  "",
+  "```vmark #lines",
+  "Net precision 2 = Qty * 5",
+  "```",
+  "",
+].join("\n");
+
+test("J4: a stale anchor on an imported value is dropped from the anchor group too", () => {
+  const { view, run } = editor(constant);
+  const checked = run.check({ title: "constant" }) as CheckReply;
+  expect(checked.kind).toBe("checked");
+  if (checked.kind !== "checked") return;
+  expect(checked.text).not.toContain("order.x");
+  expect(checked.text).not.toContain("prose anchor");
+  expect(checked.problems).toBe(1);
+
+  const values = run.evaluate() as EvaluateReply;
+  if (values.kind !== "values") throw new Error(values.kind);
+  expect(values.rows.map((r) => r.name)).toEqual(["lines.Net"]);
+
+  // Format leaves the anchor alone, and Check then agrees there is nothing left
+  expect(run.format({ fixDates: false })).toEqual({
+    kind: "applied",
+    repairs: 1,
+    importsDropped: true,
+  });
+  expect(view.state.doc.toString()).toBe(constant.replace("11.00", "10.00"));
+  const after = run.check({ title: "constant" }) as CheckReply;
+  if (after.kind !== "checked") throw new Error(after.kind);
+  expect(after.problems).toBe(0);
+});
+
+test("one undo reverts Format, even right after typing next to a stale value", () => {
+  const view = new EditorView({
+    state: EditorState.create({ doc: drift, extensions: [history()] }),
+    parent: document.body,
+  });
+  views.push(view);
+  // a space typed just after the stale cell, so the two changes touch
+  const cell = drift.indexOf("3120.00", drift.indexOf("| On-call support")) + "3120.00".length;
+  view.dispatch({ changes: { from: cell, insert: " " }, userEvent: "input.type" });
+  const typed = view.state.doc.toString();
+  editorCommands(view).format({ fixDates: false });
+  undo(view);
+  expect(view.state.doc.toString()).toBe(typed);
+});
+
+test("a throw while applying Format answers failed", () => {
+  const { view } = editor(drift);
+  view.dispatch = () => {
+    throw new Error("listener");
+  };
+  expect(editorCommands(view).format({ fixDates: false })).toEqual({ kind: "failed" });
 });
 
 test("J4: explain on an import-dependent value declines, and says why", () => {

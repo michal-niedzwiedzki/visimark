@@ -53,6 +53,14 @@ test("R1: with no CodeMirror 6 content script loaded, every command says so", as
   expect(fake.messages).toEqual(fake.commands.map(() => MESSAGES.R1));
 });
 
+test("a rejected editor command shows F2 rather than failing silently", async () => {
+  joplin.commands.execute = async () => {
+    throw new Error("ipc");
+  };
+  await fake.run("visimark.format");
+  expect(fake.messages).toEqual([MESSAGES.F2]);
+});
+
 test("Format passes fixDates off and reports the repairs", async () => {
   fake.editor["visimark.cm.format"] = { kind: "applied", repairs: 15, importsDropped: false };
   await fake.run("visimark.format");
