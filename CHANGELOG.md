@@ -4,6 +4,14 @@
 
 ### Added
 
+- **Quick fixes on `codemirror-visimark/lint` diagnostics.** A diagnostic now
+  offers the repair the VS Code extension offers for the same finding: update
+  a stale value to what `visimark fmt` would write, rewrite an unambiguous
+  date to ISO 8601, change an unknown name to its close match, or wrap a
+  column in `SUM(…)`. Each is one transaction. No new option or export; every
+  host that uses `visimarkLint()`, the Playground included, shows them.
+  ([#384](https://github.com/michal-niedzwiedzki/visimark/issues/384))
+
 - **A Joplin plugin, built but not published.** `editors/joplin` adds
   `codemirror-visimark`'s marks and lint to Joplin's Markdown editor and
   `markdown-it-visimark`'s marks to its viewer. Desktop only, Joplin 3.7.1 and

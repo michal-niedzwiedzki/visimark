@@ -21,5 +21,6 @@ export const build: VisiMarkApi["build"] = (...args) => vm().build(...args);
 export const check: VisiMarkApi["check"] = (...args) => vm().check(...args);
 export const memoryReader: VisiMarkApi["memoryReader"] = (...args) => vm().memoryReader(...args);
 export const topoOrder: VisiMarkApi["topoOrder"] = (...args) => vm().topoOrder(...args);
+export const planFmt: VisiMarkApi["planFmt"] = (...args) => vm().planFmt(...args);
 export const describeFinding: VisiMarkApi["describeFinding"] = (...args) =>
   vm().describeFinding(...args);
