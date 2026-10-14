@@ -103,9 +103,9 @@ async function checkNote(): Promise<void> {
 }
 
 async function formatNote(): Promise<void> {
-  // dates stay as written until group 3's `fixDatesOnFormat` setting, the
-  // same default as `visimark fmt` without `--fix-dates`
-  const reply = await inEditor<FormatReply>(EDITOR_COMMANDS.format, { fixDates: false });
+  // off by default, like `visimark fmt` without `--fix-dates`
+  const fixDates = (await joplin.settings.value("fixDatesOnFormat")) === true;
+  const reply = await inEditor<FormatReply>(EDITOR_COMMANDS.format, { fixDates });
   if (reply === null) return;
   switch (reply.kind) {
     case "no-block":

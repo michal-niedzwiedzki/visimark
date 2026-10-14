@@ -57,10 +57,18 @@ note with the body of `docs/example-invoice-drift.md`.
 | M-2.1 | Paste a plain table with a computed column, select it, **Infer the formulas** | The preview dialog; **Apply** writes one block, and one Ctrl+Z removes it |
 | M-2.2 | Each template in an empty note, then again in the same note | Inserted; then "This note already has a VisiMark block. Insert the template into a new note instead." |
 
+## #384, group 3: settings and the tooltip
+
+| # | Do this | Required |
+|---|---|---|
+| M-3.1 | **Tools → Options → VisiMark** | "Show marks on computed values", on; "When formatting, rewrite dates to ISO 8601 where the date is unambiguous", off |
+| M-3.2 | Turn **Show marks on computed values** off, with the drift note open | The marks leave the editor at once and the viewer on its next render (Joplin caches an unchanged note's HTML, so edit the note if the viewer has not updated); the editor's diagnostics remain |
+| M-3.3 | With the setting back on, hover a marked value in the viewer | The tooltip starts with the binding line, then "comes to" and "reads" |
+
 ## Recording
 
 | Row | Joplin version | Date | Observed |
 |---|---|---|---|
-| | | | |
+| M-1.1–M-1.7 | 3.7.21 (AppImage) | 2026-10-14 | All passed, reported by the maintainer |
 
 <!--vmark:no-formulas-->

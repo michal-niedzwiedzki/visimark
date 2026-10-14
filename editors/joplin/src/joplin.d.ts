@@ -12,6 +12,7 @@ declare const joplin: {
       id: string,
       scriptPath: string,
     ): Promise<void>;
+    onMessage(id: string, callback: (message: unknown) => Promise<unknown>): Promise<void>;
   };
   commands: {
     register(command: {
@@ -21,7 +22,19 @@ declare const joplin: {
     }): Promise<void>;
     execute(name: string, ...args: unknown[]): Promise<unknown>;
   };
-  settings: { globalValue(key: string): Promise<unknown> };
+  settings: {
+    globalValue(key: string): Promise<unknown>;
+    /** one of this plugin's own settings */
+    value(key: string): Promise<unknown>;
+    registerSection(name: string, section: { label: string }): Promise<void>;
+    registerSettings(
+      settings: Record<
+        string,
+        { value: unknown; type: number; section: string; public: boolean; label: string }
+      >,
+    ): Promise<void>;
+    onChange(handler: (event: { keys: string[] }) => void): Promise<void>;
+  };
   workspace: { selectedNote(): Promise<{ id: string; title: string } | null> };
   views: {
     menus: {

@@ -273,5 +273,6 @@ test("the content script registers the editor commands on a CodeMirror 6 editor"
     "visimark.cm.inferPreview",
     "visimark.cm.apply",
     "visimark.cm.insertTemplate",
+    "visimark.cm.setMarks",
   ]);
 });
