@@ -62,6 +62,22 @@ export interface AssertionResult {
   /** the expression as written with each named operand replaced by its value;
    *  equals the bare expression when `holds` is `null` */
   substituted: string;
+  /** the top-level operator when the expression is one comparison (never `!=`) */
+  comparison?: ComparisonOp;
+  /** both sides as evaluated; only when `comparison` is set and `holds` is not
+   *  `null`. Read by `report slack` alone, never by `--json`. See
+   *  docs/design/a-slack-report-for-the-nearest-miss-spec.md §5. */
+  sides?: AssertionSides;
+}
+
+export type ComparisonOp = "<" | "<=" | ">" | ">=" | "==";
+
+export interface AssertionSides {
+  left: Value;
+  right: Value;
+  /** the wider of the two sides' derived widths (design doc §7); `null` when
+   *  either side derives none */
+  width: number | null;
 }
 
 export function newAssertionLedger(model: DocModel): AssertionLedger {
