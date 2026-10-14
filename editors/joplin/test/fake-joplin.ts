@@ -19,7 +19,16 @@ export interface FakeJoplin {
   readonly editorCalls: { name: string; args: unknown[] }[];
   /** what the plugin passed to `joplin.plugins.register` */
   onStart?: () => Promise<void>;
+  /** app settings, read with globalValue */
   settings: Record<string, unknown>;
+  /** the plugin's own settings, as registered and then changed by a test */
+  pluginSettings: Record<string, unknown>;
+  readonly sections: { name: string; label: string }[];
+  readonly registered: Record<string, Record<string, unknown>>;
+  /** what the plugin passed to settings.onChange */
+  onSettingsChange?: (event: { keys: string[] }) => Promise<void> | void;
+  /** contentScripts.onMessage handlers, by content script id */
+  readonly onMessage: Record<string, (message: unknown) => unknown>;
   note: { id: string; title: string } | null;
   /** what `editor.execCommand` answers, by editor command name */
   editor: Record<string, unknown>;
@@ -38,6 +47,10 @@ export function installFakeJoplin(): FakeJoplin {
     answer: "ok",
     editorCalls: [],
     settings: { "editor.codeView": true },
+    pluginSettings: {},
+    sections: [],
+    registered: {},
+    onMessage: {},
     note: { id: "n1", title: "example-invoice-drift.md" },
     editor: {},
     async run(name, ...args) {
@@ -52,7 +65,11 @@ export function installFakeJoplin(): FakeJoplin {
     plugins: {
       register: async (s: { onStart(): Promise<void> }) => void (fake.onStart = s.onStart),
     },
-    contentScripts: { register: async (...a: unknown[]) => void fake.contentScripts.push(a) },
+    contentScripts: {
+      register: async (...a: unknown[]) => void fake.contentScripts.push(a),
+      onMessage: async (id: string, f: (message: unknown) => unknown) =>
+        void (fake.onMessage[id] = f),
+    },
     commands: {
       register: async (c: FakeJoplin["commands"][number]) => void fake.commands.push(c),
       execute: async (name: string, value: { name: string; args: unknown[] }) => {
@@ -61,7 +78,17 @@ export function installFakeJoplin(): FakeJoplin {
         return fake.editor[value.name];
       },
     },
-    settings: { globalValue: async (key: string) => fake.settings[key] },
+    settings: {
+      globalValue: async (key: string) => fake.settings[key],
+      value: async (key: string) => fake.pluginSettings[key],
+      registerSection: async (name: string, section: { label: string }) =>
+        void fake.sections.push({ name, label: section.label }),
+      registerSettings: async (settings: Record<string, Record<string, unknown>>) => {
+        Object.assign(fake.registered, settings);
+        for (const [key, item] of Object.entries(settings)) fake.pluginSettings[key] = item.value;
+      },
+      onChange: async (f: FakeJoplin["onSettingsChange"]) => void (fake.onSettingsChange = f),
+    },
     workspace: { selectedNote: async () => fake.note },
     views: {
       menus: {

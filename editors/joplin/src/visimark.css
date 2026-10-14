@@ -14,3 +14,8 @@
     text-decoration: none;
   }
 }
+/* the showMarks setting, off (#384 spec §2.4): the marks go, the lint stays.
+   Two classes, so it outranks .visimark-disagrees. */
+.visimark-marks-off .visimark-computed {
+  text-decoration: none;
+}

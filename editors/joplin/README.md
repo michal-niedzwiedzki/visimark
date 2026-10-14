@@ -48,6 +48,14 @@ In Joplin desktop 3.7.1 or later: **Tools → Options → Plugins** (on macOS,
   - **VisiMark: Insert … template** (invoice, monthly budget, team capacity,
     experiment log) inserts a starter note at the cursor. A note that already
     has a `vmark` block is refused.
+- In the viewer, hovering a marked value shows its formula, what it comes to
+  and what it reads.
+- Settings, under **Tools → Options → VisiMark**:
+  - **Show marks on computed values** (on by default). Off hides the marks in
+    the editor and the viewer, and the viewer's tooltip with them. The editor's
+    diagnostics and quick fixes stay.
+  - **When formatting, rewrite dates to ISO 8601 where the date is
+    unambiguous** (off by default), the same as `visimark fmt --fix-dates`.
 - Each lint diagnostic offers a quick fix where one is obvious: update a stale
   value, rewrite an unambiguous date, take the suggested name, or wrap a
   column in `SUM(…)`.
@@ -61,6 +69,6 @@ In Joplin desktop 3.7.1 or later: **Tools → Options → Plugins** (on macOS,
   they ask you to switch.
 - **No `vmark` block highlighting.** Joplin gives plugins no way to add a code
   language to its editor.
-- **Desktop only**, and no settings.
+- **Desktop only.**
 - With Joplin's **typographer** setting on, a quoted text value is rendered
   with curly quotes and left unmarked. Numbers are unaffected.

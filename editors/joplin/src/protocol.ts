@@ -16,6 +16,7 @@ export const EDITOR_COMMANDS = {
   inferPreview: "visimark.cm.inferPreview",
   apply: "visimark.cm.apply",
   insertTemplate: "visimark.cm.insertTemplate",
+  setMarks: "visimark.cm.setMarks",
 } as const;
 
 export interface CheckArgs {
