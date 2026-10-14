@@ -45,17 +45,13 @@ With **250**<!--vmark=event.attendees--> people at **80.00**<!--vmark=event.tick
 EUR a ticket the day costs **23025.00**<!--vmark=costs.total--> EUR and makes
 **6975.00**<!--vmark=event.profit--> EUR.
 
-## Readings
-
-```vmark #readings
+<!--vmark:report #readings
 report gates
 report forbidden
 report best scalar event.profit direction max among feasible
 report best scalar event.ticket direction min among feasible
 report deltas on event.profit, event.sponsor_share among all
 report slack
-```
+-->
 
-```vmark #ledger
-report ledger assertions broken
-```
+<!--vmark:report #ledger report ledger assertions broken-->
