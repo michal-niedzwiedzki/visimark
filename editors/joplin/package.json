@@ -9,7 +9,8 @@
   "dependencies": {
     "codemirror-visimark": "workspace:*",
     "markdown-it-visimark": "workspace:*",
-    "visimark": "workspace:*"
+    "visimark": "workspace:*",
+    "visimark-editor-shared": "workspace:*"
   },
   "devDependencies": {
     "@codemirror/language": "^6.13.1",

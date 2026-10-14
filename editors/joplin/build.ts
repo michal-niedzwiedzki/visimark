@@ -54,6 +54,7 @@ export function options(entry: (typeof ENTRIES)[number], outDir: string): BuildO
       visimark: join(packages, "visimark", "src", "browser.ts"),
       "codemirror-visimark": join(packages, "codemirror-visimark", "src"),
       "markdown-it-visimark": join(packages, "markdown-it-visimark", "src"),
+      "visimark-editor-shared": join(here, "..", "shared", "src"),
       "node:path": join(packages, "codemirror-visimark", "src", "browser-path.ts"),
     },
     external: [...entry.external],

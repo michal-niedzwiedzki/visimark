@@ -12,7 +12,8 @@
       "visimark": ["../../packages/visimark/src/browser.ts"],
       "codemirror-visimark": ["../../packages/codemirror-visimark/src/index.ts"],
       "codemirror-visimark/*": ["../../packages/codemirror-visimark/src/*"],
-      "markdown-it-visimark": ["../../packages/markdown-it-visimark/src/index.ts"]
+      "markdown-it-visimark": ["../../packages/markdown-it-visimark/src/index.ts"],
+      "visimark-editor-shared/*": ["../shared/src/*"]
     }
   },
   "include": ["src", "test", "build.ts", "pack.ts"]

@@ -1,7 +1,11 @@
+import { registerCommands } from "./commands.js";
+
 /**
- * The Joplin plugin (#378): two content scripts and no logic of its own. It
- * reads one note — no `joplin.data`, no reader, no settings — so nothing
- * outside the note changes what it computes (visimark-design.md §2, constraint 4).
+ * The Joplin plugin (#378, #384): two content scripts, and the palette
+ * commands that route to the editor one. The engine runs in the content
+ * script, over the one note that is open — no `joplin.data`, no reader — so
+ * nothing outside the note changes what it computes (visimark-design.md §2,
+ * constraint 4).
  */
 void joplin.plugins.register({
   onStart: async () => {
@@ -15,7 +19,6 @@ void joplin.plugins.register({
       "visimark-markdown-it",
       "./markdownItContentScript.js",
     );
+    await registerCommands();
   },
 });
-
-export {}; // a module, so the test can import it; Joplin runs it as a script either way
