@@ -1,9 +1,9 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { createApi } from "../src/api.js";
+import { build, check, locate } from "visimark";
+import { explainBinding } from "../src/explain.js";
 import { rowFrom, summaryFor } from "../src/hover.js";
-import type { VaultRead } from "../src/snapshot.js";
 
 /**
  * Manual test §2.3 names three things a popover must contain — **the formula,
@@ -14,11 +14,13 @@ import type { VaultRead } from "../src/snapshot.js";
  */
 
 const docs = resolve(import.meta.dir, "../../../docs");
-const files: Record<string, string> = {
-  "invoice.md": readFileSync(join(docs, "example-invoice.md"), "utf8"),
+// The invoice imports nothing, so a reader-less check is the whole answer —
+// the same values Obsidian's `api.explain` gives for it.
+const model = build(locate(readFileSync(join(docs, "example-invoice.md"), "utf8")));
+const result = check(model);
+const api = {
+  explain: (_file: string, name: string) => Promise.resolve(explainBinding(model, result, name)),
 };
-const read: VaultRead = (p) => Promise.resolve(files[p] ?? null);
-const api = createApi(read, (f) => (typeof f === "string" ? f : null));
 
 test("a scalar's line has the formula, the result and what it reads", async () => {
   const e = (await api.explain("invoice.md", "lines.net_total"))!;
