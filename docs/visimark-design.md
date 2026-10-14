@@ -90,6 +90,29 @@ total = SUM(Net)
 **Sheet identity** comes from the fence info string: ` ```vmark #lines `. A `vmark`
 block with no identity contributes to **document scope**, whose names are
 visible to every sheet. Multiple document-scope blocks are permitted and merge.
+Several blocks with one id are one sheet, too.
+
+**A report comment is a second way to write a sheet's `report` statements**
+(#375, [`design/declare-a-sheet-s-report-statements-spec.md`](design/declare-a-sheet-s-report-statements-spec.md)):
+
+```markdown
+<!--vmark:report #readings
+report gates
+report forbidden
+-->
+
+<!--vmark:report #ledger report ledger assertions broken-->
+```
+
+The id follows `report` on the opener line, after a space or tab, with no
+space after `#`. The body runs from the id to `-->`. It is split like a block
+body, and every remaining line must be a `report` statement. A report comment
+opens a table-less sheet or joins the sheet that already has its id, with
+exactly the rights a second block of that id would have. Blocks and report
+comments contribute in source order, so a sheet is opened by whichever comes
+first. A report comment never owns a table, and `fmt` never writes one. It is
+invisible in every target renderer, so the readings `simulate` prints do not
+appear in the rendered page.
 
 **A sheet id must be a valid identifier**, `[A-Za-z_][A-Za-z0-9_]*` — the same
 grammar an anchor comment and a qualified expression reference (`sheet.name`)
@@ -102,7 +125,7 @@ builds and evaluates under a bad id; the `SHEET` finding is reported in
 addition, not instead.
 
 **Table association.** If the block's immediately preceding node, ignoring
-blank lines, is a GFM table, the sheet owns that table. Otherwise the sheet is
+blank lines and report comments, is a GFM table, the sheet owns that table. Otherwise the sheet is
 table-less — legitimate, and used by `#terms` and `#recon` in both examples. A
 block that declares column rules but owns no table is a `SHEET` error, so
 inserting a paragraph between a table and its block fails loudly rather than
@@ -231,6 +254,18 @@ silently treated as an ordinary comment. The expected form is
 `<!--vmark=sheet.name-->` or `<!--vmark=sheet.name|rule-->`. A comment that
 does not match the loose prefix at all is unaffected, including the distinct
 `<!--vmark:no-formulas-->` marker, which uses `:` rather than `=`.
+
+**The colon family has two words.** An HTML comment that opens with
+`<!--vmark:` is `<!--vmark:no-formulas-->` or a report comment, and nothing
+else. Any other word after the colon (`reports`, `Report`, an empty one) is an
+`ANCHOR` error, so a typo is reported rather than ignored. Both forms must be
+direct children of the document, like a `vmark` block. One inside a list item,
+a blockquote, a table cell or a paragraph is an error: `SHEET` for a report
+comment, `ANCHOR` for the marker. A marker with anything else in the comment
+is `ANCHOR`. A report comment that is not closed, has text after its `-->`, has
+no id, has no statement, or holds a line that is not a `report` is a `SHEET`
+error, and it contributes nothing to any sheet. A comment inside a fenced code
+block is text, not a comment, so an example stays inert.
 
 ## 4. Syntax
 
@@ -726,8 +761,8 @@ justifies the project.
 | `VECTOR` | foreign column outside an aggregate | no |
 | `CYCLE` | circular dependency, among bindings or among unit definitions | no |
 | `TYPE` | illegal operand types, a malformed call (name, arity, shape), or a display rule on a value of a type it does not accept (a date or a string for `percent`; a number or a date for `nbsp`; any value with a unit for those two, and any value without one for `unit`), or a chart/image, or a malformed or impossible `lattice` clause, or a malformed or unknown `report`, or a `report` ref that names a column, or a bare `report deltas` with no scalar to read, or a `report slack` in a file with no `assert` | no |
-| `SHEET` | column rules with no table, an `assert` in a document-scope block, or a unit definition in a sheet block, or a `report` in a document-scope block | no |
-| `ANCHOR` | anchor with no rewritable target, an unrecognised display-rule name, a display-rule anchor with no delimited seed, a display rule that cannot render in a code span, or a string display rule whose rendering would not read back as the stored text | no |
+| `SHEET` | column rules with no table, an `assert` in a document-scope block, or a unit definition in a sheet block, or a `report` in a document-scope block, or a report comment that is unclosed, has trailing text, has no sheet id, declares no report, holds a line that is not a report, or is not at top level | no |
+| `ANCHOR` | anchor with no rewritable target, an unrecognised display-rule name, a display-rule anchor with no delimited seed, a display rule that cannot render in a code span, or a string display rule whose rendering would not read back as the stored text, or an unknown `vmark:` comment word, or a `no-formulas` marker that is malformed or not at top level | no |
 | `PRECISION` | a numeric binding with no declared width and none derivable, a value too large to carry the width it has ([§7](#7-numeric-semantics)), or a `percent` display rule on a binding whose width is below 2, or a `lattice` step with more decimals than its param declares | no |
 | `DOMAIN` | a `param`'s default is outside its declared domain, or the domain has no legal value ([§20](#20-scenario-parameters)) | no |
 | `ASSERT` | an `assert` statement evaluated false ([§17](#17-assertions)) | no |

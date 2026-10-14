@@ -93,7 +93,7 @@ A sweep needs four things, and three of them you may already have.
 | `param` | This number is an assumption. | a `vmark` block |
 | `in [...]` and `lattice` | These are the values worth trying. | the `param` line |
 | `assert` | This is what "the plan works" means. | a `vmark` block |
-| `report` | These are the readings I want. | a sheet of its own, usually |
+| `report` | These are the readings I want. | a report comment, or a sheet block of its own |
 
 The rest of this guide takes them in that order.
 
@@ -147,20 +147,16 @@ With **250**<!--vmark=event.attendees--> people at **80.00**<!--vmark=event.tick
 EUR a ticket the day costs **23025.00**<!--vmark=costs.total--> EUR and makes
 **6975.00**<!--vmark=event.profit--> EUR.
 
-## Readings
-
-```vmark #readings
+<!--vmark:report #readings
 report gates
 report forbidden
 report best scalar event.profit direction max among feasible
 report best scalar event.ticket direction min among feasible
 report deltas on event.profit, event.sponsor_share among all
 report slack
-```
+-->
 
-```vmark #ledger
-report ledger assertions broken
-```
+<!--vmark:report #ledger report ledger assertions broken-->
 ````
 
 It checks clean, like any other document:
@@ -409,32 +405,51 @@ lever still check normally.
 
 ## 11. Where reports live
 
-A `report` line goes in a sheet block, a `vmark #id` block. It binds nothing
-and stores nothing, the same as a `chart`.
+A `report` line binds nothing and stores nothing, the same as a `chart`. It
+belongs to a sheet, and there are two places to write it.
 
-You can put reports in the sheet whose values they read, but the example keeps
-them apart:
+**In a report comment.** This is what the example does:
 
-````markdown
-## Readings
-
-```vmark #readings
+```markdown
+<!--vmark:report #readings
 report gates
 report forbidden
 report best scalar event.profit direction max among feasible
 report best scalar event.ticket direction min among feasible
 report deltas on event.profit, event.sponsor_share among all
 report slack
+-->
+
+<!--vmark:report #ledger report ledger assertions broken-->
 ```
 
-```vmark #ledger
-report ledger assertions broken
+The comment opens with `<!--vmark:report`, a space, and the sheet id, on one
+line. Every line after the id, up to `-->`, is a whole `report` statement,
+keyword included. A sheet with one statement fits on one line, like `#ledger`.
+Blank lines and `#` comments are allowed, as in a block.
+
+A renderer hides HTML comments, so the readings are configuration for
+`simulate` and nothing more. The rendered budget stays prose and tables.
+`simulate` prints every statement back under its `#id` heading, so nothing a
+reader needs is lost.
+
+**In a sheet block.** A `vmark #id` block may hold `report` lines too:
+
+````markdown
+```vmark #readings
+report gates
+report forbidden
 ```
 ````
 
-**A sheet of its own reads as a section of the document.** "Readings" is a
-heading a reviewer can find. It also means the model sheets stay exactly what
-they were before anyone asked for a sweep.
+Use a block when the document is teaching the declaration, or when you want
+it on the page.
+
+**Both can name one sheet.** A comment and a block with the same id are one
+sheet, and its reports run in source order. A comment may also name the sheet
+whose values it reads, such as `#event`, and join it. The example keeps its
+readings in sheets of their own, so the model sheets stay exactly what they
+were before anyone asked for a sweep.
 
 **The long report gets its own sheet.** The ledger prints one row per
 question, 65 here. `simulate` prints sheets in document order, so putting the
@@ -444,8 +459,23 @@ ledger last keeps the short readings at the top of the output.
 Each question is evaluated once, however many reports read it.
 
 `check` reads every `report` line, checks its options and resolves every name
-in it. It never runs one. A report must be in a `#id` block; a document-scope
-block is a `SHEET` error.
+in it. It never runs one. A report must be in a `#id` block or a report
+comment; a document-scope block is a `SHEET` error.
+
+A report comment that does not parse is an error too, never an ordinary
+comment:
+
+| Comment | `check` reports |
+|---|---|
+| `<!--vmark:report gates-->` | `SHEET` a report comment has no sheet id |
+| `<!--vmark:report #readings-->` | `SHEET` a report comment declares no report |
+| `<!--vmark:report #readings x = 1-->` | `SHEET` a report comment holds report statements only |
+| `<!--vmark:report #readings report gates--> more` | `SHEET` text after a report comment |
+| a comment with no `-->` | `SHEET` a report comment is not closed with `-->` |
+| a report comment inside a list, a blockquote or a paragraph | `SHEET` a report comment must be at top level |
+| `<!--vmark:reports #readings report gates-->` | `ANCHOR` unknown `vmark:` comment `reports` — expected … |
+
+A comment with one of these errors adds nothing to any sheet.
 
 ## 12. The six reports, and the question each answers
 
@@ -513,7 +543,7 @@ as a read.
 
 ## 14. Mistakes in a report line, and what they report
 
-Each comes from changing one line of the example's `#readings` sheet.
+Each comes from changing one line of the example's `#readings` report comment.
 
 A misspelt name, `report deltas on event.proift among all`:
 

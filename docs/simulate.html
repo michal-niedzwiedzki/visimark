@@ -274,7 +274,7 @@ found, you edit a default and run <code>fmt</code>, and that is a normal diff fo
 <tr>
 <td><code>report</code></td>
 <td>These are the readings I want.</td>
-<td>a sheet of its own, usually</td>
+<td>a report comment, or a sheet block of its own</td>
 </tr>
 </tbody>
 </table>
@@ -324,20 +324,16 @@ With **250**&#x3C;!--vmark=event.attendees--> people at **80.00**&#x3C;!--vmark=
 EUR a ticket the day costs **23025.00**&#x3C;!--vmark=costs.total--> EUR and makes
 **6975.00**&#x3C;!--vmark=event.profit--> EUR.
 
-## Readings
-
-```vmark #readings
+&#x3C;!--vmark:report #readings
 report gates
 report forbidden
 report best scalar event.profit direction max among feasible
 report best scalar event.ticket direction min among feasible
 report deltas on event.profit, event.sponsor_share among all
 report slack
-```
+-->
 
-```vmark #ledger
-report ledger assertions broken
-```
+&#x3C;!--vmark:report #ledger report ledger assertions broken-->
 </code></pre>
 <p>It checks clean, like any other document:</p>
 <pre><code class="language-console">$ visimark check conference.md
@@ -604,36 +600,90 @@ lever still check normally.</p>
 <hr>
 <h1 id="part-3-designing-the-report">Part 3 — Designing the report</h1>
 <h2 id="11-where-reports-live">11. Where reports live</h2>
-<p>A <code>report</code> line goes in a sheet block, a <code>vmark #id</code> block. It binds nothing
-and stores nothing, the same as a <code>chart</code>.</p>
-<p>You can put reports in the sheet whose values they read, but the example keeps
-them apart:</p>
-<pre><code class="language-markdown">## Readings
-
-```vmark #readings
+<p>A <code>report</code> line binds nothing and stores nothing, the same as a <code>chart</code>. It
+belongs to a sheet, and there are two places to write it.</p>
+<p><strong>In a report comment.</strong> This is what the example does:</p>
+<pre><code class="language-markdown">&#x3C;!--vmark:report #readings
 report gates
 report forbidden
 report best scalar event.profit direction max among feasible
 report best scalar event.ticket direction min among feasible
 report deltas on event.profit, event.sponsor_share among all
 report slack
-```
+-->
 
-```vmark #ledger
-report ledger assertions broken
+&#x3C;!--vmark:report #ledger report ledger assertions broken-->
+</code></pre>
+<p>The comment opens with <code>&#x3C;!--vmark:report</code>, a space, and the sheet id, on one
+line. Every line after the id, up to <code>--></code>, is a whole <code>report</code> statement,
+keyword included. A sheet with one statement fits on one line, like <code>#ledger</code>.
+Blank lines and <code>#</code> comments are allowed, as in a block.</p>
+<p>A renderer hides HTML comments, so the readings are configuration for
+<code>simulate</code> and nothing more. The rendered budget stays prose and tables.
+<code>simulate</code> prints every statement back under its <code>#id</code> heading, so nothing a
+reader needs is lost.</p>
+<p><strong>In a sheet block.</strong> A <code>vmark #id</code> block may hold <code>report</code> lines too:</p>
+<pre><code class="language-markdown">```vmark #readings
+report gates
+report forbidden
 ```
 </code></pre>
-<p><strong>A sheet of its own reads as a section of the document.</strong> "Readings" is a
-heading a reviewer can find. It also means the model sheets stay exactly what
-they were before anyone asked for a sweep.</p>
+<p>Use a block when the document is teaching the declaration, or when you want
+it on the page.</p>
+<p><strong>Both can name one sheet.</strong> A comment and a block with the same id are one
+sheet, and its reports run in source order. A comment may also name the sheet
+whose values it reads, such as <code>#event</code>, and join it. The example keeps its
+readings in sheets of their own, so the model sheets stay exactly what they
+were before anyone asked for a sweep.</p>
 <p><strong>The long report gets its own sheet.</strong> The ledger prints one row per
 question, 65 here. <code>simulate</code> prints sheets in document order, so putting the
 ledger last keeps the short readings at the top of the output.</p>
 <p><strong>One grid per file.</strong> Every report sheet in a file reads the same questions.
 Each question is evaluated once, however many reports read it.</p>
 <p><code>check</code> reads every <code>report</code> line, checks its options and resolves every name
-in it. It never runs one. A report must be in a <code>#id</code> block; a document-scope
-block is a <code>SHEET</code> error.</p>
+in it. It never runs one. A report must be in a <code>#id</code> block or a report
+comment; a document-scope block is a <code>SHEET</code> error.</p>
+<p>A report comment that does not parse is an error too, never an ordinary
+comment:</p>
+<table>
+<thead>
+<tr>
+<th>Comment</th>
+<th><code>check</code> reports</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>&#x3C;!--vmark:report gates--></code></td>
+<td><code>SHEET</code> a report comment has no sheet id</td>
+</tr>
+<tr>
+<td><code>&#x3C;!--vmark:report #readings--></code></td>
+<td><code>SHEET</code> a report comment declares no report</td>
+</tr>
+<tr>
+<td><code>&#x3C;!--vmark:report #readings x = 1--></code></td>
+<td><code>SHEET</code> a report comment holds report statements only</td>
+</tr>
+<tr>
+<td><code>&#x3C;!--vmark:report #readings report gates--> more</code></td>
+<td><code>SHEET</code> text after a report comment</td>
+</tr>
+<tr>
+<td>a comment with no <code>--></code></td>
+<td><code>SHEET</code> a report comment is not closed with <code>--></code></td>
+</tr>
+<tr>
+<td>a report comment inside a list, a blockquote or a paragraph</td>
+<td><code>SHEET</code> a report comment must be at top level</td>
+</tr>
+<tr>
+<td><code>&#x3C;!--vmark:reports #readings report gates--></code></td>
+<td><code>ANCHOR</code> unknown <code>vmark:</code> comment <code>reports</code> — expected …</td>
+</tr>
+</tbody>
+</table>
+<p>A comment with one of these errors adds nothing to any sheet.</p>
 <h2 id="12-the-six-reports-and-the-question-each-answers">12. The six reports, and the question each answers</h2>
 <p>The list is closed. A document can ask for these six and nothing else, so a
 Markdown file can never make the tool run code it does not ship.</p>
@@ -742,7 +792,7 @@ sheet the no-<code>on</code> form prints every scalar, including constants that 
 <p>A scalar that only a report reads is not reported as unused. The report counts
 as a read.</p>
 <h2 id="14-mistakes-in-a-report-line-and-what-they-report">14. Mistakes in a report line, and what they report</h2>
-<p>Each comes from changing one line of the example's <code>#readings</code> sheet.</p>
+<p>Each comes from changing one line of the example's <code>#readings</code> report comment.</p>
 <p>A misspelt name, <code>report deltas on event.proift among all</code>:</p>
 <pre><code class="language-console">  UNDEF   readings.         unknown name `event.proift`
           did you mean `profit`?
