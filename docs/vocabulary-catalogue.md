@@ -277,7 +277,7 @@ the same time.
 
 | Name | Kind | Request | Landed | Released | Decision |
 |------|------|---------|--------|----------|----------|
-| Joplin commands, repair, settings, and notebook sweep | tooling | [#384](https://github.com/michal-niedzwiedzki/visimark/issues/384) | LANDED_PR | — | [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/384#issuecomment-6164291939) |
+| Joplin commands, repair, settings, and notebook sweep | tooling | [#384](https://github.com/michal-niedzwiedzki/visimark/issues/384) | [#391](https://github.com/michal-niedzwiedzki/visimark/pull/391) | — | [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/384#issuecomment-6164291939) |
 | Joplin plugin (`joplin-plugin-visimark`), build-only | tooling | [#378](https://github.com/michal-niedzwiedzki/visimark/issues/378) | [#381](https://github.com/michal-niedzwiedzki/visimark/pull/381) | — | [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/378#issuecomment-6148869639) |
 | `report slack` | language feature | [#352](https://github.com/michal-niedzwiedzki/visimark/issues/352) | [#383](https://github.com/michal-niedzwiedzki/visimark/pull/383) | — | [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/352#issuecomment-6151007966) |
 | Published markdown-it plugin (`markdown-it-visimark`) | tooling | [#373](https://github.com/michal-niedzwiedzki/visimark/issues/373) | [#377](https://github.com/michal-niedzwiedzki/visimark/pull/377) | — | [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/373#issuecomment-6123728493) |
