@@ -26,7 +26,7 @@ Editors covered:
 | Mark computed values while editing | ○ | ● Live Preview, with a setting to turn it off | ● CodeMirror 6 editor only |
 | Stale value shown differently from a fresh one | ● preview | ● | ● red wavy underline |
 | Print and PDF treatment | ○ | ○ | ● disagree mark stays, computed values print plain |
-| Hover or tap a value for its formula | ● hover | ● hover, tap and keyboard | ○ |
+| Hover or tap a value for its formula | ● hover | ● hover, tap and keyboard | ● viewer tooltip |
 | Hover on a function name for its signature | ● | ○ | ○ |
 | Syntax highlighting inside `vmark` blocks | ○ | ○ | ○ Joplin gives plugins no way in |
 | Imports (`from rows.csv`) resolved | ● from disk next to the file | ● through the vault | ○ one note only |
@@ -40,7 +40,7 @@ Editors covered:
 | Per-finding repair | ● quick fix | ● button on each row | ● quick fix on each lint diagnostic |
 | Fix every stale value in the note | ● command and source action | ● Format command | ● Format command, one undo |
 | Fix on save | ● on by default, never on autosave | ● off by default, Ctrl/Cmd+S only | ○ |
-| Rewrite decidable non-ISO dates | ● setting | ● setting | ○ |
+| Rewrite decidable non-ISO dates | ● setting | ● setting | ● setting, and a quick fix |
 | Format a selection only | ● range formatting | ○ | ○ |
 | Regenerate chart SVGs | ○ not in the extension's own code | ● setting, off by default | ○ |
 
@@ -64,7 +64,7 @@ Editors covered:
 | Status bar item with stale and error counts | ● click opens the report | ● click opens the findings view; desktop only | ○ |
 | Ribbon icon | — | ● opens the sweep | — |
 | Command palette entries | ● 5 | ● 5 plus 4 templates plus sweep | ● 5 plus 4 templates, also under Tools → VisiMark |
-| Settings | ● 10 | ● 5 | ○ none |
+| Settings | ● 10 | ● 5 | ● 2: show marks, fix dates on Format |
 | Public API for other plugins or extensions | ○ | ● `plugins.plugins["visimark"].api`: check, evaluate, get, explain | ○ |
 
 ### Platform
@@ -145,6 +145,9 @@ first group for free.
   Markdown editor only, and drop whatever depends on an import.
 - **Infer and the four templates** (#384 group 2). Infer's dialog previews
   the blocks, and Apply is refused if the note changed in between.
+- **Two settings and a viewer tooltip** (#384 group 3). `showMarks` hides the
+  marks and keeps the diagnostics; `fixDatesOnFormat` is Format's
+  `--fix-dates`.
 - **Legacy CodeMirror 5 editor is skipped** with no error.
 - **Print and PDF export rules** in the stylesheet.
 - **One shared stylesheet** shipped as a content-script asset.
@@ -162,9 +165,9 @@ integrated editor except the playground currently gets block highlighting.
 
 Read these as candidates, not decisions. Each one needs its own issue.
 
-1. **Joplin has no settings, findings panel or sweep yet.** Check, Format,
-   Evaluate, Explain, Infer and the templates are in (#384 groups 1–2); the
-   rest is #384's groups 3–4. The plugin has no file path, so `path` stays null and
+1. **Joplin has no findings panel or sweep yet.** Commands, templates,
+   settings and the viewer tooltip are in (#384 groups 1–3); the panel and
+   the sweep are #384's group 4. The plugin has no file path, so `path` stays null and
    imports stay out of reach.
 2. **Obsidian has no inline diagnostics.** `codemirror-visimark/lint` exists
    and Joplin uses it. Obsidian shows findings only in its own pane.
