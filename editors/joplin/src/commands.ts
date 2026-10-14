@@ -173,10 +173,11 @@ async function inferFormulas(): Promise<void> {
     return;
   }
   const choice = await showDialog("visimark.infer", html, [
-    { id: "apply", title: "Apply" },
+    // `confirm` is one of Joplin's submit ids, so Enter applies
+    { id: "confirm", title: "Apply" },
     { id: "cancel", title: "Cancel" },
   ]);
-  if (choice !== "apply") return;
+  if (choice !== "confirm") return;
   const reply = await inEditor<ApplyReply>(EDITOR_COMMANDS.apply, {
     version: preview.version,
     edits: preview.edits,

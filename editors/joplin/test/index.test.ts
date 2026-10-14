@@ -163,9 +163,9 @@ const preview = {
 test("Infer shows the preview with Apply and Cancel, and Apply sends its version back", async () => {
   fake.editor["visimark.cm.inferPreview"] = preview;
   fake.editor["visimark.cm.apply"] = { kind: "applied" };
-  fake.answer = "apply";
+  fake.answer = "confirm";
   await fake.run("visimark.infer");
-  expect(fake.buttons).toEqual([["apply", "cancel"]]);
+  expect(fake.buttons).toEqual([["confirm", "cancel"]]);
   expect(fake.dialogs[0]).toContain("VisiMark can work out 1 column.");
   expect(fake.dialogs[0]).toContain("Total = Price * Qty");
   expect(fake.editorCalls.at(-1)).toEqual({
@@ -213,7 +213,7 @@ test("Infer with nothing to propose shows OK only", async () => {
 test("Infer's Apply on a note that moved says A1", async () => {
   fake.editor["visimark.cm.inferPreview"] = preview;
   fake.editor["visimark.cm.apply"] = { kind: "changed" };
-  fake.answer = "apply";
+  fake.answer = "confirm";
   await fake.run("visimark.infer");
   expect(fake.messages).toEqual([MESSAGES.A1]);
 });
