@@ -37,6 +37,10 @@ test("Sweep: empty until run, progress with Cancel, then the list and the counts
   });
   expect(running).toContain("Checked 3 of 10 notes");
   expect(running).toContain('data-action="cancel"');
+  // before the note ids are listed there is no total to count against
+  expect(
+    panelHtml({ note: { kind: "no-block" }, sweep: { kind: "running", done: 0, total: 0 } }),
+  ).toContain("Listing notes");
   const done = panelHtml({
     note: { kind: "no-block" },
     sweep: {

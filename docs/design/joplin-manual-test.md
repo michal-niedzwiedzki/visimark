@@ -45,10 +45,10 @@ note with the body of `docs/example-invoice-drift.md`.
 | M-1.1 | Open the command palette; open **Tools → VisiMark** | Both list Check this note, Format this note, Evaluate this note, Explain this value, in that order |
 | M-1.2 | **Format this note** | "Applied 15 repairs."; one Ctrl+Z restores the drifted note exactly; copied out, the note is byte-identical to `visimark fmt`'s output, and `visimark check` on it reports `5 problems (0 stale, 5 errors)` and exits 1 |
 | M-1.3 | The quick fix on the On-call support `Net` cell | That cell becomes `5200.00`; nothing else changes |
-| M-1.4 | **Check this note** | The dialog text matches `visimark check`'s output (the `27 problems` summary) |
+| M-1.4 | **Check this note** | The dialog text matches `visimark check`'s output (the `27 problems` summary). *Superseded by M-4.1 from group 4: Check opens the findings panel.* |
 | M-1.5 | **Explain this value** with the cursor on a stale `Net` cell, then on prose | Formula, value and inputs; then "Put the cursor on a value VisiMark works out, and ask again." |
 | M-1.6 | A note with no block, every command | "This note has no VisiMark block, so there is nothing to check in it yet."; nothing changes |
-| M-1.7 | The Rich Text editor, every command | "VisiMark commands work in the Markdown editor. Switch to it and try again."; the note is unchanged |
+| M-1.7 | The Rich Text editor, every command | "VisiMark commands work in the Markdown editor. Switch to it and try again."; the note is unchanged. *From group 4, Check, the panel and the sweep work there instead (M-4.1).* |
 
 ## #384, group 2: authoring
 
@@ -69,13 +69,13 @@ note with the body of `docs/example-invoice-drift.md`.
 
 | # | Do this | Required |
 |---|---|---|
-| M-4.1 | **Check this note** on the drift note, in the Markdown editor and then the Rich Text editor | The panel opens in both with one row per finding; clicking a row in the Markdown editor moves the cursor to it |
+| M-4.1 | As the first VisiMark action after starting Joplin, **Show findings panel**; then **Check this note** on the drift note, in the Markdown editor and then the Rich Text editor | The first command shows the panel; it opens in both editors with one row per finding; clicking a row in the Markdown editor moves the cursor to it |
 | M-4.2 | Put the drift note in a sub-notebook, then **Sweep this notebook** from the parent's context menu; run it again and press **Cancel** | The drift note is listed and opens on click; Cancel stops the sweep and marks it Cancelled; no note's `updated_time` changes |
 
 ## Recording
 
 | Row | Joplin version | Date | Observed |
 |---|---|---|---|
-| M-1.1–M-1.7 | 3.7.21 (AppImage) | 2026-10-14 | All passed, reported by the maintainer |
+| M-1.1–M-1.7 | 3.7.21 (AppImage) | 2026-10-14 | All passed, reported by the maintainer, before group 4 changed M-1.4 and M-1.7 |
 
 <!--vmark:no-formulas-->

@@ -23,12 +23,14 @@ function fakeData(notes: FakeNote[], pageSize = 2) {
     { id: "other", parent_id: "", title: "Other" },
   ];
   const calls: string[] = [];
+  const writes: string[] = [];
   const page = <T>(items: T[], n = 1) => ({
     items: items.slice((n - 1) * pageSize, n * pageSize),
     has_more: n * pageSize < items.length,
   });
   return {
     calls,
+    writes,
     data: {
       get: async (path: string[], query: { page?: number; fields?: string[] }) => {
         calls.push(path.join("/"));
@@ -46,8 +48,9 @@ function fakeData(notes: FakeNote[], pageSize = 2) {
         }
         throw new Error(`unexpected ${path.join("/")}`);
       },
-      put: async () => {
-        throw new Error("the sweep must never write");
+      put: async (path: string[]) => {
+        writes.push(path.join("/"));
+        return {};
       },
     },
   };
@@ -62,8 +65,9 @@ const notes: FakeNote[] = [
 ];
 
 test("J11: the sweep visits the notebook and its sub-notebooks only, and lists the disagreeing notes", async () => {
-  const { data, calls } = fakeData(notes);
+  const { data, calls, writes } = fakeData(notes);
   const result = await sweepNotebook(data, "root");
+  expect(writes).toEqual([]);
   expect(result.notes.map((n) => [n.path, n.detail.title])).toEqual([
     ["a", "Drift in root"],
     ["d", "Drift in child"],

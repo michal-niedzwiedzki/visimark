@@ -13,6 +13,7 @@ import { EDITOR_COMMANDS } from "./protocol.js";
 export type SweepState =
   | { readonly kind: "idle" }
   | { readonly kind: "running"; readonly done: number; readonly total: number }
+  | { readonly kind: "failed" }
   | {
       readonly kind: "done";
       readonly cancelled: boolean;
@@ -52,8 +53,13 @@ function noteHtml(note: NoteFindings): string {
 
 function sweepHtml(sweep: SweepState): string {
   if (sweep.kind === "idle") return "";
+  if (sweep.kind === "failed") {
+    return `<p>${escape("The sweep stopped: Joplin could not list this notebook's notes.")}</p>`;
+  }
   if (sweep.kind === "running") {
-    return `<p>Checked ${sweep.done} of ${sweep.total} notes</p><button data-action="cancel">Cancel</button>`;
+    const progress =
+      sweep.total === 0 ? "Listing notes…" : `Checked ${sweep.done} of ${sweep.total} notes`;
+    return `<p>${progress}</p><button data-action="cancel">Cancel</button>`;
   }
   const notes = sweep.notes
     .map(
@@ -80,6 +86,8 @@ function sweepHtml(sweep: SweepState): string {
 /** The panel in Joplin: created on first use, then kept. */
 export class FindingsPanel {
   private handle: Promise<string> | null = null;
+  /** set by the first `ensure()`: a new panel's visibility is Joplin's call */
+  private fresh = false;
   private state: PanelState = { note: { kind: "no-block" }, sweep: { kind: "idle" } };
   private signal: { aborted: boolean } | null = null;
 
@@ -87,6 +95,7 @@ export class FindingsPanel {
     if (this.handle === null) {
       this.handle = (async () => {
         const h = await joplin.views.panels.create("visimark.findings");
+        this.fresh = true;
         await joplin.views.panels.addScript(h, "./panel.css");
         await joplin.views.panels.addScript(h, "./panel.js");
         await joplin.views.panels.onMessage(h, (message: unknown) => this.onMessage(message));
@@ -103,7 +112,9 @@ export class FindingsPanel {
 
   async toggle(): Promise<void> {
     const h = await this.ensure();
-    const visible = await joplin.views.panels.visible(h);
+    // the first toggle always shows, whatever a new panel starts as
+    const visible = this.fresh ? false : await joplin.views.panels.visible(h);
+    this.fresh = false;
     await joplin.views.panels.show(h, !visible);
     if (!visible) await this.refreshNote();
   }
@@ -111,6 +122,7 @@ export class FindingsPanel {
   /** What Check does from group 4: open the panel on this note, in either editor. */
   async showNote(): Promise<void> {
     const h = await this.ensure();
+    this.fresh = false;
     await joplin.views.panels.show(h, true);
     await this.refreshNote();
   }
@@ -126,21 +138,35 @@ export class FindingsPanel {
     const root = folderId ?? (await joplin.workspace.selectedFolder())?.id;
     if (root === undefined) return;
     const h = await this.ensure();
+    this.fresh = false;
     await joplin.views.panels.show(h, true);
+    await this.refreshNote();
     if (this.signal !== null) this.signal.aborted = true;
     const signal = { aborted: false };
     this.signal = signal;
     this.state = { ...this.state, sweep: { kind: "running", done: 0, total: 0 } };
     await this.render();
-    const result = await sweepNotebook(joplin.data, root, {
-      signal,
-      pause: () => new Promise((r) => setTimeout(r, 0)),
-      onProgress: (done, total) => {
-        if (this.signal !== signal) return;
-        this.state = { ...this.state, sweep: { kind: "running", done, total } };
-        void this.render();
-      },
-    });
+    let result;
+    try {
+      result = await sweepNotebook(joplin.data, root, {
+        signal,
+        // Joplin's notebooks are small next to a vault: report every ten notes
+        chunk: 10,
+        pause: () => new Promise((r) => setTimeout(r, 0)),
+        onProgress: (done, total) => {
+          if (this.signal !== signal) return;
+          this.state = { ...this.state, sweep: { kind: "running", done, total } };
+          void this.render();
+        },
+      });
+    } catch {
+      // listing failed (a folder deleted mid-sweep, say): say so, never hang
+      if (this.signal !== signal) return;
+      this.signal = null;
+      this.state = { ...this.state, sweep: { kind: "failed" } };
+      await this.render();
+      return;
+    }
     if (this.signal !== signal) return; // a newer sweep owns the panel now
     this.signal = null;
     this.state = {

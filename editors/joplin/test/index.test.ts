@@ -135,6 +135,33 @@ test("Show findings panel toggles it, and the panel is created once", async () =
   expect(fake.panel.created).toBe(1);
 });
 
+test("Sweep refreshes This note too, so the panel never opens on a stale note", async () => {
+  fake.note = { id: "n1", title: "drift", body: drift };
+  await fake.run("visimark.sweep", "f9");
+  expect(fake.panel.html).not.toContain(MESSAGES.N1);
+  expect(fake.panel.html).toContain("STALE lines.Net · On-call support");
+});
+
+test("a sweep that fails ends with a message, not a stuck progress line", async () => {
+  fake.data = async () => {
+    throw new Error("folder gone");
+  };
+  await fake.run("visimark.sweep", "f9");
+  expect(fake.panel.html).not.toContain('data-action="cancel"');
+  expect(fake.panel.html).toContain("The sweep stopped");
+});
+
+test("a panel Joplin creates already showing is not hidden by the first toggle", async () => {
+  const panels = joplin.views.panels as { create: (id: string) => Promise<string> };
+  const create = panels.create;
+  panels.create = async (id) => {
+    fake.panel.visible = true;
+    return create(id);
+  };
+  await fake.run("visimark.toggleFindings");
+  expect(fake.panel.visible).toBe(true);
+});
+
 test("a panel row reveals its span in the Markdown editor, and nothing in Rich Text", async () => {
   await fake.run("visimark.toggleFindings");
   fake.editor["visimark.cm.reveal"] = { kind: "ok" };

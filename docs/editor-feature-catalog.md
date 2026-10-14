@@ -169,8 +169,8 @@ Read these as candidates, not decisions. Each one needs its own issue.
 
 1. **Joplin reads one note at a time, with no path.** #384 closed the
    feature gap Joplin's API allows; what is left is what it does not: imports
-   (`from x.csv`) stay out of reach, and write commands need the Markdown
-   editor.
+   (`from x.csv`) stay out of reach, and commands other than Check, the panel
+   and the sweep need the Markdown editor.
 2. **Obsidian has no inline diagnostics.** `codemirror-visimark/lint` exists
    and Joplin uses it. Obsidian shows findings only in its own pane.
 3. **VS Code has no sweep, infer, evaluate or templates.** Sweep is the

@@ -72,8 +72,8 @@ In Joplin desktop 3.7.1 or later: **Tools → Options → Plugins** (on macOS,
 - **One note at a time.** A value that reads an imported file
   (`from rows.csv`) is not marked, checked or repaired. The commands say so
   when a note has one.
-- **The write commands work in the Markdown editor only.** In the Rich Text
-  editor they ask you to switch. Check, the panel and the sweep work in both.
+- **Commands other than Check, the panel and the sweep need the Markdown
+  editor.** In the Rich Text editor they ask you to switch.
 - **No `vmark` block highlighting.** Joplin gives plugins no way to add a code
   language to its editor.
 - **Desktop only.**
