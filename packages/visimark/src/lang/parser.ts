@@ -404,6 +404,28 @@ export function parseBinding(line: string): Binding {
 }
 
 /**
+ * Whether `parseStatement` would read `line` as a `report` statement: its first
+ * token is `report` and it has no `=` — the dispatch below. A line the lexer
+ * rejects is judged the same way by its text. A report comment holds only
+ * such lines (docs/design/declare-a-sheet-s-report-statements-spec.md §2.1).
+ */
+export function isReportLine(line: string): boolean {
+  let toks: Token[];
+  try {
+    toks = lex(line);
+  } catch (e) {
+    if (!(e instanceof LangError)) throw e;
+    return /^report(?:\s|$)/.test(line.trim()) && !/=/.test(line.replace(/"[^"]*"/g, ""));
+  }
+  const first = toks.find((t) => t.kind !== "eof");
+  return (
+    first?.kind === "ident" &&
+    first.value === "report" &&
+    !toks.some((t) => t.kind === "op" && t.value === "=")
+  );
+}
+
+/**
  * Parse one `vmark` block line: an `assert <expression>` statement, or an
  * ordinary `name = expression` binding. `assert` is a keyword — `assert = 1`
  * and a binding named `assert` are rejected here rather than silently parsed.

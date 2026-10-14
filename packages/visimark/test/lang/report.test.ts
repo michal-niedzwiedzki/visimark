@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { parseStatement } from "../../src/lang/parser.js";
+import { isReportLine, parseStatement } from "../../src/lang/parser.js";
 import { LangError } from "../../src/lang/token.js";
 
 // docs/design/lattice-on-param-and-report-statements-spec.md §2.2 and §4.2
@@ -156,5 +156,37 @@ describe("report options (add-a-simulate-command-spec.md §4)", () => {
   test("malformed options keep #258's messages", () => {
     expect(fails("report best scalar m").message).toBe(BEST);
     expect(fails("report gates now").message).toBe("`report gates` takes no options");
+  });
+});
+
+// docs/design/declare-a-sheet-s-report-statements-spec.md §2.1
+describe("isReportLine", () => {
+  test("the parser's own dispatch: first token `report`, no `=`", () => {
+    for (const line of [
+      "report gates",
+      "report heatmap",
+      "report",
+      "report deltas on a.b among all",
+    ]) {
+      expect([line, isReportLine(line)]).toEqual([line, true]);
+    }
+    for (const line of [
+      "report = 5",
+      "report precision 2 = 5",
+      "report x = 1",
+      "x = 1",
+      "assert a < 1",
+      '"Item" is item',
+      "param p = default 1",
+    ]) {
+      expect([line, isReportLine(line)]).toEqual([line, false]);
+    }
+  });
+
+  test("a line the lexer rejects is judged by its text", () => {
+    expect(isReportLine("report gates $$ ~")).toBe(true);
+    expect(isReportLine("report gates = ~")).toBe(false);
+    expect(isReportLine('report gates "a = b" ~')).toBe(true);
+    expect(isReportLine("reported ~")).toBe(false);
   });
 });

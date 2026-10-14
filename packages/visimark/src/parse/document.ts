@@ -2,9 +2,11 @@ import remarkGfm from "remark-gfm";
 import remarkParse from "remark-parse";
 import { unified } from "unified";
 import { type RawBinding, splitBindings } from "./blocks.js";
+import { type ColonProblem, parseColonComment, REPORT_LOOSE_RE } from "./colon-comment.js";
 import { parseFenceInfo } from "./fence-info.js";
 
 export type { RawBinding };
+export type { ColonProblem };
 
 interface MdNode {
   type: string;
@@ -67,6 +69,28 @@ export interface RawBlock {
   grammarError: { message: string; span: Span } | null;
   bindings: RawBinding[];
   /** span of the whole fenced code block, including fences */
+  span: Span;
+}
+
+/**
+ * A well-formed, top-level `<!--vmark:report #id …-->` comment: a second way
+ * to write a sheet's `report` statements. See
+ * `docs/design/declare-a-sheet-s-report-statements-spec.md` §2.1.
+ */
+export interface RawReportComment {
+  /** the id as written; `build` checks it is an identifier */
+  sheetId: string;
+  /** the body, split exactly like a fence body */
+  bindings: RawBinding[];
+  /** the whole comment */
+  span: Span;
+}
+
+/** a colon-family comment that is neither a marker nor a report comment */
+export interface MalformedColonComment {
+  problem: ColonProblem;
+  /** the word after `vmark:`, possibly empty */
+  word: string;
   span: Span;
 }
 
@@ -152,6 +176,10 @@ export interface LocatedDoc {
    * documentation rather than an assertion.
    */
   noFormulas: Span | null;
+  /** top-level report comments, in source order */
+  reportComments: RawReportComment[];
+  /** colon-family comments `build` reports, in source order */
+  malformedColonComments: MalformedColonComment[];
   /** for each block, the GFM table it owns (immediately precedes it), or null */
   tableBeforeBlock: Map<RawBlock, RawTable | null>;
   /** true when a block owns no table but a table appears between it and the previous block/heading */
@@ -166,7 +194,6 @@ const ANCHOR_RE =
  *  is a malformed anchor, not an ordinary HTML comment. */
 const ANCHOR_LOOSE_RE = /^<!--\s*vmark\s*=/;
 export const NO_FORMULAS_MARKER = "<!--vmark:no-formulas-->";
-const NO_FORMULAS_RE = /^<!--\s*vmark\s*:\s*no-formulas\s*-->$/;
 /** a trailing ISO-shaped date, tried before TRAILING_NUMBER_RE — otherwise
  *  the number regex reads a date's last `-DD` as a negative number and
  *  mis-scopes the span to three characters instead of the whole date.
@@ -206,23 +233,14 @@ export function locate(source: string): LocatedDoc {
   // index tables by their span start so a block can find the sibling before it
   const tableBySpanStart = new Map<number, RawTable>();
 
-  let noFormulas: Span | null = null;
-
-  for (let i = 0; i < top.length; i++) {
-    const node = top[i]!;
+  for (const node of top) {
     if (node.type === "table") {
       const t = readTable(node, source);
       tables.push(t);
       tableBySpanStart.set(t.span.start, t);
     }
-    if (
-      node.type === "html" &&
-      noFormulas === null &&
-      NO_FORMULAS_RE.test((node.value ?? "").trim())
-    ) {
-      noFormulas = { start: off(node, "start"), end: off(node, "end") };
-    }
   }
+  const { noFormulas, reportComments, malformedColonComments } = collectColonComments(tree);
 
   for (let i = 0; i < top.length; i++) {
     const node = top[i]!;
@@ -250,7 +268,11 @@ export function locate(source: string): LocatedDoc {
       };
       blocks.push(block);
 
-      const prev = top[i - 1];
+      // a report comment never owns a table, so the lookup steps over it
+      // the way it steps over a blank line (spec §3.2)
+      let p = i - 1;
+      while (p >= 0 && isReportComment(top[p]!)) p--;
+      const prev = top[p];
       if (prev && prev.type === "table") {
         tableBeforeBlock.set(block, tableBySpanStart.get(off(prev, "start")) ?? null);
       } else {
@@ -288,9 +310,55 @@ export function locate(source: string): LocatedDoc {
     malformedAnchors,
     figures,
     noFormulas,
+    reportComments,
+    malformedColonComments,
     tableBeforeBlock,
     detachedTableBlocks,
   };
+}
+
+function isReportComment(node: MdNode): boolean {
+  return node.type === "html" && REPORT_LOOSE_RE.test((node.value ?? "").trim());
+}
+
+/**
+ * Every colon-family comment, at any depth, in source order. Only a direct
+ * child of the root may be a marker or a report comment; anything deeper is
+ * reported, never silently ignored (spec §2.2). The first top-level marker is
+ * the one that counts, as before.
+ */
+function collectColonComments(root: MdNode): {
+  noFormulas: Span | null;
+  reportComments: RawReportComment[];
+  malformedColonComments: MalformedColonComment[];
+} {
+  let noFormulas: Span | null = null;
+  const reportComments: RawReportComment[] = [];
+  const malformedColonComments: MalformedColonComment[] = [];
+  const visit = (node: MdNode, topLevel: boolean): void => {
+    for (const child of node.children ?? []) {
+      if (child.type === "html") {
+        // an unclosed comment runs to the end of the document, newline and all
+        const start = off(child, "start");
+        const span: Span = { start, end: start + (child.value ?? "").trimEnd().length };
+        const r = parseColonComment(child.value ?? "", span.start, topLevel);
+        if (r?.kind === "marker") {
+          noFormulas ??= span;
+        } else if (r?.kind === "report") {
+          reportComments.push({
+            sheetId: r.sheetId,
+            bindings: splitBindings(r.body, r.bodyStart),
+            span,
+          });
+        } else if (r?.kind === "problem") {
+          malformedColonComments.push({ problem: r.problem, word: r.word, span });
+        }
+      }
+      visit(child, false);
+    }
+  };
+  visit(root, true);
+  return { noFormulas, reportComments, malformedColonComments };
 }
 
 /** the code fence's opening line, from `span.start` up to (not including) the newline */

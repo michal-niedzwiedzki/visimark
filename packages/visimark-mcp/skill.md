@@ -214,6 +214,13 @@ or **16236.00**<!--vmark=lines.gross_total--> PLN gross.
   one wherever a number's correctness depends on a relationship a later edit
   could break.
 
+- **`report` lines** tell `simulate` which readings to print. They may sit in a
+  `#id` block, or in a report comment that keeps them out of the rendered page:
+  `<!--vmark:report #readings report gates-->`, or one statement per line
+  between `<!--vmark:report #readings` and `-->`. The id goes on the opener
+  line; every body line is a whole `report` statement. A comment and a block
+  with the same id are one sheet.
+
 Write the table cells as `0.00` placeholders and run `visimark fmt` to fill
 them in. Do not compute them yourself.
 
@@ -270,7 +277,8 @@ eur_total [EUR] precision 2 = lines.gross_total / fx_eur
 | Rule | Consequence if ignored |
 |------|------------------------|
 | An anchor names `sheet.scalar` — always qualified | A document-scope constant **cannot** be anchored. Put anything you want in prose inside a named sheet. |
-| A block owns the table immediately above it, ignoring blank lines | A paragraph between table and block detaches the rules: `SHEET` error. |
+| A block owns the table immediately above it, ignoring blank lines and report comments | A paragraph between table and block detaches the rules: `SHEET` error. |
+| `<!--vmark:` has two words, `no-formulas` and `report`, at top level only | Any other word is an `ANCHOR` error; a report comment with no id, no `-->`, text after it, or a non-`report` line is a `SHEET` error, and so is one inside a list or blockquote. |
 | Cross-sheet column references must be qualified **and** aggregated | `SUM(schedule.Amount)` is legal; bare `schedule.Amount` is a `VECTOR` error. |
 | Dates are ISO 8601 only, `YYYY-MM-DD` | `15.10.2026` is refused with an offered fix; `11/12/2026` is refused outright. |
 | No thousands separators | `1,800.00` is a lex error. Write `1800.00`. |

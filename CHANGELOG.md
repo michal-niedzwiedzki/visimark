@@ -4,6 +4,15 @@
 
 ### Added
 
+- **`report` statements in an HTML comment.** A sheet's readings for
+  `simulate` may be written as `<!--vmark:report #readings report gates-->`,
+  or one statement per line between `<!--vmark:report #readings` and `-->`, so
+  they stay out of the rendered page. A comment and a `vmark` block with the
+  same id are one sheet, in source order. A malformed report comment (no id,
+  no `-->`, text after it, a line that is not a `report`) is a `SHEET` finding
+  and adds nothing. `docs/simulate/conference.md` now uses the comment form.
+  ([#375](https://github.com/michal-niedzwiedzki/visimark/issues/375))
+
 - **Quick fixes on `codemirror-visimark/lint` diagnostics.** A diagnostic now
   offers the repair the VS Code extension offers for the same finding: update
   a stale value to what `visimark fmt` would write, rewrite an unambiguous
@@ -82,6 +91,14 @@
   ([#351](https://github.com/michal-niedzwiedzki/visimark/issues/351))
 
 ### Changed
+
+- **Every `<!--vmark:` comment is checked.** The colon family has two words,
+  `no-formulas` and `report`. Any other word (`<!--vmark:reports …-->`), a
+  `no-formulas` marker with anything else in the comment, and a colon comment
+  inside a list, blockquote, table cell or paragraph used to be ignored as
+  ordinary comments. They are now `ANCHOR` findings (`SHEET` for a nested
+  report comment), and `check` fails on them.
+  ([#375](https://github.com/michal-niedzwiedzki/visimark/issues/375))
 
 - **The Playground editor is CodeMirror 6.** It now marks computed values,
   underlines values that disagree with their formulas, shows findings as
