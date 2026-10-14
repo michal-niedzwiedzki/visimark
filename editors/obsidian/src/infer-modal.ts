@@ -1,5 +1,5 @@
 import { Modal, Notice, type App, type Editor } from "obsidian";
-import { describePreview, isEmpty, type InferPreview } from "./infer-plan.js";
+import { describePreview, isEmpty, type InferPreview } from "visimark-editor-shared/infer-plan.js";
 
 /**
  * The preview a reader sees before anything is inserted — v1 row 5 of #176,

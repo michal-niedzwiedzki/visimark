@@ -1,4 +1,4 @@
-import type { Explanation } from "./api.js";
+import type { Explanation } from "./explain.js";
 
 /**
  * The one line a hover shows — v1 row 3 of #176, which rates it 5 and gives

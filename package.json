@@ -36,7 +36,7 @@
     "format:check": "oxfmt --check",
     "gen:docs": "bun scripts/gen-docs.ts && bun scripts/gen-function-reference.ts",
     "gen:mcp": "bun scripts/gen-mcp-skill.ts",
-    "gen:obsidian-templates": "bun scripts/gen-obsidian-templates.ts",
+    "gen:editor-templates": "bun scripts/gen-editor-templates.ts",
     "gen:articles": "bun scripts/gen-articles.ts",
     "publish:devto": "bun scripts/publish-devto.ts",
     "repo:scan": "bun scripts/repo-scan.ts",

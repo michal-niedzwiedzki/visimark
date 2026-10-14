@@ -75,11 +75,11 @@ test("the prefilter skips the notes a parse could not have found anything in", a
 test("each listed note carries the same rows the findings view would show", async () => {
   const r = await sweep(sweepFixture());
   for (const note of r.notes) {
-    expect(note.problems).toBe(note.report.problems.length);
-    expect(note.advice).toBe(note.report.advice.length);
+    expect(note.problems).toBe(note.detail.problems.length);
+    expect(note.advice).toBe(note.detail.advice.length);
     expect(note.problems).toBeGreaterThan(0);
     // audience-B words, not codes — the same table every surface uses
-    expect(note.report.problems[0]!.reader.row).toMatch(/[a-z] /);
+    expect(note.detail.problems[0]!.reader.row).toMatch(/[a-z] /);
   }
 });
 
