@@ -37,7 +37,9 @@ does not have one. See
 **Another is a client of the published packages.** `editors/joplin` (#378)
 uses neither the server nor the engine API directly. It adds
 `codemirror-visimark` to Joplin's editor and `markdown-it-visimark` to its
-viewer, and has no logic of its own. It is build-only and carries no version:
+viewer. Its commands, findings panel and notebook sweep (#384) run the
+engine in the editor's content script and in its own entry point, one note at
+a time with no reader. It is build-only and carries no version:
 its build stamps the engine's. See
 [`design/joplin-plugin-visimark-a-joplin-plugin-spec.md`](design/joplin-plugin-visimark-a-joplin-plugin-spec.md).
 

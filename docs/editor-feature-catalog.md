@@ -36,7 +36,7 @@ Editors covered:
 | Feature | VS Code | Obsidian | Joplin |
 |---|---|---|---|
 | Findings listed as diagnostics in the editor | ● Problems panel and squiggles | ○ | ● lint diagnostics |
-| Findings pane in the product's own words | ○ | ● findings view, no finding codes in the text | ○ |
+| Findings pane in the product's own words | ○ | ● findings view, no finding codes in the text | ● findings panel, in the CLI's words |
 | Per-finding repair | ● quick fix | ● button on each row | ● quick fix on each lint diagnostic |
 | Fix every stale value in the note | ● command and source action | ● Format command | ● Format command, one undo |
 | Fix on save | ● on by default, never on autosave | ● off by default, Ctrl/Cmd+S only | ○ |
@@ -48,13 +48,13 @@ Editors covered:
 
 | Feature | VS Code | Obsidian | Joplin |
 |---|---|---|---|
-| Check | ● Show Report | ● Check this note | ● Check this note, the CLI's output |
+| Check | ● Show Report | ● Check this note | ● Check this note, opens the findings panel in either editor |
 | Format / fix | ● Fix All Stale Values; Fix Sheet (the lens target, but it fixes the whole document) | ● Format this note | ● Format this note |
 | Evaluate (every name and its value) | ○ | ● dialog, with copy as JSON | ● dialog |
 | Explain one value or sheet | ● Explain Sheet, whole sheet | ● Explain this value, one value | ● Explain this value, also in the editor's context menu |
 | Infer formulas from a pasted table | ○ | ● with a preview | ● with a preview, scoped to the selection |
 | Insert a starter template | ○ | ● invoice, monthly budget, team capacity, experiment log | ● the same four, refused when the note has a block |
-| Vault or workspace sweep | ○ | ● pane, cancellable, optional on open | ○ |
+| Vault or workspace sweep | ○ | ● pane, cancellable, optional on open | ● notebook and its sub-notebooks, cancellable |
 | Restart the engine | ● Restart Server | — no server | — |
 
 ### Ambient status and entry points
@@ -63,7 +63,7 @@ Editors covered:
 |---|---|---|---|
 | Status bar item with stale and error counts | ● click opens the report | ● click opens the findings view; desktop only | ○ |
 | Ribbon icon | — | ● opens the sweep | — |
-| Command palette entries | ● 5 | ● 5 plus 4 templates plus sweep | ● 5 plus 4 templates, also under Tools → VisiMark |
+| Command palette entries | ● 5 | ● 5 plus 4 templates plus sweep | ● 5 plus 4 templates plus panel and sweep, also under Tools → VisiMark |
 | Settings | ● 10 | ● 5 | ● 2: show marks, fix dates on Format |
 | Public API for other plugins or extensions | ○ | ● `plugins.plugins["visimark"].api`: check, evaluate, get, explain | ○ |
 
@@ -145,6 +145,8 @@ first group for free.
   Markdown editor only, and drop whatever depends on an import.
 - **Infer and the four templates** (#384 group 2). Infer's dialog previews
   the blocks, and Apply is refused if the note changed in between.
+- **A findings panel and a notebook sweep** (#384 group 4). The engine runs
+  in the plugin's entry point for these, over the saved note body.
 - **Two settings and a viewer tooltip** (#384 group 3). `showMarks` hides the
   marks and keeps the diagnostics; `fixDatesOnFormat` is Format's
   `--fix-dates`.
@@ -165,10 +167,10 @@ integrated editor except the playground currently gets block highlighting.
 
 Read these as candidates, not decisions. Each one needs its own issue.
 
-1. **Joplin has no findings panel or sweep yet.** Commands, templates,
-   settings and the viewer tooltip are in (#384 groups 1–3); the panel and
-   the sweep are #384's group 4. The plugin has no file path, so `path` stays null and
-   imports stay out of reach.
+1. **Joplin reads one note at a time, with no path.** #384 closed the
+   feature gap Joplin's API allows; what is left is what it does not: imports
+   (`from x.csv`) stay out of reach, and write commands need the Markdown
+   editor.
 2. **Obsidian has no inline diagnostics.** `codemirror-visimark/lint` exists
    and Joplin uses it. Obsidian shows findings only in its own pane.
 3. **VS Code has no sweep, infer, evaluate or templates.** Sweep is the

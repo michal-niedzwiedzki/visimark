@@ -65,6 +65,13 @@ note with the body of `docs/example-invoice-drift.md`.
 | M-3.2 | Turn **Show marks on computed values** off, with the drift note open | The marks leave the editor at once and the viewer on its next render (Joplin caches an unchanged note's HTML, so edit the note if the viewer has not updated); the editor's diagnostics remain |
 | M-3.3 | With the setting back on, hover a marked value in the viewer | The tooltip starts with the binding line, then "comes to" and "reads" |
 
+## #384, group 4: the findings panel and the sweep
+
+| # | Do this | Required |
+|---|---|---|
+| M-4.1 | **Check this note** on the drift note, in the Markdown editor and then the Rich Text editor | The panel opens in both with one row per finding; clicking a row in the Markdown editor moves the cursor to it |
+| M-4.2 | Put the drift note in a sub-notebook, then **Sweep this notebook** from the parent's context menu; run it again and press **Cancel** | The drift note is listed and opens on click; Cancel stops the sweep and marks it Cancelled; no note's `updated_time` changes |
+
 ## Recording
 
 | Row | Joplin version | Date | Observed |
