@@ -40,6 +40,12 @@ test("A4: the entry point and the viewer script import nothing", () => {
   expect(imports(metas.markdownItContentScript!).filter((i) => i.external)).toEqual([]);
 });
 
+test("#384: the entry point carries no engine — the content script does the work", () => {
+  for (const input of Object.keys(metas.index!.inputs)) {
+    expect(input).not.toMatch(/packages\/(visimark|codemirror-visimark)\/src\//);
+  }
+});
+
 test("the entry point is a plain script: no module, exports or require", async () => {
   const entry = ENTRIES.find((e) => e.name === "index")!;
   const r = await build({ ...options(entry, out), write: false, logLevel: "silent" });

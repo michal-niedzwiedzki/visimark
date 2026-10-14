@@ -34,11 +34,25 @@ In Joplin desktop 3.7.1 or later: **Tools → Options → Plugins** (on macOS,
 - In PDF export and print, the disagree mark stays and computed values print
   plain.
 - A note with no `vmark` block renders exactly as before.
+- Commands, in the command palette and under **Tools → VisiMark**:
+  - **VisiMark: Check this note** shows what `visimark check` prints.
+  - **VisiMark: Format this note** repairs every stale value, as
+    `visimark fmt` would, in one step that one undo reverts.
+  - **VisiMark: Evaluate this note** lists every name and its value.
+  - **VisiMark: Explain this value** shows the formula, the value and the
+    inputs of the value under the cursor. It is also in the editor's context
+    menu.
+- Each lint diagnostic offers a quick fix where one is obvious: update a stale
+  value, rewrite an unambiguous date, take the suggested name, or wrap a
+  column in `SUM(…)`.
 
 ## Limits
 
 - **One note at a time.** A value that reads an imported file
-  (`from rows.csv`) is not marked.
+  (`from rows.csv`) is not marked, checked or repaired. The commands say so
+  when a note has one.
+- **The commands work in the Markdown editor only.** In the Rich Text editor
+  they ask you to switch.
 - **No `vmark` block highlighting.** Joplin gives plugins no way to add a code
   language to its editor.
 - **Desktop only**, and no settings.

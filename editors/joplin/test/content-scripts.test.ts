@@ -2,6 +2,7 @@ import { expect, mock, test } from "bun:test";
 import MarkdownIt from "markdown-it";
 import codemirror from "../src/codemirrorContentScript.js";
 import markdownIt from "../src/markdownItContentScript.js";
+import { installFakeJoplin } from "./fake-joplin.js";
 
 // The fixture scripts/markdown-it-smoke.mjs renders (spec A8).
 const fixture = [
@@ -58,17 +59,13 @@ test("A11: both scripts ship the one stylesheet", () => {
   expect(markdownIt({}).assets()).toEqual([{ name: "visimark.css" }]);
 });
 
-test("onStart registers both content scripts with Joplin's type strings", async () => {
-  const register = mock(async (..._args: unknown[]) => {});
-  let onStart: (() => Promise<void>) | undefined;
-  (globalThis as Record<string, unknown>).joplin = {
-    plugins: { register: async (s: { onStart(): Promise<void> }) => void (onStart = s.onStart) },
-    contentScripts: { register },
-  };
+test("onStart registers both content scripts with Joplin's type strings, then the commands", async () => {
+  const fake = installFakeJoplin();
   await import("../src/index.js");
-  await onStart!();
-  expect(register.mock.calls).toEqual([
+  await fake.onStart!();
+  expect(fake.contentScripts).toEqual([
     ["codeMirrorPlugin", "visimark-codemirror", "./codemirrorContentScript.js"],
     ["markdownItPlugin", "visimark-markdown-it", "./markdownItContentScript.js"],
   ]);
+  expect(fake.commands.length).toBeGreaterThan(0);
 });
