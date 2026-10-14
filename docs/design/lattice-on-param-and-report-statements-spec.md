@@ -118,6 +118,7 @@ list shipped with the tool; each name has a closed option grammar:
 | `gates` | *(none)* |
 | `best` | `scalar REF direction max\|min among feasible\|infeasible\|all` |
 | `forbidden` | *(none)* |
+| `slack` | *(none)* — added by #352, [`a-slack-report-for-the-nearest-miss-spec.md`](a-slack-report-for-the-nearest-miss-spec.md) |
 
 `REF` is a name as written in an expression: bare (`margin`) or sheet-qualified
 (`lines.margin`). The words `assertions`, `broken`, `on`, `scalar`,
@@ -242,7 +243,7 @@ The finding names the param (`location.name`), as every `param` finding does.
 | Case | Code | Message |
 |---|---|---|
 | `report` with no name | `TYPE` | `a report needs a name` |
-| a name outside the closed list | `TYPE` | `unknown report \`foo\`; the reports are ledger, deltas, gates, best, forbidden` |
+| a name outside the closed list | `TYPE` | `unknown report \`foo\`; the reports are ledger, deltas, gates, best, forbidden, slack` (`slack` since #352) |
 | options that do not match the report's grammar | `TYPE` | `` `report best` takes: scalar REF direction max\|min among feasible\|infeasible\|all `` (the synopsis from §2.2 for that name; `` `report gates` takes no options `` for the optionless two) |
 | a `REF` that resolves to nothing | `UNDEF` | the message an unresolved name has today |
 | a `REF` that resolves to a column, not a scalar | `TYPE` | `a report reads a scalar; lines.price is a column` |

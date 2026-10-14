@@ -44,7 +44,9 @@ import {
 } from "./check-report.js";
 import {
   type AssertionResult,
+  type AssertionSides,
   type CheckOptions,
+  type ComparisonOp,
   type Entry,
   newAssertionLedger,
   newCheckState,
@@ -52,7 +54,24 @@ import {
 
 import type { ChartResult } from "./check-state.js";
 
-export type { AssertionResult, CheckOptions, ChartResult } from "./check-state.js";
+export type {
+  AssertionResult,
+  AssertionSides,
+  CheckOptions,
+  ChartResult,
+  ComparisonOp,
+} from "./check-state.js";
+
+const COMPARISONS: readonly string[] = ["<", "<=", ">", ">=", "=="];
+
+/** the operator of an assertion that is one comparison; parentheses leave no
+ *  node, so `(a < b)` is one too. `!=` has no single boundary. See
+ *  docs/design/a-slack-report-for-the-nearest-miss-spec.md §3.1. */
+function comparisonOp(expr: Expr): ComparisonOp | undefined {
+  return expr.type === "binary" && COMPARISONS.includes(expr.op)
+    ? (expr.op as ComparisonOp)
+    : undefined;
+}
 // `fmt` and the chart pass both need this; it lives with the decoration parser
 // it depends on, and is re-exported here because callers have always found it here.
 export { decimalPlaces } from "./units.js";
@@ -1087,13 +1106,17 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
   function evalAssertion(a: Assertion, node: Binding, dep: ReturnType<typeof dependencies>): void {
     ledger.handled.add(a.id);
     const base = { sheetId: a.sheetId, source: a.source, span: a.span } as const;
+    const comparison = comparisonOp(node.expr);
     const record = (holds: boolean | null): void => {
+      const sides = holds !== null && comparison ? sidesOf(node) : undefined;
       ledger.results.set(a.id, {
         sheetId: a.sheetId,
         source: a.source,
         holds,
         operands: holds === null ? {} : operandMap(node),
         substituted: holds === null ? payloadOf(a) : substituteOperands(node),
+        ...(comparison ? { comparison } : {}),
+        ...(sides ? { sides } : {}),
       });
     };
 
@@ -1182,6 +1205,27 @@ export function check(model: DocModel, opts: CheckOptions = {}): CheckResult {
         record(null);
         emit({ ...base, code: e.code, message: e.message }, { sheetId: a.sheetId });
       } else throw e;
+    }
+  }
+
+  /** both sides of a comparison assertion, and the width a distance between
+   *  them prints at; `undefined` if a side cannot be evaluated on its own */
+  function sidesOf(node: Binding): AssertionSides | undefined {
+    if (node.expr.type !== "binary") return undefined;
+    const { left, right } = node.expr;
+    try {
+      const env = scalarEnv(node);
+      const width = (e: Expr): Width =>
+        derivePrecision(e, (ref) => refPrecision(node.sheetId, ref));
+      const wl = width(left);
+      const wr = width(right);
+      return {
+        left: evalExpr(left, env),
+        right: evalExpr(right, env),
+        width: typeof wl === "number" && typeof wr === "number" ? Math.max(wl, wr) : null,
+      };
+    } catch {
+      return undefined;
     }
   }
 

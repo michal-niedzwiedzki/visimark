@@ -4,6 +4,51 @@
 
 ### Added
 
+- **Quick fixes on `codemirror-visimark/lint` diagnostics.** A diagnostic now
+  offers the repair the VS Code extension offers for the same finding: update
+  a stale value to what `visimark fmt` would write, rewrite an unambiguous
+  date to ISO 8601, change an unknown name to its close match, or wrap a
+  column in `SUM(…)`. Each is one transaction. No new option or export; every
+  host that uses `visimarkLint()`, the Playground included, shows them.
+  ([#384](https://github.com/michal-niedzwiedzki/visimark/issues/384))
+
+- **A Joplin plugin, built but not published.** `editors/joplin` adds
+  `codemirror-visimark`'s marks and lint to Joplin's Markdown editor and
+  `markdown-it-visimark`'s marks to its viewer. Desktop only, Joplin 3.7.1 and
+  up. CI uploads it as the `visimark-joplin` artifact for installing from a
+  file. ([#378](https://github.com/michal-niedzwiedzki/visimark/issues/378))
+
+- **Joplin: commands, repair, settings, and a notebook sweep.** The Joplin
+  plugin gains Check, Format, Evaluate and Explain, Infer and four starter
+  templates, a quick fix on a diagnostic where one is obvious, a findings
+  panel, and a
+  cancellable, read-only sweep over a notebook and its sub-notebooks. Format
+  writes the bytes `visimark fmt` writes, as one undoable step. Two settings:
+  **Show marks on computed values** and **When formatting, rewrite dates to
+  ISO 8601**. The viewer shows each marked value's formula as a tooltip.
+  Commands other than Check, the panel and the sweep need the Markdown editor;
+  anything that depends on an imported file is left out, and the plugin says
+  so.
+  ([#384](https://github.com/michal-niedzwiedzki/visimark/issues/384))
+
+- **`report slack`, the nearest miss on each assertion.** A sixth `simulate`
+  reading. For each `assert` it prints the least room among the questions that
+  work and the smallest miss among the questions that break only that rule,
+  as an exact distance labelled `room` or `miss`, with tie lines and pool
+  counts. A rule that is not one numeric comparison says so instead.
+  `check` refuses a `report slack` in a file with no `assert`.
+  ([#352](https://github.com/michal-niedzwiedzki/visimark/issues/352))
+
+- **`markdown-it-visimark`, VisiMark marks in rendered HTML.** A new npm
+  package: `md.use(markdownItVisimark)` wraps each computed value with
+  `visimark-computed` (and `visimark-disagrees` when it no longer matches its
+  formula), carries `codemirror-visimark`'s `data-vmark*` attributes, and puts
+  the fence's info string on the rendered `vmark` block as `data-vmark-info`.
+  No CSS and no dependency. The VS Code extension uses it for the built-in
+  Markdown preview, switched by the new `visimark.preview.enable` setting.
+  Supported from markdown-it 13.0.2, the version Joplin uses.
+  ([#373](https://github.com/michal-niedzwiedzki/visimark/issues/373))
+
 - **`codemirror-visimark/highlight`, syntax highlighting for `vmark` blocks.**
   `visimarkLanguage` colours a fence's keywords, names, functions, numbers,
   units and comments when a host passes it to `markdown({ codeLanguages })`,

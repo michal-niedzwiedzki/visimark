@@ -36,6 +36,7 @@ import { build } from "esbuild";
 const here = dirname(fileURLToPath(import.meta.url));
 const engineBrowserSrc = join(here, "..", "..", "packages", "visimark", "src", "browser.ts");
 const extensionSrc = join(here, "..", "..", "packages", "codemirror-visimark", "src");
+const sharedSrc = join(here, "..", "shared", "src");
 
 /** What Obsidian provides to a plugin at run time, and therefore never bundles. */
 export const EXTERNALS = [
@@ -73,6 +74,7 @@ export const options = {
   alias: {
     visimark: engineBrowserSrc,
     "codemirror-visimark": extensionSrc,
+    "visimark-editor-shared": sharedSrc,
     "node:path": join(extensionSrc, "browser-path.ts"),
   },
   external: EXTERNALS,

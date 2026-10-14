@@ -1,5 +1,5 @@
 import { Modal, Notice, type App } from "obsidian";
-import { valueRows, valuesJson } from "./values.js";
+import { valueRows, valuesJson } from "visimark-editor-shared/values.js";
 import type { JsonValue } from "visimark";
 
 /**

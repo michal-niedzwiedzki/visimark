@@ -1,0 +1,168 @@
+/**
+ * A stand-in for the `joplin` global: records what the plugin registers and
+ * shows, and answers `editor.execCommand` from a table the test sets.
+ */
+export interface FakeJoplin {
+  readonly commands: { name: string; label?: string; execute(...a: unknown[]): Promise<unknown> }[];
+  readonly menus: { id: string; label: string; items: string[]; location?: string }[];
+  readonly menuItems: { id: string; commandName: string; location?: string }[];
+  readonly contentScripts: unknown[][];
+  /** every message box, in order */
+  readonly messages: string[];
+  /** every dialog's HTML at the moment it opened */
+  readonly dialogs: string[];
+  /** the buttons each opened dialog showed, by id */
+  readonly buttons: string[][];
+  /** the button the next dialog is closed with */
+  answer: string;
+  /** the editor commands the main script asked for */
+  readonly editorCalls: { name: string; args: unknown[] }[];
+  /** what the plugin passed to `joplin.plugins.register` */
+  onStart?: () => Promise<void>;
+  /** app settings, read with globalValue */
+  settings: Record<string, unknown>;
+  /** the plugin's own settings, as registered and then changed by a test */
+  pluginSettings: Record<string, unknown>;
+  readonly sections: { name: string; label: string }[];
+  readonly registered: Record<string, Record<string, unknown>>;
+  /** what the plugin passed to settings.onChange */
+  onSettingsChange?: (event: { keys: string[] }) => Promise<void> | void;
+  /** the findings panel: its HTML, visibility, scripts and message handler */
+  readonly panel: { html: string; visible: boolean; scripts: string[]; created: number };
+  panelMessage?: (message: unknown) => Promise<unknown>;
+  /** every other command the plugin executed, e.g. openNote */
+  readonly executed: { name: string; args: unknown[] }[];
+  folder: { id: string } | null;
+  /** what joplin.data.get answers */
+  data: (path: string[], query?: object) => Promise<unknown>;
+  /** contentScripts.onMessage handlers, by content script id */
+  readonly onMessage: Record<string, (message: unknown) => unknown>;
+  note: { id: string; title: string; body?: string } | null;
+  /** what `editor.execCommand` answers, by editor command name */
+  editor: Record<string, unknown>;
+  run(name: string, ...args: unknown[]): Promise<unknown>;
+}
+
+export function installFakeJoplin(): FakeJoplin {
+  const fake: FakeJoplin = {
+    commands: [],
+    menus: [],
+    menuItems: [],
+    contentScripts: [],
+    messages: [],
+    dialogs: [],
+    buttons: [],
+    answer: "ok",
+    editorCalls: [],
+    settings: { "editor.codeView": true },
+    pluginSettings: {},
+    sections: [],
+    registered: {},
+    onMessage: {},
+    panel: { html: "", visible: false, scripts: [], created: 0 },
+    executed: [],
+    folder: { id: "f1" },
+    data: async () => ({ items: [], has_more: false }),
+    note: { id: "n1", title: "example-invoice-drift.md" },
+    editor: {},
+    async run(name, ...args) {
+      const command = fake.commands.find((c) => c.name === name);
+      if (!command) throw new Error(`no command ${name}`);
+      return command.execute(...args);
+    },
+  };
+  const html = new Map<string, string>();
+  const buttons = new Map<string, string[]>();
+  (globalThis as Record<string, unknown>).joplin = {
+    plugins: {
+      register: async (s: { onStart(): Promise<void> }) => void (fake.onStart = s.onStart),
+    },
+    contentScripts: {
+      register: async (...a: unknown[]) => void fake.contentScripts.push(a),
+      onMessage: async (id: string, f: (message: unknown) => unknown) =>
+        void (fake.onMessage[id] = f),
+    },
+    commands: {
+      register: async (c: FakeJoplin["commands"][number]) => void fake.commands.push(c),
+      execute: async (
+        name: string,
+        value: { name: string; args: unknown[] },
+        ...rest: unknown[]
+      ) => {
+        if (name !== "editor.execCommand") {
+          fake.executed.push({ name, args: [value, ...rest] });
+          return undefined;
+        }
+        fake.editorCalls.push(value);
+        return fake.editor[value.name];
+      },
+    },
+    settings: {
+      globalValue: async (key: string) => fake.settings[key],
+      value: async (key: string) => fake.pluginSettings[key],
+      registerSection: async (name: string, section: { label: string }) =>
+        void fake.sections.push({ name, label: section.label }),
+      registerSettings: async (settings: Record<string, Record<string, unknown>>) => {
+        Object.assign(fake.registered, settings);
+        for (const [key, item] of Object.entries(settings)) fake.pluginSettings[key] = item.value;
+      },
+      onChange: async (f: FakeJoplin["onSettingsChange"]) => void (fake.onSettingsChange = f),
+    },
+    workspace: {
+      selectedNote: async () => fake.note,
+      selectedFolder: async () => fake.folder,
+      onNoteSelectionChange: async () => {},
+      onNoteChange: async () => {},
+    },
+    data: { get: (path: string[], query?: object) => fake.data(path, query) },
+    views: {
+      panels: {
+        create: async (id: string) => {
+          fake.panel.created++;
+          return id;
+        },
+        addScript: async (_h: string, path: string) => void fake.panel.scripts.push(path),
+        setHtml: async (_h: string, html: string) => void (fake.panel.html = html),
+        onMessage: async (_h: string, f: (m: unknown) => Promise<unknown>) =>
+          void (fake.panelMessage = f),
+        show: async (_h: string, show = true) => void (fake.panel.visible = show),
+        visible: async () => fake.panel.visible,
+      },
+      menus: {
+        create: async (
+          id: string,
+          label: string,
+          items: { commandName: string }[],
+          location?: string,
+        ) => void fake.menus.push({ id, label, items: items.map((i) => i.commandName), location }),
+      },
+      menuItems: {
+        create: async (id: string, commandName: string, location?: string) =>
+          void fake.menuItems.push({ id, commandName, location }),
+      },
+      dialogs: {
+        create: async (id: string) => {
+          if (html.has(id)) throw new Error(`dialog ${id} created twice`);
+          html.set(id, "");
+          return id;
+        },
+        setHtml: async (h: string, body: string) => void html.set(h, body),
+        setButtons: async (h: string, b: { id: string }[]) =>
+          void buttons.set(
+            h,
+            b.map((x) => x.id),
+          ),
+        open: async (h: string) => {
+          fake.dialogs.push(html.get(h) ?? "");
+          fake.buttons.push(buttons.get(h) ?? []);
+          return { id: fake.answer };
+        },
+        showMessageBox: async (m: string) => {
+          fake.messages.push(m);
+          return 0;
+        },
+      },
+    },
+  };
+  return fake;
+}

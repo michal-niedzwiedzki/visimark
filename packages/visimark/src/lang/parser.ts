@@ -1055,6 +1055,7 @@ const REPORT_SYNOPSIS: Record<ReportName, string | null> = {
   gates: null,
   best: "scalar REF direction max|min among feasible|infeasible|all",
   forbidden: null,
+  slack: null,
 };
 
 /**

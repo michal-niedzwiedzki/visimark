@@ -84,3 +84,5 @@ and a line number but no column highlight. Only `check` ever runs: `fmt`,
 `infer`, `explain`, `eval` and `--json` are not reachable through this package.
 See [`docs/ci.md`](https://github.com/michal-niedzwiedzki/visimark/blob/master/docs/ci.md)
 in the main repository for the full write-up.
+
+<!--vmark:no-formulas-->

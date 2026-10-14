@@ -496,6 +496,15 @@ The same Live Preview marks are published as
 [`codemirror-visimark`](packages/codemirror-visimark/README.md), a CodeMirror 6
 extension for any editor built on it, with lint diagnostics in the CLI's words
 on a separate `codemirror-visimark/lint` import. The playground uses both.
+For rendered HTML, [`markdown-it-visimark`](packages/markdown-it-visimark/README.md)
+puts the same marks on markdown-it's output; the VS Code extension uses it for
+the built-in Markdown preview.
+
+The **Joplin plugin** puts both of those into Joplin desktop: marks and lint in
+the Markdown editor, marks in the viewer. It is not published. Install the
+`.jpl` from a CI build —
+[`editors/joplin/README.md`](editors/joplin/README.md) has the steps and its
+limits.
 
 Releases are tag-driven: pushing a `vX.Y.Z` tag publishes the engine to npm and
 the extension to both the VS Code Marketplace and Open VSX. The workflow needs

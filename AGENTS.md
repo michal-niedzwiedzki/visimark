@@ -12,3 +12,5 @@ Harness-neutral project config lives in [`.agents/`](.agents/):
 `.claude/` and `.grok/` are shims so Claude Code and Grok still discover the same files. Do not add a second copy of a rule, skill, command, or hook there.
 
 Grok does not scan `.agents/rules/` itself. Attribution reaches Grok through `.claude/rules` (a symlink, loaded under Claude compatibility). Codex gets this file plus the pointer above; follow the linked rule on every commit, PR, and public comment.
+
+<!--vmark:no-formulas-->

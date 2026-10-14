@@ -49,7 +49,7 @@ import { locate } from "../parse/document.js";
 import { describeFinding, formatCheck } from "../report/format.js";
 import { formatInfer } from "../report/infer.js";
 import { nonParams, paramLines, params } from "../report/params.js";
-import { fmt as fmtDoc, type FmtOptions, type FmtResult } from "../write/fmt.js";
+import { fmt as fmtDoc, planFmt, type FmtOptions, type FmtResult } from "../write/fmt.js";
 import { memoryReader } from "./memory-reader.js";
 import { pgSimulate } from "./pg-simulate.js";
 import { sha256Hex } from "./sha256.js";
@@ -182,6 +182,8 @@ const api = {
   build,
   check,
   fmt,
+  // codemirror-visimark's lint quick fixes plan their "Update to" text with it (#384)
+  planFmt,
   infer,
   planInfer,
   applyEdits,

@@ -12,9 +12,10 @@ import {
   type EditorView,
   type ViewUpdate,
 } from "@codemirror/view";
+import { planFmt, type CheckResult, type DocModel, type DocumentFile, type Edit } from "visimark";
 import { analyse, analyseWithSnapshot } from "./analysis.js";
 import type { Decoration as VmarkDecoration } from "./decorations.js";
-import { findingsField, setFindings, type FindingSet } from "./findings-field.js";
+import { findingsField, setFindings, type FindingSet, type LintFinding } from "./findings-field.js";
 import { hasVmarkBlock } from "./gate.js";
 import { hasImportedSheet, importDependentNames } from "./import-deps.js";
 import type { ReadImport } from "./snapshot.js";
@@ -100,6 +101,37 @@ function marksFrom(
   return { set: builder.finish(), skipped };
 }
 
+/**
+ * Each spanned finding with the text `fmt` would write over its span, for the
+ * lint's "Update to …" quick fix (#384 spec §2.2). Dates are planned too, as
+ * the LSP plans them, though the lint reads a date's `isoFix` directly. One
+ * `planFmt` per recompute; a plan that throws costs the fixes, never the
+ * findings.
+ */
+function withFixes(
+  model: DocModel,
+  result: CheckResult,
+  doc?: DocumentFile,
+): readonly LintFinding[] {
+  let planned: readonly Edit[];
+  try {
+    planned = planFmt(model, result, {
+      noArtifacts: true,
+      fixDates: true,
+      ...(doc ? { doc } : {}),
+    });
+  } catch {
+    return result.findings;
+  }
+  const bySpan = new Map<string, string>();
+  for (const e of planned) bySpan.set(`${e.start}:${e.end}`, e.text);
+  return result.findings.map((f) => {
+    if (f.span === undefined) return f;
+    const text = bySpan.get(`${f.span.start}:${f.span.end}`);
+    return text === undefined ? f : { ...f, fix: text };
+  });
+}
+
 interface Local {
   readonly decorations: DecorationSet;
   readonly findings: FindingSet;
@@ -123,7 +155,7 @@ function localFor(state: EditorState, o: ResolvedOptions): Local {
   );
   return {
     decorations: set,
-    findings: imported ? null : result.findings,
+    findings: imported ? null : withFixes(model, result),
     needsSnapshot: skipped || imported,
   };
 }
@@ -158,7 +190,7 @@ export function visimarkExtension(o: ResolvedOptions): Extension {
             const unread = snapshot.result.findings.some((f) => f.code === "IMPORT");
             const skip = unread ? importDependentNames(snapshot.model) : new Set<string>();
             const { set } = marksFrom(snapshot.decorations, path, o.focusableMarks, skip);
-            publish(set, snapshot.result.findings);
+            publish(set, withFixes(snapshot.model, snapshot.result, snapshot.doc));
           })
           .catch(() => {
             // a failed read leaves withheld marks withheld; the host reports

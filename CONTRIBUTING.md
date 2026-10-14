@@ -167,6 +167,28 @@ Obsidian instance. `.agents/skills/obsidian-cli` (a Claude skill, but its
    Prefer dispatching on the element over `dev:cdp` when a DOM-level listener
    is what's under test, and attach the debugger if the two disagree.
 
+### Building the Joplin plugin and side-loading it
+
+`editors/joplin` is a client of the two published editor packages: it adds
+`codemirror-visimark` to Joplin's editor and `markdown-it-visimark` to its
+viewer. It is build-only (#378). Nothing publishes it, and it carries no
+version of its own; the build stamps the engine's into the manifest.
+
+```console
+$ bun run --filter joplin-plugin-visimark build
+$ ls editors/joplin/publish
+com.visimark.joplin.jpl
+```
+
+Install it in Joplin desktop 3.7.1 or later with **Tools → Options → Plugins →
+⚙ → Install from file**. CI uploads the same file as the `visimark-joplin`
+artifact.
+
+`editors/joplin/test/bundle.test.ts` reads esbuild's metafile. It fails if
+any `@codemirror/*` or `@lezer/*` source is bundled (Joplin provides them) or
+if any `node:` import survives. `docs/design/joplin-manual-test.md` is the
+check a screen needs.
+
 ### Running the MCP server from your working tree
 
 ```console
@@ -216,10 +238,17 @@ and `articles-pages` enforce the same checks in CI either way.
 | `bun run build` | Builds every package |
 | `bun run gen:docs` | Regenerates the function reference from the engine's own registry |
 | `bun run gen:mcp` | Regenerates the MCP server's served skill and doc copies |
-| `bun run gen:obsidian-templates` | Regenerates the Obsidian plugin's templates module from `editors/obsidian/templates/*.md` |
+| `bun run gen:editor-templates` | Regenerates the editor plugins' shared templates module from `editors/shared/templates/*.md` |
 | `bun run --filter visimark build:playground` | Rebuilds the browser bundles committed under `docs/vendor/`. The application bundle is built by `packages/visimark/build-playground.ts`, which also bundles CodeMirror 6 and `codemirror-visimark` |
 | `bun run serve` | Serves `docs/` on `http://localhost:8080` — needed for the playground and the tutorial pages, which fetch their content and cannot run from `file://` |
 | `bun run vscode-install` | Builds, packages and installs the VS Code extension locally |
+
+The extension's Markdown preview marks (#373) have one check no test reaches,
+because it needs VS Code itself. After `bun run vscode-install`, open
+`docs/example-invoice-drift.md` and run **Markdown: Open Preview to the Side**:
+the stale values are flagged on the first render, with no refresh. Set
+`visimark.preview.enable` to false and the marks leave the open preview without
+a window reload; set it back and they return.
 
 ## Before you push
 
@@ -240,7 +269,7 @@ the matching regeneration and **commit the result**:
 ```console
 $ bun run gen:docs                              # if you changed a builtin function
 $ bun run gen:mcp                               # if you changed SKILL.md or a served doc
-$ bun run gen:obsidian-templates                # if you changed an Obsidian template
+$ bun run gen:editor-templates                  # if you changed an editor template
 $ bun run --filter visimark build:playground    # if you changed engine or playground source
 ```
 
@@ -279,10 +308,10 @@ in production) would answer differently than the CLI for the same document.
 Fix: this is a real bug, not something to silence — find why the two hosts
 disagree, and fix the engine or the `ReaderPort` boundary, never the check.
 
-**Every version-carrying file must agree.** Thirteen fields carry the version —
-seven package manifests (three of which also pin `visimark` as a dependency;
-`codemirror-visimark` carries only its own version, because it bundles the
-engine),
+**Every version-carrying file must agree.** Fourteen fields carry the version —
+eight package manifests (three of which also pin `visimark` as a dependency;
+`codemirror-visimark` and `markdown-it-visimark` carry only their own version,
+because they bundle the engine),
 `action.yml`'s pinned `version` default and `scripts/precommit-visimark-check.sh`.
 One tag publishes all of them, the Action's default is what a consumer's `npx`
 actually installs, and an exact `visimark` pin is what stops a published plugin
@@ -309,9 +338,13 @@ section.
 ## The repository eats its own cooking
 
 `dogfood.yml` runs the shipped GitHub Action against this repository's own
-documents — the worked examples, the tutorial, the CI guide, the design doc, the
-README and the changelog. If your pull request touches one of them and the
-numbers in it stop agreeing with its formulas, the build goes red.
+documents: every tracked Markdown file, package READMEs and editor plugins
+included. The exceptions are `docs/WIP/`, the vendored skills under
+`.agents/skills/<name>/`, the engine's test fixtures, and the drift examples
+that fail on purpose. If your pull request touches one of them and the numbers
+in it stop agreeing with its formulas, the build goes red. `bun test` runs the
+same check (`scripts/doc-set.test.ts`), so it fails locally too, with or
+without the pre-commit hook installed.
 
 There are two findings you are likely to meet, and each has exactly one correct
 response.

@@ -6,14 +6,14 @@
   // fails CI on every pull request. .oxlintrc.json skips the same directory, for the
   // same reason.
   //
-  // editors/obsidian/src/templates.ts is written by
-  // scripts/gen-obsidian-templates.ts and checked against its sources by
-  // editors/obsidian/test/templates.test.ts, byte for byte. Formatting it
+  // editors/shared/src/templates.ts is written by
+  // scripts/gen-editor-templates.ts and checked against its sources by
+  // editors/shared/test/templates.test.ts, byte for byte. Formatting it
   // rewrites the quoting of string literals that hold Markdown full of
   // double quotes, so the committed file stops matching what the generator
   // would write and the freshness check fails for a reason that has nothing
-  // to do with the templates. Edit the Markdown in editors/obsidian/templates/
-  // and run `bun run gen:obsidian-templates`.
+  // to do with the templates. Edit the Markdown in editors/shared/templates/
+  // and run `bun run gen:editor-templates`.
   //
   // docs/articles.html, docs/articles/*/index.html, docs/examples.html,
   // docs/examples/*/index.html, docs/ci.html, docs/tutorial.html,
@@ -22,11 +22,14 @@
   // Their shape comes entirely from gen-articles-lib.ts's and gen-docs-lib.ts's
   // template functions; formatting the generated HTML fights every future generator
   // run the same way formatting docs/vendor/** would fight the next bundle rebuild.
+  //
+  // packages/markdown-it-visimark/test/fixtures/*.html is markdown-it's exact
+  // output, compared byte for byte by the package's render tests (#373).
   "ignorePatterns": [
     "**/*.md",
     ".vscode/**",
     "docs/vendor/**",
-    "editors/obsidian/src/templates.ts",
+    "editors/shared/src/templates.ts",
     "docs/articles.html",
     "docs/articles/*/index.html",
     "docs/examples.html",
@@ -34,6 +37,7 @@
     "docs/ci.html",
     "docs/tutorial.html",
     "docs/simulate.html",
-    "docs/mcp-server.html"
+    "docs/mcp-server.html",
+    "packages/markdown-it-visimark/test/fixtures/*.html"
   ]
 }

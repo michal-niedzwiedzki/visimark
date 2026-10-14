@@ -473,3 +473,5 @@ once it is posted. Sub-points inside one question may be bullets.
 8. `git switch -`
 
 Print the comment URL, the PR URL, and: "Discuss on the issue or here, then run /issue-decide <n> when ready."
+
+<!--vmark:no-formulas-->

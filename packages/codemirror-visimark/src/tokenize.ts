@@ -55,6 +55,7 @@ export const WORDS = {
     "gates",
     "best",
     "forbidden",
+    "slack",
     "feasible",
     "infeasible",
     "all",

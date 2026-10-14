@@ -225,7 +225,7 @@ questions never change the exit code. They are readings.
 
 ## 4. The reports
 
-All five read the same set of evaluated questions. `N` is the grid size,
+All six read the same set of evaluated questions. `N` is the grid size,
 excluding the base.
 
 | Report | Prints |
@@ -235,6 +235,7 @@ excluding the base.
 | `deltas [on REF, …] among feasible\|infeasible\|all` | The clause is required and last. With `on`, each named ref in the order written; with no `on`, every scalar of the report's own sheet that is not a param, in document order. A parsed `report deltas among <word>` with no `on`, in a sheet with no such scalar, is a `TYPE` finding from `check` (#333), so the sheet is `(cannot start)` and never prints an empty body. A line with no `among` fails the synopsis and does not also emit that sentence. For each ref: `REF  base V`, then `low` and `high` when at least one question in that population ranks the ref (its value is a number). Each shows the signed delta from base in parentheses and the first such question in grid order. A ref none of them ranks keeps the base line and omits `low` and `high`. After the last ref, one count: `over F feasible of N questions`, `over I infeasible of N questions`, or `over K questions`. `F`, `I`, and `K` count population questions that rank at least one ref on the line. |
 | `gates` | A line `N questions`, then one row per `assert` in document order. Columns: `assert`, `holds`, `fails`, `faulted` (counts over the grid), `base` (`holds`, `fails`, `faulted`), and `first failure` (the first grid question in which it is false, blank if none). |
 | `best scalar REF direction max\|min among feasible\|infeasible\|all` | The winning question in prose, then `REF  V  (Δ against base)`, then `chosen from F feasible of N questions`, `chosen from I infeasible of N questions`, or `chosen from K questions`. Candidates are the questions in that population whose scalar is a number. `F`, `I`, and `K` count those candidates. |
+| `slack` | One block per `assert` in document order: the smallest room among feasible questions, the smallest miss among questions that fail only that assertion, tie lines and pool counts. Specified in [`a-slack-report-for-the-nearest-miss-spec.md`](a-slack-report-for-the-nearest-miss-spec.md) (#352). |
 | `forbidden` | One line per lattice-param point at which every grid question is infeasible or faulted, in grid order: `NAME = V  every question with it breaks an assertion`. Then `I of N questions are infeasible`. With no such point, the first line reads `nothing is forbidden`. |
 
 **Ties.** `best`, `low` and `high` take the first question in grid order. When
@@ -456,7 +457,7 @@ The plan's final task covers each of these.
   run, and the caller decides.
 - **Time estimates, rates, or parallel evaluation.**
 - **New report names or options.** The closed list is #258's, and it grows
-  through its own catalogue row.
+  through its own catalogue row. `slack` (#352) grew it that way.
 - **Writing a report back into the document.**
 
 ## 10. Open questions

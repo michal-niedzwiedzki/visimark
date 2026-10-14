@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- `report slack` is no longer flagged as an unknown report; in a document with no `assert` it gets a `TYPE` diagnostic.
+- The built-in Markdown preview marks computed values and flags the ones that disagree with their formulas. Turn it off with `visimark.preview.enable`.
+
 ## 0.2.0 - 2026-10-04
 
 - A `lattice` clause on a `param` and a `report` statement are now understood: an impossible lattice, an unknown report name or a report option that does not match its grammar gets a diagnostic.

@@ -140,7 +140,7 @@ test("4b. every report finding in spec 4.2, and the silent cases", () => {
   const withScalars = (stmts: string) => fence("s", `a = 1\nb = 2\n${stmts}`);
   expect(shape(withScalars("report"))).toEqual(["TYPE|s||a report needs a name"]);
   expect(shape(withScalars("report foo"))).toEqual([
-    "TYPE|s||unknown report `foo`; the reports are ledger, deltas, gates, best, forbidden",
+    "TYPE|s||unknown report `foo`; the reports are ledger, deltas, gates, best, forbidden, slack",
   ]);
   expect(shape(withScalars("report ledger assertions"))).toEqual([
     "TYPE|s||`report ledger` takes: [assertions broken]",

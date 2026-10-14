@@ -109,6 +109,16 @@ Each finding with a position becomes one diagnostic. Problems that fail a
 warnings, and advice is a hint. A document that imports a file shows no
 diagnostics until that file has been read.
 
+Some diagnostics carry a quick fix, the same ones the VS Code extension
+offers. Each applies as one transaction, so one undo reverts it:
+
+| Finding | Quick fix |
+|---|---|
+| a value that disagrees with its formula | **Update to** the value `visimark fmt` would write |
+| a date whose ISO form is unambiguous | **Rewrite to** that date |
+| an unknown name with a close match | **Change to** the match |
+| a column used where a single value belongs | **Wrap in SUM(…)** |
+
 ## Highlighting
 
 `codemirror-visimark/highlight` exports `visimarkLanguage`, the language for

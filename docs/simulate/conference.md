@@ -53,6 +53,7 @@ report forbidden
 report best scalar event.profit direction max among feasible
 report best scalar event.ticket direction min among feasible
 report deltas on event.profit, event.sponsor_share among all
+report slack
 ```
 
 ```vmark #ledger
