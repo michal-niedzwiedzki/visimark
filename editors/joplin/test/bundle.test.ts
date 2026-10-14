@@ -3,6 +3,7 @@ import { build, type Metafile } from "esbuild";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { runInNewContext } from "node:vm";
 import { ENTRIES, options } from "../build.js";
 
 /**
@@ -35,21 +36,37 @@ test("A3: the editor script imports only what Joplin provides", () => {
   for (const i of ext) expect(i.path).toMatch(/^@(codemirror|lezer)\//);
 });
 
-test("A4: the entry point and the viewer script import nothing", () => {
+test("A4: the entry point, the viewer script and the panel script import nothing", () => {
   expect(imports(metas.index!).filter((i) => i.external)).toEqual([]);
+  expect(imports(metas.panel!).filter((i) => i.external)).toEqual([]);
   expect(imports(metas.markdownItContentScript!).filter((i) => i.external)).toEqual([]);
 });
 
-test("#384: the entry point carries no engine — the content script does the work", () => {
-  for (const input of Object.keys(metas.index!.inputs)) {
-    expect(input).not.toMatch(/packages\/(visimark|codemirror-visimark)\/src\//);
+test("#384: the panel's webview script carries no engine", () => {
+  for (const input of Object.keys(metas.panel!.inputs)) {
+    expect(input).not.toMatch(/packages\//);
   }
 });
 
-test("the entry point is a plain script: no module, exports or require", async () => {
+test("the entry point is a plain script: it runs with no module, exports or require", async () => {
+  // #384 group 4 bundles the engine into it, and esbuild wraps a CommonJS
+  // dependency in a closure with its own local `exports` — so the bytes may
+  // say `exports`. What matters is that nothing reaches for a global one.
   const entry = ENTRIES.find((e) => e.name === "index")!;
   const r = await build({ ...options(entry, out), write: false, logLevel: "silent" });
   const js = r.outputFiles![0]!.text;
-  expect(js).toContain("joplin.plugins.register");
-  expect(js).not.toMatch(/\bmodule\b|\bexports\b|\brequire\(/);
+  let registered = false;
+  const joplin = { plugins: { register: async () => void (registered = true) } };
+  // a DOM, as Joplin's plugin runner has one: the engine's Markdown parser
+  // decodes entities through `document` (decode-named-character-reference)
+  runInNewContext(js, {
+    joplin,
+    document,
+    setTimeout,
+    clearTimeout,
+    console,
+    TextEncoder,
+    TextDecoder,
+  });
+  expect(registered).toBe(true);
 });

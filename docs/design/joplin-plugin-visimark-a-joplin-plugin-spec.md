@@ -437,6 +437,10 @@ Not touched: `docs/releasing.md`, `docs/distribution.md`,
 
 ## 8. Non-goals
 
+> #384 took up plugin settings, commands and a findings panel with a notebook
+> sweep. See
+> [`chore-bring-joplin-plugin-visimark-to-spec.md`](chore-bring-joplin-plugin-visimark-to-spec.md).
+
 - Publishing to npm or to Joplin's plugin repository, the `publish/*.json`
   file, and any `release.yml` leg. That is a later issue, which re-opens the
   version fields, `engines.node` and the unverified Joplin listing.

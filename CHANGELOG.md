@@ -18,6 +18,19 @@
   up. CI uploads it as the `visimark-joplin` artifact for installing from a
   file. ([#378](https://github.com/michal-niedzwiedzki/visimark/issues/378))
 
+- **Joplin: commands, repair, settings, and a notebook sweep.** The Joplin
+  plugin gains Check, Format, Evaluate and Explain, Infer and four starter
+  templates, a quick fix on a diagnostic where one is obvious, a findings
+  panel, and a
+  cancellable, read-only sweep over a notebook and its sub-notebooks. Format
+  writes the bytes `visimark fmt` writes, as one undoable step. Two settings:
+  **Show marks on computed values** and **When formatting, rewrite dates to
+  ISO 8601**. The viewer shows each marked value's formula as a tooltip.
+  Commands other than Check, the panel and the sweep need the Markdown editor;
+  anything that depends on an imported file is left out, and the plugin says
+  so.
+  ([#384](https://github.com/michal-niedzwiedzki/visimark/issues/384))
+
 - **`report slack`, the nearest miss on each assertion.** A sixth `simulate`
   reading. For each `assert` it prints the least room among the questions that
   work and the smallest miss among the questions that break only that rule,

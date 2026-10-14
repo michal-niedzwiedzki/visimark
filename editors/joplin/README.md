@@ -35,7 +35,9 @@ In Joplin desktop 3.7.1 or later: **Tools → Options → Plugins** (on macOS,
   plain.
 - A note with no `vmark` block renders exactly as before.
 - Commands, in the command palette and under **Tools → VisiMark**:
-  - **VisiMark: Check this note** shows what `visimark check` prints.
+  - **VisiMark: Check this note** opens the findings panel on the note: one
+    row per finding, in the CLI's words. Click a row to move the cursor to it.
+    It works in both editors, and reads the note as last saved.
   - **VisiMark: Format this note** repairs every stale value, as
     `visimark fmt` would, in one step that one undo reverts.
   - **VisiMark: Evaluate this note** lists every name and its value.
@@ -48,6 +50,11 @@ In Joplin desktop 3.7.1 or later: **Tools → Options → Plugins** (on macOS,
   - **VisiMark: Insert … template** (invoice, monthly budget, team capacity,
     experiment log) inserts a starter note at the cursor. A note that already
     has a `vmark` block is refused.
+  - **VisiMark: Show findings panel** shows or hides the panel.
+  - **VisiMark: Sweep this notebook** checks every note in a notebook and the
+    notebooks inside it, and lists the ones that disagree with themselves.
+    It is also in a notebook's context menu. It reads notes one at a time,
+    changes none, and can be cancelled.
 - In the viewer, hovering a marked value shows its formula, what it comes to
   and what it reads.
 - Settings, under **Tools → Options → VisiMark**:
@@ -65,8 +72,8 @@ In Joplin desktop 3.7.1 or later: **Tools → Options → Plugins** (on macOS,
 - **One note at a time.** A value that reads an imported file
   (`from rows.csv`) is not marked, checked or repaired. The commands say so
   when a note has one.
-- **The commands work in the Markdown editor only.** In the Rich Text editor
-  they ask you to switch.
+- **Commands other than Check, the panel and the sweep need the Markdown
+  editor.** In the Rich Text editor they ask you to switch.
 - **No `vmark` block highlighting.** Joplin gives plugins no way to add a code
   language to its editor.
 - **Desktop only.**

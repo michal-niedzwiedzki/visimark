@@ -35,7 +35,13 @@ declare const joplin: {
     ): Promise<void>;
     onChange(handler: (event: { keys: string[] }) => void): Promise<void>;
   };
-  workspace: { selectedNote(): Promise<{ id: string; title: string } | null> };
+  workspace: {
+    selectedNote(): Promise<{ id: string; title: string; body: string } | null>;
+    selectedFolder(): Promise<{ id: string } | null>;
+    onNoteSelectionChange(handler: () => void): Promise<unknown>;
+    onNoteChange(handler: () => void): Promise<unknown>;
+  };
+  data: { get(path: string[], query?: object): Promise<unknown> };
   views: {
     menus: {
       create(
@@ -46,7 +52,19 @@ declare const joplin: {
       ): Promise<void>;
     };
     menuItems: {
-      create(id: string, commandName: string, location?: "editorContextMenu"): Promise<void>;
+      create(
+        id: string,
+        commandName: string,
+        location?: "editorContextMenu" | "folderContextMenu",
+      ): Promise<void>;
+    };
+    panels: {
+      create(id: string): Promise<string>;
+      addScript(handle: string, path: string): Promise<void>;
+      setHtml(handle: string, html: string): Promise<unknown>;
+      onMessage(handle: string, callback: (message: unknown) => unknown): Promise<void>;
+      show(handle: string, show?: boolean): Promise<void>;
+      visible(handle: string): Promise<boolean>;
     };
     dialogs: {
       create(id: string): Promise<string>;

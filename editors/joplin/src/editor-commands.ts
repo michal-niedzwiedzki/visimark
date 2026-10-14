@@ -32,6 +32,7 @@ import type {
   InferPreviewReply,
   InsertTemplateArgs,
   InsertTemplateReply,
+  RevealArgs,
 } from "./protocol.js";
 
 /**
@@ -212,6 +213,17 @@ export function editorCommands(view: EditorView, options: EditorCommandsOptions 
         return { kind: "failed" };
       }
       return { kind: "applied" };
+    },
+
+    /** A findings-panel row: select its span and bring it into view. */
+    reveal({ start, end }: RevealArgs): { kind: "ok" } {
+      // the panel reads the last save, so the note may since have shrunk
+      const length = view.state.doc.length;
+      const from = Math.min(Math.max(start, 0), length);
+      const to = Math.min(Math.max(end, from), length);
+      view.dispatch({ selection: { anchor: from, head: to }, scrollIntoView: true });
+      view.focus();
+      return { kind: "ok" };
     },
 
     /** A starter template at the cursor, refused when the note has a block. */

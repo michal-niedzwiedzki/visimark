@@ -27,9 +27,17 @@ export interface FakeJoplin {
   readonly registered: Record<string, Record<string, unknown>>;
   /** what the plugin passed to settings.onChange */
   onSettingsChange?: (event: { keys: string[] }) => Promise<void> | void;
+  /** the findings panel: its HTML, visibility, scripts and message handler */
+  readonly panel: { html: string; visible: boolean; scripts: string[]; created: number };
+  panelMessage?: (message: unknown) => Promise<unknown>;
+  /** every other command the plugin executed, e.g. openNote */
+  readonly executed: { name: string; args: unknown[] }[];
+  folder: { id: string } | null;
+  /** what joplin.data.get answers */
+  data: (path: string[], query?: object) => Promise<unknown>;
   /** contentScripts.onMessage handlers, by content script id */
   readonly onMessage: Record<string, (message: unknown) => unknown>;
-  note: { id: string; title: string } | null;
+  note: { id: string; title: string; body?: string } | null;
   /** what `editor.execCommand` answers, by editor command name */
   editor: Record<string, unknown>;
   run(name: string, ...args: unknown[]): Promise<unknown>;
@@ -51,6 +59,10 @@ export function installFakeJoplin(): FakeJoplin {
     sections: [],
     registered: {},
     onMessage: {},
+    panel: { html: "", visible: false, scripts: [], created: 0 },
+    executed: [],
+    folder: { id: "f1" },
+    data: async () => ({ items: [], has_more: false }),
     note: { id: "n1", title: "example-invoice-drift.md" },
     editor: {},
     async run(name, ...args) {
@@ -72,8 +84,15 @@ export function installFakeJoplin(): FakeJoplin {
     },
     commands: {
       register: async (c: FakeJoplin["commands"][number]) => void fake.commands.push(c),
-      execute: async (name: string, value: { name: string; args: unknown[] }) => {
-        if (name !== "editor.execCommand") throw new Error(`unexpected ${name}`);
+      execute: async (
+        name: string,
+        value: { name: string; args: unknown[] },
+        ...rest: unknown[]
+      ) => {
+        if (name !== "editor.execCommand") {
+          fake.executed.push({ name, args: [value, ...rest] });
+          return undefined;
+        }
         fake.editorCalls.push(value);
         return fake.editor[value.name];
       },
@@ -89,8 +108,26 @@ export function installFakeJoplin(): FakeJoplin {
       },
       onChange: async (f: FakeJoplin["onSettingsChange"]) => void (fake.onSettingsChange = f),
     },
-    workspace: { selectedNote: async () => fake.note },
+    workspace: {
+      selectedNote: async () => fake.note,
+      selectedFolder: async () => fake.folder,
+      onNoteSelectionChange: async () => {},
+      onNoteChange: async () => {},
+    },
+    data: { get: (path: string[], query?: object) => fake.data(path, query) },
     views: {
+      panels: {
+        create: async (id: string) => {
+          fake.panel.created++;
+          return id;
+        },
+        addScript: async (_h: string, path: string) => void fake.panel.scripts.push(path),
+        setHtml: async (_h: string, html: string) => void (fake.panel.html = html),
+        onMessage: async (_h: string, f: (m: unknown) => Promise<unknown>) =>
+          void (fake.panelMessage = f),
+        show: async (_h: string, show = true) => void (fake.panel.visible = show),
+        visible: async () => fake.panel.visible,
+      },
       menus: {
         create: async (
           id: string,

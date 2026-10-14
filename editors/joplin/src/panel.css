@@ -1,0 +1,18 @@
+/* The findings panel. Joplin's theme variables keep it legible in light and dark. */
+.visimark-panel {
+  padding: 8px 12px;
+  font-family: var(--joplin-font-family, sans-serif);
+  font-size: var(--joplin-font-size, 13px);
+  color: var(--joplin-color, inherit);
+}
+.visimark-row {
+  padding: 4px 0;
+  border-bottom: 1px solid var(--joplin-divider-color, rgba(128, 128, 128, 0.3));
+}
+.visimark-row[data-action] {
+  cursor: pointer;
+}
+.visimark-label {
+  font-family: monospace;
+  font-weight: bold;
+}

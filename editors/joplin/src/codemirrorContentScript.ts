@@ -3,7 +3,7 @@ import { EditorView } from "@codemirror/view";
 import { visimark } from "codemirror-visimark";
 import { visimarkLint } from "codemirror-visimark/lint";
 import { editorCommands } from "./editor-commands.js";
-import { EDITOR_COMMANDS, type ApplyArgs } from "./protocol.js";
+import { EDITOR_COMMANDS, type ApplyArgs, type RevealArgs } from "./protocol.js";
 
 interface EditorControl {
   cm6?: unknown;
@@ -58,6 +58,7 @@ export default (context: Context) => ({
       setMarks((args as { show: boolean }).show);
       return { kind: "ok" };
     });
+    register(EDITOR_COMMANDS.reveal, (args) => run.reveal(args as RevealArgs));
   },
   assets: () => [{ name: "visimark.css" }],
 });

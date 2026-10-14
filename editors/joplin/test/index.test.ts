@@ -1,7 +1,14 @@
 import { beforeEach, expect, test } from "bun:test";
 import { COMMANDS, registerCommands } from "../src/commands.js";
 import { MESSAGES } from "../src/messages.js";
+import { readFileSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { installFakeJoplin, type FakeJoplin } from "./fake-joplin.js";
+
+const drift = readFileSync(
+  join(resolve(import.meta.dir, "../../../docs"), "example-invoice-drift.md"),
+  "utf8",
+);
 
 let fake: FakeJoplin;
 beforeEach(async () => {
@@ -19,9 +26,11 @@ const IDS = [
   "visimark.insertBudgetTemplate",
   "visimark.insertCapacityTemplate",
   "visimark.insertExperimentTemplate",
+  "visimark.toggleFindings",
+  "visimark.sweep",
 ];
 
-test("J8: the group 1 and 2 commands, with the spec's ids and labels, in order", () => {
+test("J8: every command, with the spec's ids and labels, in order", () => {
   expect(fake.commands.map((c) => [c.name, c.label])).toEqual([
     ["visimark.check", "VisiMark: Check this note"],
     ["visimark.format", "VisiMark: Format this note"],
@@ -32,6 +41,8 @@ test("J8: the group 1 and 2 commands, with the spec's ids and labels, in order",
     ["visimark.insertBudgetTemplate", "VisiMark: Insert monthly budget template"],
     ["visimark.insertCapacityTemplate", "VisiMark: Insert team capacity template"],
     ["visimark.insertExperimentTemplate", "VisiMark: Insert experiment log template"],
+    ["visimark.toggleFindings", "VisiMark: Show findings panel"],
+    ["visimark.sweep", "VisiMark: Sweep this notebook"],
   ]);
   expect(COMMANDS.map((c) => c.name)).toEqual(IDS);
 });
@@ -42,27 +53,33 @@ test("J8: Tools → VisiMark lists the same commands in table order", () => {
   ]);
 });
 
-test("J8: Explain is also in the editor context menu", () => {
+test("J8: Explain is in the editor context menu, Sweep in the notebook context menu", () => {
   expect(fake.menuItems).toEqual([
     {
       id: "visimark.explain.context",
       commandName: "visimark.explain",
       location: "editorContextMenu",
     },
+    { id: "visimark.sweep.folder", commandName: "visimark.sweep", location: "folderContextMenu" },
   ]);
 });
 
-test("R1: in the Rich Text editor every command says so and calls nothing", async () => {
+/** the commands that need the Markdown editor: all but Check and the panel's two */
+const EDITOR_ONLY = IDS.filter(
+  (id) => !["visimark.check", "visimark.toggleFindings", "visimark.sweep"].includes(id),
+);
+
+test("R1: in the Rich Text editor every editor command says so and calls nothing", async () => {
   fake.settings["editor.codeView"] = false;
-  for (const c of fake.commands) await c.execute();
+  for (const id of EDITOR_ONLY) await fake.run(id);
   expect(fake.editorCalls).toEqual([]);
-  expect(fake.messages).toEqual(fake.commands.map(() => MESSAGES.R1));
+  expect(fake.messages).toEqual(EDITOR_ONLY.map(() => MESSAGES.R1));
 });
 
-test("R1: with no CodeMirror 6 content script loaded, every command says so", async () => {
-  for (const c of fake.commands) await c.execute();
-  expect(fake.editorCalls.length).toBe(IDS.length);
-  expect(fake.messages).toEqual(fake.commands.map(() => MESSAGES.R1));
+test("R1: with no CodeMirror 6 content script loaded, every editor command says so", async () => {
+  for (const id of EDITOR_ONLY) await fake.run(id);
+  expect(fake.editorCalls.length).toBe(EDITOR_ONLY.length);
+  expect(fake.messages).toEqual(EDITOR_ONLY.map(() => MESSAGES.R1));
 });
 
 test("a rejected editor command shows F2 rather than failing silently", async () => {
@@ -96,23 +113,85 @@ test("Format's other answers", async () => {
   }
 });
 
-test("Check shows the CLI text in a monospace block, titled by the note", async () => {
-  fake.editor["visimark.cm.check"] = {
-    kind: "checked",
-    text: "a <b> & c",
-    problems: 1,
-    importsDropped: true,
+test("Check opens the findings panel on the selected note, in either editor", async () => {
+  fake.settings["editor.codeView"] = false;
+  fake.note = { id: "n1", title: "drift", body: drift };
+  await fake.run("visimark.check");
+  expect(fake.panel.visible).toBe(true);
+  expect(fake.panel.html).toContain("problems");
+  expect(fake.panel.html).toContain("STALE lines.Net · On-call support");
+  expect(fake.editorCalls).toEqual([]);
+  expect(fake.messages).toEqual([]);
+});
+
+test("Show findings panel toggles it, and the panel is created once", async () => {
+  fake.note = { id: "n1", title: "plain", body: "# Plain\n" };
+  await fake.run("visimark.toggleFindings");
+  expect(fake.panel.visible).toBe(true);
+  expect(fake.panel.html).toContain(MESSAGES.N1);
+  expect(fake.panel.scripts).toEqual(["./panel.css", "./panel.js"]);
+  await fake.run("visimark.toggleFindings");
+  expect(fake.panel.visible).toBe(false);
+  expect(fake.panel.created).toBe(1);
+});
+
+test("Sweep refreshes This note too, so the panel never opens on a stale note", async () => {
+  fake.note = { id: "n1", title: "drift", body: drift };
+  await fake.run("visimark.sweep", "f9");
+  expect(fake.panel.html).not.toContain(MESSAGES.N1);
+  expect(fake.panel.html).toContain("STALE lines.Net · On-call support");
+});
+
+test("a sweep that fails ends with a message, not a stuck progress line", async () => {
+  fake.data = async () => {
+    throw new Error("folder gone");
   };
-  await fake.run("visimark.check");
+  await fake.run("visimark.sweep", "f9");
+  expect(fake.panel.html).not.toContain('data-action="cancel"');
+  expect(fake.panel.html).toContain("The sweep stopped");
+});
+
+test("a panel Joplin creates already showing is not hidden by the first toggle", async () => {
+  const panels = joplin.views.panels as { create: (id: string) => Promise<string> };
+  const create = panels.create;
+  panels.create = async (id) => {
+    fake.panel.visible = true;
+    return create(id);
+  };
+  await fake.run("visimark.toggleFindings");
+  expect(fake.panel.visible).toBe(true);
+});
+
+test("a panel row reveals its span in the Markdown editor, and nothing in Rich Text", async () => {
+  await fake.run("visimark.toggleFindings");
+  fake.editor["visimark.cm.reveal"] = { kind: "ok" };
+  await fake.panelMessage!({ kind: "reveal", start: 10, end: 17 });
   expect(fake.editorCalls).toEqual([
-    { name: "visimark.cm.check", args: [{ title: "example-invoice-drift.md" }] },
+    { name: "visimark.cm.reveal", args: [{ start: 10, end: 17 }] },
   ]);
-  expect(fake.dialogs).toHaveLength(1);
-  expect(fake.dialogs[0]).toContain("<pre>a &lt;b&gt; &amp; c</pre>");
-  expect(fake.dialogs[0]).toContain(MESSAGES.I1);
-  // a second Check reuses the dialog rather than creating it again
-  await fake.run("visimark.check");
-  expect(fake.dialogs).toHaveLength(2);
+  fake.settings["editor.codeView"] = false;
+  await fake.panelMessage!({ kind: "reveal", start: 10, end: 17 });
+  expect(fake.editorCalls).toHaveLength(1);
+});
+
+test("Sweep takes the notebook it is given, or the selected one, and opens a listed note", async () => {
+  const asked: string[] = [];
+  fake.data = async (path) => {
+    asked.push(path.join("/"));
+    if (path[0] === "folders" && path.length === 1) return { items: [], has_more: false };
+    if (path[2] === "notes") return { items: [{ id: "x", title: "Drift" }], has_more: false };
+    return { body: drift };
+  };
+  await fake.run("visimark.sweep", "f9");
+  expect(asked).toContain("folders/f9/notes");
+  expect(fake.panel.html).toContain("Drift");
+  expect(fake.panel.html).toContain('data-action="open"');
+  await fake.panelMessage!({ kind: "open", id: "x" });
+  expect(fake.executed).toEqual([{ name: "openNote", args: ["x"] }]);
+
+  asked.length = 0;
+  await fake.run("visimark.sweep");
+  expect(asked).toContain("folders/f1/notes");
 });
 
 test("Evaluate shows a table of names and values", async () => {
