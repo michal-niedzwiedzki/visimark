@@ -4,6 +4,14 @@
 
 ### Added
 
+- **Quick fixes on `codemirror-visimark/lint` diagnostics.** A diagnostic now
+  offers the repair the VS Code extension offers for the same finding: update
+  a stale value to what `visimark fmt` would write, rewrite an unambiguous
+  date to ISO 8601, change an unknown name to its close match, or wrap a
+  column in `SUM(…)`. Each is one transaction. No new option or export; every
+  host that uses `visimarkLint()`, the Playground included, shows them.
+  ([#384](https://github.com/michal-niedzwiedzki/visimark/issues/384))
+
 - **`report slack`, the nearest miss on each assertion.** A sixth `simulate`
   reading. For each `assert` it prints the least room among the questions that
   work and the smallest miss among the questions that break only that rule,

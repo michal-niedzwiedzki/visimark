@@ -482,7 +482,9 @@ are fixed in the usual npm way, which is why [§2.2](#22-the-public-api) is clos
 - A Joplin host, and anything that reads another note.
 - Lint in Obsidian, or relaxing #176's constraint 6.
 - Hover, explain or quick-fix UI in the package. Obsidian keeps its own
-  popover; the playground keeps its REASONING panel.
+  popover; the playground keeps its REASONING panel. (Quick-fix actions on
+  the lint diagnostics were added later by
+  [#384](https://github.com/michal-niedzwiedzki/visimark/issues/384), spec §2.2.)
 - A published `visimark/browser` subpath (#201's deferral stands).
 - Removing `style-src 'unsafe-inline'` from the playground — a follow-up issue,
   needing a real-browser test.
