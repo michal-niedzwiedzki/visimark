@@ -231,6 +231,15 @@ test("evaluate lists every value, in the CLI's own values", async () => {
   expect(reply.rows.map((r) => r.name).sort()).toEqual(Object.keys(json).sort());
 });
 
+test("reveal selects the span and scrolls it into view", () => {
+  const { view, run } = editor(drift);
+  expect(run.reveal({ start: 10, end: 17 })).toEqual({ kind: "ok" });
+  expect(view.state.selection.main.from).toBe(10);
+  expect(view.state.selection.main.to).toBe(17);
+  // a span past the end of a note that moved is clamped, not thrown
+  expect(run.reveal({ start: 1e9, end: 1e9 + 5 })).toEqual({ kind: "ok" });
+});
+
 test("J7: a note with no vmark block answers no-block to every command, and is untouched", () => {
   const plain = "# Groceries\n\n- milk\n- 2 eggs\n";
   const { view, run } = editor(plain);
@@ -274,5 +283,6 @@ test("the content script registers the editor commands on a CodeMirror 6 editor"
     "visimark.cm.apply",
     "visimark.cm.insertTemplate",
     "visimark.cm.setMarks",
+    "visimark.cm.reveal",
   ]);
 });

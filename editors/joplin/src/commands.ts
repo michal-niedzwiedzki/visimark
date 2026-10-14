@@ -1,9 +1,10 @@
 import type { Explanation } from "visimark-editor-shared/explain.js";
+import { escape } from "./html.js";
 import { MESSAGES, applied, withImports } from "./messages.js";
+import { FindingsPanel } from "./panel.js";
 import {
   EDITOR_COMMANDS,
   type ApplyReply,
-  type CheckReply,
   type EvaluateReply,
   type ExplainReply,
   type FormatReply,
@@ -21,8 +22,11 @@ import {
 interface PaletteCommand {
   readonly name: string;
   readonly label: string;
-  readonly execute: () => Promise<void>;
+  readonly execute: (...args: unknown[]) => Promise<void>;
 }
+
+/** One panel for the plugin's life, made when the commands are registered. */
+let panel = new FindingsPanel();
 
 /**
  * The starter templates, one command each. The ids and titles are spec
@@ -46,9 +50,22 @@ export const COMMANDS: readonly PaletteCommand[] = [
     label: `VisiMark: Insert ${t.title} template`,
     execute: () => insertTemplate(t.id),
   })),
+  {
+    name: "visimark.toggleFindings",
+    label: "VisiMark: Show findings panel",
+    execute: () => panel.toggle(),
+  },
+  {
+    name: "visimark.sweep",
+    label: "VisiMark: Sweep this notebook",
+    // the notebook context menu passes the folder it was opened on
+    execute: (folderId?: unknown) =>
+      panel.sweep(typeof folderId === "string" ? folderId : undefined),
+  },
 ];
 
 export async function registerCommands(): Promise<void> {
+  panel = new FindingsPanel();
   for (const { name, label, execute } of COMMANDS) {
     await joplin.commands.register({ name, label, execute });
   }
@@ -62,6 +79,11 @@ export async function registerCommands(): Promise<void> {
     "visimark.explain.context",
     "visimark.explain",
     "editorContextMenu",
+  );
+  await joplin.views.menuItems.create(
+    "visimark.sweep.folder",
+    "visimark.sweep",
+    "folderContextMenu",
   );
 }
 
@@ -92,14 +114,13 @@ async function inEditor<T>(name: string, args?: object): Promise<T | null> {
   return reply as T;
 }
 
-async function checkNote(): Promise<void> {
-  const title = (await joplin.workspace.selectedNote())?.title ?? "";
-  const reply = await inEditor<CheckReply>(EDITOR_COMMANDS.check, { title });
-  if (reply === null) return;
-  if (reply.kind === "no-block") return say(MESSAGES.N1);
-  if (reply.kind === "failed") return say(MESSAGES.F2);
-  const imports = reply.importsDropped ? `<p>${escape(MESSAGES.I1)}</p>` : "";
-  await showDialog("visimark.check", `<pre>${escape(reply.text)}</pre>${imports}`);
+/**
+ * Check opens the findings panel on the selected note (#384 spec §2.5). It
+ * reads the saved body, so it works in either editor: read-only Check in the
+ * Rich Text editor.
+ */
+function checkNote(): Promise<void> {
+  return panel.showNote();
 }
 
 async function formatNote(): Promise<void> {
@@ -246,8 +267,4 @@ async function showDialog(
   // a dialog dismissed without a button may answer nothing: treat it as Cancel
   const result = (await joplin.views.dialogs.open(h)) as { id: string } | null;
   return result?.id ?? "";
-}
-
-function escape(text: string): string {
-  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }

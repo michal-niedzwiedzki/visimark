@@ -53,7 +53,7 @@ test("the system tar lists what ustar wrote", () => {
 const repo = join(import.meta.dir, "..", "..", "..");
 const engine = JSON.parse(readFileSync(join(repo, "packages/visimark/package.json"), "utf8"));
 
-test("A6 and A7: a real build packs the five files in order, at the engine's version", async () => {
+test("A6 and A7: a real build packs the seven files in order, at the engine's version", async () => {
   const tmp = mkdtempSync(join(tmpdir(), "joplin-build-"));
   const { jpl } = await buildPlugin(join(tmp, "dist"), join(tmp, "publish"));
   expect(jpl).toBe(join(tmp, "publish", "com.visimark.joplin.jpl"));
@@ -65,6 +65,8 @@ test("A6 and A7: a real build packs the five files in order, at the engine's ver
     "codemirrorContentScript.js",
     "markdownItContentScript.js",
     "visimark.css",
+    "panel.js",
+    "panel.css",
   ]);
   const manifest = JSON.parse(new TextDecoder().decode(entries[0]!.bytes));
   expect(manifest.version).toBe(engine.version);

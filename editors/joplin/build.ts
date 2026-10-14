@@ -18,7 +18,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const packages = join(here, "..", "..", "packages");
 
 export const ENTRIES: readonly {
-  name: "index" | "codemirrorContentScript" | "markdownItContentScript";
+  name: "index" | "codemirrorContentScript" | "markdownItContentScript" | "panel";
   format: "iife" | "cjs";
   external: string[];
 }[] = [
@@ -29,7 +29,14 @@ export const ENTRIES: readonly {
   // second copy of CodeMirror would be a second editor state.
   { name: "codemirrorContentScript", format: "cjs", external: ["@codemirror/*", "@lezer/*"] },
   { name: "markdownItContentScript", format: "cjs", external: [] },
+  // the findings panel's webview script (#384), a plain script like the entry
+  { name: "panel", format: "iife", external: [] },
 ];
+
+/** an entry whose source file is named differently from its output */
+const SOURCES: Partial<Record<(typeof ENTRIES)[number]["name"], string>> = {
+  panel: "panel-webview",
+};
 
 export const JPL_ORDER = [
   "manifest.json",
@@ -37,11 +44,13 @@ export const JPL_ORDER = [
   "codemirrorContentScript.js",
   "markdownItContentScript.js",
   "visimark.css",
+  "panel.js",
+  "panel.css",
 ] as const;
 
 export function options(entry: (typeof ENTRIES)[number], outDir: string): BuildOptions {
   return {
-    entryPoints: [join(here, "src", `${entry.name}.ts`)],
+    entryPoints: [join(here, "src", `${SOURCES[entry.name] ?? entry.name}.ts`)],
     outfile: join(outDir, `${entry.name}.js`),
     bundle: true,
     format: entry.format,
@@ -91,6 +100,7 @@ export async function buildPlugin(
   const manifest = JSON.parse(readFileSync(join(here, "src", "manifest.json"), "utf8"));
   writeFileSync(join(outDir, "manifest.json"), manifestWithVersion(manifest, version));
   copyFileSync(join(here, "src", "visimark.css"), join(outDir, "visimark.css"));
+  copyFileSync(join(here, "src", "panel.css"), join(outDir, "panel.css"));
   const jpl = join(publishDir, "com.visimark.joplin.jpl");
   const entries = JPL_ORDER.map((name) => ({
     name,

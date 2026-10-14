@@ -17,6 +17,7 @@ export const EDITOR_COMMANDS = {
   apply: "visimark.cm.apply",
   insertTemplate: "visimark.cm.insertTemplate",
   setMarks: "visimark.cm.setMarks",
+  reveal: "visimark.cm.reveal",
 } as const;
 
 export interface CheckArgs {
@@ -94,3 +95,8 @@ export type InsertTemplateReply =
   | { readonly kind: "has-block" }
   | { readonly kind: "no-place" }
   | { readonly kind: "inserted" };
+
+export interface RevealArgs {
+  readonly start: number;
+  readonly end: number;
+}
