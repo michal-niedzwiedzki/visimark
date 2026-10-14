@@ -160,11 +160,10 @@ integrated editor except the playground currently gets block highlighting.
 
 Read these as candidates, not decisions. Each one needs its own issue.
 
-1. **Joplin has no commands and no settings.** Everything else here has a
-   palette. The first real question is what Joplin lets a plugin do to a note:
-   `joplin.commands` plus `joplin.workspace.selectedNote()` can read the note
-   and `joplin.data.put` can write it, but the plugin has no file path, so
-   `path` stays null.
+1. **Joplin has no settings, authoring commands, findings panel or sweep
+   yet.** Check, Format, Evaluate and Explain are in (#384 group 1); the rest
+   is #384's groups 2–4. The plugin has no file path, so `path` stays null and
+   imports stay out of reach.
 2. **Obsidian has no inline diagnostics.** `codemirror-visimark/lint` exists
    and Joplin uses it. Obsidian shows findings only in its own pane.
 3. **VS Code has no sweep, infer, evaluate or templates.** Sweep is the
