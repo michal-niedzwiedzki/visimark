@@ -338,7 +338,9 @@ function collectColonComments(root: MdNode): {
   const visit = (node: MdNode, topLevel: boolean): void => {
     for (const child of node.children ?? []) {
       if (child.type === "html") {
-        const span: Span = { start: off(child, "start"), end: off(child, "end") };
+        // an unclosed comment runs to the end of the document, newline and all
+        const start = off(child, "start");
+        const span: Span = { start, end: start + (child.value ?? "").trimEnd().length };
         const r = parseColonComment(child.value ?? "", span.start, topLevel);
         if (r?.kind === "marker") {
           noFormulas ??= span;
