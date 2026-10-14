@@ -34,6 +34,22 @@ spec requires. Record what Joplin actually did under *Recording*.
 
 M1–M7 and M10 must pass before the implementation PR is merged.
 
+## #384, group 1: commands and repair
+
+Spec: `docs/design/chore-bring-joplin-plugin-visimark-to-spec.md` §4.2. Use a
+note with the body of `docs/example-invoice-drift.md`.
+
+| # | Do this | Required |
+|---|---|---|
+| M-A1 | Confirm in Joplin v3.7.1's source that `joplin.commands`, `joplin.views.menus`, `joplin.views.menuItems`, `joplin.views.dialogs`, `joplin.settings.globalValue`, `CodeMirrorControl.registerCommand` and the `editor.execCommand` command exist | Recorded |
+| M-1.1 | Open the command palette; open **Tools → VisiMark** | Both list Check this note, Format this note, Evaluate this note, Explain this value, in that order |
+| M-1.2 | **Format this note** | "Applied 15 repairs."; one Ctrl+Z restores the drifted note exactly; copied out, the note is byte-identical to `visimark fmt`'s output, and `visimark check` on it reports `5 problems (0 stale, 5 errors)` and exits 1 |
+| M-1.3 | The quick fix on the On-call support `Net` cell | That cell becomes `5200.00`; nothing else changes |
+| M-1.4 | **Check this note** | The dialog text matches `visimark check`'s output (the `27 problems` summary) |
+| M-1.5 | **Explain this value** with the cursor on a stale `Net` cell, then on prose | Formula, value and inputs; then "Put the cursor on a value VisiMark works out, and ask again." |
+| M-1.6 | A note with no block, every command | "This note has no VisiMark block, so there is nothing to check in it yet."; nothing changes |
+| M-1.7 | The Rich Text editor, every command | "VisiMark commands work in the Markdown editor. Switch to it and try again."; the note is unchanged |
+
 ## Recording
 
 | Row | Joplin version | Date | Observed |

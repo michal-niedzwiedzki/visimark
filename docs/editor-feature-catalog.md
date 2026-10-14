@@ -1,7 +1,6 @@
 # Editor feature catalog
 
-What each editor integration does today, read from the source on `master`
-plus the Joplin plugin on `issue/378-…-impl` (PR #381, not yet merged). It is a
+What each editor integration does today, read from the source on `master`. It is a
 map for deciding what to build next, not a user guide; the per-editor READMEs
 are that.
 
@@ -11,7 +10,7 @@ Editors covered:
 |---|---|---|---|
 | VS Code | `editors/vscode` | Language server (`visimark-lsp`) over IPC, plus an in-process engine for reports | Private workspace package, published as a VSIX |
 | Obsidian | `editors/obsidian` | Engine bundled into `main.js`, no server | Released as GitHub Releases; BRAT or manual install |
-| Joplin | `editors/joplin` | Two content scripts over `codemirror-visimark` and `markdown-it-visimark` | Build-only, side-loaded, PR #381 |
+| Joplin | `editors/joplin` | Engine in the editor's content script, over `codemirror-visimark`; `markdown-it-visimark` in the viewer | Build-only, side-loaded |
 | Any CodeMirror 6 host | `codemirror-visimark` | Engine bundled into the package | Published; also drives the playground |
 | Any markdown-it host | `markdown-it-visimark` | Engine bundled into the package | Published |
 
@@ -38,8 +37,8 @@ Editors covered:
 |---|---|---|---|
 | Findings listed as diagnostics in the editor | ● Problems panel and squiggles | ○ | ● lint diagnostics |
 | Findings pane in the product's own words | ○ | ● findings view, no finding codes in the text | ○ |
-| Per-finding repair | ● quick fix | ● button on each row | ○ |
-| Fix every stale value in the note | ● command and source action | ● Format command | ○ |
+| Per-finding repair | ● quick fix | ● button on each row | ● quick fix on each lint diagnostic |
+| Fix every stale value in the note | ● command and source action | ● Format command | ● Format command, one undo |
 | Fix on save | ● on by default, never on autosave | ● off by default, Ctrl/Cmd+S only | ○ |
 | Rewrite decidable non-ISO dates | ● setting | ● setting | ○ |
 | Format a selection only | ● range formatting | ○ | ○ |
@@ -49,10 +48,10 @@ Editors covered:
 
 | Feature | VS Code | Obsidian | Joplin |
 |---|---|---|---|
-| Check | ● Show Report | ● Check this note | ○ |
-| Format / fix | ● Fix All Stale Values; Fix Sheet (the lens target, but it fixes the whole document) | ● Format this note | ○ |
-| Evaluate (every name and its value) | ○ | ● dialog, with copy as JSON | ○ |
-| Explain one value or sheet | ● Explain Sheet, whole sheet | ● Explain this value, one value | ○ |
+| Check | ● Show Report | ● Check this note | ● Check this note, the CLI's output |
+| Format / fix | ● Fix All Stale Values; Fix Sheet (the lens target, but it fixes the whole document) | ● Format this note | ● Format this note |
+| Evaluate (every name and its value) | ○ | ● dialog, with copy as JSON | ● dialog |
+| Explain one value or sheet | ● Explain Sheet, whole sheet | ● Explain this value, one value | ● Explain this value, also in the editor's context menu |
 | Infer formulas from a pasted table | ○ | ● with a preview | ○ |
 | Insert a starter template | ○ | ● invoice, monthly budget, team capacity, experiment log | ○ |
 | Vault or workspace sweep | ○ | ● pane, cancellable, optional on open | ○ |
@@ -64,7 +63,7 @@ Editors covered:
 |---|---|---|---|
 | Status bar item with stale and error counts | ● click opens the report | ● click opens the findings view; desktop only | ○ |
 | Ribbon icon | — | ● opens the sweep | — |
-| Command palette entries | ● 5 | ● 5 plus 4 templates plus sweep | ○ none registered |
+| Command palette entries | ● 5 | ● 5 plus 4 templates plus sweep | ● 4, also under Tools → VisiMark |
 | Settings | ● 10 | ● 5 | ○ none |
 | Public API for other plugins or extensions | ○ | ● `plugins.plugins["visimark"].api`: check, evaluate, get, explain | ○ |
 
@@ -138,8 +137,12 @@ first group for free.
 
 ### Joplin
 
-- **Two content scripts, no logic of its own.** CodeMirror 6 marks and lint in
-  the editor; markdown-it marks in the renderer.
+- **Two content scripts.** CodeMirror 6 marks and lint in the editor;
+  markdown-it marks in the renderer.
+- **Check, Format, Evaluate and Explain** (#384 group 1). The engine runs in
+  the editor's content script, which the commands reach through
+  `editor.execCommand`. Format writes one transaction. They work in the
+  Markdown editor only, and drop whatever depends on an import.
 - **Legacy CodeMirror 5 editor is skipped** with no error.
 - **Print and PDF export rules** in the stylesheet.
 - **One shared stylesheet** shipped as a content-script asset.
