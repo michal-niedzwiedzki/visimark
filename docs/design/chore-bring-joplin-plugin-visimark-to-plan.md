@@ -115,7 +115,6 @@ These settle what the spec leaves to the implementation. None changes a contract
 - Replace: `editors/obsidian/src/sweep.ts` with the adapter: `sweep(source, options)` calls the shared `sweep(source, noteChecker(source.read), options)`, and it exports `SweepSource`, `SweptNote = Shared.SweptNote<NoteReport>` and `SweepResult = Shared.SweepResult<NoteReport>`.
 - Modify: `vault-index.ts` (`verdictFor` uses `noteChecker`, and builds `detail`), and `sweep.test.ts` and `vault-index.test.ts` (`.report` → `.detail`).
 - Test: `editors/shared/test/sweep.test.ts`, with a stub `checkNote` that counts `"STALE"` substrings. It asserts the prefilter skip, `unreadable` on a `null` read and on a throw, `adviceOnly`, `cancelled`, and S3: `paths()` returning a `Promise` gives the same result as the array form.
-- Move: `scripts/gen-obsidian-templates.ts` does not move here (Task 6).
 
 - [ ] **Step 1:** Write the shared test and watch it fail. Then create the shared module, the checker and the adapter.
 - [ ] **Step 2:** The Obsidian suite passes with only the `.detail` renames. Commit as `refactor(obsidian): generalise the sweep over a per-note checker`.
