@@ -11,7 +11,15 @@ import type { Finding } from "visimark";
  * One module-level field shared by `index.js` and `lint.js` — the published
  * build splits them into a common chunk so there is exactly one.
  */
-export type FindingSet = readonly Finding[] | null;
+export type FindingSet = readonly LintFinding[] | null;
+
+/**
+ * A finding plus, for a `STALE` with a span, the text `fmt` would write over
+ * that span — the lint quick fix's replacement (#384). Internal: the field's
+ * type is not exported from the package, so this adds no public surface.
+ * The span mapping below carries `fix` across edits unchanged.
+ */
+export type LintFinding = Finding & { readonly fix?: string };
 
 export const setFindings = StateEffect.define<FindingSet>();
 
