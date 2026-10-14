@@ -191,7 +191,7 @@ test("beginSeed()/seed() replay a vault event that happened during the scan, ins
 
 test("beginSeed()/seed() replay a removal that happened during the scan", async () => {
   const { files, index } = await seeded({ "invoice.md": drifted });
-  const report = index.notes()[0]!.report; // a real report, captured before it is touched
+  const report = index.notes()[0]!.detail; // a real report, captured before it is touched
   index.beginSeed();
   files.delete("invoice.md");
   index.remove("invoice.md");
@@ -201,7 +201,7 @@ test("beginSeed()/seed() replay a removal that happened during the scan", async 
     scanned: 1,
     candidates: 1,
     checked: 1,
-    notes: [{ path: "invoice.md", problems: 1, advice: 0, report }],
+    notes: [{ path: "invoice.md", problems: 1, advice: 0, detail: report }],
     adviceOnly: [],
     unreadable: [],
     cancelled: false,
