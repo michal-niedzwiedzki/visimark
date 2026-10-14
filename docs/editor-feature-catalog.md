@@ -189,3 +189,5 @@ Obsidian's README says Part 2 of its manual test has not been run whole, but
 `docs/design/obsidian-manual-test.md` records every Part 2 section as pass on
 desktop (not on a phone for §2.5), and says a person still needs to confirm the
 sweep and findings panes render. The README line is stale.
+
+<!--vmark:no-formulas-->
