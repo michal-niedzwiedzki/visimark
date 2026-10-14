@@ -34,7 +34,7 @@ import { VisiMarkSettingTab } from "./settings-tab.js";
 import { HIDDEN, UNKNOWN, statusFor, type Status } from "./status.js";
 import { sweep } from "./sweep.js";
 import { SWEEP_VIEW, SweepView } from "./sweep-view.js";
-import { TEMPLATES } from "./templates.js";
+import { TEMPLATES } from "visimark-editor-shared/templates.js";
 import { ValuesModal } from "./values-modal.js";
 import { vaultSweepRead, vaultWriter } from "./vault.js";
 import { LiveVaultIndex } from "./vault-index.js";
