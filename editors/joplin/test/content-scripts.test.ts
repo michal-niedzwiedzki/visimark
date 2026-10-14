@@ -73,6 +73,16 @@ test("J9: with showMarks off the viewer leaves the note untouched", () => {
   expect(html).toBe(new MarkdownIt({ html: true }).render(drift));
 });
 
+test("a renderer with no settings (settingValue throws) still renders, with marks", () => {
+  const md = new MarkdownIt({ html: true });
+  markdownIt({}).plugin(md, {
+    settingValue: () => {
+      throw new Error("settingValue is not implemented");
+    },
+  });
+  expect(md.render(drift)).toContain("visimark-computed");
+});
+
 test("J10: with showMarks on, every marked value has a title starting with its binding line", () => {
   const md = new MarkdownIt({ html: true });
   markdownIt({}).plugin(md, {

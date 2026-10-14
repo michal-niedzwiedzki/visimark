@@ -29,13 +29,26 @@ interface MarkdownIt {
  */
 export default (_context: unknown) => ({
   plugin: (instance: unknown, options: PluginOptions = {}) => {
-    if (options.settingValue?.("showMarks") === false) return;
+    if (!showMarks(options)) return;
     const md = instance as MarkdownIt;
     withTitles(md);
     markdownItVisimark(md);
   },
   assets: () => [{ name: "visimark.css" }],
 });
+
+/**
+ * The setting, or `true`. A `MarkupToHtml` caller that supplies no settings
+ * gets Joplin's default `settingValue`, which throws; that must not take the
+ * whole render down with it.
+ */
+function showMarks(options: PluginOptions): boolean {
+  try {
+    return options.settingValue?.("showMarks") !== false;
+  } catch {
+    return true;
+  }
+}
 
 /**
  * A `title` on every element that carries `data-vmark`: the binding line,

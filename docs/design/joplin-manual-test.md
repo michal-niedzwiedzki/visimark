@@ -62,7 +62,7 @@ note with the body of `docs/example-invoice-drift.md`.
 | # | Do this | Required |
 |---|---|---|
 | M-3.1 | **Tools → Options → VisiMark** | "Show marks on computed values", on; "When formatting, rewrite dates to ISO 8601 where the date is unambiguous", off |
-| M-3.2 | Turn **Show marks on computed values** off, with the drift note open | The marks leave the editor at once and the viewer on its next render; the editor's diagnostics remain |
+| M-3.2 | Turn **Show marks on computed values** off, with the drift note open | The marks leave the editor at once and the viewer on its next render (Joplin caches an unchanged note's HTML, so edit the note if the viewer has not updated); the editor's diagnostics remain |
 | M-3.3 | With the setting back on, hover a marked value in the viewer | The tooltip starts with the binding line, then "comes to" and "reads" |
 
 ## Recording
