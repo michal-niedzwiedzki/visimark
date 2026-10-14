@@ -41,8 +41,8 @@ export interface Explanation {
  *
  * **Why this is a separate function from `createApi`'s `explain` method.**
  * `createApi`'s `explain` reads the note through `analyse`, which goes
- * through `vault.cachedRead` — the last *saved* text. `main.ts`'s Explain
- * command already has a live, unsaved editor buffer parsed and checked
+ * through `vault.cachedRead` — the last *saved* text. The Obsidian plugin's
+ * Explain command already has a live, unsaved editor buffer parsed and checked
  * (`noteFor`); routing it through `api.explain(file, name)` instead would
  * silently answer from the saved copy on a dirty note. Exporting this piece
  * lets both callers share the one implementation over whichever `model` and

@@ -31,8 +31,9 @@ import type { VaultRead } from "./snapshot.js";
  *
  * **`apiVersion` is semver'd from day one and a bump is a breaking change with
  * no migration channel** — the same property that freezes the MCP tool names.
- * That is why `explain` returns a shape of its own (`visimark-editor-shared/explain.ts`) rather than the engine's
- * `ExplainView`: see `Explanation`.
+ * That is why `explain` returns a shape of its own rather than the engine's
+ * `ExplainView`: see `Explanation`, which lives in
+ * `visimark-editor-shared/explain.ts` since #384.
  */
 
 export interface VisiMarkApi {
