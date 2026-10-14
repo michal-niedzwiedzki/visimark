@@ -107,9 +107,10 @@ A starting point:
 
 ## Compatibility
 
-Supported from markdown-it 14.3.2 upward. CI tests 14.3.2, the version VS Code's
-built-in Markdown extension uses, and the latest release. There is no peer
-dependency: the plugin uses only the instance it is given.
+Supported from markdown-it 13.0.2 upward. CI tests 13.0.2, the version Joplin's
+renderer uses; 14.3.2, the version VS Code's built-in Markdown extension uses;
+and the latest release. There is no peer dependency: the plugin uses only the
+instance it is given.
 
 The plugin adds a core rule, wraps `md.renderer.render`, and wraps
 `renderer.rules.fence`. A plugin applied later that replaces

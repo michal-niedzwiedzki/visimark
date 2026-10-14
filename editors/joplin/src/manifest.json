@@ -1,0 +1,13 @@
+{
+  "manifest_version": 1,
+  "id": "com.visimark.joplin",
+  "app_min_version": "3.7.1",
+  "name": "VisiMark",
+  "description": "Marks every value a note computes in Joplin's editor and viewer, and flags the ones that no longer match their formula.",
+  "author": "Michał Niedźwiedzki",
+  "homepage_url": "https://github.com/michal-niedzwiedzki/visimark/tree/master/editors/joplin#readme",
+  "repository_url": "https://github.com/michal-niedzwiedzki/visimark",
+  "keywords": ["visimark", "markdown", "calculations", "formulas"],
+  "categories": ["editor", "viewer"],
+  "platforms": ["desktop"]
+}

@@ -1,8 +1,9 @@
 // Library smoke for markdown-it-visimark, run by ci.yml's smoke-node and
 // smoke-bun from a scratch project that installed the *packed* tarball and
-// one markdown-it version (14.3.2, the version VS Code's built-in Markdown
-// extension locks, and latest). It renders the spec's fixture and expects the
-// marks and the fence attribute. Anything else is a broken artifact.
+// one markdown-it version (13.0.2, the version Joplin's renderer pins; 14.3.2,
+// the version VS Code's built-in Markdown extension locks; and latest). It
+// renders the spec's fixture and expects the marks and the fence attribute.
+// Anything else is a broken artifact.
 import MarkdownIt from "markdown-it";
 import visimark from "markdown-it-visimark";
 

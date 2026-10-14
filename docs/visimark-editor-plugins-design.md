@@ -34,6 +34,13 @@ the browser-safe entry point, because `index.ts` reaches `node:fs` and a phone
 does not have one. See
 [`design/obsidian-plugin-spec.md`](design/obsidian-plugin-spec.md) §2.1.
 
+**Another is a client of the published packages.** `editors/joplin` (#378)
+uses neither the server nor the engine API directly. It adds
+`codemirror-visimark` to Joplin's editor and `markdown-it-visimark` to its
+viewer, and has no logic of its own. It is build-only and carries no version:
+its build stamps the engine's. See
+[`design/joplin-plugin-visimark-a-joplin-plugin-spec.md`](design/joplin-plugin-visimark-a-joplin-plugin-spec.md).
+
 **In scope for v1**
 
 - Monorepo restructuring into workspaces.
