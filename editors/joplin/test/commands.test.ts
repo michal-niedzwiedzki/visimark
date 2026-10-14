@@ -257,7 +257,7 @@ test("an engine throw answers failed and changes nothing", () => {
   expect(view.state.doc.toString()).toBe(drift);
 });
 
-test("the content script registers the four editor commands on a CodeMirror 6 editor", () => {
+test("the content script registers the editor commands on a CodeMirror 6 editor", () => {
   const names: string[] = [];
   const { view } = editor("");
   codemirror({}).plugin({
@@ -270,5 +270,8 @@ test("the content script registers the four editor commands on a CodeMirror 6 ed
     "visimark.cm.format",
     "visimark.cm.evaluate",
     "visimark.cm.explain",
+    "visimark.cm.inferPreview",
+    "visimark.cm.apply",
+    "visimark.cm.insertTemplate",
   ]);
 });

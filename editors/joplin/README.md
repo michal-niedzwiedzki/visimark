@@ -42,6 +42,12 @@ In Joplin desktop 3.7.1 or later: **Tools → Options → Plugins** (on macOS,
   - **VisiMark: Explain this value** shows the formula, the value and the
     inputs of the value under the cursor. It is also in the editor's context
     menu.
+  - **VisiMark: Infer the formulas** works out the formulas behind a pasted
+    table and shows them before adding anything. Select a table first to
+    work on that table only.
+  - **VisiMark: Insert … template** (invoice, monthly budget, team capacity,
+    experiment log) inserts a starter note at the cursor. A note that already
+    has a `vmark` block is refused.
 - Each lint diagnostic offers a quick fix where one is obvious: update a stale
   value, rewrite an unambiguous date, take the suggested name, or wrap a
   column in `SUM(…)`.

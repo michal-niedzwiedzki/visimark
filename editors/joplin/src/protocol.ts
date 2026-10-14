@@ -13,6 +13,9 @@ export const EDITOR_COMMANDS = {
   format: "visimark.cm.format",
   evaluate: "visimark.cm.evaluate",
   explain: "visimark.cm.explain",
+  inferPreview: "visimark.cm.inferPreview",
+  apply: "visimark.cm.apply",
+  insertTemplate: "visimark.cm.insertTemplate",
 } as const;
 
 export interface CheckArgs {
@@ -53,3 +56,38 @@ export type ExplainReply =
   | Failed
   | { readonly kind: "not-on-value"; readonly importsDropped?: boolean }
   | { readonly kind: "explained"; readonly explanation: Explanation; readonly row?: number };
+
+/** a plain text edit over the document the preview read */
+export interface PlainEdit {
+  readonly start: number;
+  readonly end: number;
+  readonly text: string;
+}
+
+export type InferPreviewReply =
+  | Failed
+  | {
+      readonly kind: "preview";
+      /** names this preview; `apply` refuses once the document has moved */
+      readonly version: number;
+      readonly description: string;
+      readonly empty: boolean;
+      readonly edits: PlainEdit[];
+    };
+
+export interface ApplyArgs {
+  readonly version: number;
+  readonly edits: readonly PlainEdit[];
+}
+
+export type ApplyReply = Failed | { readonly kind: "applied" } | { readonly kind: "changed" };
+
+export interface InsertTemplateArgs {
+  readonly id: string;
+}
+
+export type InsertTemplateReply =
+  | Failed
+  | { readonly kind: "has-block" }
+  | { readonly kind: "no-place" }
+  | { readonly kind: "inserted" };

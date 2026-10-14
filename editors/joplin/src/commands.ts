@@ -2,10 +2,13 @@ import type { Explanation } from "visimark-editor-shared/explain.js";
 import { MESSAGES, applied, withImports } from "./messages.js";
 import {
   EDITOR_COMMANDS,
+  type ApplyReply,
   type CheckReply,
   type EvaluateReply,
   type ExplainReply,
   type FormatReply,
+  type InferPreviewReply,
+  type InsertTemplateReply,
 } from "./protocol.js";
 
 /**
@@ -21,11 +24,28 @@ interface PaletteCommand {
   readonly execute: () => Promise<void>;
 }
 
+/**
+ * The starter templates, one command each. The ids and titles are spec
+ * §2.3's; the template ids are the shared templates' own.
+ */
+const TEMPLATE_COMMANDS = [
+  { id: "invoice", name: "visimark.insertInvoiceTemplate", title: "invoice" },
+  { id: "budget", name: "visimark.insertBudgetTemplate", title: "monthly budget" },
+  { id: "capacity", name: "visimark.insertCapacityTemplate", title: "team capacity" },
+  { id: "experiment", name: "visimark.insertExperimentTemplate", title: "experiment log" },
+] as const;
+
 export const COMMANDS: readonly PaletteCommand[] = [
   { name: "visimark.check", label: "VisiMark: Check this note", execute: checkNote },
   { name: "visimark.format", label: "VisiMark: Format this note", execute: formatNote },
   { name: "visimark.evaluate", label: "VisiMark: Evaluate this note", execute: evaluateNote },
   { name: "visimark.explain", label: "VisiMark: Explain this value", execute: explainValue },
+  { name: "visimark.infer", label: "VisiMark: Infer the formulas", execute: inferFormulas },
+  ...TEMPLATE_COMMANDS.map((t) => ({
+    name: t.name,
+    label: `VisiMark: Insert ${t.title} template`,
+    execute: () => insertTemplate(t.id),
+  })),
 ];
 
 export async function registerCommands(): Promise<void> {
@@ -127,6 +147,47 @@ async function explainValue(): Promise<void> {
 }
 
 /**
+ * Infer: the preview in a dialog, then **Apply** sends the edits back with
+ * the preview's version, and the content script refuses them if the note
+ * moved in between (A1). With nothing to propose, the dialog says so with OK
+ * only. Not gated on a block, same as Obsidian.
+ */
+async function inferFormulas(): Promise<void> {
+  const preview = await inEditor<InferPreviewReply>(EDITOR_COMMANDS.inferPreview);
+  if (preview === null) return;
+  if (preview.kind === "failed") return say(MESSAGES.F2);
+  const added = preview.edits
+    .filter((e) => e.text.trim() !== "")
+    .map((e) => `<pre>${escape(e.text.trim())}</pre>`)
+    .join("");
+  const html = `<p>${escape(preview.description)}</p>${preview.empty ? "" : added}`;
+  if (preview.empty) {
+    await showDialog("visimark.infer", html, [{ id: "ok" }]);
+    return;
+  }
+  const choice = await showDialog("visimark.infer", html, [
+    { id: "apply", title: "Apply" },
+    { id: "cancel", title: "Cancel" },
+  ]);
+  if (choice !== "apply") return;
+  const reply = await inEditor<ApplyReply>(EDITOR_COMMANDS.apply, {
+    version: preview.version,
+    edits: preview.edits,
+  });
+  if (reply === null) return;
+  if (reply.kind === "changed") return say(MESSAGES.A1);
+  if (reply.kind === "failed") return say(MESSAGES.F2);
+}
+
+async function insertTemplate(id: string): Promise<void> {
+  const reply = await inEditor<InsertTemplateReply>(EDITOR_COMMANDS.insertTemplate, { id });
+  if (reply === null) return;
+  if (reply.kind === "has-block") return say(MESSAGES.T1);
+  if (reply.kind === "no-place") return say(MESSAGES.T2);
+  if (reply.kind === "failed") return say(MESSAGES.F2);
+}
+
+/**
  * The binding line verbatim, what it comes to and what it reads — the
  * Obsidian plugin's Explain dialog, as text. `row` picks one cell of a
  * column; without it a column shows every row.
@@ -160,18 +221,21 @@ async function say(message: string): Promise<void> {
 /** A dialog per id, created on first use: Joplin refuses a second `create`. */
 const dialogs = new Map<string, Promise<string>>();
 
-async function showDialog(id: string, html: string): Promise<void> {
+/** Shows `html` and answers the id of the button that closed the dialog. */
+async function showDialog(
+  id: string,
+  html: string,
+  buttons: { id: string; title?: string }[] = [{ id: "ok" }],
+): Promise<string> {
   let handle = dialogs.get(id);
   if (handle === undefined) {
-    handle = joplin.views.dialogs.create(id).then(async (h) => {
-      await joplin.views.dialogs.setButtons(h, [{ id: "ok" }]);
-      return h;
-    });
+    handle = joplin.views.dialogs.create(id);
     dialogs.set(id, handle);
   }
   const h = await handle;
+  await joplin.views.dialogs.setButtons(h, buttons);
   await joplin.views.dialogs.setHtml(h, `<div class="visimark-dialog">${html}</div>`);
-  await joplin.views.dialogs.open(h);
+  return (await joplin.views.dialogs.open(h)).id;
 }
 
 function escape(text: string): string {

@@ -2,7 +2,7 @@ import type { EditorView } from "@codemirror/view";
 import { visimark } from "codemirror-visimark";
 import { visimarkLint } from "codemirror-visimark/lint";
 import { editorCommands } from "./editor-commands.js";
-import { EDITOR_COMMANDS } from "./protocol.js";
+import { EDITOR_COMMANDS, type ApplyArgs } from "./protocol.js";
 
 interface EditorControl {
   cm6?: unknown;
@@ -27,6 +27,9 @@ export default (_context: unknown) => ({
     register(EDITOR_COMMANDS.format, (args) => run.format(args as { fixDates: boolean }));
     register(EDITOR_COMMANDS.evaluate, () => run.evaluate());
     register(EDITOR_COMMANDS.explain, () => run.explain());
+    register(EDITOR_COMMANDS.inferPreview, () => run.inferPreview());
+    register(EDITOR_COMMANDS.apply, (args) => run.apply(args as ApplyArgs));
+    register(EDITOR_COMMANDS.insertTemplate, (args) => run.insertTemplate(args as { id: string }));
   },
   assets: () => [{ name: "visimark.css" }],
 });
