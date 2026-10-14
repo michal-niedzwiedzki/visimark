@@ -1,0 +1,19 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["bun", "node"],
+    "lib": ["ES2023", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    // Source, never dist, for tsc and `bun test` alike — the same mapping
+    // build.ts's esbuild aliases make. Three resolvers that disagree typecheck,
+    // test and ship three different plugins.
+    "paths": {
+      "visimark": ["../../packages/visimark/src/browser.ts"],
+      "codemirror-visimark": ["../../packages/codemirror-visimark/src/index.ts"],
+      "codemirror-visimark/*": ["../../packages/codemirror-visimark/src/*"],
+      "markdown-it-visimark": ["../../packages/markdown-it-visimark/src/index.ts"]
+    }
+  },
+  "include": ["src", "test", "build.ts", "pack.ts"]
+}

@@ -167,6 +167,28 @@ Obsidian instance. `.agents/skills/obsidian-cli` (a Claude skill, but its
    Prefer dispatching on the element over `dev:cdp` when a DOM-level listener
    is what's under test, and attach the debugger if the two disagree.
 
+### Building the Joplin plugin and side-loading it
+
+`editors/joplin` is a client of the two published editor packages: it adds
+`codemirror-visimark` to Joplin's editor and `markdown-it-visimark` to its
+viewer. It is build-only (#378). Nothing publishes it, and it carries no
+version of its own; the build stamps the engine's into the manifest.
+
+```console
+$ bun run --filter joplin-plugin-visimark build
+$ ls editors/joplin/publish
+com.visimark.joplin.jpl
+```
+
+Install it in Joplin desktop 3.7.1 or later with **Tools → Options → Plugins →
+⚙ → Install from file**. CI uploads the same file as the `visimark-joplin`
+artifact.
+
+`editors/joplin/test/bundle.test.ts` reads esbuild's metafile. It fails if
+any `@codemirror/*` or `@lezer/*` source is bundled (Joplin provides them) or
+if any `node:` import survives. `docs/design/joplin-manual-test.md` is the
+check a screen needs.
+
 ### Running the MCP server from your working tree
 
 ```console

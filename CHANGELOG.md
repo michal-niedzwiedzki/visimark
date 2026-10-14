@@ -12,6 +12,12 @@
   host that uses `visimarkLint()`, the Playground included, shows them.
   ([#384](https://github.com/michal-niedzwiedzki/visimark/issues/384))
 
+- **A Joplin plugin, built but not published.** `editors/joplin` adds
+  `codemirror-visimark`'s marks and lint to Joplin's Markdown editor and
+  `markdown-it-visimark`'s marks to its viewer. Desktop only, Joplin 3.7.1 and
+  up. CI uploads it as the `visimark-joplin` artifact for installing from a
+  file. ([#378](https://github.com/michal-niedzwiedzki/visimark/issues/378))
+
 - **`report slack`, the nearest miss on each assertion.** A sixth `simulate`
   reading. For each `assert` it prints the least room among the questions that
   work and the smallest miss among the questions that break only that rule,
@@ -27,6 +33,7 @@
   the fence's info string on the rendered `vmark` block as `data-vmark-info`.
   No CSS and no dependency. The VS Code extension uses it for the built-in
   Markdown preview, switched by the new `visimark.preview.enable` setting.
+  Supported from markdown-it 13.0.2, the version Joplin uses.
   ([#373](https://github.com/michal-niedzwiedzki/visimark/issues/373))
 
 - **`codemirror-visimark/highlight`, syntax highlighting for `vmark` blocks.**
