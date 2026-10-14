@@ -33,7 +33,7 @@ These settle what the spec leaves to the implementation. None changes a contract
 - **`hover.test.ts` moves to `editors/shared`.** It builds its `Explanation`s with `explainBinding` over `check(build(locate(source)))` instead of through Obsidian's `createApi`. `docs/example-invoice.md` imports nothing, so the values are the same and the assertions do not change.
 - **Resolution.** `visimark-editor-shared/*` resolves to `editors/shared/src/*` the way `codemirror-visimark/*` already does: a `paths` entry in each consumer's `tsconfig.json` (which `tsc` and `bun test` both read), and an `alias` in each esbuild config. `editors/shared` has no `exports` map and no build. Obsidian's `package.json` lists it as a `workspace:*` dependency, as it lists `codemirror-visimark`.
 - **`api.ts` keeps `export type { Explanation }`,** because `VisiMarkApi`'s published shape names it. `main.ts` and `explain-modal.ts` import from the shared module directly.
-- **The lint `fix` field.** `findingsField` keeps its `FindingSet` type for every reader. The fix texts live in a parallel internal field, `fixesField: readonly (string | null)[] | null`, set by the same `setFindings` dispatch through a second effect, `setFixes`. Entry `i` is the `planFmt` replacement for finding `i`. Nothing outside `src/` sees it. The field maps nothing, because a fix is text and the finding's span is what moves.
+- **The lint `fix` field.** As spec §2.2 says: each entry of `findingsField` may carry an internal `fix: string`, the `planFmt` text for its span. The field's span mapping already spreads each entry, so `fix` survives an edit. `FindingSet` is not exported from the package. The playground's `window.VisiMark` gains `planFmt`, because the extension imports it by name and `engine-global.ts` forwards every such name.
 
 ---
 
@@ -149,8 +149,9 @@ Its own branch, `issue/384-lint-actions`, off `master`. It does not wait on #381
 
 **Files:**
 
-- Modify: `packages/codemirror-visimark/src/findings-field.ts`: add `fixesField` and `setFixes` (see **Decisions**).
-- Modify: `packages/codemirror-visimark/src/plugin.ts`: `localFor` and `runSnapshot` also compute `fixesFor(model, result, doc?)`. This runs `planFmt(model, result, { noArtifacts: true, fixDates: true, doc })`. For each finding with a span it returns the `text` of the planned edit whose `start`/`end` equal that span, or `null`. `publish` and `publishFindingsSoon` dispatch `setFixes` beside `setFindings`. `visimarkExtension` returns `[findingsField, fixesField, plugin]`.
+- Modify: `packages/codemirror-visimark/src/findings-field.ts`: `FindingSet` entries become `LintFinding = Finding & { fix?: string }` (see **Decisions**).
+- Modify: `packages/codemirror-visimark/src/plugin.ts`: `localFor` and `runSnapshot` publish `withFixes(model, result, doc?)`. This runs `planFmt(model, result, { noArtifacts: true, fixDates: true, doc })` and puts on each spanned finding the `text` of the planned edit whose `start`/`end` equal its span. A plan that throws leaves the findings without fixes.
+- Modify: `packages/visimark/src/playground/browser-entry.ts` and `app/engine-global.ts`: expose and forward `planFmt`. Rebuild `docs/vendor/`.
 
 - [ ] **Step 1:** Commit as `feat(codemirror): keep the planned fix for each finding`.
 
