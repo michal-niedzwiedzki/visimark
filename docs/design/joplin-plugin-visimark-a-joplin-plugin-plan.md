@@ -4,7 +4,7 @@
 
 **Goal:** Add `editors/joplin`, a private, build-only Joplin plugin that wires `codemirror-visimark` into Joplin's CodeMirror 6 editor and `markdown-it-visimark` into its viewer. CI packs it as a `.jpl` artifact. `markdown-it-visimark`'s supported floor drops to markdown-it 13.0.2.
 
-**Architecture:** Three esbuild CommonJS bundles: an entry point that registers two content scripts, an editor script and a viewer script. Each workspace package resolves to its source. An in-repo ustar writer packs them with a generated manifest that carries the engine's version. Tests build in memory and check the esbuild metafile, the archive and the content scripts' behaviour. CI uploads the `.jpl` from the existing `build` job.
+**Architecture:** Three esbuild bundles: an entry point that registers two content scripts, built as a plain script (IIFE), and an editor script and a viewer script, built as CommonJS. Each workspace package resolves to its source. An in-repo ustar writer packs them with a generated manifest that carries the engine's version. Tests build in memory and check the esbuild metafile, the archive and the content scripts' behaviour. CI uploads the `.jpl` from the existing `build` job.
 
 **Tech Stack:** Bun (workspaces, `bun test`), TypeScript, esbuild 0.28, markdown-it, CodeMirror 6, GitHub Actions.
 
@@ -636,9 +636,9 @@ import { fileURLToPath } from "node:url";
 import { ustar } from "./pack.ts";
 
 /**
- * The Joplin plugin build (#378, spec §2.6). Three CommonJS bundles — Joplin
- * loads a content script as `require(file).default` — then a manifest stamped
- * with the engine's version, the stylesheet, and the `.jpl`.
+ * The Joplin plugin build (#378, spec §2.6). A plain-script entry point and two
+ * CommonJS content scripts — Joplin loads one as `require(file).default` — then
+ * a manifest stamped with the engine's version, the stylesheet, and the `.jpl`.
  *
  * Every workspace package resolves to its **source**, for the reason
  * `editors/obsidian/esbuild.config.mjs` gives: the plugin must not ship a stale
@@ -648,13 +648,19 @@ import { ustar } from "./pack.ts";
 const here = dirname(fileURLToPath(import.meta.url));
 const packages = join(here, "..", "..", "packages");
 
-export const ENTRIES = [
-  { name: "index", external: [] as string[] },
+export const ENTRIES: readonly {
+  name: "index" | "codemirrorContentScript" | "markdownItContentScript";
+  format: "iife" | "cjs";
+  external: string[];
+}[] = [
+  // The entry point runs as a plain script with the `joplin` global; nothing
+  // promises it a `module`, so it must not touch one.
+  { name: "index", format: "iife", external: [] },
   // What Joplin's `codeMirrorRequire` hands a CodeMirror content script. A
   // second copy of CodeMirror would be a second editor state.
-  { name: "codemirrorContentScript", external: ["@codemirror/*", "@lezer/*"] },
-  { name: "markdownItContentScript", external: [] as string[] },
-] as const;
+  { name: "codemirrorContentScript", format: "cjs", external: ["@codemirror/*", "@lezer/*"] },
+  { name: "markdownItContentScript", format: "cjs", external: [] },
+];
 
 export const JPL_ORDER = [
   "manifest.json",
@@ -669,7 +675,7 @@ export function options(entry: (typeof ENTRIES)[number], outDir: string): BuildO
     entryPoints: [join(here, "src", `${entry.name}.ts`)],
     outfile: join(outDir, `${entry.name}.js`),
     bundle: true,
-    format: "cjs",
+    format: entry.format,
     platform: "browser",
     target: "es2020",
     minify: true,
