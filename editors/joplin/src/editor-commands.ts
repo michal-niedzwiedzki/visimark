@@ -190,6 +190,7 @@ export function editorCommands(view: EditorView, options: EditorCommandsOptions 
           version: previewed.version,
           description: describePreview(preview),
           empty: isEmpty(preview),
+          removesMarker: preview.removesMarker,
           edits: preview.inserts.map((e) => ({ start: e.start, end: e.end, text: e.text })),
         };
       } catch {

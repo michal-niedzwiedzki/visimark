@@ -160,7 +160,14 @@ async function inferFormulas(): Promise<void> {
     .filter((e) => e.text.trim() !== "")
     .map((e) => `<pre>${escape(e.text.trim())}</pre>`)
     .join("");
-  const html = `<p>${escape(preview.description)}</p>${preview.empty ? "" : added}`;
+  // the description says nothing written is changed; a deleted comment is
+  // the one exception, so it is named, as Obsidian's dialog names it
+  const marker = preview.removesMarker
+    ? `<p>${escape(
+        "This table already said it had no formulas to check. That comment will be removed, since it now does.",
+      )}</p>`
+    : "";
+  const html = `<p>${escape(preview.description)}</p>${preview.empty ? "" : added + marker}`;
   if (preview.empty) {
     await showDialog("visimark.infer", html, [{ id: "ok" }]);
     return;
@@ -235,7 +242,9 @@ async function showDialog(
   const h = await handle;
   await joplin.views.dialogs.setButtons(h, buttons);
   await joplin.views.dialogs.setHtml(h, `<div class="visimark-dialog">${html}</div>`);
-  return (await joplin.views.dialogs.open(h)).id;
+  // a dialog dismissed without a button may answer nothing: treat it as Cancel
+  const result = (await joplin.views.dialogs.open(h)) as { id: string } | null;
+  return result?.id ?? "";
 }
 
 function escape(text: string): string {

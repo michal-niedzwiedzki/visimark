@@ -68,7 +68,25 @@ test("Infer scopes to a non-empty selection", () => {
 test("Infer on prose with no arithmetic says so", () => {
   const { run } = editor("# Notes\n\nJust words.\n");
   const preview = run.inferPreview() as InferPreviewReply;
-  expect(preview.kind).toBe("preview");
+  if (preview.kind !== "preview") throw new Error(preview.kind);
+  expect(preview.empty).toBe(true);
+  expect(preview.description).toBe("There is nothing here to work out.");
+});
+
+test("Apply deletes a stale no-formulas comment in the same transaction, and says it will", () => {
+  const marked = `${pasted}\n<!--vmark:no-formulas-->\n`;
+  const { view, run } = editor(marked);
+  const preview = run.inferPreview() as InferPreviewReply;
+  if (preview.kind !== "preview") throw new Error(preview.kind);
+  expect(preview.removesMarker).toBe(true);
+  expect(preview.edits.some((e) => e.start < e.end && e.text === "")).toBe(true);
+  expect(run.apply({ version: preview.version, edits: preview.edits })).toEqual({
+    kind: "applied",
+  });
+  expect(view.state.doc.toString()).not.toContain("no-formulas");
+  expect(hasVmarkBlock(view.state.doc.toString())).toBe(true);
+  undo(view);
+  expect(view.state.doc.toString()).toBe(marked);
 });
 
 test("J6: apply after a document change answers changed, and the document is untouched", () => {

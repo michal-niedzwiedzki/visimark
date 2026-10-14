@@ -42,6 +42,16 @@ test("J8: Tools → VisiMark lists the same commands in table order", () => {
   ]);
 });
 
+test("J8: Explain is also in the editor context menu", () => {
+  expect(fake.menuItems).toEqual([
+    {
+      id: "visimark.explain.context",
+      commandName: "visimark.explain",
+      location: "editorContextMenu",
+    },
+  ]);
+});
+
 test("R1: in the Rich Text editor every command says so and calls nothing", async () => {
   fake.settings["editor.codeView"] = false;
   for (const c of fake.commands) await c.execute();
@@ -163,6 +173,22 @@ test("Infer shows the preview with Apply and Cancel, and Apply sends its version
     args: [{ version: 3, edits: preview.edits }],
   });
   expect(fake.messages).toEqual([]);
+});
+
+test("Infer says when Apply removes the note's no-formulas comment", async () => {
+  fake.editor["visimark.cm.inferPreview"] = { ...preview, removesMarker: true };
+  fake.answer = "cancel";
+  await fake.run("visimark.infer");
+  expect(fake.dialogs[0]).toContain(
+    "This table already said it had no formulas to check. That comment will be removed, since it now does.",
+  );
+});
+
+test("a dialog closed without a button counts as Cancel", async () => {
+  fake.editor["visimark.cm.inferPreview"] = preview;
+  (joplin.views.dialogs as { open: unknown }).open = async () => null;
+  await fake.run("visimark.infer");
+  expect(fake.editorCalls.map((c) => c.name)).toEqual(["visimark.cm.inferPreview"]);
 });
 
 test("Infer's Cancel writes nothing", async () => {

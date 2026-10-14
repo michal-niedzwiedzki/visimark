@@ -72,6 +72,8 @@ export type InferPreviewReply =
       readonly version: number;
       readonly description: string;
       readonly empty: boolean;
+      /** Apply deletes a `<!--vmark:no-formulas-->` comment the table has outgrown */
+      readonly removesMarker: boolean;
       readonly edits: PlainEdit[];
     };
 
