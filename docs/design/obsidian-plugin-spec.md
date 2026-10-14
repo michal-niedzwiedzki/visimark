@@ -274,7 +274,7 @@ is for. The verbs are unchanged and are what the table below lists.
 offers three answers to that: a caret can be in the binding line that declares
 a name, in a prose anchor that reads one, or in a table cell a column rule
 computes. The first two are spans the engine already records and
-`editors/obsidian/src/at-cursor.ts` answers from them, counting both halves of
+`at-cursor.ts` (in `editors/shared/src/` since #384) answers from them, counting both halves of
 an anchor — the value and the comment that binds it — because in reading mode
 the comment is invisible and in Live Preview it is not, so a caret "on the
 number" lands in either. The third is not a span the engine records, and the
@@ -295,7 +295,7 @@ each one's job is to create the block the gate looks for:
 v1 row 10. One command each rather than a picker: four palette entries are
 searchable by name, the palette is already a picker, and a modal is UI nothing
 can test. The documents are Markdown files in the repository, generated into
-the bundle by `scripts/gen-obsidian-templates.ts`, because a template's whole
+the bundle by `scripts/gen-editor-templates.ts` (from `editors/shared/templates/` since #384), because a template's whole
 contract is that `visimark check` passes it with **zero** findings unedited —
 and a string literal can be handed to no CLI, no formatter and no renderer.
 

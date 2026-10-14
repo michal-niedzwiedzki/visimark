@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { readFileSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { build, check, locate } from "visimark";
-import { TEMPLATE_ORDER, render, sourceNames } from "../../../scripts/gen-obsidian-templates.js";
+import { TEMPLATE_ORDER, render, sourceNames } from "../../../scripts/gen-editor-templates.js";
 import { TEMPLATES } from "../src/templates.js";
 
 /**
@@ -114,7 +114,7 @@ test("src/templates.ts is what the generator would write today", () => {
   const current = readFileSync(resolve(import.meta.dir, "../src/templates.ts"), "utf8");
   expect(
     render(read),
-    "editors/obsidian/src/templates.ts is stale — run `bun run gen:obsidian-templates`",
+    "editors/shared/src/templates.ts is stale — run `bun run gen:editor-templates`",
   ).toBe(current);
 });
 

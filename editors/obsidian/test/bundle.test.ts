@@ -35,6 +35,7 @@ import { EXTERNALS, options } from "../esbuild.config.mjs";
 const here = resolve(import.meta.dir, "..");
 const engineSrc = resolve(here, "../../packages/visimark/src");
 const extensionSrc = resolve(here, "../../packages/codemirror-visimark/src");
+const sharedSrc = resolve(here, "../shared/src");
 
 /** `import … from "x";` / `export … from "x";` / `import "x";`, oxfmt style */
 const FROM_RE = /^(?:import|export)\b[^;]*?\bfrom\s*"([^"]+)";/gm;
@@ -89,6 +90,12 @@ function graph(): Map<string, string> {
             ? join(extensionSrc, "index.ts")
             : join(extensionSrc, sub.slice(1).replace(/\.js$/, ".ts")),
         );
+        continue;
+      }
+      // the editor logic shared with the Joplin plugin (#384), aliased the same way
+      if (spec.startsWith("visimark-editor-shared/")) {
+        const sub = spec.slice("visimark-editor-shared/".length);
+        queue.push(join(sharedSrc, sub.replace(/\.js$/, ".ts")));
         continue;
       }
       if (!spec.startsWith(".")) continue;
@@ -189,6 +196,7 @@ test("the walk actually reaches the engine, not just the plugin's own few files"
   expect(files).toContain("packages/visimark/src/browser.ts");
   expect(files).toContain("packages/visimark/src/fs/gate.ts");
   expect(files).toContain("packages/codemirror-visimark/src/analysis.ts");
+  expect(files).toContain("editors/shared/src/explain.ts");
   expect(files.length).toBeGreaterThan(20);
 });
 

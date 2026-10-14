@@ -291,8 +291,8 @@ nothing are the ones that most need a person.
 
   The line's *content* — the formula, the result and what it reads, with a
   cross-sheet input named — is asserted in
-  `editors/obsidian/test/hover.test.ts`, against the same API row 9 compares
-  to the engine. So a failure here is about the **gesture**: the wrong element
+  `editors/shared/test/hover.test.ts`, against `explainBinding`, the function
+  row 9's API answers with. So a failure here is about the **gesture**: the wrong element
   answered, or none did.
 - **A cell must say what that cell comes to**, not what its whole column does.
   Hover the four `Net` cells in `example-invoice.md` and expect four different
@@ -441,7 +441,7 @@ manual step is the "a person, not just a machine" half.
   and rewrites **no existing byte** of the table. Verify with `git diff`, not
   by eye: `planInfer` only inserts.
 
-  `editors/obsidian/test/infer-plan.test.ts` asserts this more strongly than a
+  `editors/shared/test/infer-plan.test.ts` asserts this more strongly than a
   diff can — it deletes exactly the inserted ranges out of the result and
   requires the original document back, byte for byte — and asserts that
   accepting it on `example-quote-plain.md` leaves a document `check` reports
@@ -536,7 +536,7 @@ manual step is the "a person, not just a machine" half.
   inside Obsidian (v1 constraint 5).
 
   Both halves of that condition are asserted by
-  `editors/obsidian/test/templates.test.ts` over the documents themselves, so
+  `editors/shared/test/templates.test.ts` over the documents themselves, so
   a failure here means the *insertion* changed the bytes — a trailing newline
   eaten, an indent added, a selection replaced that should not have been.
   That is the part only a person can check, and it is worth checking on the
