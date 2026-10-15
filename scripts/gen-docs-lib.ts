@@ -9,7 +9,7 @@ import remarkGfm from "remark-gfm";
 import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
 import { unified } from "unified";
-import { escapeHtml, slugify } from "../packages/visimark/src/site/dom.js";
+import { escapeHtml, slugify } from "../site/src/pages/dom.js";
 import { GOATCOUNTER_ORIGIN, analyticsScriptTag } from "./analytics-lib.js";
 import { renderNav } from "./nav-lib.js";
 

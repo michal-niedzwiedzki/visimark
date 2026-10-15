@@ -18,8 +18,8 @@ import {
   articleRepostUrls,
   articleSourceUrl,
   type Article,
-} from "../packages/visimark/src/site/articles.js";
-import { escapeHtml } from "../packages/visimark/src/site/dom.js";
+} from "../site/src/pages/articles.js";
+import { escapeHtml } from "../site/src/pages/dom.js";
 import { GOATCOUNTER_ORIGIN, analyticsScriptTag } from "./analytics-lib.js";
 
 const SITE_DESCRIPTION =

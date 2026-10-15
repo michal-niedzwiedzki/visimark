@@ -166,6 +166,19 @@ describe("check-overrides", () => {
     expect(r.code).toBe(1);
     expect(r.out).toContain("::error file=packages/a/package.json::");
   });
+
+  test("reads a workspace named as one directory, not a glob", () => {
+    const root = tree([], {
+      "package.json": json({
+        workspaces: ["packages/*", "site"],
+        overrides: { "@codemirror/view": "6.43.13" },
+      }),
+      "site/package.json": json({ devDependencies: { "@codemirror/view": "^6.43.14" } }),
+    });
+    const r = run("check-overrides.ts", root);
+    expect(r.code).toBe(1);
+    expect(r.out).toContain("::error file=site/package.json::");
+  });
 });
 
 describe("check-bun-policy", () => {

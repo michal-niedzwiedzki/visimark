@@ -105,9 +105,10 @@ jobs:
           path: editors/joplin/publish/com.visimark.joplin.jpl
           if-no-files-found: error
 
-  # docs/vendor/visimark-browser.js is a committed build artifact. pages.yml
-  # uploads docs/ verbatim with no build step, so nothing else in this pipeline
-  # notices it drifting from packages/visimark/src/**. It did drift, silently,
+  # docs/vendor/visimark-*.js are committed build artifacts, built by the site
+  # workspace (site/) from its own source, the engine's and
+  # codemirror-visimark's. pages.yml uploads docs/ verbatim with no build step,
+  # so nothing else in this pipeline notices them drifting. One did, silently,
   # for two releases — the deployed playground was missing three chart engines
   # the docs already documented (see docs/reviews/2026-09-15.md §2.5).
   #
@@ -129,9 +130,9 @@ jobs:
       - run: bun install --frozen-lockfile
       - name: the committed playground bundle must match the source
         run: |
-          bun run --filter visimark build:playground
+          bun run --filter visimark-site build:playground
           if ! git diff --exit-code -- docs/vendor/; then
-            echo "::error::docs/vendor/ is stale. Run 'bun run --filter visimark build:playground' and commit the result. If the diff looks like pure minifier churn rather than a real change, check that your local Bun matches packageManager in package.json."
+            echo "::error::docs/vendor/ is stale. Run 'bun run --filter visimark-site build:playground' and commit the result. If the diff looks like pure minifier churn rather than a real change, check that your local Bun matches packageManager in package.json."
             exit 1
           fi
 

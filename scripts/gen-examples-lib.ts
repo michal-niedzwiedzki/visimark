@@ -5,7 +5,7 @@
  * same technique as docs/ci.html.
  */
 import { posix } from "node:path";
-import { escapeHtml } from "../packages/visimark/src/site/dom.js";
+import { escapeHtml } from "../site/src/pages/dom.js";
 import { renderTutorialPage } from "./gen-docs-lib.js";
 import { pageShell } from "./gen-articles-lib.js";
 

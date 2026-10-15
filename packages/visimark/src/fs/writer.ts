@@ -16,7 +16,7 @@
  * `fs/reader.ts`: an interface file that imports nothing cannot pull
  * `node:fs` into a module graph that does not expect it. The Node
  * implementation lives in `fs/node-writer.ts`, which the browser entry must
- * never import — `test/playground/browser-graph.test.ts` checks this the same
+ * never import — `test/browser/browser-graph.test.ts` checks this the same
  * way it already checks `fs/node-reader.ts`.
  *
  * **What this port does not attempt.** `artifact/write.ts`'s `writeArtifact`

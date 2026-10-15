@@ -15,11 +15,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import {
-  articleCanonicalUrl,
-  stripFrontMatter,
-  type Article,
-} from "../packages/visimark/src/site/articles.js";
+import { articleCanonicalUrl, stripFrontMatter, type Article } from "../site/src/pages/articles.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const ARTICLES_DIR = join(ROOT, "docs/articles");

@@ -46,10 +46,16 @@ if (rootManifest === null) {
 }
 const overrides = (rootManifest.overrides ?? {}) as Record<string, string>;
 
-/** Every workspace manifest the root's `workspaces` globs (`dir/*`) name. */
+/** Every workspace manifest the root's `workspaces` entries name: a `dir/*`
+ * glob, or one directory (`site`). */
 const files = [ROOT];
-for (const glob of (rootManifest.workspaces ?? []) as string[]) {
-  const dir = glob.replace(/\/\*$/, "");
+for (const entry of (rootManifest.workspaces ?? []) as string[]) {
+  if (!entry.endsWith("/*")) {
+    const file = `${entry}/package.json`;
+    if (existsSync(join(root, file))) files.push(file);
+    continue;
+  }
+  const dir = entry.slice(0, -2);
   if (!existsSync(join(root, dir))) continue;
   for (const name of readdirSync(join(root, dir)).sort()) {
     const file = `${dir}/${name}/package.json`;

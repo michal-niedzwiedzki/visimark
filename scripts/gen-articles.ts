@@ -9,7 +9,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { stripFrontMatter, type Article } from "../packages/visimark/src/site/articles.js";
+import { stripFrontMatter, type Article } from "../site/src/pages/articles.js";
 import {
   nextArticle,
   relatedArticle,
