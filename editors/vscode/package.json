@@ -117,7 +117,8 @@
         "visimark.server.path": {
           "type": "string",
           "default": "",
-          "description": "Development only: path to a server entry point to run instead of the bundled one."
+          "scope": "machine",
+          "description": "Development only: path to a server entry point to run instead of the bundled one. User settings only: a workspace cannot set it, because the extension runs this file."
         },
         "visimark.trace.server": {
           "type": "string",
@@ -138,5 +139,14 @@
   "icon": "icon.png",
   "engines": {
     "vscode": "^1.91.0"
+  },
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "VisiMark checks documents in Restricted Mode; a custom server path is ignored.",
+      "restrictedConfigurations": [
+        "visimark.server.path"
+      ]
+    }
   }
 }

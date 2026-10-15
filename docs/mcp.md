@@ -205,6 +205,13 @@ artifact gate: containment in the document's own directory, and the refusal to
 overwrite any file that does not carry VisiMark's metadata marker — which is
 what protects a hand-drawn SVG.
 
+**Reads are not contained.** The gate is about writes only. A read tool given a
+`path` reads whatever the server's process can read, inside the declared roots
+or not, and its findings and `explain` view echo text from that file back to
+the agent. Most hosts already give an agent file access, so this rarely adds a
+capability, but it is not a boundary: run the server as a user that should be
+able to read what the agent asks for.
+
 ## Resources
 
 Served from the installed package's own files, never fetched at runtime.
