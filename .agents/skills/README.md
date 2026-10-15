@@ -12,8 +12,10 @@ gets the same `.claude`/`.grok` symlinks as everything else.
 
 [`skills-lock.json`](../../skills-lock.json) at the repository root records the
 source and content hash of every skill installed with the `skills` CLI, and
-`bunx skills experimental_install` restores them from it. A skill absent from
-the lockfile is written here by hand and has no upstream.
+`bunx skills experimental_install` restores them from it. CI recomputes each
+hash with [`scripts/check-skills.ts`](../../scripts/check-skills.ts) and fails
+when a vendored skill no longer matches its pin. A skill absent
+from the lockfile is written here by hand and has no upstream.
 
 | Skill | In the lockfile |
 |---|---|

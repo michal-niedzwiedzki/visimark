@@ -1,0 +1,48 @@
+name: supply-chain
+
+# What this repository pulls in, as opposed to what it builds. ci.yml checks
+# the repo's own policies; this checks the packages and actions it depends on.
+# Review 2026-10-15 §2.15.
+on:
+  pull_request:
+  schedule:
+    - cron: "17 6 * * 1" # Mondays, after Dependabot's weekly run has opened its PRs
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # A PR (Dependabot's included) that adds or bumps a dependency with a known
+  # advisory at or above `high` fails here, before it merges. It reads GitHub's
+  # dependency graph diff for the PR, so it covers what the graph parses:
+  # the workflows' actions and the lockfile ecosystems GitHub supports.
+  dependency-review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/dependency-review-action@v5
+        with:
+          fail-on-severity: high
+
+  # Every package in bun.lock against the OSV database, weekly. Report only:
+  # a new advisory against an existing dependency turns this scheduled run red
+  # and blocks nothing on master. The binary is a named release checked
+  # against its published SHA-256; bump both lines together.
+  osv-scan:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: scan bun.lock
+        run: |
+          set -euo pipefail
+          osv_version=2.7.0
+          osv_sha256=160c6253e2922e9e0a6a9771c5c4c40a4b3c6090b34a3cdd5e80c96cc2e4218b
+          curl -sSfL -o "$RUNNER_TEMP/osv-scanner" \
+            "https://github.com/google/osv-scanner/releases/download/v$osv_version/osv-scanner_linux_amd64"
+          echo "$osv_sha256  $RUNNER_TEMP/osv-scanner" | sha256sum -c -
+          chmod +x "$RUNNER_TEMP/osv-scanner"
+          "$RUNNER_TEMP/osv-scanner" scan source --lockfile=bun.lock

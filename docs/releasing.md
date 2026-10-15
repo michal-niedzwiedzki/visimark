@@ -507,9 +507,29 @@ Set as repository secrets (`gh secret set …`):
 
 | Secret | Used by | Notes |
 |--------|---------|-------|
-| `NPM_TOKEN` | npm publish | Automation token, publish scope. Provenance also needs `id-token: write`, which the workflow already declares. |
+| `NPM_TOKEN` | npm publish | Automation token, publish scope. Provenance also needs `id-token: write`, which the workflow already declares. To be retired: see below. |
 | `VSCE_PAT` | Marketplace publish | Azure DevOps PAT for the `visimark-michal-niedzwiedzki` publisher, Marketplace → Manage scope. |
 | `OVSX_PAT` | Open VSX publish | open-vsx.org access token. The namespace is the extension's `publisher`, `visimark-michal-niedzwiedzki`; the workflow creates it on first publish if it is missing. |
 | *(none)* | MCP registry publish | No secret. `mcp-publisher login github-oidc` uses the `id-token: write` permission the workflow already declares for npm provenance, and the `io.github.michal-niedzwiedzki/*` namespace is owned by virtue of that GitHub identity. Nothing to rotate, and nothing to set before the first release. |
+
+**Retiring `NPM_TOKEN`.** It is a long-lived credential that can publish all
+six packages, held by a job that also runs third-party code. npm trusted
+publishing replaces it with the OIDC token the job already mints. On
+npmjs.com, add a trusted publisher to each of the six packages (repository
+`michal-niedzwiedzki/visimark`, workflow `release.yml`), then delete every
+`NODE_AUTH_TOKEN` line from `release.yml` and the `NPM_TOKEN` secret, in that
+order. Provenance stays automatic. Until then the token stays: removing it
+first fails every npm leg.
+
+## Tools the release job pins
+
+`release.yml` and `obsidian-release.yml` build with the Bun in
+`packageManager` (`bun-version-file: package.json`), not `latest`, so what
+ships is built by the Bun CI tested with; `scripts/check-bun-policy.ts`
+enforces it. Third-party actions are pinned to a commit SHA with the tag in a
+comment, and Dependabot's `github-actions` ecosystem keeps both current.
+`mcp-publisher` is a named release checked against its SHA-256 before it runs;
+to move it, change `mcp_publisher_version` and `mcp_publisher_sha256` together,
+taking the digest from that release's `registry_<version>_checksums.txt`.
 
 <!--vmark:no-formulas-->

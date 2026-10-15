@@ -43,15 +43,23 @@ jobs:
       # On a dispatch with a `tag`, build that tag's tree rather than the
       # default branch: a backfill has to publish what was released, not what
       # master happens to hold now.
+      # persist-credentials: false keeps the write-scoped GITHUB_TOKEN out of
+      # .git/config, where every later step could read it. Nothing here pushes;
+      # the steps that need the token get it in their own `env:`.
       - uses: actions/checkout@v7
         with:
+          persist-credentials: false
           ref: ${{ inputs.tag || github.ref }}
           fetch-depth: 0 # the vocab issue-close step walks history back to the previous tag
-      - uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
-          bun-version: latest
+          no-cache: true
+          # The packageManager Bun, not latest: what ships is built by the Bun
+          # developers and CI use. scripts/check-bun-policy.ts enforces it.
+          bun-version-file: package.json
       - uses: actions/setup-node@v7
         with:
+          package-manager-cache: false
           # Node is a tool here, not the thing under test — npm does the
           # publishing. It still tracks the LTS rather than a number, so this
           # file cannot drift onto an EOL runtime while ci.yml moves on.
@@ -266,8 +274,15 @@ jobs:
             for (const pkg of doc.packages) pkg.version = process.env.ENGINE_VERSION;
             fs.writeFileSync("server.json", JSON.stringify(doc, null, 2) + "\n");
           '
-          curl -sSL -o /tmp/mcp-publisher.tar.gz \
-            "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/').tar.gz"
+          # A named release and its SHA-256, never `releases/latest`: this
+          # binary runs in a job that can mint an OIDC token. Bump both lines
+          # together, deliberately — the digest is in the release's
+          # registry_<version>_checksums.txt.
+          mcp_publisher_version=1.8.1
+          mcp_publisher_sha256=a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc
+          curl -sSfL -o /tmp/mcp-publisher.tar.gz \
+            "https://github.com/modelcontextprotocol/registry/releases/download/v$mcp_publisher_version/mcp-publisher_linux_amd64.tar.gz"
+          echo "$mcp_publisher_sha256  /tmp/mcp-publisher.tar.gz" | sha256sum -c -
           tar -xzf /tmp/mcp-publisher.tar.gz -C /tmp mcp-publisher
           # npm accepts a publish before it serves the version: the registry
           # validates the entry against npm and refuses one for a version npm
@@ -375,7 +390,7 @@ jobs:
         id: ghrelease
         if: steps.tag.outputs.tag != '' && steps.package.outcome == 'success' && steps.notes.outcome == 'success' && !inputs.dry_run
         continue-on-error: true
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
           files: editors/vscode/visimark.vsix
