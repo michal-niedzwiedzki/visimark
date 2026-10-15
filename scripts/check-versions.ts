@@ -29,6 +29,8 @@ import {
   ACTION_VERSION,
   ENGINE_MANIFEST,
   HOOK_PIN,
+  OBSIDIAN_MANIFEST,
+  OBSIDIAN_VERSIONS,
   RELEASE_MANIFESTS,
   lockBlock,
   workspaceOf,
@@ -124,6 +126,18 @@ expectEngine("server.json", '"version"', server?.version);
 for (const [i, pkg] of ((server?.packages ?? []) as Array<Record<string, unknown>>).entries()) {
   expectEngine("server.json", `packages[${i}].version`, pkg.version);
 }
+
+// The Obsidian plugin (docs/releasing.md#versioning). The newest versions.json
+// key is the last one in the file, the one prepare-release appends.
+expectEngine(OBSIDIAN_MANIFEST, '"version"', json(OBSIDIAN_MANIFEST)?.version);
+const pluginVersions = json(OBSIDIAN_VERSIONS);
+expectEngine(
+  OBSIDIAN_VERSIONS,
+  "newest key",
+  pluginVersions !== null && !Array.isArray(pluginVersions)
+    ? Object.keys(pluginVersions).at(-1)
+    : undefined,
+);
 
 for (const line of seen) console.log(line);
 process.exit(fail ? 1 : 0);
