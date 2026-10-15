@@ -6,7 +6,11 @@
       "Bash(git add *)",
       "Bash(git rebase --continue)",
       "Bash(git rebase --abort)",
-      "Bash(git rebase --skip)"
+      "Bash(git rebase --skip)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(gh workflow *)",
+      "Bash(gh run *)"
     ]
   },
   "hooks": {

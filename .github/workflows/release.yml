@@ -24,10 +24,8 @@ on:
         default: false
         type: boolean
 
-permissions:
-  contents: write # cut the GitHub Release
-  id-token: write # mint the OIDC token that signs the npm provenance attestation
-  issues: write # close vocabulary-request issues whose primitive ships in this release
+# Each job asks for its own; nothing is granted workflow-wide.
+permissions: {}
 
 # One run per tag. The first v0.1.9 push started two at once, racing each other
 # to the same registries. `cancel-in-progress: false` queues the second rather
@@ -39,6 +37,15 @@ concurrency:
 jobs:
   release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # cut the GitHub Release
+      id-token: write # mint the OIDC token that signs the npm provenance attestation
+      issues: write # close vocabulary-request issues whose primitive ships in this release
+    # Read by the `obsidian` job below: which commit to cut the plugin's
+    # release on, and under which version.
+    outputs:
+      plugin_tag: ${{ steps.tag.outputs.plugin_tag }}
+      commit: ${{ steps.tag.outputs.commit }}
     steps:
       # On a dispatch with a `tag`, build that tag's tree rather than the
       # default branch: a backfill has to publish what was released, not what
@@ -118,6 +125,10 @@ jobs:
             echo "Effective tag: $tag"
           fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          if [ -n "$tag" ]; then
+            echo "plugin_tag=${tag#v}" >> "$GITHUB_OUTPUT"
+            echo "commit=$(git rev-parse "refs/tags/$tag^{commit}")" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Resolve the versions to publish
         run: |
@@ -514,6 +525,8 @@ jobs:
           GHRELEASE_OUTCOME: ${{ steps.ghrelease.outcome }}
           ISSUES_OUTCOME: ${{ steps.issues.outcome }}
           NOTES_OUTCOME: ${{ steps.notes.outcome }}
+          TAG: ${{ steps.tag.outputs.tag }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -uo pipefail
           fail=0
@@ -641,4 +654,71 @@ jobs:
             fail=1
           fi
 
+          # What scripts/verify-release.sh used to be the only thing to check,
+          # asked here so that a green run is the whole verification.
+          #
+          # Listed is not attested: a version published without --provenance
+          # has no dist.attestations at all.
+          attested() {
+            curl -sSf "https://registry.npmjs.org/$1/$ENGINE_VERSION" 2>/dev/null \
+              | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{let d;try{d=JSON.parse(s)}catch{process.exit(1)}process.exit(d.dist&&d.dist.attestations?0:1)})'
+          }
+          for pkg in visimark remark-lint-visimark markdownlint-rule-visimark visimark-mcp codemirror-visimark markdown-it-visimark; do
+            if retry attested "$pkg"; then
+              echo "npm's $pkg@$ENGINE_VERSION carries a provenance attestation."
+            else
+              echo "::error::npm's $pkg@$ENGINE_VERSION has no provenance attestation. A published version cannot be re-attested; ship the next patch from this workflow (see docs/releasing.md)."
+              fail=1
+            fi
+          done
+
+          if [ -n "$TAG" ]; then
+            if gh release view "$TAG" --json assets --jq '.assets[].name' 2>/dev/null | grep -qx visimark.vsix; then
+              echo "GitHub Release $TAG exists, with visimark.vsix."
+            else
+              echo "::error::GitHub Release $TAG is missing or has no visimark.vsix. Re-run with 'gh workflow run release.yml -f tag=$TAG'."
+              fail=1
+            fi
+          fi
+
+          # A server that cannot start is invisible to every registry check.
+          # --nope is an unknown flag: a server that starts rejects it with exit
+          # 2 and a usage line. Run from outside the checkout, so neither runner
+          # can resolve the workspace's own visimark-mcp instead of npm's.
+          starts() {
+            (cd "$RUNNER_TEMP" && "$@" "visimark-mcp@$ENGINE_VERSION" --nope >/dev/null 2>&1)
+            [ $? -eq 2 ]
+          }
+          for runner in "npx -y" bunx; do
+            # shellcheck disable=SC2086
+            if retry starts $runner; then
+              echo "$runner visimark-mcp@$ENGINE_VERSION starts."
+            else
+              echo "::error::'$runner visimark-mcp@$ENGINE_VERSION --nope' did not exit 2: the published server does not start. Read docs/releasing.md, \"Publishing a new package for the first time\"."
+              fail=1
+            fi
+          done
+
           exit $fail
+
+  # The Obsidian plugin's GitHub Release, on the same commit and version, under
+  # the bare tag the community registry and BRAT match (no `v`). It runs only
+  # once the job above has proved every leg landed: the plugin bundles the
+  # engine, and its release must not exist before the npm packages it names
+  # (#286). A dispatch with no tag has nothing to release it from, and a dry run
+  # publishes nothing.
+  #
+  # The release creates the bare tag. A tag GITHUB_TOKEN creates does not start
+  # obsidian-release.yml a second time, so this is the only run. Pushing the
+  # bare tag by hand still works, as a backfill.
+  obsidian:
+    needs: release
+    if: needs.release.outputs.plugin_tag != '' && !inputs.dry_run
+    permissions:
+      contents: write # cut the GitHub Release, and with it the bare tag
+      id-token: write # sign the build attestation
+      attestations: write # store it against this repository
+    uses: ./.github/workflows/obsidian-release.yml
+    with:
+      tag: ${{ needs.release.outputs.plugin_tag }}
+      commit: ${{ needs.release.outputs.commit }}
