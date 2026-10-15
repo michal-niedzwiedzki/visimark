@@ -1,5 +1,13 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { RELEASE_MANIFESTS } from "./release-manifests.ts";
@@ -303,5 +311,151 @@ describe("check-links", () => {
       "docs/reviews/2026-01-01.md": "[gone](gone.md)\n",
     });
     expect(run("check-links.ts", root).code).toBe(0);
+  });
+});
+
+describe("check-dist-imports", () => {
+  /** Every npm manifest with an empty dist, then `files` on top. */
+  function pkgTree(files: Record<string, string>): string {
+    const base: Record<string, string> = {};
+    for (const m of RELEASE_MANIFESTS.filter((r) => r.npm !== null)) {
+      base[m.file] = json({ name: m.npm, types: "./dist/index.d.ts" });
+      base[m.file.replace("package.json", "dist/index.js")] = "export {};\n";
+      base[m.file.replace("package.json", "dist/index.d.ts")] = "export {};\n";
+    }
+    return tree([], { ...base, ...files });
+  }
+  const remark = "packages/remark-visimark";
+
+  // Needs every package built; a fresh clone's postinstall builds only the
+  // engine, so this skips rather than fails there. CI builds first.
+  const built = RELEASE_MANIFESTS.filter((m) => m.npm !== null).every((m) =>
+    existsSync(join(repo, dirname(m.file), "dist")),
+  );
+  test.skipIf(!built)("passes on the real repository's build", () => {
+    expect(run("check-dist-imports.ts").code).toBe(0);
+  });
+
+  test("passes when what dist loads and names is exactly what is declared", () => {
+    const root = pkgTree({
+      [`${remark}/package.json`]: json({
+        types: "./dist/index.d.ts",
+        dependencies: { visimark: "1.0.0" },
+      }),
+      [`${remark}/dist/index.js`]:
+        'import { analyze } from "visimark";\nimport { readFileSync } from "node:fs";\nimport "path";\n',
+    });
+    expect(run("check-dist-imports.ts", root).code).toBe(0);
+  });
+
+  test("fails on a runtime import the manifest does not declare", () => {
+    const root = pkgTree({ [`${remark}/dist/index.js`]: 'import { x } from "left-pad";\n' });
+    const r = run("check-dist-imports.ts", root);
+    expect(r.code).toBe(1);
+    expect(r.out).toContain('loads "left-pad"');
+  });
+
+  test("fails on a dependency nothing loads or names (bundled but still declared, §2.2)", () => {
+    const root = pkgTree({
+      [`${remark}/package.json`]: json({
+        types: "./dist/index.d.ts",
+        dependencies: { unified: "^11" },
+      }),
+    });
+    const r = run("check-dist-imports.ts", root);
+    expect(r.code).toBe(1);
+    expect(r.out).toContain('depends on "unified"');
+  });
+
+  test("fails on a reachable declaration naming an undeclared package (§2.11)", () => {
+    const root = pkgTree({
+      [`${remark}/dist/index.d.ts`]: 'export * from "./types.js";\n',
+      [`${remark}/dist/types.d.ts`]:
+        'import type { Plugin } from "unified";\nexport type P = Plugin;\n',
+    });
+    const r = run("check-dist-imports.ts", root);
+    expect(r.code).toBe(1);
+    expect(r.out).toContain('imports types from "unified"');
+  });
+
+  test("accepts a types-only dependency, and ignores unreachable declarations and comments", () => {
+    const root = pkgTree({
+      [`${remark}/package.json`]: json({
+        types: "./dist/index.d.ts",
+        dependencies: { "decimal.js": "^10" },
+      }),
+      [`${remark}/dist/index.d.ts`]:
+        '/** values from "elsewhere" */\nimport { Decimal } from "decimal.js";\nexport type D = Decimal;\n',
+      [`${remark}/dist/internal.d.ts`]: 'import type { Server } from "some-sdk";\n',
+      [`${remark}/dist/index.js`]:
+        'const s = `require("ajv/dist/runtime/equal")`;\nexport { s };\n',
+    });
+    expect(run("check-dist-imports.ts", root).code).toBe(0);
+  });
+
+  test("fails when a package has not been built", () => {
+    const root = pkgTree({});
+    rmSync(join(root, remark, "dist"), { recursive: true });
+    const r = run("check-dist-imports.ts", root);
+    expect(r.code).toBe(1);
+    expect(r.out).toContain("bun run build");
+  });
+});
+
+describe("check-workflow-downloads", () => {
+  const wf = (run: string): Record<string, string> => ({
+    ".github/workflows/x.yml": `jobs:\n  a:\n    steps:\n      - name: get\n        run: |\n${run
+      .split("\n")
+      .map((l) => `          ${l}`)
+      .join("\n")}\n      - name: next\n        run: sha256sum -c sums\n`,
+  });
+
+  test("passes on the real repository", () => {
+    expect(run("check-workflow-downloads.ts").code).toBe(0);
+  });
+
+  test("passes a pinned download verified in the same step", () => {
+    const r = run(
+      "check-workflow-downloads.ts",
+      tree(
+        [],
+        wf(
+          'curl -sSfL -o /tmp/t.tgz \\\n  "https://x.test/releases/download/v1/t.tgz"\necho "abc  /tmp/t.tgz" | sha256sum -c -',
+        ),
+      ),
+    );
+    expect(r.code).toBe(0);
+  });
+
+  test("ignores probes that save nothing", () => {
+    const r = run(
+      "check-workflow-downloads.ts",
+      tree(
+        [],
+        wf(
+          "curl -sS -o /dev/null -w '%{http_code}' https://x.test/a\ncurl -sS https://x.test/b | grep -q ok\nwget -qO - https://x.test/c",
+        ),
+      ),
+    );
+    expect(r.code).toBe(0);
+  });
+
+  test("fails a download verified only in a later step", () => {
+    const r = run(
+      "check-workflow-downloads.ts",
+      tree([], wf("curl -sSL -o t.tgz https://x.test/v1/t.tgz")),
+    );
+    expect(r.code).toBe(1);
+    expect(r.out).toContain("never checks it");
+  });
+
+  test("fails a wget download and a releases/latest URL", () => {
+    const r = run(
+      "check-workflow-downloads.ts",
+      tree([], wf("wget https://github.com/o/r/releases/latest/download/t.tgz")),
+    );
+    expect(r.code).toBe(1);
+    expect(r.out).toContain("releases/latest");
+    expect(r.out).toContain("never checks it");
   });
 });
