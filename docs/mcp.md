@@ -64,6 +64,11 @@ clean shutdown and never exits because a document had findings.
 | `visimark_fmt_apply` | `path`, `plan` | computed cells and anchors in place; generated artifacts, whole | `false` | `true` |
 | `visimark_infer_apply` | `path`, `plan` | a `vmark` block after each table, an anchor after each matched figure | `false` | `true` |
 
+There is no `simulate` tool. Its spec left one to a follow-up issue
+([`add-a-simulate-command-spec.md`](design/add-a-simulate-command-spec.md) §9),
+so an agent that reads about the command in `visimark://cli-reference` runs
+`visimark simulate` from a shell instead.
+
 `visimark_fmt` and `visimark_infer` are **read-only**: they return the edits
 they would make and touch nothing. That is the plan half of the plan/apply
 split, and it is why they carry `readOnlyHint: true` — planning is not writing.

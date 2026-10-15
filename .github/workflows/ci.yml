@@ -69,6 +69,11 @@ jobs:
       - name: vendored skills must match skills-lock.json
         run: bun scripts/check-skills.ts
 
+      # A relative link in a living document whose target moved, or never
+      # existed outside one machine (a gitignored path), fails here.
+      - name: relative links in the docs must resolve
+        run: bun scripts/check-links.ts
+
       - run: bun run lint
       # The Obsidian community scanner's ruleset. Errors fail the build; the
       # warnings that remain are known and listed in editors/obsidian's

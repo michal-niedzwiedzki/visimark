@@ -1,7 +1,7 @@
 {
   "name": "visimark-mcp",
   "version": "0.2.0",
-  "description": "A stdio MCP server exposing the VisiMark engine to agents: every command as a tool, the authoring discipline as resources, read-only unless an operator opens the write gate.",
+  "description": "A stdio MCP server exposing the VisiMark engine to agents: every command except simulate as a tool, the authoring discipline as resources, read-only unless an operator opens the write gate.",
   "keywords": [
     "agent",
     "ai",

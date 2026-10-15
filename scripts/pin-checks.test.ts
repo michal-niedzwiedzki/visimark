@@ -230,3 +230,78 @@ describe("check-bun-policy", () => {
     expect(r.out).toContain("oven/bun:1.3.0");
   });
 });
+
+describe("check-skills", () => {
+  test("passes on the real repository", () => {
+    expect(run("check-skills.ts").code).toBe(0);
+  });
+
+  test("fails when a vendored skill is edited without re-pinning", () => {
+    const root = tree([".agents/skills/karpathy-guidelines", "skills-lock.json"]);
+    const skill = join(root, ".agents/skills/karpathy-guidelines/SKILL.md");
+    writeFileSync(skill, readFileSync(skill, "utf8") + "\nOne more rule.\n");
+    const r = run("check-skills.ts", root);
+    expect(r.code).toBe(1);
+    expect(r.out).toContain("karpathy-guidelines hashes to");
+  });
+
+  test("passes with the vendored copy untouched", () => {
+    const root = tree([".agents/skills/karpathy-guidelines"], {
+      "skills-lock.json": json({
+        version: 1,
+        skills: {
+          "karpathy-guidelines": JSON.parse(real("skills-lock.json")).skills["karpathy-guidelines"],
+        },
+      }),
+    });
+    expect(run("check-skills.ts", root).code).toBe(0);
+  });
+});
+
+describe("check-links", () => {
+  /** A temp git work tree: links resolve against what git sees, not the disk. */
+  function repoTree(files: Record<string, string>): string {
+    const root = tree([], files);
+    Bun.spawnSync(["git", "init", "-q"], { cwd: root });
+    return root;
+  }
+
+  test("passes on the real repository", () => {
+    expect(run("check-links.ts").code).toBe(0);
+  });
+
+  test("passes when every relative link resolves", () => {
+    const root = repoTree({
+      "README.md":
+        "[a](docs/a.md#part) [dir](docs/) ![img](docs/i.png) [web](https://x.y) [here](#top)\n",
+      "docs/a.md": "[back](../README.md)\n",
+      "docs/i.png": "",
+    });
+    expect(run("check-links.ts", root).code).toBe(0);
+  });
+
+  test("fails on a link to a moved file, naming the line", () => {
+    const root = repoTree({ "editors/x/README.md": "intro\n\nsee [`templates/`](templates/)\n" });
+    const r = run("check-links.ts", root);
+    expect(r.code).toBe(1);
+    expect(r.out).toContain("::error file=editors/x/README.md,line=3::");
+  });
+
+  test("fails on a link into a gitignored directory", () => {
+    const root = repoTree({
+      ".gitignore": "private/\n",
+      "private/plan.md": "x\n",
+      "README.md": "[plan](private/plan.md)\n",
+    });
+    expect(run("check-links.ts", root).code).toBe(1);
+  });
+
+  test("ignores links inside code, and skips specs, plans and reviews", () => {
+    const root = repoTree({
+      "README.md": "`[a](missing.md)`\n\n```md\n[b](missing.md)\n```\n",
+      "docs/design/x-spec.md": "[gone](gone.md)\n",
+      "docs/reviews/2026-01-01.md": "[gone](gone.md)\n",
+    });
+    expect(run("check-links.ts", root).code).toBe(0);
+  });
+});

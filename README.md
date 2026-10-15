@@ -254,8 +254,9 @@ editor; a VS Code extension is a later, thin wrapper.
 
 ## The commands
 
-Five of them. `check` is the one that matters; the rest exist to get a
-document into a state `check` can be strict about, or to explain what it did.
+Seven of them. `check` is the one that matters; the rest exist to get a
+document into a state `check` can be strict about, to explain what it did, or
+to ask it what-if questions.
 
 ```mermaid
 flowchart LR
@@ -446,70 +447,37 @@ configuration, and no rule for what a bare `/` means.
 
 ## Status
 
-All five commands are implemented, in TypeScript. Install the `visimark`
-command with `bun add -g visimark` or `npm i -g visimark` — it runs under
-whichever of Bun or Node is on your PATH — or run it without installing with
-`npx visimark`. (On Windows the `npx` / `npm i -g` shims need `sh` on PATH,
-which Git Bash or WSL provide.) All three worked examples pass as the
-acceptance suite — `check` on the drift invoice reproduces the transcript above
-byte-for-byte, `fmt` leaves the clean invoice untouched, and `infer` on
-[`docs/example-quote-plain.md`](docs/example-quote-plain.md) — a quote with no
-formulas in it at all — reproduces the transcript in that document's own
-appendix. The design is
-written up in [`docs/visimark-design.md`](docs/visimark-design.md), including the
-deferred work and the known tensions; the implementation plan is
-[`docs/superpowers/plans/2026-09-03-visimark-cli.md`](docs/superpowers/plans/2026-09-03-visimark-cli.md).
+All seven commands are implemented, in TypeScript. Install the `visimark`
+command with `npm i -g visimark` or `bun add -g visimark`; it runs under
+whichever of Node or Bun is on your PATH. To run it without installing, use
+`npx visimark` or `bunx visimark`. (On Windows the `npx` / `npm i -g` shims
+need `sh` on PATH, which Git Bash or WSL provide.) The three worked examples
+are the acceptance suite: `check` on the drift invoice reproduces the
+transcript above byte-for-byte, `fmt` leaves the clean invoice untouched, and
+`infer` on [`docs/example-quote-plain.md`](docs/example-quote-plain.md), a
+quote with no formulas in it at all, reproduces the transcript in that
+document's own appendix. The design, with the deferred work and the known
+tensions, is [`docs/visimark-design.md`](docs/visimark-design.md).
 
-The editor support is implemented too: one language server
-(`packages/visimark-lsp`) wrapping the same engine, and a VS Code client
-(`editors/vscode`) — live diagnostics, `fmt` behind the editor's own
-format-on-save, quick fixes, inlay hints, CodeLens and hover.
+| Artifact | Where it is published | Read more |
+|---|---|---|
+| `visimark`, the CLI | npm | [`docs/cli-reference.md`](docs/cli-reference.md) |
+| `visimark`, the library | npm, the same package | [`docs/library.md`](docs/library.md) |
+| `visimark-mcp`, the MCP server | npm and the official MCP registry | [`docs/mcp.md`](docs/mcp.md) |
+| Language server and VS Code extension | VS Code Marketplace and Open VSX | [`editors/vscode/README.md`](editors/vscode/README.md) |
+| Obsidian plugin | Obsidian community plugins, and its own GitHub releases (tags without a `v`) | [`editors/obsidian/README.md`](editors/obsidian/README.md) |
+| Joplin plugin | Not published; a `.jpl` from a CI build | [`editors/joplin/README.md`](editors/joplin/README.md) |
+| `codemirror-visimark` | npm, from the first tag that contains it | [`packages/codemirror-visimark/README.md`](packages/codemirror-visimark/README.md) |
+| `markdown-it-visimark` | npm, from the first tag that contains it | [`packages/markdown-it-visimark/README.md`](packages/markdown-it-visimark/README.md) |
+| `remark-lint-visimark` | npm | [`packages/remark-visimark/README.md`](packages/remark-visimark/README.md) |
+| `markdownlint-rule-visimark` | npm | [`packages/markdownlint-visimark/README.md`](packages/markdownlint-visimark/README.md) |
 
-The extension is not published to a marketplace yet; to build and install it
-from a clone (Bun, like the rest of the repo's tooling):
-
-```bash
-bun run vscode-install     # build, package and install (also reinstalls)
-bun run vscode-uninstall   # remove it again
-```
-
-Reload the window afterwards, then open `docs/example-invoice-drift.md`. Both
-targets need the `code` CLI on your PATH. For development, press <kbd>F5</kbd>
-instead — that runs the extension straight from `editors/vscode` in a separate
-Extension Development Host, so uninstall the packaged copy first or you will see
-every diagnostic twice.
-
-The **Obsidian plugin** is for people who keep notes in Obsidian, read them on
-a phone and will never open a terminal. It marks every computed value in reading
-mode and Live Preview, explains where a value came from, and sweeps a whole vault
-for notes that disagree with themselves. It is a client of the engine rather than
-of the language server, it is not published to npm, and it does nothing on a note
-that has no `vmark` block. Install it from the
-[latest plugin release](https://github.com/michal-niedzwiedzki/visimark/releases)
-(the ones tagged without a `v`, such as `0.2.1`) with
-[BRAT](https://github.com/TfTHacker/obsidian42-brat) or by copying its three
-files into a vault —
-[`editors/obsidian/README.md`](editors/obsidian/README.md) has the steps and
-says what each feature does.
-
-The same Live Preview marks are published as
-[`codemirror-visimark`](packages/codemirror-visimark/README.md), a CodeMirror 6
-extension for any editor built on it, with lint diagnostics in the CLI's words
-on a separate `codemirror-visimark/lint` import. The playground uses both.
-For rendered HTML, [`markdown-it-visimark`](packages/markdown-it-visimark/README.md)
-puts the same marks on markdown-it's output; the VS Code extension uses it for
-the built-in Markdown preview.
-
-The **Joplin plugin** puts both of those into Joplin desktop: marks and lint in
-the Markdown editor, marks in the viewer. It is not published. Install the
-`.jpl` from a CI build —
-[`editors/joplin/README.md`](editors/joplin/README.md) has the steps and its
-limits.
-
-Releases are tag-driven: pushing a `vX.Y.Z` tag publishes the engine to npm and
-the extension to both the VS Code Marketplace and Open VSX. The workflow needs
-three repository secrets — `NPM_TOKEN`, `VSCE_PAT` and `OVSX_PAT`. The checklist
-for cutting one is [`docs/releasing.md`](docs/releasing.md).
+[`docs/distribution.md`](docs/distribution.md) is the record of every
+registry and directory each artifact is listed in. A `vX.Y.Z` tag publishes
+the npm packages, the MCP registry entry and the VS Code extension;
+[`docs/releasing.md`](docs/releasing.md) is the checklist, and
+[`CONTRIBUTING.md`](CONTRIBUTING.md) says how to build and install the editor
+plugins from a clone.
 
 ## For agents
 
