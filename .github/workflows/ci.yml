@@ -77,7 +77,7 @@ jobs:
       - run: bun run format:check
       - run: bun run typecheck
       - run: bun run build
-      - run: bun test
+      - run: bun run test
       - name: Package the extension
         working-directory: editors/vscode
         run: bunx @vscode/vsce package --no-dependencies --out visimark.vsix

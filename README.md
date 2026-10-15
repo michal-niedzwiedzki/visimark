@@ -537,7 +537,7 @@ computed value without touching the bytes — with VS Code as the first client.
 
 ```
 git clone … && cd visimark && bun install
-bun test                    # the full suite, the three examples included
+bun run test                # the full suite, the three examples included
 bunx visimark check docs/example-invoice-drift.md
 ```
 

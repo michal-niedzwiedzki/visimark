@@ -1,2 +1,4 @@
 [test]
-preload = ["./editors/obsidian/test/harness/preload.ts"]
+# Only the root package's own tests (scripts/). Each workspace runs its own
+# from its own directory, with its own bunfig: `bun run test` runs them all.
+root = "./scripts"

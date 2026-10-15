@@ -93,7 +93,7 @@ workspace declares.
 Then check that it works:
 
 ```console
-$ bun test
+$ bun run test
 $ bunx visimark check docs/example-invoice.md
 ```
 
@@ -239,7 +239,8 @@ and `articles-pages` enforce the same checks in CI either way.
 
 | Command | What it does |
 |---|---|
-| `bun test` | The whole suite. It runs in a few seconds — there is no reason not to run it. |
+| `bun run test` | The whole suite: each workspace's tests from its own directory, with its own `bunfig.toml`, then the root's `scripts/` tests. It runs in seconds — there is no reason not to run it. |
+| `bun test` | At the root, only `scripts/` (the root `bunfig.toml` sets `root`). Inside a workspace, that workspace's tests. |
 | `bun run typecheck` | TypeScript, across every workspace |
 | `bun run lint` | `oxlint`, with warnings treated as failures |
 | `bun run format` | `oxfmt`, in place |
@@ -269,7 +270,7 @@ $ bun run format
 $ bun run lint
 $ bun run typecheck
 $ bun run build
-$ bun test
+$ bun run test
 ```
 
 If you touched anything a generated or committed artifact depends on, also run
@@ -353,7 +354,7 @@ documents: every tracked Markdown file, package READMEs and editor plugins
 included. The exceptions are `docs/WIP/`, the vendored skills under
 `.agents/skills/<name>/`, the engine's test fixtures, and the drift examples
 that fail on purpose. If your pull request touches one of them and the numbers
-in it stop agreeing with its formulas, the build goes red. `bun test` runs the
+in it stop agreeing with its formulas, the build goes red. `bun run test` runs the
 same check (`scripts/doc-set.test.ts`), so it fails locally too, with or
 without the pre-commit hook installed.
 
@@ -386,7 +387,10 @@ Two more documentation rules that matter here:
 ## Tests
 
 Tests live next to what they test, in each package's `test/` directory, and run
-under `bun test`.
+under `bun test` from that package's directory. A package's test environment
+matches its runtime: only the editor workspaces and the two browser packages
+preload a DOM, each in its own `bunfig.toml`. A Node library's test that needs
+`document` is a bug in the test, not a reason to add a preload.
 
 **A bug fix comes with a test that fails before it.** Write the failing test
 first, watch it fail for the reason you expect, then fix it. A test that passes

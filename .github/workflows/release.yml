@@ -69,7 +69,7 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run typecheck
       - run: bun run build
-      - run: bun test
+      - run: bun run test
 
       # The tag the tag-gated steps below work from: the dispatch input if one
       # was given, else the pushed tag. Anything else — a dispatch with no input

@@ -13,6 +13,7 @@
   },
   "type": "module",
   "scripts": {
+    "test": "bun test",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "build": "bun esbuild.config.mjs"

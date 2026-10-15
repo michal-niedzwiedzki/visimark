@@ -220,7 +220,7 @@ What the scanner looks at, learned from 0.2.0 to 0.2.2:
    ```bash
    bun install --frozen-lockfile
    bun run typecheck
-   bun test
+   bun run test
    bun run build
    ```
 2. **Green in CI on the commit you will tag.** `scripts/release-tag.sh` (step 7)

@@ -26,6 +26,7 @@
   "publisher": "visimark-michal-niedzwiedzki",
   "main": "./dist/extension.js",
   "scripts": {
+    "test": "bun test",
     "typecheck": "tsc --noEmit",
     "build": "node esbuild.mjs",
     "package": "bun run build && vsce package --no-dependencies --out visimark.vsix",
