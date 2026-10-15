@@ -19,7 +19,7 @@ on:
         required: false
         type: string
       dry_run:
-        description: "Rehearse: build, test, check the tag, `npm publish --dry-run` for the five packages and `vsce package`. Publishes nothing, cuts no GitHub Release, closes no issues."
+        description: "Rehearse: build, test, check the tag, `npm publish --dry-run` for the six npm packages and `vsce package`. Publishes nothing, cuts no GitHub Release, closes no issues."
         required: false
         default: false
         type: boolean
@@ -256,10 +256,9 @@ jobs:
             exit 0
           fi
           # server.json's two version fields are rewritten from the tag rather
-          # than trusted: the committed value documents the shape, and a stale
-          # one would publish a registry entry pointing at a version that is
-          # not what just went to npm. It is not in ci.yml's version-agreement
-          # check because it is not a package manifest.
+          # than trusted, even though scripts/check-versions.ts keeps the
+          # committed values in step: a backfill dispatch must publish the
+          # version that just went to npm, whatever the tree says.
           bun -e '
             const fs = require("fs");
             const doc = JSON.parse(fs.readFileSync("server.json", "utf8"));

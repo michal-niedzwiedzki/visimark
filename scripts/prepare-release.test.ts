@@ -16,6 +16,7 @@ const FILES = [
   "packages/markdown-it-visimark/package.json",
   "action.yml",
   "scripts/precommit-visimark-check.sh",
+  "server.json",
   "bun.lock",
   "CHANGELOG.md",
   "editors/vscode/CHANGELOG.md",
@@ -96,8 +97,11 @@ describe("prepare-release", () => {
     }
     expect(read(root, "action.yml")).toContain(`default: "${next}"`);
     const hook = read(root, "scripts/precommit-visimark-check.sh");
-    expect(hook.match(new RegExp(`visimark@${next}`, "g"))).toHaveLength(2);
-    expect(hook).not.toContain(`visimark@${current()}`);
+    expect(hook.match(new RegExp(`^pinned=${next}$`, "gm"))).toHaveLength(1);
+    expect(hook).not.toContain(`pinned=${current()}`);
+    const server = JSON.parse(read(root, "server.json"));
+    expect(server.version).toBe(next);
+    expect(server.packages[0].version).toBe(next);
   });
 
   test("leaves workspace:* dependencies alone", () => {
@@ -241,20 +245,17 @@ describe("prepare-release", () => {
     expect(snapshot(root)).toEqual(before);
   });
 
-  test("refuses when one pre-commit pin is no longer numeric", () => {
+  test("refuses when the pre-commit pin is no longer numeric", () => {
     const root = tree();
     const file = join(root, "scripts/precommit-visimark-check.sh");
     writeFileSync(
       file,
-      read(root, "scripts/precommit-visimark-check.sh").replace(
-        /npx --yes visimark@\S+/,
-        "npx --yes visimark@latest",
-      ),
+      read(root, "scripts/precommit-visimark-check.sh").replace(/^pinned=\S+$/m, "pinned=latest"),
     );
     const before = snapshot(root);
     const r = runAt(root, next);
     expect(r.code).toBe(1);
-    expect(r.out).toContain("exactly two numeric");
+    expect(r.out).toContain("exactly one numeric");
     expect(snapshot(root)).toEqual(before);
   });
 

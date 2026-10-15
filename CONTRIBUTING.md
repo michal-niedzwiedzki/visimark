@@ -308,11 +308,13 @@ in production) would answer differently than the CLI for the same document.
 Fix: this is a real bug, not something to silence — find why the two hosts
 disagree, and fix the engine or the `ReaderPort` boundary, never the check.
 
-**Every version-carrying file must agree.** Fourteen fields carry the version —
-eight package manifests (three of which also pin `visimark` as a dependency;
-`codemirror-visimark` and `markdown-it-visimark` carry only their own version,
-because they bundle the engine),
-`action.yml`'s pinned `version` default and `scripts/precommit-visimark-check.sh`.
+**Every version-carrying file must agree.** The eight package manifests listed
+in `scripts/release-manifests.ts` (three of which also pin `visimark` as a
+dependency; `codemirror-visimark` and `markdown-it-visimark` carry only their
+own version, because they bundle the engine), their mirror in `bun.lock`,
+`action.yml`'s pinned `version` default, the `pinned=` line in
+`scripts/precommit-visimark-check.sh` and the two versions in `server.json`.
+`scripts/check-versions.ts` is the check.
 One tag publishes all of them, the Action's default is what a consumer's `npx`
 actually installs, and an exact `visimark` pin is what stops a published plugin
 or the MCP server pairing with an engine it was never tested against. You only touch these in a release commit; see

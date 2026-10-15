@@ -93,6 +93,7 @@ jobs:
       - name: every doc in that set must pass
         uses: ./
         with:
+          version: path
           files: ${{ steps.docfiles.outputs.files }}
 
       - name: the drift invoice is supposed to fail
@@ -100,6 +101,7 @@ jobs:
         continue-on-error: true
         uses: ./
         with:
+          version: path
           files: "docs/example-invoice-drift.md"
 
       - name: fail the job if the drift example stopped failing
@@ -116,6 +118,7 @@ jobs:
         continue-on-error: true
         uses: ./
         with:
+          version: path
           files: "docs/example-quote-plain.md"
 
       - name: fail the job if the plain quote stopped failing
@@ -133,6 +136,7 @@ jobs:
         continue-on-error: true
         uses: ./
         with:
+          version: path
           files: "docs/example-lunch-split-drift.md"
 
       - name: fail the job if the lunch split stopped failing

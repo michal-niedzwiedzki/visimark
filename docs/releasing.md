@@ -246,14 +246,17 @@ What the scanner looks at, learned from 0.2.0 to 0.2.2:
    packages/visimark-lsp/package.json
    editors/vscode/package.json
    action.yml                                  # the `version` input's default
-   scripts/precommit-visimark-check.sh         # both visimark@ pins inside it
+   scripts/precommit-visimark-check.sh         # its one pinned= line
    packages/remark-visimark/package.json       # its own version AND its visimark dependency pin
    packages/markdownlint-visimark/package.json # its own version AND its visimark dependency pin
    packages/visimark-mcp/package.json          # its own version AND its visimark dependency pin
    packages/codemirror-visimark/package.json   # its own version only — it bundles the engine
    packages/markdown-it-visimark/package.json  # its own version only — it bundles the engine
    bun.lock                                    # the same eight "version"s and three visimark pins, mirrored
+   server.json                                 # its own version AND its npm package's
    ```
+   The eight manifests are listed once, in `scripts/release-manifests.ts`,
+   which `prepare-release.ts` and the CI check both import.
    They must match each other and the tag exactly. `action.yml` is in the list
    because its default is what a consumer's `npx` installs: leave it behind and
    everyone who pinned the new Action ref quietly keeps running the old engine.
@@ -265,13 +268,14 @@ What the scanner looks at, learned from 0.2.0 to 0.2.2:
    says, so the drift was invisible to every build in this repo — it would only
    have bitten a consumer reading `bun.lock` for provenance, or a future change
    to that linking behavior. No hand-run `grep` needed any more — `ci.yml`'s
-   "every version-carrying file must agree" step fails the build if you miss
-   one of them, so step 6's green CI is the confirmation.
+   "every version-carrying file must agree" step (`scripts/check-versions.ts`)
+   fails the build if you miss one of them, so step 6's green CI is the
+   confirmation.
 
-   `server.json` is **not** in this list, and does not need to be: the
-   MCP-registry leg rewrites its two version fields from the tag before it
-   publishes, so it cannot go stale and cannot register an entry pointing at a
-   version other than the one that just shipped.
+   `server.json` is in the list so the committed file never shows a version
+   releases old. The MCP-registry leg still rewrites its two version fields
+   from the tag before it publishes, so a backfill dispatch registers the
+   version that just shipped whatever the tree says.
 4. **Write the changelog** — see [Preparing the changelog](#preparing-the-changelog).
    `ci.yml`'s "every release must have a changelog entry" step fails the build if
    `CHANGELOG.md` or `editors/vscode/CHANGELOG.md` has no dated

@@ -662,7 +662,8 @@ schedule that checks everything. Do not let the fast path be the only path.</p>
 <h2 id="12-pin-the-version">12. Pin the version</h2>
 <p>The Action's <code>version</code> input defaults to the engine release that Action ref
 ships. So <code>@v0.1.5</code> pins two things at once: the Action, and the verifier it
-installs.</p>
+installs. A <code>visimark</code> already on the runner's <code>PATH</code> is used only when it is
+that same version, and the log's first line names the engine that ran.</p>
 <p>That matters in a way that is easy to miss. Re-run an unchanged commit next
 month and you get the same answer. A build that was green stays green, and a new
 release of VisiMark cannot turn yesterday's merged pull request red while
@@ -1502,8 +1503,10 @@ as paths that no longer exist and come back as exit <code>2</code>.</p>
       - id: visimark
 </code></pre>
 <p><code>pre-commit autoupdate</code> moves <code>rev:</code> forward as releases ship. Under the hood
-the hook tries an already-installed <code>visimark</code> first, then Bun's <code>bunx</code>, then
-npm's <code>npx</code> — so it works whether the machine has Node, Bun, or both.</p>
+the hook uses an already-installed <code>visimark</code> only when it is the version the
+<code>rev:</code> pins, and otherwise fetches that version with Bun's <code>bunx</code> or npm's
+<code>npx</code>. It works whether the machine has Node, Bun, or both, and an old global
+install never stands in for the pinned engine.</p>
 <p>Without the framework, or to pin the fetch command yourself, the same recipe
 by hand:</p>
 <pre><code class="language-yaml">repos:
