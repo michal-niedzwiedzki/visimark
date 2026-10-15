@@ -73,7 +73,7 @@
     },
     "editors/vscode": {
       "name": "visimark-vscode",
-      "version": "0.2.0",
+      "version": "0.4.0",
       "dependencies": {
         "visimark": "workspace:*",
         "vscode-languageclient": "^10.1.1",
@@ -88,7 +88,7 @@
     },
     "packages/codemirror-visimark": {
       "name": "codemirror-visimark",
-      "version": "0.2.0",
+      "version": "0.4.0",
       "devDependencies": {
         "@codemirror/lang-markdown": "^6.5.2",
         "@codemirror/language": "^6.13.1",
@@ -110,7 +110,7 @@
     },
     "packages/markdown-it-visimark": {
       "name": "markdown-it-visimark",
-      "version": "0.2.0",
+      "version": "0.4.0",
       "devDependencies": {
         "@happy-dom/global-registrator": "^20.14.5",
         "markdown-it": "^15.0.2",
@@ -119,9 +119,9 @@
     },
     "packages/markdownlint-visimark": {
       "name": "markdownlint-rule-visimark",
-      "version": "0.2.0",
+      "version": "0.4.0",
       "dependencies": {
-        "visimark": "0.2.0",
+        "visimark": "0.4.0",
       },
       "devDependencies": {
         "markdownlint": "^0.41.1",
@@ -130,9 +130,9 @@
     },
     "packages/remark-visimark": {
       "name": "remark-lint-visimark",
-      "version": "0.2.0",
+      "version": "0.4.0",
       "dependencies": {
-        "visimark": "0.2.0",
+        "visimark": "0.4.0",
       },
       "devDependencies": {
         "@types/mdast": "^4.0.4",
@@ -146,7 +146,7 @@
     },
     "packages/visimark": {
       "name": "visimark",
-      "version": "0.2.0",
+      "version": "0.4.0",
       "bin": {
         "visimark": "bin/visimark",
       },
@@ -164,7 +164,7 @@
     },
     "packages/visimark-lsp": {
       "name": "visimark-lsp",
-      "version": "0.2.0",
+      "version": "0.4.0",
       "dependencies": {
         "visimark": "workspace:*",
         "vscode-jsonrpc": "^9.0.2",
@@ -174,12 +174,12 @@
     },
     "packages/visimark-mcp": {
       "name": "visimark-mcp",
-      "version": "0.2.0",
+      "version": "0.4.0",
       "bin": {
         "visimark-mcp": "bin/visimark-mcp",
       },
       "dependencies": {
-        "visimark": "0.2.0",
+        "visimark": "0.4.0",
       },
       "devDependencies": {
         "@modelcontextprotocol/sdk": "1.32.1",

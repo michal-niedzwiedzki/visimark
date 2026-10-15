@@ -146,11 +146,8 @@ plugin bundles from source through the same kind of alias as the engine —
 `esbuild.config.mjs` and `tsconfig.json` both map it. The plugin never imports
 `codemirror-visimark/lint`; `bundle.test.ts` checks that too.
 
-The plugin's version lives in `manifest.json` only, and is deliberately **not**
-one of the numbers `ci.yml`'s version-agreement step keeps in lockstep: an
-Obsidian release goes through a human registry review and must not be coupled
-to an engine patch. `scripts/check-changelog-entries.ts` holds it honest
-instead.
+The plugin's version lives in `manifest.json` and is the release's, like every
+other shipped artifact's ([`docs/releasing.md`](docs/releasing.md#versioning)).
 
 #### Developing and debugging it against a running vault
 
@@ -323,14 +320,16 @@ in `scripts/release-manifests.ts` (three of which also pin `visimark` as a
 dependency; `codemirror-visimark` and `markdown-it-visimark` carry only their
 own version, because they bundle the engine), their mirror in `bun.lock`,
 `action.yml`'s pinned `version` default, the `pinned=` line in
-`scripts/precommit-visimark-check.sh` and the two versions in `server.json`.
+`scripts/precommit-visimark-check.sh`, the two versions in `server.json`, and
+the Obsidian plugin's `editors/obsidian/manifest.json` and the newest key of its
+`versions.json`.
 `scripts/check-versions.ts` is the check.
 One tag publishes all of them, the Action's default is what a consumer's `npx`
 actually installs, and an exact `visimark` pin is what stops a published plugin
 or the MCP server pairing with an engine it was never tested against. You only touch these in a release commit; see
 [`docs/releasing.md`](docs/releasing.md). The same commit needs a dated
-`## X.Y.Z - YYYY-MM-DD` heading in `CHANGELOG.md` and in
-`editors/vscode/CHANGELOG.md`; a separate CI step checks that each has one.
+`## X.Y.Z - YYYY-MM-DD` heading in `CHANGELOG.md`,
+`editors/vscode/CHANGELOG.md` and `editors/obsidian/CHANGELOG.md`; a separate CI step checks that each has one.
 
 **The built CLI must run under Node, not only Bun**
 ([`.agents/rules/runtime-parity.md`](.agents/rules/runtime-parity.md)). A

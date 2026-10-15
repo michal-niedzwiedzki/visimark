@@ -3,8 +3,11 @@
  *
  * `prepare-release.ts` bumps them and `check-versions.ts` asserts they agree;
  * both import this, so a new package is one edit here rather than three that
- * can drift (review 2026-10-15 §2.16). The Obsidian plugin is not here: its
- * version is its own (docs/releasing.md, "Release order").
+ * can drift (review 2026-10-15 §2.16).
+ *
+ * The Obsidian plugin carries the same version (docs/releasing.md#versioning)
+ * but is not in RELEASE_MANIFESTS: it is no package.json and has no bun.lock
+ * block. Its two files are named below, and both scripts handle them apart.
  */
 export interface ReleaseManifest {
   /** Repository-relative path, which is also the workspace's `bun.lock` key plus `/package.json`. */
@@ -16,6 +19,11 @@ export interface ReleaseManifest {
 }
 
 export const ENGINE_MANIFEST = "packages/visimark/package.json";
+
+/** The Obsidian plugin's manifest; its version is the release's (docs/releasing.md#versioning). */
+export const OBSIDIAN_MANIFEST = "editors/obsidian/manifest.json";
+/** Plugin version -> minAppVersion; the newest key is the release's version. */
+export const OBSIDIAN_VERSIONS = "editors/obsidian/versions.json";
 
 export const RELEASE_MANIFESTS: readonly ReleaseManifest[] = [
   { file: ENGINE_MANIFEST, npm: "visimark", pinsEngine: false },

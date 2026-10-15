@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { OBSIDIAN_MANIFEST, OBSIDIAN_VERSIONS } from "./release-manifests.ts";
 
 const repo = join(import.meta.dir, "..");
 const script = join(import.meta.dir, "prepare-release.ts");
@@ -20,6 +21,11 @@ const FILES = [
   "bun.lock",
   "CHANGELOG.md",
   "editors/vscode/CHANGELOG.md",
+  OBSIDIAN_MANIFEST,
+  OBSIDIAN_VERSIONS,
+  "manifest.json",
+  "versions.json",
+  "editors/obsidian/CHANGELOG.md",
 ];
 
 const temps: string[] = [];
@@ -27,8 +33,15 @@ afterEach(() => {
   for (const dir of temps.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
 
+const read = (root: string, file: string): string => readFileSync(join(root, file), "utf8");
+const current = (): string => JSON.parse(read(repo, "packages/visimark/package.json")).version;
+
 /** A temp tree of the real release files, so the layout it edits is the real one. */
-function tree(unreleased = "### Fixed\n\n- Something.\n", editorUnreleased?: string): string {
+function tree(
+  unreleased = "### Fixed\n\n- Something.\n",
+  editorUnreleased?: string,
+  pluginUnreleased = "",
+): string {
   const root = mkdtempSync(join(tmpdir(), "prepare-release-"));
   temps.push(root);
   for (const file of FILES) {
@@ -52,12 +65,50 @@ function tree(unreleased = "### Fixed\n\n- Something.\n", editorUnreleased?: str
       ? editor
       : editor.replace(/^## /m, `## Unreleased\n\n${editorUnreleased}\n## `),
   );
+  // The plugin starts in lockstep with the engine, which check-versions
+  // requires. The real tree may not be there yet: until v0.4.0 it is plugin
+  // 0.3.0 against engine 0.2.0. Pin it, so no test depends on which side of
+  // that release it runs on.
+  const engine = current();
+  const manifest = JSON.parse(read(root, OBSIDIAN_MANIFEST));
+  const manifestText = read(root, OBSIDIAN_MANIFEST).replace(
+    /^(\s*"version": ")[^"]+(",?)$/m,
+    `$1${engine}$2`,
+  );
+  // A lockstep versions.json has no key above the engine; the plugin's own
+  // line (0.2.1 to 0.3.0) left some, which would collide with `next`.
+  const notAbove = (v: string): boolean => {
+    const [x, y] = [v, engine].map((s) => s.split(".").map(Number));
+    return x!.reduce((acc, n, i) => acc || n - y![i]!, 0) <= 0;
+  };
+  const versions = Object.entries(
+    JSON.parse(read(root, OBSIDIAN_VERSIONS)) as Record<string, string>,
+  );
+  const versionsText =
+    JSON.stringify(
+      {
+        ...Object.fromEntries(versions.filter(([v]) => notAbove(v))),
+        [engine]: manifest.minAppVersion,
+      },
+      null,
+      2,
+    ) + "\n";
+  for (const [a, b, text] of [
+    [OBSIDIAN_MANIFEST, "manifest.json", manifestText],
+    [OBSIDIAN_VERSIONS, "versions.json", versionsText],
+  ] as const) {
+    writeFileSync(join(root, a), text);
+    writeFileSync(join(root, b), text);
+  }
+  const plugin = read(root, "editors/obsidian/CHANGELOG.md").replace(
+    /^## Unreleased[ \t]*\n[\s\S]*?(?=^## )/m,
+    pluginUnreleased === "" ? "## Unreleased\n\n" : `## Unreleased\n\n${pluginUnreleased}\n`,
+  );
+  writeFileSync(join(root, "editors/obsidian/CHANGELOG.md"), plugin);
   return root;
 }
 
-const read = (root: string, file: string): string => readFileSync(join(root, file), "utf8");
 const snapshot = (root: string): string[] => FILES.map((f) => read(root, f));
-const current = (): string => JSON.parse(read(repo, "packages/visimark/package.json")).version;
 const fixOf = (v: string): string => {
   const [a, b, c] = v.split(".").map(Number);
   return `${a}.${b}.${c! + 1}`;
@@ -170,6 +221,170 @@ describe("prepare-release", () => {
     expect(read(root, "editors/vscode/CHANGELOG.md")).toContain(
       `## ${next} - 2030-01-02\n\nNo editor-visible changes. Bundles engine ${next}.`,
     );
+  });
+
+  describe("the Obsidian plugin", () => {
+    const min = (root: string): string => JSON.parse(read(root, OBSIDIAN_MANIFEST)).minAppVersion;
+
+    test("bumps both manifests to the new version, byte-equal", () => {
+      const root = tree();
+      expect(runAt(root, next).code).toBe(0);
+      expect(JSON.parse(read(root, OBSIDIAN_MANIFEST)).version).toBe(next);
+      expect(read(root, "manifest.json")).toBe(read(root, OBSIDIAN_MANIFEST));
+    });
+
+    test("appends the new version to versions.json as its last key, in both copies", () => {
+      const root = tree();
+      expect(runAt(root, next).code).toBe(0);
+      const versions = read(root, OBSIDIAN_VERSIONS);
+      expect(versions.endsWith(`,\n  "${next}": "${min(root)}"\n}\n`)).toBe(true);
+      expect(Object.keys(JSON.parse(versions)).at(-1)).toBe(next);
+      expect(read(root, "versions.json")).toBe(versions);
+    });
+
+    test("an empty Unreleased gets the placeholder entry and stays", () => {
+      const root = tree();
+      runAt(root, next, "--date", "2030-01-02");
+      expect(read(root, "editors/obsidian/CHANGELOG.md")).toContain(
+        `## Unreleased\n\n## ${next} - 2030-01-02\n\nNo plugin changes. Bundles engine ${next}.\n\n## `,
+      );
+    });
+
+    test("a whitespace-only Unreleased counts as empty", () => {
+      const root = tree(undefined, undefined, "   \n\n");
+      runAt(root, next, "--date", "2030-01-02");
+      expect(read(root, "editors/obsidian/CHANGELOG.md")).toContain(
+        `## ${next} - 2030-01-02\n\nNo plugin changes. Bundles engine ${next}.`,
+      );
+    });
+
+    test("with no Unreleased, the placeholder goes above the newest entry and none is invented", () => {
+      const root = tree();
+      const file = join(root, "editors/obsidian/CHANGELOG.md");
+      writeFileSync(
+        file,
+        read(root, "editors/obsidian/CHANGELOG.md").replace(/^## Unreleased\n+/m, ""),
+      );
+      expect(runAt(root, next, "--date", "2030-01-02").code).toBe(0);
+      const text = read(root, "editors/obsidian/CHANGELOG.md");
+      expect(text).not.toContain("## Unreleased");
+      // the placeholder is the first "## " heading, above every older entry
+      expect(text.slice(text.indexOf("\n## ") + 1)).toStartWith(
+        `## ${next} - 2030-01-02\n\nNo plugin changes. Bundles engine ${next}.\n\n## `,
+      );
+    });
+
+    test("an Unreleased with content is dated, reopened above, and gets no placeholder", () => {
+      const root = tree(undefined, undefined, "- Something.\n");
+      runAt(root, next, "--date", "2030-01-02");
+      const text = read(root, "editors/obsidian/CHANGELOG.md");
+      expect(text).toContain(`## Unreleased\n\n## ${next} - 2030-01-02\n\n- Something.\n`);
+      expect(text).not.toContain(`No plugin changes. Bundles engine ${next}.`);
+    });
+
+    test("refuses a version that is not newer than the plugin's, writing nothing", () => {
+      // spec §4 session 4: the plugin sits where MINOR would land
+      const root = tree("### Added\n\n- Something new.\n");
+      const ahead = minorOf(current());
+      for (const f of [OBSIDIAN_MANIFEST, "manifest.json"]) {
+        writeFileSync(
+          join(root, f),
+          read(root, f).replace(/^(\s*"version": ")[^"]+/m, `$1${ahead}`),
+        );
+      }
+      const before = snapshot(root);
+      const r = runAt(root, "MINOR");
+      expect(r.code).toBe(1);
+      expect(r.out).toContain(
+        `::error file=${OBSIDIAN_MANIFEST}::${ahead} is not newer than the Obsidian plugin's current version ${ahead}.`,
+      );
+      expect(snapshot(root)).toEqual(before);
+    });
+
+    test("an explicit version past the plugin's is accepted, in 19 files", () => {
+      // spec §4 session 5: the one-time skip
+      const root = tree("### Added\n\n- Something new.\n");
+      const ahead = minorOf(current());
+      for (const f of [OBSIDIAN_MANIFEST, "manifest.json"]) {
+        writeFileSync(
+          join(root, f),
+          read(root, f).replace(/^(\s*"version": ")[^"]+/m, `$1${ahead}`),
+        );
+      }
+      const skip = minorOf(ahead);
+      const r = runAt(root, skip, "--date", "2030-01-02");
+      expect(r.code).toBe(0);
+      expect(r.out).toContain(`Prepared ${current()} -> ${skip} (2030-01-02, MINOR) in 19 files.`);
+      expect(r.out).toContain(`commit as "chore: release v${skip}".`);
+      expect(r.out).not.toContain("The Obsidian plugin is not touched.");
+    });
+
+    for (const file of ["manifest.json", "versions.json"]) {
+      test(`refuses when the root ${file} has drifted, writing nothing`, () => {
+        const root = tree();
+        writeFileSync(join(root, file), read(root, file) + " ");
+        const before = snapshot(root);
+        const r = runAt(root, next);
+        expect(r.code).toBe(1);
+        expect(r.out).toContain(
+          `::error file=${file}::${file} differs from editors/obsidian/${file}. Make the root copies byte-equal first — see scripts/check-obsidian-root-mirror.ts.`,
+        );
+        expect(snapshot(root)).toEqual(before);
+      });
+    }
+
+    test("refuses when versions.json already has the new key, writing nothing", () => {
+      const root = tree();
+      const v =
+        JSON.stringify({ ...JSON.parse(read(root, OBSIDIAN_VERSIONS)), [next]: "1.8.7" }, null, 2) +
+        "\n";
+      writeFileSync(join(root, OBSIDIAN_VERSIONS), v);
+      writeFileSync(join(root, "versions.json"), v);
+      const before = snapshot(root);
+      const r = runAt(root, next);
+      expect(r.code).toBe(1);
+      expect(r.out).toContain(
+        `::error file=${OBSIDIAN_VERSIONS}::${OBSIDIAN_VERSIONS} already has a "${next}" key.`,
+      );
+      expect(snapshot(root)).toEqual(before);
+    });
+
+    test("refuses when minAppVersion is missing, writing nothing", () => {
+      const root = tree();
+      const m = read(root, OBSIDIAN_MANIFEST).replace(/^\s*"minAppVersion": "[^"]*",?\n/m, "");
+      writeFileSync(join(root, OBSIDIAN_MANIFEST), m);
+      writeFileSync(join(root, "manifest.json"), m);
+      const before = snapshot(root);
+      const r = runAt(root, next);
+      expect(r.code).toBe(1);
+      expect(r.out).toContain('cannot find "minAppVersion"');
+      expect(snapshot(root)).toEqual(before);
+    });
+
+    test("refuses a versions.json with no entry to append after, writing nothing", () => {
+      const root = tree();
+      writeFileSync(join(root, OBSIDIAN_VERSIONS), "{}\n");
+      writeFileSync(join(root, "versions.json"), "{}\n");
+      const before = snapshot(root);
+      const r = runAt(root, next);
+      expect(r.code).toBe(1);
+      expect(r.out).toContain(OBSIDIAN_VERSIONS);
+      expect(snapshot(root)).toEqual(before);
+    });
+
+    test("leaves a tree every release check passes on", () => {
+      // spec §4 session 9
+      const root = tree();
+      expect(runAt(root, next, "--date", "2030-01-02").code).toBe(0);
+      for (const check of [
+        "check-versions.ts",
+        "check-changelog-entries.ts",
+        "check-obsidian-root-mirror.ts",
+      ]) {
+        const r = Bun.spawnSync(["bun", join(import.meta.dir, check), root]);
+        expect({ check, code: r.exitCode }).toEqual({ check, code: 0 });
+      }
+    });
   });
 
   test("dates an editor changelog's own Unreleased section instead of the placeholder", () => {

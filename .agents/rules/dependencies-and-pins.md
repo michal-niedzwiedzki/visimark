@@ -54,7 +54,7 @@ check in the same PR:
 
 | Pin | Check |
 |---|---|
-| A package's own version, an exact engine pin, `action.yml`, the pre-commit hook, `server.json` | `scripts/check-versions.ts`, from the list in `scripts/release-manifests.ts` |
+| A package's own version, an exact engine pin, `action.yml`, the pre-commit hook, `server.json`, the Obsidian plugin's `manifest.json` and newest `versions.json` key | `scripts/check-versions.ts`, from the list in `scripts/release-manifests.ts` |
 | A type package standing in for a runtime floor | `scripts/check-type-floors.ts` |
 | A root `overrides` entry | `scripts/check-overrides.ts` |
 | `engines.bun`, a Bun version in a workflow | `scripts/check-bun-policy.ts` |

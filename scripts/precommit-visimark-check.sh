@@ -9,7 +9,7 @@
 # .pre-commit-hooks.yaml (the published hook) and .pre-commit-config.yaml
 # (this repo's own dogfood config) — keep `pinned` as the one place the
 # version is written.
-pinned=0.2.0
+pinned=0.4.0
 if command -v visimark >/dev/null 2>&1 &&
   [ "$(visimark --version 2>/dev/null)" = "visimark $pinned" ]; then
   exec visimark check "$@"

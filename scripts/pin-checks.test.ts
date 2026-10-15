@@ -10,7 +10,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { RELEASE_MANIFESTS } from "./release-manifests.ts";
+import { OBSIDIAN_MANIFEST, OBSIDIAN_VERSIONS, RELEASE_MANIFESTS } from "./release-manifests.ts";
 
 const repo = join(import.meta.dir, "..");
 const scripts = import.meta.dir;
@@ -49,7 +49,66 @@ describe("check-versions", () => {
     "action.yml",
     "scripts/precommit-visimark-check.sh",
     "server.json",
+    OBSIDIAN_MANIFEST,
+    OBSIDIAN_VERSIONS,
   ];
+
+  // The plugin's files, set explicitly so these cases do not depend on the
+  // real tree's plugin state (0.3.0 against 0.2.0 until the v0.4.0 commit).
+  const engine = (): string => JSON.parse(real("packages/visimark/package.json")).version;
+  const plugin = (version: string, versions: Record<string, string>) => ({
+    [OBSIDIAN_MANIFEST]: json({ ...JSON.parse(real(OBSIDIAN_MANIFEST)), version }),
+    [OBSIDIAN_VERSIONS]: json(versions),
+  });
+
+  test("passes when the plugin agrees, without reading the root copies", () => {
+    const r = run(
+      "check-versions.ts",
+      tree(COPY, plugin(engine(), { "0.1.0": "1.8.7", [engine()]: "1.8.7" })),
+    );
+    expect(r.code).toBe(0);
+    expect(r.out).toContain(`${OBSIDIAN_MANIFEST} "version"=${engine()}`);
+    expect(r.out).toContain(`${OBSIDIAN_VERSIONS} newest key=${engine()}`);
+  });
+
+  test("fails when the plugin manifest drifts", () => {
+    const r = run("check-versions.ts", tree(COPY, plugin("9.9.9", { [engine()]: "1.8.7" })));
+    expect(r.code).toBe(1);
+    expect(r.out).toContain(
+      `::error file=${OBSIDIAN_MANIFEST}::${OBSIDIAN_MANIFEST} "version" says 9.9.9 but packages/visimark/package.json says ${engine()}. Bump every version-carrying file in the release commit — run bun scripts/prepare-release.ts, see docs/releasing.md.`,
+    );
+  });
+
+  test("fails when versions.json's newest key drifts", () => {
+    const r = run(
+      "check-versions.ts",
+      tree(COPY, plugin(engine(), { [engine()]: "1.8.7", "9.9.9": "1.8.7" })),
+    );
+    expect(r.code).toBe(1);
+    expect(r.out).toContain(
+      `::error file=${OBSIDIAN_VERSIONS}::${OBSIDIAN_VERSIONS} newest key says 9.9.9 but packages/visimark/package.json says ${engine()}.`,
+    );
+  });
+
+  test("reports a layout move when versions.json has no keys", () => {
+    const r = run("check-versions.ts", tree(COPY, plugin(engine(), {})));
+    expect(r.code).toBe(1);
+    expect(r.out).toContain(
+      `::error file=${OBSIDIAN_VERSIONS}::cannot read newest key in ${OBSIDIAN_VERSIONS}.`,
+    );
+  });
+
+  test("reports a layout move when the plugin manifest is missing", () => {
+    const root = tree(
+      COPY.filter((f) => f !== OBSIDIAN_MANIFEST),
+      { [OBSIDIAN_VERSIONS]: json({ [engine()]: "1.8.7" }) },
+    );
+    const r = run("check-versions.ts", root);
+    expect(r.code).toBe(1);
+    expect(r.out).toContain(
+      `::error file=${OBSIDIAN_MANIFEST}::cannot read "version" in ${OBSIDIAN_MANIFEST}.`,
+    );
+  });
 
   test("passes on the real repository", () => {
     expect(run("check-versions.ts").code).toBe(0);

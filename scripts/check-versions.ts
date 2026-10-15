@@ -12,7 +12,10 @@
  *   releases before anyone noticed;
  * - `action.yml`'s `version` default and the pre-commit hook's `pinned=`
  *   line, which are what a tag-pinned consumer actually runs;
- * - `server.json`'s two `version` fields, which the MCP registry reads.
+ * - `server.json`'s two `version` fields, which the MCP registry reads;
+ * - the Obsidian plugin's `editors/obsidian/manifest.json` version and the
+ *   newest key of its `versions.json` (docs/releasing.md#versioning). The root
+ *   copies are `check-obsidian-root-mirror.ts`'s job.
  *
  * `bun scripts/prepare-release.ts` bumps all of them; docs/releasing.md says
  * when. Usage: `bun scripts/check-versions.ts [root]` — `root` defaults to the
@@ -26,6 +29,8 @@ import {
   ACTION_VERSION,
   ENGINE_MANIFEST,
   HOOK_PIN,
+  OBSIDIAN_MANIFEST,
+  OBSIDIAN_VERSIONS,
   RELEASE_MANIFESTS,
   lockBlock,
   workspaceOf,
@@ -121,6 +126,18 @@ expectEngine("server.json", '"version"', server?.version);
 for (const [i, pkg] of ((server?.packages ?? []) as Array<Record<string, unknown>>).entries()) {
   expectEngine("server.json", `packages[${i}].version`, pkg.version);
 }
+
+// The Obsidian plugin (docs/releasing.md#versioning). The newest versions.json
+// key is the last one in the file, the one prepare-release appends.
+expectEngine(OBSIDIAN_MANIFEST, '"version"', json(OBSIDIAN_MANIFEST)?.version);
+const pluginVersions = json(OBSIDIAN_VERSIONS);
+expectEngine(
+  OBSIDIAN_VERSIONS,
+  "newest key",
+  pluginVersions !== null && !Array.isArray(pluginVersions)
+    ? Object.keys(pluginVersions).at(-1)
+    : undefined,
+);
 
 for (const line of seen) console.log(line);
 process.exit(fail ? 1 : 0);

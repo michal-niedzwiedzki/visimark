@@ -183,6 +183,14 @@ versions nobody changed. `manifest.json` carries its own version, and the
 engine version it bundles is stated in the release notes and in
 `CONTRIBUTING.md`.
 
+> **Amended 2026-10-15 ([#396](https://github.com/michal-niedzwiedzki/visimark/issues/396)).**
+> Reversed: the plugin now carries the release's version, starting at 0.4.0.
+> The premise above, a human registry review on every release, lapsed once the
+> plugin was listed: after the one-time submission the registry reviews each
+> release automatically. The policy is stated in
+> [`releasing.md`](../releasing.md#versioning). The paragraph above, the §5
+> table row and the §9 note stay as the record of v1.
+
 **v1 is side-loadable, not listed.** The community registry — a PR against
 `obsidianmd/obsidian-releases`, a human review, and a GitHub release carrying
 `manifest.json`, `main.js` and `styles.css` — is submitted once the v1 rows are

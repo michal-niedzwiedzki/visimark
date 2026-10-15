@@ -1,6 +1,6 @@
 {
   "name": "markdown-it-visimark",
-  "version": "0.2.0",
+  "version": "0.4.0",
   "description": "A markdown-it plugin for VisiMark: marks every computed value in rendered HTML and flags the ones that disagree with their formulas.",
   "keywords": [
     "markdown",

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.4.0 - 2026-10-15
+
 ### Added
 
 - **`report` statements in an HTML comment.** A sheet's readings for
@@ -103,6 +105,11 @@
   entry led to them; they were the website playground's types.
 
 ### Changed
+
+- **The Obsidian plugin carries the release's version.** Plugin 0.4.0 bundles
+  engine 0.4.0, and the numbers match from here on. The plugin's own line had
+  reached 0.3.0, so this release skips from 0.2.0 to 0.4.0
+  ([#396](https://github.com/michal-niedzwiedzki/visimark/issues/396)).
 
 - **Fewer installed packages.** `visimark` bundles the parser it uses and no
   longer installs `unified`, `remark-parse` or `remark-gfm`: 2 packages instead
@@ -1157,6 +1164,7 @@ record that the publish happened, and making the history read clean after the
 fact is the kind of underived edit this project exists to catch. There is no
 0.1.0 of the VS Code extension.
 
+[0.4.0]: https://github.com/michal-niedzwiedzki/visimark/releases/tag/v0.4.0
 [0.2.0]: https://github.com/michal-niedzwiedzki/visimark/releases/tag/v0.2.0
 [0.1.11]: https://github.com/michal-niedzwiedzki/visimark/releases/tag/v0.1.11
 [0.1.10]: https://github.com/michal-niedzwiedzki/visimark/releases/tag/v0.1.10
