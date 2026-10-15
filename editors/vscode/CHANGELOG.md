@@ -5,6 +5,7 @@
 - `report` statements in a `<!--vmark:report #id …-->` comment are understood; a malformed report comment gets a `SHEET` diagnostic, and an unknown, nested or malformed `<!--vmark:` comment gets `ANCHOR`.
 - `report slack` is no longer flagged as an unknown report; in a document with no `assert` it gets a `TYPE` diagnostic.
 - The built-in Markdown preview marks computed values and flags the ones that disagree with their formulas. Turn it off with `visimark.preview.enable`.
+- `visimark.server.path` can only be set in user settings, so a workspace cannot choose the file the extension runs as its server. In Restricted Mode the extension now runs with that setting ignored, instead of not at all.
 
 ## 0.2.0 - 2026-10-04
 
