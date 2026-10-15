@@ -104,6 +104,11 @@
 
 ### Changed
 
+- **The Obsidian plugin carries the release's version.** Plugin 0.4.0 bundles
+  engine 0.4.0, and the numbers match from here on. The plugin's own line had
+  reached 0.3.0, so this release skips from 0.2.0 to 0.4.0
+  ([#396](https://github.com/michal-niedzwiedzki/visimark/issues/396)).
+
 - **Fewer installed packages.** `visimark` bundles the parser it uses and no
   longer installs `unified`, `remark-parse` or `remark-gfm`: 2 packages instead
   of 68. `remark-lint-visimark` and `markdownlint-rule-visimark` load the

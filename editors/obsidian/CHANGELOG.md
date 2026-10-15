@@ -1,11 +1,9 @@
 # Changelog
 
-The plugin's version is its own. It is not the version of the `visimark` npm
-packages and does not move with them: an Obsidian release goes through a human
-registry review, and coupling an engine patch to that latency would either
-stall the engine or ship plugin versions nobody changed
-([`obsidian-plugin-spec.md`](../../docs/design/obsidian-plugin-spec.md) §2.2).
-Each entry says which engine version the bundle carries.
+The plugin carries the version of the release it ships in, the same number as
+the `visimark` npm packages and the VS Code extension
+([`releasing.md`](../../docs/releasing.md#versioning)). Entries up to 0.3.0 are
+from its own earlier line and end with the engine version they bundled.
 
 ## Unreleased
 

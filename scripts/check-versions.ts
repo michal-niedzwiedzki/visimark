@@ -12,7 +12,10 @@
  *   releases before anyone noticed;
  * - `action.yml`'s `version` default and the pre-commit hook's `pinned=`
  *   line, which are what a tag-pinned consumer actually runs;
- * - `server.json`'s two `version` fields, which the MCP registry reads.
+ * - `server.json`'s two `version` fields, which the MCP registry reads;
+ * - the Obsidian plugin's `editors/obsidian/manifest.json` version and the
+ *   newest key of its `versions.json` (docs/releasing.md#versioning). The root
+ *   copies are `check-obsidian-root-mirror.ts`'s job.
  *
  * `bun scripts/prepare-release.ts` bumps all of them; docs/releasing.md says
  * when. Usage: `bun scripts/check-versions.ts [root]` — `root` defaults to the
