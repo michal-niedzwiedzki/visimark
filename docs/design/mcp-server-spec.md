@@ -537,6 +537,19 @@ exports condition, so `bun add -g visimark-mcp` would have failed for every
 user had the server shipped against it. Publishing both in lockstep from one
 tag, which §5.5's release legs do, is what makes this safe.
 
+**The MCP SDK is bundled, not a dependency** (review 2026-10-15 §2.13). The
+SDK declares `express`, `hono`, `cors`, `jose`, `pkce-challenge` and more as
+runtime dependencies for its HTTP transports and OAuth client, which a stdio
+server never imports: `npm i -g visimark-mcp` installed 158 packages, 34 MB,
+every one in a user's advisory scanner. The SDK was already pinned exactly, so
+a fix in any of them needed a `visimark-mcp` release anyway; the pin paid the
+cost of bundling without the benefit. `build` now inlines the server and stdio
+subset into `dist/index.js` and lists the SDK under `devDependencies`, so the
+engine is the only runtime dependency. The rule is the engine's own: bundle
+third-party code, depend on first-party code. `createServer` left the root
+export with it, since its signature names the SDK's `Server` and `Transport`.
+The spawn test and both smoke jobs' handshake are what catch a bundling break.
+
 **Import the library; do not shell out.** Shelling out costs a process spawn and
 a JSON reparse per call, forces every call through a file path — killing §2.3 —
 and would inherit `fmt`'s writes as the *only* option, losing the entire

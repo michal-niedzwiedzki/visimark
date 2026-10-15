@@ -1,3 +1,8 @@
+// The published `dist/index.js` bundles every third-party module the engine
+// runs, so a transitive update cannot change how a released version parses a
+// document. `decimal.js` is the one runtime dependency left in package.json,
+// and only for its types: the emitted `.d.ts` files name `Decimal`, and a
+// consumer's typecheck has to resolve it.
 export { locate } from "./parse/document.js";
 export { build } from "./model/build.js";
 export { check, type CheckResult } from "./eval/check.js";

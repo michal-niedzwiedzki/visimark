@@ -151,9 +151,6 @@
       },
       "dependencies": {
         "decimal.js": "^10.4.3",
-        "remark-gfm": "^4.0.0",
-        "remark-parse": "^11.0.0",
-        "unified": "^11.0.4",
       },
       "devDependencies": {
         "@codemirror/commands": "^6.11.1",
@@ -167,7 +164,10 @@
         "@lezer/highlight": "^1.2.5",
         "@types/bun": "^1.4.2",
         "@types/node": "^26.6.4",
+        "remark-gfm": "^4.0.0",
+        "remark-parse": "^11.0.0",
         "typescript": "^7.0.2",
+        "unified": "^11.0.4",
       },
     },
     "packages/visimark-lsp": {
@@ -187,8 +187,10 @@
         "visimark-mcp": "bin/visimark-mcp",
       },
       "dependencies": {
-        "@modelcontextprotocol/sdk": "1.32.1",
         "visimark": "0.2.0",
+      },
+      "devDependencies": {
+        "@modelcontextprotocol/sdk": "1.32.1",
       },
     },
   },

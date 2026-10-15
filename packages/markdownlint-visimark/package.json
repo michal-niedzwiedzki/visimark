@@ -38,7 +38,7 @@
   "scripts": {
     "test": "bun test",
     "typecheck": "tsc --noEmit",
-    "build": "bun build src/index.ts --target node --outdir dist && tsc -p tsconfig.build.json",
+    "build": "bun build src/index.ts --target node --outdir dist --external visimark && tsc -p tsconfig.build.json",
     "prepublishOnly": "bun run typecheck && bun test && bun run build"
   },
   "dependencies": {

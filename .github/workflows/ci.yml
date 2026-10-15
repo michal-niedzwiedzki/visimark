@@ -456,6 +456,23 @@ jobs:
       - name: the depth cap still has stack headroom under Node
         run: node scripts/stack-headroom.mjs
 
+      # A plain `bun build --target node` resolves the `development` export
+      # condition, which shipped micromark's debug build in 0.2.0: 78,977
+      # stderr lines from one `check` under DEBUG=micromark. The DEBUG run is
+      # the behaviour test, and catches any instrumented dependency; the grep
+      # names the one library that did it.
+      - name: the built CLI is a production build (silent under DEBUG=*)
+        run: |
+          set -e
+          out=$(DEBUG='*' node packages/visimark/bin/visimark.js check docs/example-invoice.md 2>&1 >/dev/null)
+          if [ -n "$out" ]; then
+            echo "::error::the CLI writes to stderr under DEBUG=*; is a build missing --production?"
+            printf '%s\n' "$out" | head -20; exit 1
+          fi
+          if grep -l 'micromark/dev/' packages/*/dist/*.js packages/*/dist/*/*.js 2>/dev/null; then
+            echo "::error::a dist/ bundle contains micromark's development build"; exit 1
+          fi
+
   # Pack once, then install the tarballs globally in two isolated environments —
   # a Node-only runner and a Bun-only container — and run the commands. This is
   # the regression test for #29 (bun add -g on a machine with no Node), and the

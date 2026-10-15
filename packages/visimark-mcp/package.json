@@ -44,15 +44,17 @@
   "scripts": {
     "test": "bun test",
     "typecheck": "tsc --noEmit",
-    "build": "bun ../../scripts/gen-mcp-skill.ts && bun build src/main.ts src/index.ts --target node --outdir dist --external visimark --external @modelcontextprotocol/sdk && tsc -p tsconfig.build.json",
+    "build": "bun ../../scripts/gen-mcp-skill.ts && rm -rf dist && bun build src/index.ts --target node --production --outdir dist --external visimark && tsc -p tsconfig.build.json",
     "prepublishOnly": "bun run typecheck && bun test && bun run build"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "1.32.1",
     "visimark": "0.2.0"
   },
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "1.32.1"
+  },
   "engines": {
-    "bun": ">=1.0.0",
+    "bun": ">=1.4.2",
     "node": ">=24"
   },
   "mcpName": "io.github.michal-niedzwiedzki/visimark"

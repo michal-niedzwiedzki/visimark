@@ -2,7 +2,7 @@
 // Executed as an argument by the `sh` launcher beside it (`node
 // bin/visimark-mcp.js`), never as the `bin` target — see
 // .agents/rules/runtime-parity.md.
-import { runServer } from "../dist/main.js";
+import { runServer } from "../dist/index.js";
 
 runServer(process.argv.slice(2)).then(
   (code) => process.exit(code),

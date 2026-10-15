@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 const pkg = join(import.meta.dir, "..");
 const launcher = join(pkg, "bin/visimark-mcp");
-const built = join(pkg, "dist/main.js");
+const built = join(pkg, "dist/index.js");
 
 /**
  * The one test that spawns the real binary. Everything else about tool
