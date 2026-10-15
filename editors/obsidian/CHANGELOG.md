@@ -7,6 +7,35 @@ from its own earlier line and end with the engine version they bundled.
 
 ## Unreleased
 
+## 0.4.0 - 2026-10-15
+
+The plugin now carries the version of the release it ships in: 0.4.0 bundles
+engine 0.4.0, and the two numbers match from here on
+([`releasing.md`](../../docs/releasing.md#versioning)). The plugin's own line had
+reached 0.3.0, so the shared line starts at 0.4.0.
+
+The new engine's checks reach a note through the plugin's diagnostics, hovers
+and sweep like any other.
+
+**Pre-1.0 break, from the engine.** Two things that used to pass now get a
+finding. Every `<!--vmark:` comment is checked: a word other than
+`no-formulas` or `report`, a `no-formulas` marker with anything else in it, and
+a colon comment inside a list, blockquote, table cell or paragraph are now
+`ANCHOR` (`SHEET` for a nested report comment). And `report best` and
+`report deltas` need `among feasible|infeasible|all`; without it they are
+`TYPE`. Write `among all` for the range they used before.
+
+- **`report` statements in an HTML comment.**
+  `<!--vmark:report #readings report gates-->` is understood, so a sheet's
+  readings can stay out of the rendered note. A malformed report comment is a
+  `SHEET` finding.
+- **`report slack`** is understood. In a note with no `assert` it is a `TYPE`
+  finding.
+- **Live Preview marks come from `codemirror-visimark`**, the CodeMirror 6
+  extension now published on its own. No visible change.
+
+Bundles engine 0.4.0.
+
 ## 0.3.0 - 2026-10-04
 
 Bundles the 0.2.0 engine, which adds units, `lattice` params and `report`
