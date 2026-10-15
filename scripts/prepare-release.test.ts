@@ -268,11 +268,9 @@ describe("prepare-release", () => {
       expect(runAt(root, next, "--date", "2030-01-02").code).toBe(0);
       const text = read(root, "editors/obsidian/CHANGELOG.md");
       expect(text).not.toContain("## Unreleased");
-      expect(text).toMatch(
-        new RegExp(
-          `^## ${next.replace(/\./g, "\\.")} - 2030-01-02\\n\\nNo plugin changes\\. Bundles engine `,
-          "m",
-        ),
+      // the placeholder is the first "## " heading, above every older entry
+      expect(text.slice(text.indexOf("\n## ") + 1)).toStartWith(
+        `## ${next} - 2030-01-02\n\nNo plugin changes. Bundles engine ${next}.\n\n## `,
       );
     });
 
