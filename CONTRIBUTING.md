@@ -328,8 +328,8 @@ One tag publishes all of them, the Action's default is what a consumer's `npx`
 actually installs, and an exact `visimark` pin is what stops a published plugin
 or the MCP server pairing with an engine it was never tested against. You only touch these in a release commit; see
 [`docs/releasing.md`](docs/releasing.md). The same commit needs a dated
-`## X.Y.Z - YYYY-MM-DD` heading in `CHANGELOG.md` and in
-`editors/vscode/CHANGELOG.md`; a separate CI step checks that each has one.
+`## X.Y.Z - YYYY-MM-DD` heading in `CHANGELOG.md`,
+`editors/vscode/CHANGELOG.md` and `editors/obsidian/CHANGELOG.md`; a separate CI step checks that each has one.
 
 **The built CLI must run under Node, not only Bun**
 ([`.agents/rules/runtime-parity.md`](.agents/rules/runtime-parity.md)). A

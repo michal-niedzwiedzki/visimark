@@ -331,6 +331,8 @@ flowchart LR
   promo --> commit[Commit and push]
   commit --> wait[Wait for CI on that commit]
   wait --> tag[Tag vX.Y.Z and push the tag]
+  tag --> verify[Run verify-release.sh]
+  verify --> otag[Tag X.Y.Z for the plugin]
 ```
 
 ## Preparing the changelog

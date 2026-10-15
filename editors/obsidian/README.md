@@ -156,8 +156,9 @@ claims.
 ## Versioning
 
 The plugin's version is the release's: the same number as the `visimark` npm
-packages and the VS Code extension, in `manifest.json` and nowhere else in this
-folder (the workspace `package.json` carries none).
+packages and the VS Code extension, in `manifest.json` and as the newest key of
+`versions.json`, and nowhere else in this folder (the workspace `package.json`
+carries none).
 [`docs/releasing.md`](../../docs/releasing.md#versioning) states the policy;
 `scripts/check-versions.ts` fails a build where it disagrees.
 
