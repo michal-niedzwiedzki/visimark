@@ -304,6 +304,14 @@ describe("check-links", () => {
     expect(run("check-links.ts", root).code).toBe(1);
   });
 
+  test("reports a malformed percent-escape as a finding, not a crash", () => {
+    const root = repoTree({ "README.md": "ok\n\n[x](100%.md)\n" });
+    const r = run("check-links.ts", root);
+    expect(r.code).toBe(1);
+    expect(r.out).toContain("::error file=README.md,line=3::");
+    expect(r.out).toContain("not a valid URL path");
+  });
+
   test("ignores links inside code, and skips specs, plans and reviews", () => {
     const root = repoTree({
       "README.md": "`[a](missing.md)`\n\n```md\n[b](missing.md)\n```\n",

@@ -507,12 +507,12 @@ Set as repository secrets (`gh secret set …`):
 
 | Secret | Used by | Notes |
 |--------|---------|-------|
-| `NPM_TOKEN` | npm publish | Automation token, publish scope. Provenance also needs `id-token: write`, which the workflow already declares. To be retired: see below. |
+| `NPM_TOKEN` | npm publish | A granular access token with **Read and write** permission on all six packages and **Bypass 2FA** enabled, so an unattended `npm publish` is not stopped by a one-time password. npm no longer issues the classic Automation tokens. A granular token expires: note the date, and replace the secret before it lapses or the next release's npm legs fail. Provenance also needs `id-token: write`, which the workflow already declares. To be retired: see below. |
 | `VSCE_PAT` | Marketplace publish | Azure DevOps PAT for the `visimark-michal-niedzwiedzki` publisher, Marketplace → Manage scope. |
 | `OVSX_PAT` | Open VSX publish | open-vsx.org access token. The namespace is the extension's `publisher`, `visimark-michal-niedzwiedzki`; the workflow creates it on first publish if it is missing. |
 | *(none)* | MCP registry publish | No secret. `mcp-publisher login github-oidc` uses the `id-token: write` permission the workflow already declares for npm provenance, and the `io.github.michal-niedzwiedzki/*` namespace is owned by virtue of that GitHub identity. Nothing to rotate, and nothing to set before the first release. |
 
-**Retiring `NPM_TOKEN`.** It is a long-lived credential that can publish all
+**Retiring `NPM_TOKEN`.** It is a credential that can publish all
 six packages, held by a job that also runs third-party code. npm trusted
 publishing replaces it with the OIDC token the job already mints. On
 npmjs.com, add a trusted publisher to each of the six packages (repository

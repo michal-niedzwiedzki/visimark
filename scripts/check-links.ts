@@ -90,11 +90,21 @@ for (const file of files) {
     if (/^[a-z][a-z0-9+.-]*:/i.test(target) || target.startsWith("#") || target.startsWith("/")) {
       continue;
     }
-    const path = decodeURIComponent(target.replace(/[?#].*$/, ""));
+    const line = text.slice(0, m.index).split("\n").length;
+    let path: string;
+    try {
+      path = decodeURIComponent(target.replace(/[?#].*$/, ""));
+    } catch {
+      // A stray `%` (`[x](100%.md)`) is a malformed link, not a crash.
+      console.log(
+        `::error file=${file},line=${line}::${file}:${line} links to ${target}, which is not a valid URL path (escape a literal % as %25).`,
+      );
+      fail = true;
+      continue;
+    }
     const resolved = normalize(join(dirname(file), path)).replace(/\\/g, "/");
     if (resolved.startsWith("../")) continue; // outside the repository, e.g. a GitHub-relative link
     if (!exists(resolved === "." ? "" : resolved)) {
-      const line = text.slice(0, m.index).split("\n").length;
       console.log(
         `::error file=${file},line=${line}::${file}:${line} links to ${target}, which is not in the repository.`,
       );
