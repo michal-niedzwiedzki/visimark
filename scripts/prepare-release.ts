@@ -27,6 +27,14 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  ACTION_VERSION,
+  ENGINE_MANIFEST,
+  HOOK_PIN,
+  RELEASE_MANIFESTS,
+  lockBlock,
+  workspaceOf,
+} from "./release-manifests.ts";
 
 const usage = (): never => {
   console.error("usage: prepare-release [FIX|MINOR|MAJOR|X.Y.Z] [--date YYYY-MM-DD] [--root path]");
@@ -99,7 +107,7 @@ function edit(file: string, pattern: RegExp, replacement: string, what: string):
   pending.set(file, text.replace(pattern, replacement));
 }
 
-const engineFile = "packages/visimark/package.json";
+const engineFile = ENGINE_MANIFEST;
 const current: string = JSON.parse(read(engineFile)).version;
 const [curMajor, curMinor, curPatch] = current.split(".").map(Number) as [number, number, number];
 
@@ -155,20 +163,11 @@ if (rank[level] > rank[ceiling]) {
   );
 }
 
-// The eight package manifests: own version, and the exact `visimark` pin where
-// there is one (the lsp and the extension use `workspace:*`, which stays;
-// codemirror-visimark and markdown-it-visimark bundle the engine and have none).
-const manifests: Array<[string, boolean]> = [
-  [engineFile, false],
-  ["packages/visimark-lsp/package.json", false],
-  ["editors/vscode/package.json", false],
-  ["packages/remark-visimark/package.json", true],
-  ["packages/markdownlint-visimark/package.json", true],
-  ["packages/visimark-mcp/package.json", true],
-  ["packages/codemirror-visimark/package.json", false],
-  ["packages/markdown-it-visimark/package.json", false],
-];
-for (const [file, pinsEngine] of manifests) {
+// The package manifests (scripts/release-manifests.ts): own version, and the
+// exact `visimark` pin where there is one (the lsp and the extension use
+// `workspace:*`, which stays; codemirror-visimark and markdown-it-visimark
+// bundle the engine and have none).
+for (const { file, pinsEngine } of RELEASE_MANIFESTS) {
   edit(file, /^(\s*"version": ")[^"]+(",?)$/m, `$1${version}$2`, 'a top-level "version"');
   if (pinsEngine) {
     edit(
@@ -187,11 +186,9 @@ for (const [file, pinsEngine] of manifests) {
 // pin says, so it sat two releases stale (0.1.8, through v0.1.9 and v0.1.10)
 // before anyone noticed.
 //
-// Each lookup is bounded to its own "<workspace>": { ... } block, found by
-// plain substring search (so there is no workspace-path-shaped regex to
-// escape) and closed by the first line that is exactly four spaces then
-// "},". Without that bound, a field missing from its own block would let the
-// search run on and silently match — and overwrite — the next workspace's.
+// Each lookup is bounded to its own "<workspace>": { ... } block (`lockBlock`).
+// Without that bound, a field missing from its own block would let the search
+// run on and silently match — and overwrite — the next workspace's.
 const lockFile = "bun.lock";
 function editInLockBlock(
   workspace: string,
@@ -200,20 +197,14 @@ function editInLockBlock(
   what: string,
 ): void {
   const text = pending.get(lockFile) ?? read(lockFile);
-  const start = text.indexOf(`"${workspace}": {`);
-  if (start === -1)
+  const block = lockBlock(text, workspace);
+  if (block === null)
     refuse(
       lockFile,
       `${lockFile}: cannot find the "${workspace}" workspace block. The layout moved; fix scripts/prepare-release.ts.`,
     );
-  const close = /\n {4}\},?\n/.exec(text.slice(start));
-  if (close === null)
-    refuse(
-      lockFile,
-      `${lockFile}: cannot find the end of the "${workspace}" workspace block. The layout moved; fix scripts/prepare-release.ts.`,
-    );
-  const end = start + close.index + close[0].length;
-  const block = text.slice(start, end);
+  const start = text.indexOf(block);
+  const end = start + block.length;
   if (!pattern.test(block))
     refuse(
       lockFile,
@@ -224,8 +215,8 @@ function editInLockBlock(
     text.slice(0, start) + block.replace(pattern, replacement) + text.slice(end),
   );
 }
-for (const [file, pinsEngine] of manifests) {
-  const workspace = file.replace(/\/package\.json$/, "");
+for (const { file, pinsEngine } of RELEASE_MANIFESTS) {
+  const workspace = workspaceOf(file);
   editInLockBlock(workspace, /("version": ")[^"]+(")/, `$1${version}$2`, 'a "version"');
   if (pinsEngine) {
     editInLockBlock(
@@ -239,24 +230,24 @@ for (const [file, pinsEngine] of manifests) {
 
 // The block is `version:` and the lines indented under it, so the match cannot
 // run on into a later input's `default` if this one loses its own.
-edit(
-  "action.yml",
-  /(^  version:[ \t]*\n(?:(?: {4}.*)?\n)*? {4}default: ")[^"]*(")/m,
-  `$1${version}$2`,
-  "the `version` input's own default",
-);
+edit("action.yml", ACTION_VERSION, `$1${version}$3`, "the `version` input's own default");
 
-// Exactly the two pins (the bunx and npx branches), both numeric. One branch
-// drifting to `visimark@latest` must refuse, not be half-bumped.
+// Exactly one `pinned=` line, numeric. A second one, or one drifted to
+// `latest`, must refuse, not be half-bumped.
 const hook = "scripts/precommit-visimark-check.sh";
-const pins = read(hook).match(/visimark@\S+/g) ?? [];
-if (pins.length !== 2 || !pins.every((pin) => /^visimark@\d+\.\d+\.\d+$/.test(pin))) {
+const pins = [...read(hook).matchAll(HOOK_PIN)].map((m) => m[1]!);
+if (pins.length !== 1 || !/^\d+\.\d+\.\d+$/.test(pins[0]!)) {
   refuse(
     hook,
-    `${hook}: expected exactly two numeric visimark@<version> pins, found: ${pins.join(" ") || "none"}.`,
+    `${hook}: expected exactly one numeric pinned=<version> line, found: ${pins.join(" ") || "none"}.`,
   );
 }
-edit(hook, /visimark@\d+\.\d+\.\d+/g, `visimark@${version}`, "a visimark@<version> pin");
+edit(hook, /^pinned=\d+\.\d+\.\d+$/m, `pinned=${version}`, "the pinned=<version> line");
+
+// server.json's own version and its npm package's. release.yml rewrites both
+// from the tag before publishing anyway; bumping them here keeps the committed
+// file from showing a version releases old.
+edit("server.json", /("version": ")\d+\.\d+\.\d+(")/g, `$1${version}$2`, "a version field");
 
 // Root changelog: Unreleased becomes the release, a fresh Unreleased opens
 // above it, and the link reference goes at the head of the reference block.

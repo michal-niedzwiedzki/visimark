@@ -1,0 +1,93 @@
+name: supply-chain
+
+# What this repository pulls in, as opposed to what it builds. ci.yml checks
+# the repo's own policies; this checks the packages it depends on, against the
+# OSV database. Review 2026-10-15 §2.15.
+#
+# OSV and not GitHub's dependency review: the dependency graph does not parse
+# bun.lock, so a graph-based review would miss exactly the change that matters
+# here — a lockfile-only bump to a vulnerable transitive version. osv-scanner
+# reads bun.lock directly, and covers development dependencies too.
+on:
+  pull_request:
+  schedule:
+    - cron: "17 6 * * 1" # Mondays, after Dependabot's weekly run has opened its PRs
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # A PR fails when its bun.lock carries a high-severity advisory (CVSS 7.0 or
+  # more) that its base branch's bun.lock does not: a new package, a version
+  # bump into a vulnerable range, or a lockfile-only change. Advisories already
+  # on the base branch are the weekly job's to report, not this PR's to fix.
+  osv-pr:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: install osv-scanner
+        run: &install |
+          set -euo pipefail
+          # A named release checked against its published SHA-256; bump both
+          # lines together.
+          osv_version=2.7.0
+          osv_sha256=160c6253e2922e9e0a6a9771c5c4c40a4b3c6090b34a3cdd5e80c96cc2e4218b
+          curl -sSfL -o "$RUNNER_TEMP/osv-scanner" \
+            "https://github.com/google/osv-scanner/releases/download/v$osv_version/osv-scanner_linux_amd64"
+          echo "$osv_sha256  $RUNNER_TEMP/osv-scanner" | sha256sum -c -
+          chmod +x "$RUNNER_TEMP/osv-scanner"
+      - name: no new high-severity advisory in bun.lock
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin "$BASE_REF"
+          mkdir -p "$RUNNER_TEMP/base"
+          git show FETCH_HEAD:bun.lock > "$RUNNER_TEMP/base/bun.lock"
+          # Exit 1 means "vulnerabilities found", which is the normal case
+          # here; anything else is the scanner failing.
+          scan() {
+            "$RUNNER_TEMP/osv-scanner" scan source --format json --lockfile="$1" > "$2" || [ $? -eq 1 ]
+          }
+          scan "$RUNNER_TEMP/base/bun.lock" "$RUNNER_TEMP/base.json"
+          scan bun.lock "$RUNNER_TEMP/head.json"
+          # One row per advisory and package: id, name, version, CVSS score.
+          rows() {
+            jq -r '.results[]?.packages[]? | .package.name as $n | .package.version as $v
+              | .groups[] | "\(.ids[0])\t\($n)\t\($v)\t\(.max_severity // "")"' "$1" | sort -u
+          }
+          rows "$RUNNER_TEMP/base.json" | cut -f1,2 | sort -u > "$RUNNER_TEMP/base.keys"
+          new=$(rows "$RUNNER_TEMP/head.json" |
+            awk -F'\t' 'NR==FNR { seen[$1 FS $2]=1; next } !(($1 FS $2) in seen)' "$RUNNER_TEMP/base.keys" -)
+          if [ -z "$new" ]; then
+            echo "bun.lock adds no advisory the base branch does not already have."
+            exit 0
+          fi
+          printf 'New advisories in this PR (id, package, version, CVSS):\n%s\n' "$new"
+          high=$(printf '%s\n' "$new" | awk -F'\t' '$4 != "" && $4+0 >= 7')
+          if [ -n "$high" ]; then
+            printf '%s\n' "$high" | while IFS="$(printf '\t')" read -r id name version score; do
+              echo "::error file=bun.lock::$name@$version has $id (CVSS $score), which the base branch does not. Pick a fixed version, or say in the PR why it cannot reach users."
+            done
+            exit 1
+          fi
+          echo "::warning file=bun.lock::this PR adds advisories below high severity; see the list above."
+
+  # Every package in bun.lock, weekly. Report only: a new advisory against an
+  # existing dependency turns this scheduled run red and blocks nothing on
+  # master.
+  osv-scan:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: install osv-scanner
+        run: *install
+      - name: scan bun.lock
+        run: '"$RUNNER_TEMP/osv-scanner" scan source --lockfile=bun.lock'

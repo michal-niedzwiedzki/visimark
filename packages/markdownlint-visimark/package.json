@@ -38,7 +38,7 @@
   "scripts": {
     "test": "bun test",
     "typecheck": "tsc --noEmit",
-    "build": "bun build src/index.ts --target node --outdir dist && tsc -p tsconfig.build.json",
+    "build": "bun build src/index.ts --target node --production --outdir dist --external visimark && tsc -p tsconfig.build.json",
     "prepublishOnly": "bun run typecheck && bun test && bun run build"
   },
   "dependencies": {
@@ -49,7 +49,7 @@
     "markdownlint-cli2": "^0.23.3"
   },
   "engines": {
-    "bun": ">=1.0.0",
+    "bun": ">=1.4.2",
     "node": ">=24"
   }
 }

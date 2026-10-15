@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { runCli } from "../dist/cli/main.js";
+import { runCli } from "../dist/index.js";
 
 runCli(process.argv.slice(2)).then(
   (code) => process.exit(code),

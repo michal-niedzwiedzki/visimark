@@ -11,7 +11,7 @@ where the real reasoning happens and today it is lost. This command condenses it
 into a public comment so the issue thread stays the durable record.
 
 Read first, every run:
-- `docs/superpowers/specs/2026-09-06-vocabulary-review-workflow-design.md` — §1–§2, how the thread is meant to read
+- `docs/issue-runbook.md` — the workflow this comment belongs to, and why the issue thread is the durable record
 - the issue and its comments (fetched below)
 
 Arguments: `$ARGUMENTS` — the issue number `<n>`, nothing else.

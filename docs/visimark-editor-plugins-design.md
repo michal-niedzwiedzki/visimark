@@ -349,7 +349,7 @@ Contributed under `visimark.*`:
 | `visimark.codeLens.enable` | boolean | `true` | show the per-block lens |
 | `visimark.statusBar.enable` | boolean | `true` | show the status bar item |
 | `visimark.trace.server` | off/messages/verbose | `off` | standard LSP trace |
-| `visimark.server.path` | string | `""` | dev: path to a server entry to run instead of the bundled one |
+| `visimark.server.path` | string | `""` | dev: path to a server entry to run instead of the bundled one. `machine` scope: user settings only, and ignored in Restricted Mode |
 
 `visimark.format.fixOnSave` (default `true`) decides whether an explicit save
 brings stale values up to date. It is a VisiMark setting rather than a

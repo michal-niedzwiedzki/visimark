@@ -8,7 +8,6 @@ You are running the **pre-review** stage of the issue-review workflow.
 
 Read first, every run:
 - `.agents/rules/ai-attribution.md` — commit / PR trailer for **this** session (never copy a hardcoded Claude line)
-- `docs/superpowers/specs/2026-09-06-vocabulary-review-workflow-design.md` — the design
 - `docs/vocabulary-catalogue.md` — the register you will add a row to, its four vocabulary criteria, the six-template table in its preface, and sections E–F
 - `docs/issue-runbook.md` — **Six kinds, three tracks**, and **Front-loading**: what this stage must leave settled for `/issue-decide`
 - `.github/ISSUE_TEMPLATE/` — the forms. A rendered issue's field labels are these files' `label:` values, so the form tells you the kind and hands you the answers

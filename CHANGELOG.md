@@ -90,7 +90,38 @@
   `TYPE` and fails `check`.
   ([#351](https://github.com/michal-niedzwiedzki/visimark/issues/351))
 
+### Removed
+
+- **`visimark-mcp`'s library exports are three.** `import("visimark-mcp")`
+  now gives `runServer`, `engineVersion` and `serverVersion`. The write-gate
+  functions, tool tables, envelope helpers and `createServer` were internals
+  that had become semver surface; `createServer`'s signature also named the
+  MCP SDK's types, and the SDK is now bundled.
+
 ### Changed
+
+- **Fewer installed packages.** `visimark` bundles the parser it uses and no
+  longer installs `unified`, `remark-parse` or `remark-gfm`: 2 packages instead
+  of 68. `remark-lint-visimark` and `markdownlint-rule-visimark` load the
+  `visimark` they install instead of carrying their own copy of the engine, so
+  each tarball is a few KB. `visimark-mcp` bundles the MCP SDK's stdio server
+  and depends on the engine alone, instead of 158 packages that included an
+  HTTP server and an OAuth client it never ran.
+
+- **`engines.bun` is `>=1.4.2`** on every npm package, the Bun CI builds and
+  tests with. It was `>=1.0.0`, a version nothing ran, and two packages
+  declared none.
+
+- **The GitHub Action and the pre-commit hook run the pinned engine.** A
+  `visimark` already on `PATH` is used only when it reports the pinned
+  version; any other version is passed over for the pinned one. The Action
+  prints the engine version before the findings, and its `version` input
+  takes `path` to run whatever is on `PATH` on purpose.
+
+- **VS Code: `visimark.server.path` is a user setting only.** It names a file
+  the extension runs, so a workspace's `.vscode/settings.json` can no longer
+  set it. The extension now declares limited support for Restricted Mode:
+  diagnostics work in an untrusted folder, and the setting is ignored there.
 
 - **Every `<!--vmark:` comment is checked.** The colon family has two words,
   `no-formulas` and `report`. Any other word (`<!--vmark:reports …-->`), a
@@ -107,6 +138,16 @@
   ([#360](https://github.com/michal-niedzwiedzki/visimark/issues/360))
 
 ### Fixed
+
+- **No debug output under `DEBUG=*`.** The CLI, the remark plugin and the
+  markdownlint rule shipped micromark's development build, so `DEBUG=*` (or
+  `DEBUG=micromark`) printed tens of thousands of lines to stderr. They are
+  production builds now, and CLI start-up is faster.
+
+- **`remark-lint-visimark`'s types resolve.** Its `.d.ts` imported `unified`
+  and `mdast`, which the package does not depend on; under a strict layout the
+  plugin's type fell back to `any`. The declarations are now self-contained,
+  and CI typechecks the packed declarations in a consumer project.
 
 - **`--help` exits `0` on every command.** `visimark check --help` (and `fmt`,
   `infer`, `eval`, `explain`, `ref`, `simulate`) printed a refusal and exited

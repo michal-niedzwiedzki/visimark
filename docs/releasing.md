@@ -220,7 +220,7 @@ What the scanner looks at, learned from 0.2.0 to 0.2.2:
    ```bash
    bun install --frozen-lockfile
    bun run typecheck
-   bun test
+   bun run test
    bun run build
    ```
 2. **Green in CI on the commit you will tag.** `scripts/release-tag.sh` (step 7)
@@ -246,14 +246,17 @@ What the scanner looks at, learned from 0.2.0 to 0.2.2:
    packages/visimark-lsp/package.json
    editors/vscode/package.json
    action.yml                                  # the `version` input's default
-   scripts/precommit-visimark-check.sh         # both visimark@ pins inside it
+   scripts/precommit-visimark-check.sh         # its one pinned= line
    packages/remark-visimark/package.json       # its own version AND its visimark dependency pin
    packages/markdownlint-visimark/package.json # its own version AND its visimark dependency pin
    packages/visimark-mcp/package.json          # its own version AND its visimark dependency pin
    packages/codemirror-visimark/package.json   # its own version only — it bundles the engine
    packages/markdown-it-visimark/package.json  # its own version only — it bundles the engine
    bun.lock                                    # the same eight "version"s and three visimark pins, mirrored
+   server.json                                 # its own version AND its npm package's
    ```
+   The eight manifests are listed once, in `scripts/release-manifests.ts`,
+   which `prepare-release.ts` and the CI check both import.
    They must match each other and the tag exactly. `action.yml` is in the list
    because its default is what a consumer's `npx` installs: leave it behind and
    everyone who pinned the new Action ref quietly keeps running the old engine.
@@ -265,13 +268,14 @@ What the scanner looks at, learned from 0.2.0 to 0.2.2:
    says, so the drift was invisible to every build in this repo — it would only
    have bitten a consumer reading `bun.lock` for provenance, or a future change
    to that linking behavior. No hand-run `grep` needed any more — `ci.yml`'s
-   "every version-carrying file must agree" step fails the build if you miss
-   one of them, so step 6's green CI is the confirmation.
+   "every version-carrying file must agree" step (`scripts/check-versions.ts`)
+   fails the build if you miss one of them, so step 6's green CI is the
+   confirmation.
 
-   `server.json` is **not** in this list, and does not need to be: the
-   MCP-registry leg rewrites its two version fields from the tag before it
-   publishes, so it cannot go stale and cannot register an entry pointing at a
-   version other than the one that just shipped.
+   `server.json` is in the list so the committed file never shows a version
+   releases old. The MCP-registry leg still rewrites its two version fields
+   from the tag before it publishes, so a backfill dispatch registers the
+   version that just shipped whatever the tree says.
 4. **Write the changelog** — see [Preparing the changelog](#preparing-the-changelog).
    `ci.yml`'s "every release must have a changelog entry" step fails the build if
    `CHANGELOG.md` or `editors/vscode/CHANGELOG.md` has no dated
@@ -503,9 +507,29 @@ Set as repository secrets (`gh secret set …`):
 
 | Secret | Used by | Notes |
 |--------|---------|-------|
-| `NPM_TOKEN` | npm publish | Automation token, publish scope. Provenance also needs `id-token: write`, which the workflow already declares. |
+| `NPM_TOKEN` | npm publish | A granular access token with **Read and write** permission on all six packages and **Bypass 2FA** enabled, so an unattended `npm publish` is not stopped by a one-time password. npm no longer issues the classic Automation tokens. A granular token expires: note the date, and replace the secret before it lapses or the next release's npm legs fail. Provenance also needs `id-token: write`, which the workflow already declares. To be retired: see below. |
 | `VSCE_PAT` | Marketplace publish | Azure DevOps PAT for the `visimark-michal-niedzwiedzki` publisher, Marketplace → Manage scope. |
 | `OVSX_PAT` | Open VSX publish | open-vsx.org access token. The namespace is the extension's `publisher`, `visimark-michal-niedzwiedzki`; the workflow creates it on first publish if it is missing. |
 | *(none)* | MCP registry publish | No secret. `mcp-publisher login github-oidc` uses the `id-token: write` permission the workflow already declares for npm provenance, and the `io.github.michal-niedzwiedzki/*` namespace is owned by virtue of that GitHub identity. Nothing to rotate, and nothing to set before the first release. |
+
+**Retiring `NPM_TOKEN`.** It is a credential that can publish all
+six packages, held by a job that also runs third-party code. npm trusted
+publishing replaces it with the OIDC token the job already mints. On
+npmjs.com, add a trusted publisher to each of the six packages (repository
+`michal-niedzwiedzki/visimark`, workflow `release.yml`), then delete every
+`NODE_AUTH_TOKEN` line from `release.yml` and the `NPM_TOKEN` secret, in that
+order. Provenance stays automatic. Until then the token stays: removing it
+first fails every npm leg.
+
+## Tools the release job pins
+
+`release.yml` and `obsidian-release.yml` build with the Bun in
+`packageManager` (`bun-version-file: package.json`), not `latest`, so what
+ships is built by the Bun CI tested with; `scripts/check-bun-policy.ts`
+enforces it. Third-party actions are pinned to a commit SHA with the tag in a
+comment, and Dependabot's `github-actions` ecosystem keeps both current.
+`mcp-publisher` is a named release checked against its SHA-256 before it runs;
+to move it, change `mcp_publisher_version` and `mcp_publisher_sha256` together,
+taking the digest from that release's `registry_<version>_checksums.txt`.
 
 <!--vmark:no-formulas-->

@@ -10,7 +10,7 @@ const common = {
   bundle: true,
   format: "cjs",
   platform: "node",
-  target: "node18",
+  target: "node20",
   minify: true,
   sourcemap: true,
   logLevel: "info",

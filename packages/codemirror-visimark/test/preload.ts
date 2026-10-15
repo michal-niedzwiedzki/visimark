@@ -1,8 +1,8 @@
 import { GlobalRegistrator } from "@happy-dom/global-registrator";
 
-// The root bunfig.toml's preload registers happy-dom for a run from the repo
-// root; this one covers `bun test` run from this directory. Guarded the same
-// way, since both can load in one process.
+// `bun test` runs from this directory (the root `test` script runs each
+// workspace from its own), so this is the only DOM these tests get. Guarded
+// in case a preload ever runs twice in one process.
 if (typeof globalThis.document === "undefined") {
   GlobalRegistrator.register();
 }

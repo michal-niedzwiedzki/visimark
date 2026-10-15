@@ -81,10 +81,19 @@ $ bun install
 `node_modules/.bin`, so `bun run` sees a `visimark` built from your working
 tree rather than the published package.
 
+The root `package.json` has an `overrides` block that pins four CodeMirror
+packages (`@codemirror/language`, `@codemirror/state`, `@codemirror/view`,
+`@lezer/highlight`) to one version for the whole workspace: two copies of
+`@codemirror/state` are two editor states, and nothing works across them.
+Dependabot does not read `overrides` and ignores those four, so bump one by
+hand, in the override and every manifest that names it, in one commit.
+`scripts/check-overrides.ts` fails CI when an override falls outside a range a
+workspace declares.
+
 Then check that it works:
 
 ```console
-$ bun test
+$ bun run test
 $ bunx visimark check docs/example-invoice.md
 ```
 
@@ -230,7 +239,8 @@ and `articles-pages` enforce the same checks in CI either way.
 
 | Command | What it does |
 |---|---|
-| `bun test` | The whole suite. It runs in a few seconds — there is no reason not to run it. |
+| `bun run test` | The whole suite: each workspace's tests from its own directory, with its own `bunfig.toml`, then the root's `scripts/` tests. It runs in seconds — there is no reason not to run it. |
+| `bun test` | At the root, only `scripts/` (the root `bunfig.toml` sets `root`). Inside a workspace, that workspace's tests. |
 | `bun run typecheck` | TypeScript, across every workspace |
 | `bun run lint` | `oxlint`, with warnings treated as failures |
 | `bun run format` | `oxfmt`, in place |
@@ -260,7 +270,7 @@ $ bun run format
 $ bun run lint
 $ bun run typecheck
 $ bun run build
-$ bun test
+$ bun run test
 ```
 
 If you touched anything a generated or committed artifact depends on, also run
@@ -308,11 +318,13 @@ in production) would answer differently than the CLI for the same document.
 Fix: this is a real bug, not something to silence — find why the two hosts
 disagree, and fix the engine or the `ReaderPort` boundary, never the check.
 
-**Every version-carrying file must agree.** Fourteen fields carry the version —
-eight package manifests (three of which also pin `visimark` as a dependency;
-`codemirror-visimark` and `markdown-it-visimark` carry only their own version,
-because they bundle the engine),
-`action.yml`'s pinned `version` default and `scripts/precommit-visimark-check.sh`.
+**Every version-carrying file must agree.** The eight package manifests listed
+in `scripts/release-manifests.ts` (three of which also pin `visimark` as a
+dependency; `codemirror-visimark` and `markdown-it-visimark` carry only their
+own version, because they bundle the engine), their mirror in `bun.lock`,
+`action.yml`'s pinned `version` default, the `pinned=` line in
+`scripts/precommit-visimark-check.sh` and the two versions in `server.json`.
+`scripts/check-versions.ts` is the check.
 One tag publishes all of them, the Action's default is what a consumer's `npx`
 actually installs, and an exact `visimark` pin is what stops a published plugin
 or the MCP server pairing with an engine it was never tested against. You only touch these in a release commit; see
@@ -342,7 +354,7 @@ documents: every tracked Markdown file, package READMEs and editor plugins
 included. The exceptions are `docs/WIP/`, the vendored skills under
 `.agents/skills/<name>/`, the engine's test fixtures, and the drift examples
 that fail on purpose. If your pull request touches one of them and the numbers
-in it stop agreeing with its formulas, the build goes red. `bun test` runs the
+in it stop agreeing with its formulas, the build goes red. `bun run test` runs the
 same check (`scripts/doc-set.test.ts`), so it fails locally too, with or
 without the pre-commit hook installed.
 
@@ -375,7 +387,10 @@ Two more documentation rules that matter here:
 ## Tests
 
 Tests live next to what they test, in each package's `test/` directory, and run
-under `bun test`.
+under `bun test` from that package's directory. A package's test environment
+matches its runtime: only the editor workspaces and the two browser packages
+preload a DOM, each in its own `bunfig.toml`. A Node library's test that needs
+`document` is a bug in the test, not a reason to add a preload.
 
 **A bug fix comes with a test that fails before it.** Write the failing test
 first, watch it fail for the reason you expect, then fix it. A test that passes

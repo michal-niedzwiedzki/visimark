@@ -545,7 +545,8 @@ schedule that checks everything. Do not let the fast path be the only path.
 
 The Action's `version` input defaults to the engine release that Action ref
 ships. So `@v0.1.5` pins two things at once: the Action, and the verifier it
-installs.
+installs. A `visimark` already on the runner's `PATH` is used only when it is
+that same version, and the log's first line names the engine that ran.
 
 That matters in a way that is easy to miss. Re-run an unchanged commit next
 month and you get the same answer. A build that was green stays green, and a new
@@ -1499,8 +1500,10 @@ repos:
 ```
 
 `pre-commit autoupdate` moves `rev:` forward as releases ship. Under the hood
-the hook tries an already-installed `visimark` first, then Bun's `bunx`, then
-npm's `npx` — so it works whether the machine has Node, Bun, or both.
+the hook uses an already-installed `visimark` only when it is the version the
+`rev:` pins, and otherwise fetches that version with Bun's `bunx` or npm's
+`npx`. It works whether the machine has Node, Bun, or both, and an old global
+install never stands in for the pinned engine.
 
 Without the framework, or to pin the fetch command yourself, the same recipe
 by hand:

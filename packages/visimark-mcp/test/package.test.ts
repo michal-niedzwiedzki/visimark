@@ -94,5 +94,14 @@ test("visimark is pinned exactly, not by a range", () => {
   // caret would let a published server pair with an engine it was never
   // tested against. CI's version-agreement check (task 8) asserts the value.
   expect(manifest.dependencies.visimark).toMatch(/^\d+\.\d+\.\d+$/);
-  expect(manifest.dependencies["@modelcontextprotocol/sdk"]).toMatch(/^\d+\.\d+\.\d+$/);
+});
+
+test("the MCP SDK is bundled, not installed", () => {
+  // The SDK's runtime dependencies serve its HTTP transports and OAuth client,
+  // which a stdio server never imports: 158 installed packages for ~2 used.
+  // The build inlines the server + stdio subset, so `visimark` is the only
+  // runtime dependency (review 2026-10-15 §2.13). The spawn test and the
+  // smoke jobs' handshake are what catch a bundling break.
+  expect(Object.keys(manifest.dependencies)).toEqual(["visimark"]);
+  expect(manifest.scripts.build).not.toContain("--external @modelcontextprotocol/sdk");
 });

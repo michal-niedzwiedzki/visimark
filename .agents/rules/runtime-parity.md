@@ -22,11 +22,12 @@ launcher shim, so a `#!/usr/bin/env node` shebang makes the kernel hunt for
   `packages/visimark/bin/visimark.js`, keeps `#!/usr/bin/env node` on purpose:
   it is executed as an argument (`node bin/visimark.js`, or by the launcher),
   never as the `bin` target. `acceptance-node` calls it with `node`.
-- A published package with no `bin` — `remark-visimark`,
-  `markdownlint-visimark`, `codemirror-visimark`, `markdown-it-visimark`,
-  `visimark-lsp`, the VS Code extension — has nothing to launch. Do not add a `bin` whose target starts with a `node` shebang.
-  Those packages do not gain an `sh` launcher or a second CI job until they
-  gain a `bin`.
+- A published package with no `bin` — `remark-lint-visimark`,
+  `markdownlint-rule-visimark`, `codemirror-visimark`, `markdown-it-visimark`,
+  the VS Code extension — has nothing to launch. Nor does `visimark-lsp`, which
+  is `private` and ships only inside the extension's `.vsix`. Do not add a
+  `bin` whose target starts with a `node` shebang. Those packages do not gain
+  an `sh` launcher or a second CI job until they gain a `bin`.
 - Write the install line and the "run it without installing" line for a
   published command in both forms: `npm i -g` and `bun add -g`, and `npx` and
   `bunx`. A snippet that documents one named runner stays in that runner's
@@ -73,12 +74,33 @@ on the current LTS **and** on the latest stable release, and both block.
 
 **When Node promotes a new LTS, `node-support-policy` goes red.** That is the
 design, not a defect: the floor moves on a deliberate commit — bump every
-`engines.node`, add a `CHANGELOG.md` entry, update the prose in
-`CONTRIBUTING.md` and `docs/ci.md` — rather than by drifting. Do **not** pin
-the job to an older LTS to make it pass.
+`engines.node` and `@types/node`'s major with it, add a `CHANGELOG.md` entry,
+update the prose in `CONTRIBUTING.md` and `docs/ci.md` — rather than by
+drifting. Do **not** pin the job to an older LTS to make it pass.
+`scripts/check-type-floors.ts` fails CI when the locked `@types/node` major is
+above the `engines.node` floor: types newer than the runtime let code call
+APIs the floor does not have.
 
-This says nothing about Bun. In-repo development stays Bun-first, and the
-`packageManager` pin in `package.json` is unaffected.
+## Which Bun
+
+**The supported floor is the `packageManager` Bun in the root
+`package.json`.** It is the one version CI builds and tests the published
+packages with, so it is the one floor that is a claim and not a hope.
+
+- Every published manifest declares `engines.bun` as `>=<packageManager
+  version>`. `>=1.0.0` was the floor before: a version no job ran.
+- The workflows that publish (`release.yml`, `obsidian-release.yml`) set
+  `bun-version-file: package.json`, so what ships is built by the Bun
+  developers and CI use, not whatever was `latest` that hour.
+- `smoke-bun` runs in the `oven/bun:<packageManager version>` container: the
+  job that proves the floor installs and runs, with only Bun present.
+- `latest` stays where it is a canary on purpose: `ci.yml`'s `build` job runs
+  the whole suite on it, so a new Bun that breaks something shows up before
+  the pin moves.
+
+`scripts/check-bun-policy.ts` enforces all of it. Moving to a new Bun is one
+commit: `packageManager`, every `engines.bun`, the `smoke-bun` container tag,
+and a `CHANGELOG.md` entry.
 
 In-repo `bun test`, `bun run`, and `bun packages/visimark/src/cli/main.ts` are
 development commands. They are not published invocations. This rule does not

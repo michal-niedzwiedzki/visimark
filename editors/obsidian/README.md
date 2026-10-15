@@ -46,7 +46,8 @@ Plus two pieces every row above is built on: the vault-backed reader
 audience-B finding vocabulary
 ([#207](https://github.com/michal-niedzwiedzki/visimark/issues/207)).
 
-The templates live in [`templates/`](templates/), Markdown files the CLI can
+The templates live in
+[`editors/shared/templates/`](../shared/templates/), Markdown files the CLI can
 check directly; each passes `visimark check` with zero findings before it is
 edited.
 
@@ -115,8 +116,8 @@ this repository.** The browser playground permits exactly one builtin,
 does not transfer here: Obsidian desktop is Electron and has Node, Obsidian
 mobile is neither, so a `node:path` that works on the desktop is a plugin that
 does not load on the device this client exists for. The build substitutes
-[`src/browser-path.ts`](src/browser-path.ts), and
-[`test/bundle.test.ts`](test/bundle.test.ts) asserts **zero** from both ends —
+[`codemirror-visimark`'s `src/browser-path.ts`](../../packages/codemirror-visimark/src/browser-path.ts),
+and [`test/bundle.test.ts`](test/bundle.test.ts) asserts **zero** from both ends —
 a source walk from `src/main.ts` through the engine, and a scan of the bytes
 esbuild actually emits.
 

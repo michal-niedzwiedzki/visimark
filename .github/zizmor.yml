@@ -1,0 +1,10 @@
+# zizmor (https://docs.zizmor.sh) audits the workflows and action.yml in ci.yml.
+rules:
+  unpinned-uses:
+    config:
+      policies:
+        # First-party actions stay on tags: GitHub is already the trust root
+        # for every runner. Everything else is pinned to a commit SHA, with
+        # the tag in a trailing comment; Dependabot keeps both current.
+        "actions/*": ref-pin
+        "*": hash-pin
