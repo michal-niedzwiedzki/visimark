@@ -98,6 +98,10 @@
   that had become semver surface; `createServer`'s signature also named the
   MCP SDK's types, and the SDK is now bundled.
 
+- **`visimark`'s tarball ships only the declarations its export reaches.**
+  `dist/browser.d.ts` and `dist/playground/*.d.ts` are gone. No `exports`
+  entry led to them; they were the website playground's types.
+
 ### Changed
 
 - **Fewer installed packages.** `visimark` bundles the parser it uses and no

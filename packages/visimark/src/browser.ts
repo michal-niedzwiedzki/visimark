@@ -14,7 +14,7 @@
  * not help, because a bundler resolves before it shakes.
  *
  * That was never noticed because no browser consumer went through `index.ts`:
- * the playground enters at `playground/browser-entry.ts` and imports
+ * the playground enters at `browser/browser-entry.ts` and imports
  * `../eval/check.js`, `../write/fmt.js` and the rest **by path**. So the
  * repository had a browser-safe engine and a public engine, and no named
  * boundary between them. A client that is both — a plugin that wants the
@@ -44,16 +44,15 @@
  *   module; nothing else changed, and no signature did.
  *
  * **What is here that `index.ts` does not export.** `memoryReader` and
- * `sha256Hex`, from `playground/`. `ReaderPort` is synchronous and
+ * `sha256Hex`, from `browser/`. `ReaderPort` is synchronous and
  * `readSealed` must return a SHA-256, while every browser filesystem API and
  * `crypto.subtle.digest` are asynchronous — so a browser host cannot write a
  * direct adapter, and needs a map it can fill asynchronously and then read
  * synchronously. That is exactly `memoryReader`, and `sha256Hex` is the
  * synchronous digest it runs on, pinned against FIPS 180-4 and against
- * `node:crypto` over randomised inputs by `test/playground/sha256.test.ts`.
- * Both headers say they live under `playground/` because "scope is the point";
- * a second browser client is the event that reopens where they belong, and
- * moving them is not this file's business.
+ * `node:crypto` over randomised inputs by `test/browser/sha256.test.ts`.
+ * They live under `browser/` with the playground's engine entry, out of the
+ * published declarations: what only a browser host needs.
  *
  * **This is a subset, and that is enforced.**
  * `test/browser/entry-graph.test.ts` asserts that every value this module
@@ -65,7 +64,7 @@
  * **`node:path` is reachable, and is the consumer's problem.** `fs/gate.ts`
  * uses `dirname`, `isAbsolute`, `resolve` and `sep` to decide containment; it
  * touches no filesystem. The playground gets Bun's browser build of it and
- * `test/playground/browser-graph.test.ts` documents the rule for admitting a
+ * `test/browser/browser-graph.test.ts` documents the rule for admitting a
  * builtin; `editors/obsidian` maps it to a shim it ships, because Obsidian
  * mobile is not Electron and a builtin that merely happens to be unreached is
  * the class of bug that took the playground down for 74 minutes.
@@ -153,5 +152,5 @@ export type { WriteErr, WriteOk, WriterPort } from "./fs/writer.js";
 export type { CheckOptions } from "./eval/check.js";
 // The browser's `ReaderPort` and the synchronous digest it runs on. Not in
 // `index.ts`; see the header.
-export { memoryReader } from "./playground/memory-reader.js";
-export { sha256Hex } from "./playground/sha256.js";
+export { memoryReader } from "./browser/memory-reader.js";
+export { sha256Hex } from "./browser/sha256.js";

@@ -1,0 +1,25 @@
+// The website's browser code: the playground application (src/playground/)
+// and the docs/ pages' scripts (src/pages/). Both touch `document`, `window`,
+// `localStorage` and the DOM event model, so this program has the DOM lib —
+// and the engine's does not, so the engine and the CLI keep failing their
+// typecheck if they ever reach for a browser global.
+//
+// One program for both: they share the CDN-library declarations (`marked` is
+// used by five pages and declared once).
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    // `visimark` is the engine's browser-safe entry, as in every other browser
+    // client (editors/obsidian/tsconfig.json says why). codemirror-visimark
+    // from source, never its dist (#360). The bundle swaps the engine's runtime
+    // for ./src/playground/engine-global.ts (build-playground.ts); the types
+    // stay the engine's own. `bun test` reads these paths too.
+    "paths": {
+      "visimark": ["../packages/visimark/src/browser.ts"],
+      "codemirror-visimark": ["../packages/codemirror-visimark/src/index.ts"],
+      "codemirror-visimark/*": ["../packages/codemirror-visimark/src/*"]
+    }
+  },
+  "include": ["src", "test", "build-playground.ts"]
+}

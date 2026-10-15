@@ -30,7 +30,7 @@
       trade is a different order of magnitude from the script one.
 
       img-src grants `data:` for the chart SVGs the PREVIEW panel substitutes
-      in (see svgDataUri in src/playground/app/pipeline.ts, review §2.12) —
+      in (see svgDataUri in site/src/playground/pipeline.ts, review §2.12) —
       `data:` and `blob:` are separate grants, so that decision and this line
       move together.
 
@@ -42,7 +42,7 @@
       playground's documents are all local, and a remote image in a demo
       editor is a tracking beacon pointed at whoever opens a shared document.
       What changed is that the page now says so at the moment it bites, in
-      TERMINAL (reportBlockedImages in src/playground/app/main.ts), instead of
+      TERMINAL (reportBlockedImages in site/src/playground/main.ts), instead of
       swallowing it into the console.
 
       connect-src is 'self' because every fetch() is a sibling
@@ -343,7 +343,7 @@
          to "what is the playground on a phone", not a `flex-wrap` accident.
 
          The breakpoint is paired with `matchMedia("(min-width: 900px)")` in
-         src/playground/app/main.ts, which is what stops the application
+         site/src/playground/main.ts, which is what stops the application
          fetching 22 documents for a page nobody can see — and what boots it if
          a desktop window is dragged back open. Change one and change the
          other. */
@@ -419,7 +419,7 @@
          §2.3). The transitions are collapsed rather than removed so that
          anything keyed to `transitionend` still fires; the confetti is a
          <canvas> painted by JavaScript and can only be suppressed there — see
-         prefersReducedMotion() in src/playground/app/motion.ts. */
+         prefersReducedMotion() in site/src/playground/motion.ts. */
       @media (prefers-reduced-motion: reduce) {
         *,
         *::before,
@@ -1464,7 +1464,7 @@
                 <!-- Review §2.7: edits now survive a reload, so there has to
                      be a way back to the documents this page shipped with.
                      Files the visitor created are left alone — see
-                     src/playground/app/files.ts. -->
+                     site/src/playground/files.ts. -->
                 <button class="reset-all-btn" id="reset-all-btn" type="button">
                   Reset all documents
                 </button>
@@ -1903,17 +1903,17 @@ answers. Nothing in the document is changed.</pre>
          with no bundler. The order matters — visimark-playground.js reads
          `window.VisiMark` at boot, which visimark-browser.js assigns.
 
-         visimark-browser.js is the engine (packages/visimark/src/playground/
+         visimark-browser.js is the engine (packages/visimark/src/browser/
          browser-entry.ts). visimark-playground.js is this page's application
-         (packages/visimark/src/playground/app/), which lived here as 1,535
+         (site/src/playground/), which lived here as 1,535
          lines of inline <script> until review §2.4: inline, no linter,
          typechecker, formatter or test in the repository could see it. Both
          are committed build artifacts produced by
-         `bun run --filter visimark build:playground`, and the `playground-bundle`
+         `bun run --filter visimark-site build:playground`, and the `playground-bundle`
          CI job fails on either drifting from its source.
 
          The starter documents and the logo are siblings of this page (see
-         FILE_SOURCES in src/playground/app/sources.ts) and are fetched at
+         FILE_SOURCES in site/src/playground/sources.ts) and are fetched at
          runtime, which means playground.html must be served over http(s)
          (e.g. `bun run serve` or GitHub Pages) rather than opened directly via
          file://, since `fetch()` of local files is blocked by CORS there. -->

@@ -43,25 +43,14 @@
   "scripts": {
     "test": "bun test",
     "bench:finance": "bun bench/finance.ts",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.app.json",
+    "typecheck": "tsc --noEmit",
     "build": "rm -rf dist && bun build src/index.ts --target node --production --outdir dist && tsc -p tsconfig.build.json",
-    "build:playground": "bun build src/playground/browser-entry.ts --target browser --format iife --minify --outfile ../../docs/vendor/visimark-browser.js && bun build-playground.ts && bun run build:site",
-    "build:site": "for p in index preview tutorial ci simulate mcp-server; do bun build src/site/$p-page.ts --target browser --format iife --minify --outfile ../../docs/vendor/visimark-site-$p.js || exit 1; done",
     "prepublishOnly": "cp ../../README.md README.md && bun run typecheck && bun test && bun run build"
   },
   "dependencies": {
     "decimal.js": "^10.4.3"
   },
   "devDependencies": {
-    "@codemirror/commands": "^6.11.1",
-    "@codemirror/lang-markdown": "^6.5.2",
-    "@codemirror/language": "^6.13.1",
-    "@codemirror/lint": "^6.9.7",
-    "@codemirror/search": "^6.7.2",
-    "@codemirror/state": "^6.7.6",
-    "@codemirror/view": "^6.43.14",
-    "@happy-dom/global-registrator": "^20.14.5",
-    "@lezer/highlight": "^1.2.5",
     "@types/bun": "^1.4.2",
     "@types/node": "^24.19.2",
     "remark-gfm": "^4.0.0",

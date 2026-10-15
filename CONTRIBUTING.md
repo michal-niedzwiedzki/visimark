@@ -249,7 +249,7 @@ and `articles-pages` enforce the same checks in CI either way.
 | `bun run gen:docs` | Regenerates the function reference from the engine's own registry |
 | `bun run gen:mcp` | Regenerates the MCP server's served skill and doc copies |
 | `bun run gen:editor-templates` | Regenerates the editor plugins' shared templates module from `editors/shared/templates/*.md` |
-| `bun run --filter visimark build:playground` | Rebuilds the browser bundles committed under `docs/vendor/`. The application bundle is built by `packages/visimark/build-playground.ts`, which also bundles CodeMirror 6 and `codemirror-visimark` |
+| `bun run --filter visimark-site build:playground` | Rebuilds the browser bundles committed under `docs/vendor/`. The application bundle is built by `site/build-playground.ts`, which also bundles CodeMirror 6 and `codemirror-visimark` |
 | `bun run serve` | Serves `docs/` on `http://localhost:8080` — needed for the playground and the tutorial pages, which fetch their content and cannot run from `file://` |
 | `bun run vscode-install` | Builds, packages and installs the VS Code extension locally |
 
@@ -280,7 +280,7 @@ the matching regeneration and **commit the result**:
 $ bun run gen:docs                              # if you changed a builtin function
 $ bun run gen:mcp                               # if you changed SKILL.md or a served doc
 $ bun run gen:editor-templates                  # if you changed an editor template
-$ bun run --filter visimark build:playground    # if you changed engine or playground source
+$ bun run --filter visimark-site build:playground  # if you changed engine or playground source
 ```
 
 If you touched any Markdown document in `docs/` or the repository's own prose,

@@ -1,0 +1,31 @@
+{
+  "name": "visimark-site",
+  "private": true,
+  "description": "The website's browser code: the playground application and the docs/ pages' scripts. Private and unversioned: its bundles are committed under docs/vendor/.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "build:playground": "bun build ../packages/visimark/src/browser/browser-entry.ts --target browser --format iife --minify --outfile ../docs/vendor/visimark-browser.js && bun build-playground.ts && bun run build:pages",
+    "build:pages": "for p in index preview tutorial ci simulate mcp-server; do bun build src/pages/$p-page.ts --target browser --format iife --minify --outfile ../docs/vendor/visimark-site-$p.js || exit 1; done"
+  },
+  "dependencies": {
+    "codemirror-visimark": "workspace:*",
+    "visimark": "workspace:*"
+  },
+  "devDependencies": {
+    "@codemirror/commands": "^6.11.1",
+    "@codemirror/lang-markdown": "^6.5.2",
+    "@codemirror/language": "^6.13.1",
+    "@codemirror/lint": "^6.9.7",
+    "@codemirror/search": "^6.7.2",
+    "@codemirror/state": "^6.7.6",
+    "@codemirror/view": "^6.43.14",
+    "@happy-dom/global-registrator": "^20.14.5",
+    "@lezer/highlight": "^1.2.5",
+    "@types/bun": "^1.4.2",
+    "@types/node": "^24.19.2",
+    "typescript": "^7.0.2"
+  }
+}

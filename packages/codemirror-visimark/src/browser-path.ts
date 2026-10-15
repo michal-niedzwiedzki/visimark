@@ -2,7 +2,7 @@
  * The plugin's `node:path`, bundled in place of the builtin.
  *
  * **Why a shim rather than an allowlist entry.**
- * `packages/visimark/test/playground/browser-graph.test.ts` permits exactly one
+ * `packages/visimark/test/browser/browser-graph.test.ts` permits exactly one
  * `node:` builtin, `node:path`, because Bun's browser build of it works and it
  * touches no filesystem. That permission does not transfer here. Obsidian
  * desktop is Electron and has Node; Obsidian mobile is not and does not. A

@@ -9,7 +9,7 @@ import type { DocumentFile, ReaderPort, SealedRead } from "./reader.js";
  * `node:fs`/`node:crypto` on the read side.
  *
  * **Nothing in the browser's module graph may import this file.** That is the
- * whole point of the port; `test/playground/browser-graph.test.ts` enforces
+ * whole point of the port; `test/browser/browser-graph.test.ts` enforces
  * it. Everything here is the code that used to sit inline in `fs/gate.ts`,
  * `artifact/stale.ts` and `import/resolve.ts`, moved rather than rewritten, so
  * CLI behaviour is unchanged.

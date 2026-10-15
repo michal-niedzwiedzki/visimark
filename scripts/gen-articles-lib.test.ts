@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { Article } from "../packages/visimark/src/site/articles.js";
+import type { Article } from "../site/src/pages/articles.js";
 import {
   nextArticle,
   relatedArticle,

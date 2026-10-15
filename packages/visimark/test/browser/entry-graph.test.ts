@@ -14,7 +14,7 @@ import * as index from "../../src/index.js";
  * Two properties, because either can break without the other:
  *
  * 1. **No Node in the graph.** The same source walk
- *    `test/playground/browser-graph.test.ts` runs over the playground entry,
+ *    `test/browser/browser-graph.test.ts` runs over the playground entry,
  *    run over this one. `node:path` is the single admitted builtin, for the
  *    reason that file's `ALLOWED_BUILTINS` records.
  * 2. **The browser surface is a subset of the public one.** Every value
@@ -24,7 +24,7 @@ import * as index from "../../src/index.js";
  *    client" true rather than aspirational.
  *
  * **This deliberately restates the walk** rather than sharing a helper with
- * `test/playground/browser-graph.test.ts`. Those are two guards over two
+ * `test/browser/browser-graph.test.ts`. Those are two guards over two
  * graphs that can be broken independently, and the playground guard's header
  * says in as many words that it must not be relaxed; a shared walker is one
  * file whose edit relaxes both. Extract one when there is a third caller.

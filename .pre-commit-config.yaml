@@ -35,13 +35,13 @@ repos:
       - id: gen-playground-bundle
         name: rebuild playground bundle
         language: system
-        entry: 'sh scripts/prepush-regen.sh --pin-bun "build: regenerate the playground bundle" "bun run --filter visimark build:playground" "docs/vendor/*"'
+        entry: 'sh scripts/prepush-regen.sh --pin-bun "build: regenerate the playground bundle" "bun run --filter visimark-site build:playground" "docs/vendor/*"'
         stages: [pre-push]
         pass_filenames: false
         # Same trigger set as the playground-bundle CI job: anything the
         # bundles are built from. Skipped, not failed, on a Bun that is not
         # the pinned one — the minifier's output is version-specific.
-        files: ^(packages/visimark/src/|packages/visimark/package\.json$|bun\.lock$)
+        files: ^(packages/visimark/src/|packages/codemirror-visimark/src/|site/|bun\.lock$)
       - id: gen-docs
         name: regenerate docs pages and MCP resources
         language: system

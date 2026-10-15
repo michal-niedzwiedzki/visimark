@@ -12,7 +12,7 @@ import { EXTERNALS, options } from "../esbuild.config.mjs";
  * it fails on the first line, for every note, before anything can report it.
  *
  * This is stricter than the playground's rule and deliberately so.
- * `packages/visimark/test/playground/browser-graph.test.ts` permits exactly one
+ * `packages/visimark/test/browser/browser-graph.test.ts` permits exactly one
  * builtin, `node:path`, because Bun's browser build of it works in a tab. That
  * permission does not transfer: there is no allowlist here, and the number is
  * zero.

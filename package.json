@@ -23,7 +23,8 @@
   },
   "workspaces": [
     "packages/*",
-    "editors/*"
+    "editors/*",
+    "site"
   ],
   "type": "module",
   "scripts": {
