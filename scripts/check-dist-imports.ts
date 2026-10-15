@@ -126,6 +126,8 @@ function namedTypes(pkgRoot: string, entries: string[]): Map<string, string> {
 
 let fail = false;
 for (const { file, npm } of NPM_MANIFESTS) {
+  // This package's own verdict; `fail` is the run's, for the exit code.
+  let failed = false;
   const pkgDir = dirname(file);
   const dist = join(root, pkgDir, "dist");
   let manifest: Record<string, any>;
@@ -157,7 +159,7 @@ for (const { file, npm } of NPM_MANIFESTS) {
         file,
         `${npm}: ${pkgDir}/dist/${where} loads "${name}", which ${file} does not declare. Declare it, or bundle it.`,
       );
-      fail = true;
+      failed = true;
     }
   }
   for (const [name, where] of named) {
@@ -166,7 +168,7 @@ for (const { file, npm } of NPM_MANIFESTS) {
         file,
         `${npm}: ${pkgDir}/${where} imports types from "${name}", which ${file} does not declare. A consumer's typecheck cannot resolve it: declare it, or declare the types structurally.`,
       );
-      fail = true;
+      failed = true;
     }
   }
   for (const name of dependencies) {
@@ -175,10 +177,11 @@ for (const { file, npm } of NPM_MANIFESTS) {
         file,
         `${npm}: ${file} depends on "${name}", but nothing in ${pkgDir}/dist loads it or names it. If the build bundles it, move it to devDependencies.`,
       );
-      fail = true;
+      failed = true;
     }
   }
-  if (!fail) {
+  if (failed) fail = true;
+  else {
     const runtime = [...loaded.keys()].sort().join(", ") || "nothing";
     console.log(
       `${npm}: loads ${runtime}; declares ${dependencies.sort().join(", ") || "nothing"}`,

@@ -401,6 +401,15 @@ describe("check-dist-imports", () => {
     expect(run("check-dist-imports.ts", root).code).toBe(0);
   });
 
+  test("still reports every passing package after one fails", () => {
+    // `visimark` comes first in the manifest list; the others must still print.
+    const root = pkgTree({ "packages/visimark/dist/index.js": 'import "left-pad";\n' });
+    const r = run("check-dist-imports.ts", root);
+    expect(r.code).toBe(1);
+    expect(r.out).toContain("remark-lint-visimark: loads nothing");
+    expect(r.out).toContain("markdown-it-visimark: loads nothing");
+  });
+
   test("fails when a package has not been built", () => {
     const root = pkgTree({});
     rmSync(join(root, remark, "dist"), { recursive: true });
@@ -446,6 +455,16 @@ describe("check-workflow-downloads", () => {
       ),
     );
     expect(r.code).toBe(0);
+  });
+
+  test("fails a download hidden behind a /dev/null probe in the same command", () => {
+    for (const cmd of [
+      "curl -sS -o /dev/null -o t.tgz https://x.test/v1/t.tgz",
+      "curl -sS -o /dev/null -O https://x.test/v1/t.tgz",
+    ]) {
+      const r = run("check-workflow-downloads.ts", tree([], wf(cmd)));
+      expect({ cmd, code: r.code }).toEqual({ cmd, code: 1 });
+    }
   });
 
   test("fails a download verified only in a later step", () => {

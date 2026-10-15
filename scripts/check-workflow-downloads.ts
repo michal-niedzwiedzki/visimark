@@ -47,8 +47,12 @@ const files = [
 /** Whether a (joined) command line saves a download to a file. */
 function savesFile(command: string): boolean {
   if (/\bcurl\b/.test(command)) {
-    const out = /(?:^|\s)(?:-[a-zA-Z]*o|--output)\s+("[^"]*"|'[^']*'|\S+)/.exec(command);
-    if (out) return out[1]!.replace(/^["']|["']$/g, "") !== "/dev/null";
+    // Every output flag counts: one `-o /dev/null` probe in a command does
+    // not excuse a second `-o file`, or a `-O`, in the same one.
+    const outputs = [
+      ...command.matchAll(/(?:^|\s)(?:-[a-zA-Z]*o|--output)\s+("[^"]*"|'[^']*'|\S+)/g),
+    ].map((m) => m[1]!.replace(/^["']|["']$/g, ""));
+    if (outputs.some((target) => target !== "/dev/null")) return true;
     return /(?:^|\s)(?:-[a-zA-Z]*O|--remote-name)\b/.test(command);
   }
   if (/\bwget\b/.test(command)) return !/(?:^|\s)-[a-zA-Z]*O\s*-(?:\s|$)/.test(command);
