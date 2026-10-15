@@ -53,6 +53,17 @@ jobs:
           bun scripts/check-mcp-name.ts
           bun scripts/check-obsidian-root-mirror.ts
 
+      # Pins that only mean something if they agree with what they stand for:
+      # each type package at the runtime floor it describes, each root
+      # `overrides` entry inside every range a workspace declares for it, and
+      # every published `engines.bun` at the Bun the release builds with.
+      # Review 2026-10-15 §2.5–§2.7; the reasons are in each script's header.
+      - name: pins must agree with the floors they stand for
+        run: |
+          bun scripts/check-type-floors.ts
+          bun scripts/check-overrides.ts
+          bun scripts/check-bun-policy.ts
+
       # skills-lock.json pins each vendored agent skill by content hash; this
       # recomputes the hashes so the pin is checked, not just recorded.
       - name: vendored skills must match skills-lock.json
@@ -625,10 +636,14 @@ jobs:
             cd ..
           done
 
+  # The container is the packageManager Bun, which is also every published
+  # `engines.bun` floor: this is the job that proves the floor installs and
+  # runs. `build` runs the test suite on `latest`.
+  # scripts/check-bun-policy.ts keeps the tag and the floor together.
   smoke-bun:
     needs: pack
     runs-on: ubuntu-latest
-    container: oven/bun:latest
+    container: oven/bun:1.4.2
     steps:
       - uses: actions/download-artifact@v8
         with:

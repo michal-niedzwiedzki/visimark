@@ -81,6 +81,15 @@ $ bun install
 `node_modules/.bin`, so `bun run` sees a `visimark` built from your working
 tree rather than the published package.
 
+The root `package.json` has an `overrides` block that pins four CodeMirror
+packages (`@codemirror/language`, `@codemirror/state`, `@codemirror/view`,
+`@lezer/highlight`) to one version for the whole workspace: two copies of
+`@codemirror/state` are two editor states, and nothing works across them.
+Dependabot does not read `overrides` and ignores those four, so bump one by
+hand, in the override and every manifest that names it, in one commit.
+`scripts/check-overrides.ts` fails CI when an override falls outside a range a
+workspace declares.
+
 Then check that it works:
 
 ```console

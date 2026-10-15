@@ -8,6 +8,8 @@ updates:
     groups:
       actions:
         patterns: ["*"]
+    cooldown:
+      default-days: 7
 
   # The bun workspace at the repo root (packages/* and editors/*).
   #
@@ -30,11 +32,30 @@ updates:
     groups:
       bun:
         patterns: ["*"]
-    # @types/vscode tracks the VS Code API surface, not just a version
-    # number: vsce refuses to package an extension whose devDependency
-    # types are newer than its declared `engines.vscode` floor
-    # (editors/vscode/package.json), so an unattended bump here breaks
-    # `build` every time upstream ships a release past that floor. Bump
-    # it by hand alongside `engines.vscode` instead.
+    # A type package is an API claim, so each one sits at the runtime floor
+    # it stands in for and moves with that floor, by hand, in one commit:
+    # `@types/vscode` with `engines.vscode`, and `@types/node`'s major with
+    # `engines.node` (minors and patches within the major are fine). An
+    # unattended bump compiles against APIs the floor does not have and the
+    # typecheck still passes; `scripts/check-type-floors.ts` fails CI on the
+    # lockfile if one slips. (`obsidian` floats on purpose: its typings carry
+    # `@since` tags, which editors/obsidian/test/since-drift.test.ts reads.)
+    #
+    # The four packages the root `overrides` pin (one CodeMirror copy per
+    # workspace) are bumped by hand too, override and manifests together:
+    # Dependabot does not read `overrides`, so its manifest bumps did nothing
+    # but leave every workspace below its own declared range.
+    # `scripts/check-overrides.ts` fails CI when the two disagree.
     ignore:
       - dependency-name: "@types/vscode"
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@codemirror/language"
+      - dependency-name: "@codemirror/state"
+      - dependency-name: "@codemirror/view"
+      - dependency-name: "@lezer/highlight"
+    # A freshly published version waits a week before it is proposed, so a
+    # compromised release is more likely to be caught and yanked upstream
+    # first.
+    cooldown:
+      default-days: 7
