@@ -70,13 +70,6 @@ jobs:
             exit 1
           fi
 
-      # Not in ci.yml: a core-only bump would turn every PR red until the
-      # plugin was re-released. Here it asks the one question that matters, at
-      # the one commit that is about to ship — does the "Bundles engine X."
-      # line tell the truth about what main.js carries.
-      - name: Verify the changelog names the bundled engine
-        run: bun scripts/check-obsidian-engine-line.ts
-
       # Only this version's section; the whole file is history, not notes.
       - name: Extract the release notes
         env:

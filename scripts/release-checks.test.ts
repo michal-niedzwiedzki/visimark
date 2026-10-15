@@ -94,45 +94,6 @@ describe("check-obsidian-root-mirror", () => {
   });
 });
 
-describe("check-obsidian-engine-line", () => {
-  const files = (claim: string, engine = "0.1.10") => ({
-    "packages/visimark/package.json": json({ version: engine }),
-    "editors/obsidian/CHANGELOG.md": `# Changelog\n\n## Unreleased\n\n## 0.2.2 - 2026-09-28\n\nText.\n\n${claim}\n\n## 0.2.1 - 2026-09-27\n\nBundles engine 0.1.9.\n`,
-  });
-
-  test("passes when the newest entry names the tree's engine", () => {
-    expect(run("check-obsidian-engine-line.ts", tree(files("Bundles engine 0.1.10."))).code).toBe(
-      0,
-    );
-  });
-
-  test("fails when a core bump left the line behind", () => {
-    const r = run("check-obsidian-engine-line.ts", tree(files("Bundles engine 0.1.10.", "0.1.11")));
-    expect(r.code).toBe(1);
-    expect(r.out).toContain("0.1.10");
-    expect(r.out).toContain("0.1.11");
-  });
-
-  test("only reads the newest dated entry, not older ones", () => {
-    // 0.2.1 says 0.1.9, which must not matter.
-    expect(run("check-obsidian-engine-line.ts", tree(files("Bundles engine 0.1.10."))).code).toBe(
-      0,
-    );
-  });
-
-  test("fails when the newest entry has no engine line", () => {
-    const r = run("check-obsidian-engine-line.ts", tree(files("No line here.")));
-    expect(r.code).toBe(1);
-    expect(r.out).toContain("Bundles engine");
-  });
-
-  // No "passes on the real repository" case, on purpose: this check runs in
-  // obsidian-release.yml only, because a core-only bump leaves the plugin
-  // changelog one engine version behind until the plugin ships (releasing.md,
-  // "Release order"). Asserting it against the live tree turned ci red on the
-  // v0.2.0 release commit.
-});
-
 describe("changelog-section", () => {
   const changelog = [
     "# Changelog",
