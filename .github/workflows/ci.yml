@@ -481,6 +481,7 @@ jobs:
           cp scripts/plugins-smoke.mjs "$RUNNER_TEMP/plugins-smoke.mjs"
           cp scripts/codemirror-smoke.mjs "$RUNNER_TEMP/codemirror-smoke.mjs"
           cp scripts/markdown-it-smoke.mjs "$RUNNER_TEMP/markdown-it-smoke.mjs"
+          cp scripts/types-smoke.mts "$RUNNER_TEMP/types-smoke.mts"
       - uses: actions/upload-artifact@v7
         with:
           name: mcp-handshake
@@ -489,6 +490,7 @@ jobs:
             ${{ runner.temp }}/plugins-smoke.mjs
             ${{ runner.temp }}/codemirror-smoke.mjs
             ${{ runner.temp }}/markdown-it-smoke.mjs
+            ${{ runner.temp }}/types-smoke.mts
           if-no-files-found: error
 
   smoke-node:
@@ -600,6 +602,20 @@ jobs:
           [ "$packed" = "$installed" ] || { echo "::error::the engine under test is not the packed one"; exit 1; }
           cp ../plugins-smoke.mjs .
           node plugins-smoke.mjs
+
+      - name: the packed type declarations typecheck in a consumer project
+        run: |
+          set -e
+          # The lint plugins' scratch project from the step above. TypeScript
+          # and the Node types come from the registry, at the repo's
+          # TypeScript major and this runner's Node major; nothing else is
+          # added, so an import a published .d.ts makes and its package does
+          # not declare fails here (remark-lint-visimark 0.2.0 imported
+          # `unified` and `mdast` this way).
+          cd lib
+          npm i --no-save typescript@7 "@types/node@$(node -p 'process.versions.node.split(".")[0]')"
+          cp ../types-smoke.mts .
+          npx tsc --noEmit --strict --skipLibCheck false --module node16 --moduleResolution node16 --target es2022 --types node types-smoke.mts
 
       - name: the CodeMirror extension renders under Node only, at its peer floor
         run: |
