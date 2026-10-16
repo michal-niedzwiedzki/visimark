@@ -7,7 +7,8 @@
  */
 
 import type { VisiMarkApi } from "./types.js";
-import { byId, escapeHtml } from "./dom.js";
+import { byId } from "./dom.js";
+import { escapeHtml, setTrustedHtml } from "../html.js";
 
 function refInline(s: string): string {
   return escapeHtml(s).replace(/`([^`]+)`/g, "<code>$1</code>");
@@ -60,9 +61,11 @@ export function renderReference(VM: VisiMarkApi): void {
     const row = document.createElement("tr");
     const nameCell = document.createElement("td");
     nameCell.className = "ref-name";
-    nameCell.innerHTML = `<code>${escapeHtml(sig)}</code>`;
+    const sigCode = document.createElement("code");
+    sigCode.textContent = sig;
+    nameCell.appendChild(sigCode);
     const descCell = document.createElement("td");
-    descCell.innerHTML = lines.join("");
+    setTrustedHtml(descCell, lines.join(""));
     row.appendChild(nameCell);
     row.appendChild(descCell);
     tbody.appendChild(row);

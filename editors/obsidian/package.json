@@ -16,6 +16,7 @@
     "test": "bun test",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
+    "lint:scanner": "cd ../.. && eslint --config editors/obsidian/eslint.scanner.config.mjs $(git ls-files -- '*.ts' '*.mts' '*.cts' '*.js' '*.mjs' '*.cjs' ':!docs/vendor/**')",
     "build": "bun esbuild.config.mjs"
   },
   "dependencies": {

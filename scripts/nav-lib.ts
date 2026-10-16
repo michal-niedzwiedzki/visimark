@@ -5,7 +5,7 @@
  * and `bun run gen:examples`.
  */
 
-import { escapeHtml } from "../site/src/pages/dom.js";
+import { escapeHtml } from "../site/src/html.js";
 import manifest from "../docs/nav.json" with { type: "json" };
 
 export interface NavLink {

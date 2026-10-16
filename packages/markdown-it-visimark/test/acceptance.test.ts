@@ -24,7 +24,7 @@ const disk = (p: string): string | null => {
 };
 const parse = (html: string): HTMLElement => {
   const el = document.createElement("div");
-  el.innerHTML = html;
+  el.replaceChildren(...new DOMParser().parseFromString(html, "text/html").body.childNodes);
   return el;
 };
 

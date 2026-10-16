@@ -78,10 +78,14 @@ jobs:
         run: bun scripts/check-links.ts
 
       - run: bun run lint
-      # The Obsidian community scanner's ruleset. Errors fail the build; the
-      # warnings that remain are known and listed in editors/obsidian's
-      # changelog, because the scanner shows them publicly on the Scorecard.
+      # The Obsidian community scanner reads the root manifest.json and lints
+      # the whole repository as the plugin. Two steps stand in for it:
+      # the scanner's full typed ruleset on the plugin itself (errors fail;
+      # its warnings are accepted and show publicly on the Scorecard), and
+      # its two Error rules over every tracked file, which caught nothing
+      # before #402 because site/ was never linted.
       - run: bun run --filter visimark-obsidian lint
+      - run: bun run lint:scanner
       - run: bun run format:check
       - run: bun run typecheck
       - run: bun run build

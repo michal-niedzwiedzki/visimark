@@ -8,7 +8,7 @@
  * fixed and only the subject changes.
  */
 
-import { escapeHtml } from "./dom.js";
+import { escapeHtml, setTrustedHtml } from "../html.js";
 
 interface Dataset {
   slug: string;
@@ -233,7 +233,7 @@ export function fillPreviewCards(pick: number = Math.floor(Math.random() * DATAS
   const slots = buildSlots(DATASETS[pick % DATASETS.length]!);
   document.querySelectorAll<HTMLElement>("pre[data-ex]").forEach((pre) => {
     const html = slots[pre.getAttribute("data-ex") ?? ""];
-    if (html != null) pre.innerHTML = html;
+    if (html != null) setTrustedHtml(pre, html);
   });
 }
 

@@ -8,7 +8,8 @@
  * interpolated, which is what §2.3 credited this page for.
  */
 
-import { byId, escapeHtml } from "./dom.js";
+import { byId } from "./dom.js";
+import { setTrustedHtml } from "../html.js";
 
 const DEFAULT_FILE = "example-ci-sharding.md";
 const REPO_BLOB = "https://github.com/michal-niedzwiedzki/visimark/blob/master/docs/";
@@ -55,15 +56,18 @@ function start(): void {
     });
     if (start === -1) return;
     const section = lines.slice(start).join("\n").trim();
-    highlightEl.innerHTML = typeof marked === "undefined" ? section : marked.parse(section);
+    setTrustedHtml(highlightEl, typeof marked === "undefined" ? section : marked.parse(section));
     highlightEl.hidden = false;
   };
 
   if (sourceLabelEl) sourceLabelEl.textContent = `docs/${file}`;
   if (sourceLinkEl) {
-    sourceLinkEl.innerHTML =
-      `View on GitHub: <a href="${REPO_BLOB}${escapeHtml(file)}" target="_blank" ` +
-      `rel="noopener">docs/${escapeHtml(file)}</a>`;
+    const link = document.createElement("a");
+    link.href = `${REPO_BLOB}${file}`;
+    link.target = "_blank";
+    link.rel = "noopener";
+    link.textContent = `docs/${file}`;
+    sourceLinkEl.replaceChildren("View on GitHub: ", link);
   }
 
   fetch(file)
@@ -74,7 +78,7 @@ function start(): void {
     .then((raw) => {
       document.title = `VisiMark — ${file}`;
       sourceEl.textContent = raw;
-      previewEl.innerHTML = typeof marked === "undefined" ? raw : marked.parse(raw);
+      setTrustedHtml(previewEl, typeof marked === "undefined" ? raw : marked.parse(raw));
       if (highlight) renderHighlight(raw);
       if (demoEl) demoEl.hidden = false;
     })

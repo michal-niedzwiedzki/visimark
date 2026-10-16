@@ -177,7 +177,8 @@ last step, **the release must be complete**, downloads the three files back
 and fails unless the release is not a draft, its `manifest.json` says `X.Y.Z`,
 and `gh attestation verify` passes for `main.js` and `styles.css`. The release
 body is that version's own section of the plugin changelog. Before tagging,
-`bun run --filter visimark-obsidian lint` must show no errors.
+`bun run --filter visimark-obsidian lint` and `bun run lint:scanner` must
+show no errors.
 
 A tag made with the workflow's own token does not start another workflow, so
 the bare tag does not run `obsidian-release.yml` a second time. If the
@@ -219,11 +220,18 @@ something a tagged release triggers:
 
 What the scanner looks at, learned from 0.2.0 to 0.2.2:
 
-- It lints with `eslint-plugin-obsidianmd`. Errors fail
-  `bun run --filter visimark-obsidian lint`; three warnings are known and
-  accepted (see the plugin changelog). Warnings show on the public Scorecard.
-- It lints the whole repository, so about twenty warnings from `packages/*` and
-  `editors/vscode` appear on the Scorecard too. Known, accepted.
+- It lints the whole repository with `eslint-plugin-obsidianmd`. CI stands in
+  for it twice: `bun run --filter visimark-obsidian lint` runs the full typed
+  ruleset on the plugin, and `bun run lint:scanner` runs the two rules that
+  failed 0.4.0's Scorecard over every tracked file (#402). An Error in either
+  fails the build.
+- Its warnings show on the public Scorecard and are accepted. The plugin lint
+  step prints the plugin's own; the rest of the repository's appear only on
+  the Scorecard (`lint:scanner` runs Error rules alone). No count is kept
+  here, because a count goes stale.
+- It reports dependency advisories. Fix one with an exact root `overrides`
+  entry, or accept it in `osv-scanner.toml` with a reason and an
+  `ignoreUntil` date; `.github/workflows/supply-chain.yml` checks both.
 - It looks for a **build-provenance attestation** on `main.js` and `styles.css`.
   `obsidian-release.yml` makes one from the same bytes it uploads, and its last
   step verifies it.

@@ -240,6 +240,7 @@ and `articles-pages` enforce the same checks in CI either way.
 | `bun test` | At the root, only `scripts/` (the root `bunfig.toml` sets `root`). Inside a workspace, that workspace's tests. |
 | `bun run typecheck` | TypeScript, across every workspace |
 | `bun run lint` | `oxlint`, with warnings treated as failures |
+| `bun run lint:scanner` | The Obsidian community scanner's two Error rules over every tracked JS/TS file — what CI runs because the scanner lints the whole repository. A file deleted but not yet committed makes it exit 2: commit or restore it |
 | `bun run format` | `oxfmt`, in place |
 | `bun run format:check` | `oxfmt`, read-only — this is what CI runs |
 | `bun run build` | Builds every package |

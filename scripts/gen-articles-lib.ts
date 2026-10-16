@@ -19,7 +19,7 @@ import {
   articleSourceUrl,
   type Article,
 } from "../site/src/pages/articles.js";
-import { escapeHtml } from "../site/src/pages/dom.js";
+import { escapeHtml } from "../site/src/html.js";
 import { GOATCOUNTER_ORIGIN, analyticsScriptTag } from "./analytics-lib.js";
 
 const SITE_DESCRIPTION =

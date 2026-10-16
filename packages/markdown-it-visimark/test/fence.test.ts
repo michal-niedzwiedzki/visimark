@@ -39,7 +39,7 @@ test("escaping round-trips through an HTML parser", () => {
   const out = md().render(fence(`vmark #s "a<b>&'"`));
   expect(out).toContain(`data-vmark-info="#s &quot;a&lt;b&gt;&amp;'&quot;"`);
   const host = document.createElement("div");
-  host.innerHTML = out;
+  host.replaceChildren(...new DOMParser().parseFromString(out, "text/html").body.childNodes);
   expect(host.querySelector("pre")!.getAttribute("data-vmark-info")).toBe(`#s "a<b>&'"`);
 });
 

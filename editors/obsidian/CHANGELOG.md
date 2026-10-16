@@ -7,6 +7,13 @@ from its own earlier line and end with the engine version they bundled.
 
 ## Unreleased
 
+- **The repository no longer trips the community scanner's two Errors**
+  (`no-unsanitized/property`, `obsidianmd/no-static-styles-assignment`). The
+  code was in the project's website under `site/` and never in `main.js`; CI
+  now runs both rules over every tracked file. Three dependency advisories in
+  development tools are cleared, and the fourth (`braces`, no fix released) is
+  recorded as accepted (#402).
+
 ## 0.4.0 - 2026-10-15
 
 The plugin now carries the version of the release it ships in: 0.4.0 bundles
