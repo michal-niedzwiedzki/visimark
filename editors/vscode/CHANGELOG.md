@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.1 - 2026-10-17
+
+No editor-visible changes. Bundles engine 0.4.1.
+
 ## 0.4.0 - 2026-10-15
 
 - `report` statements in a `<!--vmark:report #id …-->` comment are understood; a malformed report comment gets a `SHEET` diagnostic, and an unknown, nested or malformed `<!--vmark:` comment gets `ANCHOR`.
