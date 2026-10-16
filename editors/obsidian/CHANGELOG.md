@@ -7,6 +7,8 @@ from its own earlier line and end with the engine version they bundled.
 
 ## Unreleased
 
+## 0.4.1 - 2026-10-17
+
 - **The repository no longer trips the community scanner's two Errors**
   (`no-unsanitized/property`, `obsidianmd/no-static-styles-assignment`). The
   code was in the project's website under `site/` and never in `main.js`; CI
