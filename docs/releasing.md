@@ -225,8 +225,10 @@ What the scanner looks at, learned from 0.2.0 to 0.2.2:
   ruleset on the plugin, and `bun run lint:scanner` runs the two rules that
   failed 0.4.0's Scorecard over every tracked file (#402). An Error in either
   fails the build.
-- Its warnings show on the public Scorecard and are accepted. The two lint
-  steps print them; no count is kept here, because a count goes stale.
+- Its warnings show on the public Scorecard and are accepted. The plugin lint
+  step prints the plugin's own; the rest of the repository's appear only on
+  the Scorecard (`lint:scanner` runs Error rules alone). No count is kept
+  here, because a count goes stale.
 - It reports dependency advisories. Fix one with an exact root `overrides`
   entry, or accept it in `osv-scanner.toml` with a reason and an
   `ignoreUntil` date; `.github/workflows/supply-chain.yml` checks both.

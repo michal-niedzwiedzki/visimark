@@ -312,7 +312,9 @@ outcomes:
     show no errors") gains `bun run lint:scanner`;
   - the "What the scanner looks at" bullets (lines 222-226): drop "three
     warnings are known" and "about twenty warnings". Say that warnings are
-    accepted and printed by the two lint steps, with no count. Say that CI
+    accepted, with no count: the plugin lint step prints the plugin's own,
+    and the rest appear only on the Scorecard, since `lint:scanner` runs
+    Error rules alone. Say that CI
     runs the scanner's Error rules over every tracked file
     (`lint:scanner`), and that dependency advisories are handled by
     `osv-scanner.toml` and `supply-chain.yml`.
