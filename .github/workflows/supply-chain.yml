@@ -89,17 +89,35 @@ jobs:
         run: &unused |
           set -euo pipefail
           # osv-scanner prints "<path> has unused ignores:" then one " - <id>"
-          # line per entry that matched nothing, and still exits 0. An accept
-          # whose advisory is gone (fixed upstream, or the package left
-          # bun.lock) is a stale pin: fail until the entry is deleted.
+          # line per entry that filtered nothing, and still exits 0. That is
+          # two different cases:
+          # - the advisory is gone (fixed upstream, or the package left
+          #   bun.lock): a stale pin, so fail until the entry is deleted;
+          # - the entry is past its ignoreUntil, so it stopped filtering and
+          #   the advisory is back in the scan output: it must be re-judged,
+          #   not deleted. The weekly scan fails on it; a PR only gets a
+          #   notice, because no PR caused the date to pass.
+          # The scan output names an advisory as `"<id>"` (JSON) or as
+          # `osv.dev/<id>` (table); the unused-ignores list itself does neither.
           log="$RUNNER_TEMP/osv-head.log"
           [ -f "$log" ] || exit 0
           ids=$(awk '/has unused ignores:/ { on = 1; next } on && /^ - / { print $2; next } { on = 0 }' "$log")
           [ -z "$ids" ] && exit 0
+          fail=0
           for id in $ids; do
-            echo "::error file=osv-scanner.toml::$id is ignored in osv-scanner.toml but no longer matches anything in bun.lock. Remove the entry."
+            if grep -qsE "\"$id\"|osv\.dev/$id" "$log" "$RUNNER_TEMP/head.json"; then
+              if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+                echo "::notice file=osv-scanner.toml::$id is past its ignoreUntil date in osv-scanner.toml. The weekly scan fails on it until it is re-judged: fix the advisory, or extend the date with a reason."
+              else
+                echo "::error file=osv-scanner.toml::$id is past its ignoreUntil date in osv-scanner.toml and is still present in bun.lock. Re-judge it: fix the advisory, or extend the date with a reason."
+                fail=1
+              fi
+            else
+              echo "::error file=osv-scanner.toml::$id is ignored in osv-scanner.toml but no longer matches anything in bun.lock. Remove the entry."
+              fail=1
+            fi
           done
-          exit 1
+          exit "$fail"
 
   # Every package in bun.lock, weekly. Report only: a new advisory against an
   # existing dependency, or an osv-scanner.toml entry past its ignoreUntil,

@@ -69,7 +69,10 @@ export function setTrustedHtml(el: Element, html: string): void;
   from the comments now in `site/src/playground/pipeline.ts` (the preview) and
   `site/src/pages/demo-panes.ts`. It says:
   - every string passed in today is either the visitor's own typing or a
-    document committed to this origin, so at worst this is self-XSS;
+    document committed to this origin, so at worst this is self-XSS, with one
+    exception: `repo-scan.ts`'s report carries a third-party repository's
+    file paths and findings, and is safe only because every field is escaped
+    with `escapeHtml` first;
   - it becomes a real boundary as soon as content written by one person is
     shown to another (a document in the URL, an import from a gist, a paste
     target, a shared workspace);
@@ -164,7 +167,11 @@ The policy stays exactly as it is:
 - **`osv-scan`** reports every advisory weekly, goes red, and blocks nothing.
 
 One rule is added to both jobs. When the head-tree scan prints `has unused
-ignores`, the step emits this annotation, once per id, and exits 1:
+ignores`, each listed id is one of two cases. An id that still appears in the
+scan output has passed its `ignoreUntil`: the weekly job fails with "past its
+ignoreUntil date … Re-judge it", and a PR only gets a `::notice`, because no
+PR caused the date to pass. Any other id matches nothing; the step emits this
+annotation for it and exits 1:
 
 ```text
 ::error file=osv-scanner.toml::GHSA-… is ignored in osv-scanner.toml but no longer matches anything in bun.lock. Remove the entry.
@@ -247,7 +254,8 @@ outcomes:
 | Weekly scan, only accepted advisories present | `osv-scan` job | 0 | `Filtered 1 vulnerability from output` … `No issues found` | — |
 | Weekly scan, an advisory not accepted | `osv-scan` job | 1 | osv-scanner's table | — |
 | An `osv-scanner.toml` entry matches nothing | either supply-chain job | 1 | `::error file=osv-scanner.toml::GHSA-… is ignored in osv-scanner.toml but no longer matches anything in bun.lock. Remove the entry.` | — |
-| An ignore past its `ignoreUntil` | `osv-scan` job | 1 | the advisory, unfiltered, in osv-scanner's table | — |
+| An ignore past its `ignoreUntil` | `osv-scan` job | 1 | the advisory, unfiltered, in osv-scanner's table, and `::error file=osv-scanner.toml::GHSA-… is past its ignoreUntil date in osv-scanner.toml and is still present in bun.lock. Re-judge it: fix the advisory, or extend the date with a reason.` | — |
+| An ignore past its `ignoreUntil` | `osv-pr` job | 0 | `::notice file=osv-scanner.toml::GHSA-… is past its ignoreUntil date in osv-scanner.toml. The weekly scan fails on it until it is re-judged: fix the advisory, or extend the date with a reason.` | — |
 | A PR adds a new advisory below CVSS 7 (for example by deleting an override) | `osv-pr` job | 0 | the existing `::warning file=bun.lock::…` | — |
 | A PR adds a new advisory of CVSS 7 or more | `osv-pr` job | 1 | the existing `::error file=bun.lock::…` | — |
 

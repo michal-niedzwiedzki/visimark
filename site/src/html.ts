@@ -2,16 +2,24 @@
  * The one place in `site/` where a string of HTML becomes DOM nodes, and so
  * the one statement of the site's trust boundary.
  *
- * **What reaches `setTrustedHtml` today is trusted.** Every string passed in
- * is either the visitor's own typing (the playground's CodeMirror buffer, fed
- * to the PREVIEW panel) or markup built from a document committed to this
- * repository and served from this origin: a `<script type="text/plain">`
- * block in a page, a file fetched by name from `docs/`, or this bundle's own
- * constants. Putting content into any of those already takes commit access,
- * so unsanitized Markdown here is self-XSS at worst. Sanitizing would also
- * cost the preview the inline HTML that Markdown legitimately allows. Note
- * that the playground's `?file=` is not an exception: it selects from
- * FILE_SOURCES by name and cannot carry content.
+ * **What reaches `setTrustedHtml` today is trusted, with one exception that
+ * is escaped.** Every string passed in is one of:
+ * - the visitor's own typing (the playground's CodeMirror buffer, fed to the
+ *   PREVIEW panel);
+ * - markup built from a document committed to this repository and served from
+ *   this origin: a `<script type="text/plain">` block in a page, a file
+ *   fetched by name from `docs/`, or this bundle's own constants. Putting
+ *   content into any of those already takes commit access, so unsanitized
+ *   Markdown here is self-XSS at worst. Sanitizing would also cost the
+ *   preview the inline HTML that Markdown legitimately allows. The
+ *   playground's `?file=` is not an exception: it selects from FILE_SOURCES by
+ *   name and cannot carry content;
+ * - **the exception:** `pages/repo-scan.ts`'s report, built from a public
+ *   GitHub repository the visitor names — file paths, findings text, owner and
+ *   repo. That is third-party content. It is safe only because every
+ *   interpolated field goes through `escapeHtml` before it reaches this
+ *   function, and it must stay that way: drop one `escapeHtml` there and this
+ *   is a real XSS.
  *
  * **It becomes a real boundary the moment content reaches it from anywhere
  * the reader is not**: a document in the URL, an import from a gist, a paste
@@ -19,8 +27,7 @@
  * for another. The commit that adds such a path puts a sanitizer inside this
  * function, on that same commit. Until then each page's Content-Security-Policy
  * is the second lock: `script-src` admits only this origin and cdnjs, so markup
- * from here cannot run inline script, and index.html grants no `connect-src`
- * at all because it fetches nothing.
+ * from here cannot run inline script.
  *
  * **This is not a sanitizer, and it is not safer than `innerHTML`.** It
  * exists because the Obsidian community scanner lints this whole repository
