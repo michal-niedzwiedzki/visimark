@@ -8,7 +8,7 @@
  * fixed and only the subject changes.
  */
 
-import { escapeHtml } from "./dom.js";
+import { escapeHtml } from "../html.js";
 
 interface Dataset {
   slug: string;

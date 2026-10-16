@@ -8,7 +8,8 @@
  * interpolated, which is what §2.3 credited this page for.
  */
 
-import { byId, escapeHtml } from "./dom.js";
+import { byId } from "./dom.js";
+import { escapeHtml } from "../html.js";
 
 const DEFAULT_FILE = "example-ci-sharding.md";
 const REPO_BLOB = "https://github.com/michal-niedzwiedzki/visimark/blob/master/docs/";

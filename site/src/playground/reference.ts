@@ -7,7 +7,8 @@
  */
 
 import type { VisiMarkApi } from "./types.js";
-import { byId, escapeHtml } from "./dom.js";
+import { byId } from "./dom.js";
+import { escapeHtml } from "../html.js";
 
 function refInline(s: string): string {
   return escapeHtml(s).replace(/`([^`]+)`/g, "<code>$1</code>");

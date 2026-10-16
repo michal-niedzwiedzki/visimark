@@ -13,7 +13,8 @@
 // are three lines each and are exercised by the browser, not here.
 
 import { describe, expect, test } from "bun:test";
-import { escapeHtml, slugify } from "../../src/pages/dom.js";
+import { escapeHtml } from "../../src/html.js";
+import { slugify } from "../../src/pages/dom.js";
 import { dedent } from "../../src/pages/demo-panes.js";
 import { buildSlots } from "../../src/pages/preview-cards.js";
 import { explainFailure } from "../../src/pages/source-document.js";

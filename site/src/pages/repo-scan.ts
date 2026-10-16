@@ -15,7 +15,8 @@
  * visit that doesn't use the widget pays nothing for it.
  */
 import type { VisiMarkApi } from "../playground/types.js";
-import { byId, escapeHtml } from "./dom.js";
+import { byId } from "./dom.js";
+import { escapeHtml } from "../html.js";
 
 const API = "https://api.github.com";
 const RAW = "https://raw.githubusercontent.com";

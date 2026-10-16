@@ -8,7 +8,7 @@
  * having one of.
  */
 
-import { escapeHtml } from "./dom.js";
+import { escapeHtml } from "../html.js";
 
 /**
  * Fetches `path`, or throws with the path in the message.

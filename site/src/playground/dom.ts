@@ -13,14 +13,6 @@ export function byId<T extends HTMLElement = HTMLElement>(id: string): T {
   return el as T;
 }
 
-export function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
 /** Un-hides `el` with no transition — the resting state for content that
  *  reflects persisted or already-known state (an earned badge reopened from
  *  localStorage), where a fade would just be noise. */

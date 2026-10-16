@@ -8,7 +8,7 @@
  * if the article was published somewhere else first.
  */
 
-import { escapeHtml } from "./dom.js";
+import { escapeHtml } from "../html.js";
 
 export interface Article {
   slug: string;
