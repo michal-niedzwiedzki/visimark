@@ -9,7 +9,8 @@ import remarkGfm from "remark-gfm";
 import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
 import { unified } from "unified";
-import { escapeHtml, slugify } from "../site/src/pages/dom.js";
+import { escapeHtml } from "../site/src/html.js";
+import { slugify } from "../site/src/pages/dom.js";
 import { GOATCOUNTER_ORIGIN, analyticsScriptTag } from "./analytics-lib.js";
 import { renderNav } from "./nav-lib.js";
 

@@ -275,3 +275,5 @@
   - **If it does not:** state that in the PR description.
 
 - [ ] **Step 9: The follow-up issue.** Draft it with `/issue-prepare`. Its subject is the 26 Errors that the full typed `eslint-plugin-obsidianmd` ruleset reports, to be handled with oxlint's type-aware rules. The rules and counts are in the pre-review of #402. File it only on the maintainer's confirmation, and link it from the PR description.
+
+<!--vmark:no-formulas-->
