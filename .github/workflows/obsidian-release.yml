@@ -82,7 +82,9 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           set -uo pipefail
-          have="$(gh release view "$TAG" --json assets --jq '.assets[].name' 2>/dev/null | sort | tr '\n' ' ')"
+          # No release yet is the normal first run: gh exits non-zero, and the
+          # shell's -e plus pipefail would fail the step instead of building.
+          have="$( (gh release view "$TAG" --json assets --jq '.assets[].name' 2>/dev/null || true) | sort | tr '\n' ' ')"
           if [ "$have" = "main.js manifest.json styles.css " ]; then
             echo "Release $TAG already has main.js, manifest.json and styles.css; nothing to publish."
             echo "done=true" >> "$GITHUB_OUTPUT"
