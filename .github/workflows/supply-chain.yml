@@ -8,6 +8,11 @@ name: supply-chain
 # bun.lock, so a graph-based review would miss exactly the change that matters
 # here — a lockfile-only bump to a vulnerable transitive version. osv-scanner
 # reads bun.lock directly, and covers development dependencies too.
+#
+# osv-scanner.toml, next to bun.lock, lists the advisories accepted rather
+# than fixed, each with a reason and an ignoreUntil date; osv-scanner reads it
+# from the lockfile's directory. Both jobs fail when an entry there no longer
+# matches anything, so an accept cannot outlive the advisory it covers (#402).
 on:
   pull_request:
   schedule:
@@ -54,7 +59,10 @@ jobs:
             "$RUNNER_TEMP/osv-scanner" scan source --format json --lockfile="$1" > "$2" || [ $? -eq 1 ]
           }
           scan "$RUNNER_TEMP/base/bun.lock" "$RUNNER_TEMP/base.json"
-          scan bun.lock "$RUNNER_TEMP/head.json"
+          # The head scan's stderr carries osv-scanner.toml's "unused ignores"
+          # notice under --format json; the last step reads it from this log.
+          scan bun.lock "$RUNNER_TEMP/head.json" 2> "$RUNNER_TEMP/osv-head.log"
+          cat "$RUNNER_TEMP/osv-head.log" >&2
           # One row per advisory and package: id, name, version, CVSS score.
           rows() {
             jq -r '.results[]?.packages[]? | .package.name as $n | .package.version as $v
@@ -76,10 +84,26 @@ jobs:
             exit 1
           fi
           echo "::warning file=bun.lock::this PR adds advisories below high severity; see the list above."
+      - name: every osv-scanner.toml entry still matches an advisory
+        if: ${{ !cancelled() }}
+        run: &unused |
+          set -euo pipefail
+          # osv-scanner prints "<path> has unused ignores:" then one " - <id>"
+          # line per entry that matched nothing, and still exits 0. An accept
+          # whose advisory is gone (fixed upstream, or the package left
+          # bun.lock) is a stale pin: fail until the entry is deleted.
+          log="$RUNNER_TEMP/osv-head.log"
+          [ -f "$log" ] || exit 0
+          ids=$(awk '/has unused ignores:/ { on = 1; next } on && /^ - / { print $2; next } { on = 0 }' "$log")
+          [ -z "$ids" ] && exit 0
+          for id in $ids; do
+            echo "::error file=osv-scanner.toml::$id is ignored in osv-scanner.toml but no longer matches anything in bun.lock. Remove the entry."
+          done
+          exit 1
 
   # Every package in bun.lock, weekly. Report only: a new advisory against an
-  # existing dependency turns this scheduled run red and blocks nothing on
-  # master.
+  # existing dependency, or an osv-scanner.toml entry past its ignoreUntil,
+  # turns this scheduled run red and blocks nothing on master.
   osv-scan:
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
@@ -90,4 +114,9 @@ jobs:
       - name: install osv-scanner
         run: *install
       - name: scan bun.lock
-        run: '"$RUNNER_TEMP/osv-scanner" scan source --lockfile=bun.lock'
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/osv-scanner" scan source --lockfile=bun.lock 2>&1 | tee "$RUNNER_TEMP/osv-head.log"
+      - name: every osv-scanner.toml entry still matches an advisory
+        if: ${{ !cancelled() }}
+        run: *unused

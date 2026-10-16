@@ -2,15 +2,26 @@
  * Fails when a root `overrides` version does not satisfy a range some
  * workspace declares for the same package.
  *
- * The root `overrides` keep one copy of each CodeMirror package in the
- * workspace (two `@codemirror/state` copies are two editor states). They are a
- * second source of truth that Dependabot does not read: #359 bumped five
+ * The root `overrides` serve two purposes.
+ *
+ * **One copy of each CodeMirror package** in the workspace (two
+ * `@codemirror/state` copies are two editor states). These are what this check
+ * is for. They are a second source of truth that Dependabot does not read: #359 bumped five
  * manifests to `@codemirror/view ^6.43.14`, #363 then pinned the override at
  * 6.43.13, and every workspace ran below its own declared minimum while
  * `bun install --frozen-lockfile` accepted it. Review 2026-10-15 §2.6.
  *
  * Bump an overridden package by hand, override and manifests in one commit;
  * `.github/dependabot.yml` ignores the four for that reason.
+ *
+ * **A fix for an advisory in a transitive dependency** (`moment`, `smol-toml`,
+ * `katex`, #402). No workspace declares these, so their lines read "checked
+ * against 0 declared range(s)" and this script proves nothing about them. The
+ * check that does is osv-scanner in `.github/workflows/supply-chain.yml`:
+ * delete one of these overrides and its advisory comes back. Not detected
+ * anywhere: an override that now holds a package *below* what a dependent
+ * pins. So when `obsidian` or `markdownlint-cli2` is bumped, re-check whether
+ * each of these overrides is still needed and still not a downgrade.
  *
  * Usage: `bun scripts/check-overrides.ts [root]` — `root` defaults to the
  * repository root and exists so the check can run against a temp tree.
