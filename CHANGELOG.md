@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+### Added
+
+- **CI runs the Obsidian community scanner's Error rules over the whole
+  repository.** `bun run lint:scanner` runs `no-unsanitized/property` and
+  `obsidianmd/no-static-styles-assignment` over every tracked JS/TS file. The
+  scanner lints the whole monorepo as the plugin, and its Scorecard for 0.4.0
+  failed on both rules in `site/`, which nothing in CI linted. The site's
+  `innerHTML` writes now go through one helper, `setTrustedHtml` in
+  `site/src/html.ts`, whose comment states the site's trust boundary (#402).
+- **Accepted advisories are written down and expire.** `osv-scanner.toml`
+  accepts `braces`' GHSA-vfj7-8cjw-p6xm (no patched release; dev-only) until
+  2027-04-17, and both `supply-chain.yml` jobs fail on an entry that no longer
+  matches anything. Root overrides clear the other three: `moment` 2.31.0
+  (GHSA-4p3w-j4w9-5jqw), `smol-toml` 1.9.1 (GHSA-r4xh-jqrq-34v2) and `katex`
+  0.18.11 (GHSA-238p-pmpm-9mq7), all development dependencies (#402).
+
 ## 0.4.0 - 2026-10-15
 
 ### Added

@@ -56,7 +56,8 @@ check in the same PR:
 |---|---|
 | A package's own version, an exact engine pin, `action.yml`, the pre-commit hook, `server.json`, the Obsidian plugin's `manifest.json` and newest `versions.json` key | `scripts/check-versions.ts`, from the list in `scripts/release-manifests.ts` |
 | A type package standing in for a runtime floor | `scripts/check-type-floors.ts` |
-| A root `overrides` entry | `scripts/check-overrides.ts` |
+| A root `overrides` entry | `scripts/check-overrides.ts`; one that fixes an advisory, also `supply-chain.yml`'s osv-scanner jobs |
+| An accepted advisory (`osv-scanner.toml`, with `ignoreUntil`) | `supply-chain.yml`'s osv-scanner jobs: an expired or unused entry fails |
 | `engines.bun`, a Bun version in a workflow | `scripts/check-bun-policy.ts` |
 | `engines.node`, a Node version in a workflow | `ci.yml`'s `node-support-policy` ([`runtime-parity.md`](runtime-parity.md)) |
 | A vendored skill | `scripts/check-skills.ts` against `skills-lock.json` |
