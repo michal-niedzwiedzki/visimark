@@ -10,7 +10,9 @@
       "Bash(git commit *)",
       "Bash(git push *)",
       "Bash(gh workflow *)",
-      "Bash(gh run *)"
+      "Bash(gh run *)",
+      "Skill(issue-prepare)",
+      "Skill(issue-prepare:*)"
     ]
   },
   "hooks": {
