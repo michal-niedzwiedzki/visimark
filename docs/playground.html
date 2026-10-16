@@ -1379,6 +1379,14 @@
       .reference-table .ref-errors {
         margin-top: 4px;
       }
+      /* The scratch textarea the clipboard fallback copies from: rendered,
+         because execCommand("copy") copies only a real selection, but off
+         screen (site/src/playground/clipboard.ts). */
+      .clipboard-scratch {
+        position: fixed;
+        top: 0;
+        left: -9999px;
+      }
     </style>
   </head>
   <body>

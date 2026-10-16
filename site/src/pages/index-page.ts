@@ -67,9 +67,14 @@ function wireInferToggle(): void {
     if (out) out.hidden = !shown;
     if (title) title.textContent = `quote.md — ${shown ? "after" : "before"}`;
     btn.setAttribute("aria-pressed", String(shown));
-    btn.innerHTML = shown
-      ? "Show the table before"
-      : 'Run <code style="background:none;color:inherit;padding:0">visimark infer</code>';
+    if (shown) {
+      btn.textContent = "Show the table before";
+    } else {
+      const cmd = document.createElement("code");
+      cmd.className = "code-plain";
+      cmd.textContent = "visimark infer";
+      btn.replaceChildren("Run ", cmd);
+    }
   });
   // The "before" state on load, same as the static markup would show.
   renderDemo("infer-source", "infer-preview", "infer-before-md");

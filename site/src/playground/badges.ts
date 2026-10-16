@@ -17,6 +17,7 @@
 import type { Badge, BadgeManifest, RawScenario, Scenarios } from "./types.js";
 import { byId, hideInstant, revealFadeIn, showInstant } from "./dom.js";
 import { copyText } from "./clipboard.js";
+import { setTrustedHtml } from "../html.js";
 
 const BADGE_ICONS: Record<string, string> = {
   beanie:
@@ -123,7 +124,7 @@ export function createBadgeBoard(
       const icon = document.createElement("span");
       icon.className = "badge-gallery-icon";
       icon.setAttribute("aria-hidden", "true");
-      icon.innerHTML = BADGE_ICONS[badge.icon] ?? "";
+      setTrustedHtml(icon, BADGE_ICONS[badge.icon] ?? "");
       const text = document.createElement("span");
       text.className = "badge-gallery-text";
       const name = document.createElement("span");
@@ -152,7 +153,7 @@ export function createBadgeBoard(
   const shareXEl = byId<HTMLAnchorElement>("share-x");
 
   function fill(badge: Badge): void {
-    iconEl.innerHTML = BADGE_ICONS[badge.icon] ?? "";
+    setTrustedHtml(iconEl, BADGE_ICONS[badge.icon] ?? "");
     nameEl.textContent = badge.name;
     skillEl.textContent = badge.skill;
     shareXEl.href = buildShareLink(badge);

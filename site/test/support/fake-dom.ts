@@ -53,8 +53,8 @@ export class FakeElement {
   /** Set by `focus()`, so "selection and focus travel together" is a thing a
    *  test can assert rather than take on trust. */
   focused = false;
-  /** Whatever was last assigned to `innerHTML` — the modules here only ever
-   *  clear it or hand it an SVG blob. */
+  /** Whatever was last assigned to `innerHTML` or handed to `setTrustedHtml`
+   *  — the modules here only ever clear it or hand it markup. */
   html = "";
   scrollTop = 0;
   readonly scrollHeight = 0;
@@ -130,6 +130,19 @@ export class FakeElement {
     child.parentElement = this;
     this.children.push(child);
     return child;
+  }
+  /** What `setTrustedHtml` (site/src/html.ts) calls with the nodes the fake
+   *  `DOMParser` below produced: one `#parsed` node carrying the string, which
+   *  lands in `html` the way an `innerHTML` assignment would. Added for #402,
+   *  when the `innerHTML` writes moved behind that helper. */
+  replaceChildren(...nodes: FakeElement[]): void {
+    this.children.length = 0;
+    this.ownText = "";
+    this.html = "";
+    for (const n of nodes) {
+      if (n.tagName === "#parsed") this.html += n.html;
+      else this.appendChild(n);
+    }
   }
   removeChild(child: FakeElement): FakeElement {
     const at = this.children.indexOf(child);
@@ -233,6 +246,7 @@ export function installFakeDom(): Installed {
     document: g.document,
     window: g.window,
     requestAnimationFrame: g.requestAnimationFrame,
+    DOMParser: g.DOMParser,
   };
   const doc = new FakeDocument();
   g.document = doc;
@@ -249,12 +263,22 @@ export function installFakeDom(): Installed {
     fn();
     return 0;
   };
+  // Just enough for setTrustedHtml: the parsed "body" holds one node that
+  // carries the string, and FakeElement.replaceChildren records it.
+  g.DOMParser = class {
+    parseFromString(html: string): { body: { childNodes: FakeElement[] } } {
+      const parsed = doc.createElement("#parsed");
+      parsed.html = html;
+      return { body: { childNodes: [parsed] } };
+    }
+  };
   return {
     document: doc,
     restore() {
       g.document = before.document;
       g.window = before.window;
       g.requestAnimationFrame = before.requestAnimationFrame;
+      g.DOMParser = before.DOMParser;
     },
   };
 }

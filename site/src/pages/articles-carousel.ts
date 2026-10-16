@@ -13,6 +13,7 @@
 
 import { articleBody, loadArticles } from "./articles.js";
 import { byId } from "./dom.js";
+import { setTrustedHtml } from "../html.js";
 
 const INTERVAL_MS = 5000;
 
@@ -33,12 +34,21 @@ export async function wireArticlesCarousel(): Promise<void> {
     root.hidden = true;
     return;
   }
-  track.innerHTML = articles
-    .map((a) => `<article class="articles-slide">${articleBody(a, "h3")}</article>`)
-    .join("\n");
-  dotsBox.innerHTML = articles
-    .map((_, i) => `<button type="button" aria-label="Show article ${i + 1}">${i + 1}</button>`)
-    .join("");
+  setTrustedHtml(
+    track,
+    articles
+      .map((a) => `<article class="articles-slide">${articleBody(a, "h3")}</article>`)
+      .join("\n"),
+  );
+  dotsBox.replaceChildren(
+    ...articles.map((_, i) => {
+      const dot = document.createElement("button");
+      dot.type = "button";
+      dot.setAttribute("aria-label", `Show article ${i + 1}`);
+      dot.textContent = String(i + 1);
+      return dot;
+    }),
+  );
   const dots = [...dotsBox.querySelectorAll<HTMLButtonElement>("button")];
   if (dots.length < 2) {
     dotsBox.hidden = true;

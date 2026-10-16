@@ -16,7 +16,7 @@
  */
 import type { VisiMarkApi } from "../playground/types.js";
 import { byId } from "./dom.js";
-import { escapeHtml } from "../html.js";
+import { escapeHtml, setTrustedHtml } from "../html.js";
 
 const API = "https://api.github.com";
 const RAW = "https://raw.githubusercontent.com";
@@ -418,7 +418,7 @@ function renderReport(
     }
   }
 
-  reportEl.innerHTML = parts.join("\n");
+  setTrustedHtml(reportEl, parts.join("\n"));
   reportEl.hidden = false;
 }
 
@@ -433,12 +433,26 @@ export function wireRepoScan(): void {
   function setStatus(message: string, fraction: number | null, isError = false): void {
     statusEl!.hidden = false;
     statusEl!.classList.toggle("is-error", isError);
-    const spinner = isError ? "" : '<span class="repo-scan-spinner" aria-hidden="true"></span>';
-    const bar =
-      fraction === null
-        ? ""
-        : `<span class="repo-scan-bar"><span class="repo-scan-bar-fill" style="width:${Math.round(fraction * 100)}%"></span></span>`;
-    statusEl!.innerHTML = `${spinner}<span>${escapeHtml(message)}</span>${bar}`;
+    const parts: Node[] = [];
+    if (!isError) {
+      const spinner = document.createElement("span");
+      spinner.className = "repo-scan-spinner";
+      spinner.setAttribute("aria-hidden", "true");
+      parts.push(spinner);
+    }
+    const text = document.createElement("span");
+    text.textContent = message;
+    parts.push(text);
+    if (fraction !== null) {
+      const bar = document.createElement("span");
+      bar.className = "repo-scan-bar";
+      const fill = document.createElement("span");
+      fill.className = "repo-scan-bar-fill";
+      fill.style.width = `${Math.round(fraction * 100)}%`;
+      bar.appendChild(fill);
+      parts.push(bar);
+    }
+    statusEl!.replaceChildren(...parts);
   }
 
   form.addEventListener("submit", (e) => {

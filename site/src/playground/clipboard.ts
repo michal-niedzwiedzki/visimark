@@ -14,10 +14,9 @@ function copyTextFallback(text: string): Promise<void> {
     const ta = document.createElement("textarea");
     ta.value = text;
     // Off-screen rather than hidden: execCommand("copy") only ever copies an
-    // actual, rendered selection.
-    ta.style.position = "fixed";
-    ta.style.top = "0";
-    ta.style.left = "-9999px";
+    // actual, rendered selection. `.clipboard-scratch` (docs/playground.html)
+    // is the off-screen placement.
+    ta.className = "clipboard-scratch";
     ta.setAttribute("readonly", "");
     document.body.appendChild(ta);
     ta.select();

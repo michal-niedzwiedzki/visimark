@@ -1833,3 +1833,10 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+/* Inline code inside a button label: no chip, the button's own colour. */
+code.code-plain {
+  background: none;
+  color: inherit;
+  padding: 0;
+}

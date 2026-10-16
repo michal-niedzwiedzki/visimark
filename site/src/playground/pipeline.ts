@@ -14,6 +14,7 @@ import type { FileStore } from "./store.js";
 import type { Quest } from "./quest.js";
 import type { Terminal } from "./terminal.js";
 import { byId } from "./dom.js";
+import { setTrustedHtml } from "../html.js";
 
 /**
  * How long typing has to stop before the pipeline runs — and the floor for it
@@ -323,24 +324,8 @@ export function createPipeline(
     }
 
     try {
-      // **The preview is not a trust boundary, and here is the condition on
-      // which that stops being true** (review §2.6).
-      //
-      // `source` is the CodeMirror buffer. Everything that can reach it today
-      // is either the visitor's own typing or a document committed to this
-      // repository and fetched from this origin — so unsanitized Markdown
-      // here is self-XSS at worst, and sanitizing would cost the preview the
-      // inline HTML that Markdown legitimately allows.
-      //
-      // It becomes a real boundary the moment a document reaches this buffer
-      // from anywhere the visitor is not: a document in the URL, an import
-      // from a gist, a paste target, a shared workspace, anything at all
-      // authored by one person and rendered for another. Note that `?file=`
-      // (review §2.8) is *not* that — it selects from FILE_SOURCES by name
-      // and cannot carry content. If you are adding the feature that changes
-      // this, the sanitizer goes in on the same commit, and the CSP above
-      // stops being the only control.
-      previewEl.innerHTML = marked.parse(source);
+      // Trust boundary: see setTrustedHtml in ../html.ts.
+      setTrustedHtml(previewEl, marked.parse(source));
       embedCharts(evalResult?.charts);
     } catch (e) {
       previewEl.textContent = `error: ${(e as Error).message}`;
