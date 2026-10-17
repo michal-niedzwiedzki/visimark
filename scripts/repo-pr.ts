@@ -1,5 +1,5 @@
 /**
- * Turns a `repo-scan --keep`-worthy repo into a reviewable local branch: it
+ * Turns a repo `repo:investigate` would keep a clone of into a reviewable local branch: it
  * reuses (or creates) the persisted clone from `repo-pr-clone.ts`'s
  * `ensureClone`, installs the VisiMark GitHub Action, runs `infer --write`
  * then `check` then `fmt` over the repo's tracked Markdown, commits the
