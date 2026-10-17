@@ -21,3 +21,4 @@ export {
   VISIMARK_ACTION_USE,
   type RepoRef,
 } from "./repo.js";
+export { importTargets } from "./imports.js";

@@ -3,6 +3,7 @@ import { join } from "node:path";
 import * as engine from "../../visimark/src/browser.js";
 import { cellKey } from "../src/ids.js";
 import { maskMarkdown } from "../src/mask.js";
+import { repoReader } from "../src/reader.js";
 import { readTables } from "../src/tables.js";
 import type { DocInput, Finding, Rule, RuleResult } from "../src/types.js";
 
@@ -16,7 +17,7 @@ export function doc(path: string, text: string): DocInput {
 }
 
 export function ctx(texts: Map<string, string> = new Map()) {
-  return { engine, texts, reader: engine.memoryReader((p) => texts.get(p)) };
+  return { engine, texts, reader: repoReader(engine, texts) };
 }
 
 /** One rule over one file, its raw findings shaped as the Report shapes them. */

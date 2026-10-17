@@ -1,0 +1,21 @@
+[
+  {
+    "id": "bad.md#t1/Net/D",
+    "path": "bad.md",
+    "lines": [1, 6],
+    "permalink": null,
+    "confidence": "lead",
+    "rules": ["engine-infer"],
+    "stored": "600",
+    "computed": "400",
+    "message": "the table says 600; Net = Hours * Rate, which fits the other rows, gives 400",
+    "evidence": [
+      "    1  | Item | Hours | Rate | Net |",
+      "    2  |------|------:|-----:|----:|",
+      "    3  | A | 10 | 50 | 500 |",
+      "    4  | B | 4 | 50 | 200 |",
+      "    5  | C | 6 | 50 | 300 |",
+      "    6  | D | 8 | 50 | 600 |"
+    ]
+  }
+]
