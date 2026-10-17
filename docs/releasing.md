@@ -190,6 +190,17 @@ whether the release already has all three files and, if so, skips the build
 and upload — a second build would be new bytes under the first build's
 attestation — and goes straight to the read-back.
 
+**The workflow's token can create the bare tag only on the tip of a branch.**
+A probe on 2026-10-17 had `GITHUB_TOKEN` create releases with new tags: a
+target of `master`'s tip, or of another branch's tip, worked; a target of any
+older commit, the release commit once #406 had merged after it, got `403
+Resource not accessible by integration`. So tag promptly: if `master` has
+moved past the release commit before the `obsidian` job runs, that job cannot
+create `X.Y.Z`. Backfill with `scripts/release-tag.sh X.Y.Z`, which tags
+`master`'s *current* tip, not the release commit. The plugin's bytes are the
+same if nothing but non-plugin files changed; v0.4.1's plugin tag sits one
+commit after its `v0.4.1`.
+
 The bare-tag scheme is [Option C of `docs/design/obsidian-release-plan.md`](design/obsidian-release-plan.md),
 decided 2026-09-27. Since 0.4.0 put the plugin on the core line (#396), the
 core tag cuts it.
