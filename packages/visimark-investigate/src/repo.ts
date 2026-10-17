@@ -86,6 +86,10 @@ export function hasVisimarkAction(workflowTexts: string[]): boolean {
  * A permalink to lines of a file at the scanned commit, so the link keeps
  * pointing at the table that was checked after the repo moves on. Null for a
  * host other than github.com, and for a local path, which has none.
+ *
+ * `?plain=1` makes GitHub show a Markdown file as source. Without it the
+ * blob page renders the file and the `#L` anchor selects nothing, and every
+ * file a scan reports is Markdown.
  */
 export function blobUrl(
   host: string | null,
@@ -97,5 +101,5 @@ export function blobUrl(
 ): string | null {
   if (host !== "github.com") return null;
   const range = to && to !== from ? `#L${from}-L${to}` : `#L${from}`;
-  return `https://github.com/${label}/blob/${commit}/${encodePath(path)}${range}`;
+  return `https://github.com/${label}/blob/${commit}/${encodePath(path)}?plain=1${range}`;
 }

@@ -152,7 +152,7 @@ describe("investigate", () => {
       engine,
     );
     expect(gh.findings[0]!.permalink).toBe(
-      "https://github.com/o/r/blob/c0ffee/docs/budget.md#L3-L15",
+      "https://github.com/o/r/blob/c0ffee/docs/budget.md?plain=1#L3-L15",
     );
   });
 });

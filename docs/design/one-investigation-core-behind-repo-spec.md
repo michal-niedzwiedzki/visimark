@@ -165,7 +165,7 @@ interface Finding {
   id: string;                              // §3.5
   path: string;
   lines: [number, number];                 // 1-based, the table's header line to the finding's line
-  permalink: string | null;                // github.com only: /blob/<commit>/<path>#L<a>-L<b>
+  permalink: string | null;                // github.com only: /blob/<commit>/<path>?plain=1#L<a>-L<b>
   confidence: "confirmed" | "lead";
   rules: string[];                         // registry order
   stored: string; computed: string;

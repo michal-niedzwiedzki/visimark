@@ -133,13 +133,13 @@ describe("isDotPath", () => {
 describe("blobUrl", () => {
   test("links a line range at the commit on github.com", () => {
     expect(blobUrl("github.com", "o/r", "abc", "docs/a b.md", 3, 15)).toBe(
-      "https://github.com/o/r/blob/abc/docs/a%20b.md#L3-L15",
+      "https://github.com/o/r/blob/abc/docs/a%20b.md?plain=1#L3-L15",
     );
   });
 
   test("a single line has no range", () => {
     expect(blobUrl("github.com", "o/r", "abc", "a.md", 7)).toBe(
-      "https://github.com/o/r/blob/abc/a.md#L7",
+      "https://github.com/o/r/blob/abc/a.md?plain=1#L7",
     );
   });
 
