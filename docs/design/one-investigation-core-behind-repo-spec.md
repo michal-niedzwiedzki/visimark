@@ -363,7 +363,7 @@ Each rule has the folder `packages/visimark-investigate/test/fixtures/rules/<id>
 - **Registry test.** For every rule in the registry, the folder exists, `good.md` gives no finding with that rule in `rules`, and `bad.md` gives exactly `bad.expected.json`. A rule without the folder fails the test.
 - **Fix property.** For every `bad.md`: apply every `fix` of every finding, run `investigate` again, and check that no finding has an `id` that was fixed. A finding with no `fix` has no `fix` key at all.
 - **Masking property.** The masked text has the same length and the same `\n` offsets as the input, on every fixture.
-- **Merge.** One fixture where `total-row` and `engine-infer` hit the same cell gives one finding with `rules: ["total-row", "engine-infer"]` and `confidence: "confirmed"`.
+- **Merge.** The #409 table followed by a `vmark #q` block holding `Cost = Qty * Price` makes `line-product` and `engine-check` (`STALE` Cost/B) hit the same cell. It gives one finding with `rules: ["line-product", "engine-check"]` and `confidence: "confirmed"`. A `total-row` + `engine-infer` merge cannot be built today, because `infer` proposes nothing for a table with a Total row.
 - **Q12 case.** The #409 table (row B 13.00): `line-product` confirms B; `engine-infer`'s `Qty = Cost / Price` is not counted in `inferable`; `inferableAfterFix` is 1.
 - **Parity.** A test in `site/` runs the widget's adapter, with `fetch` stubbed from a fixture directory, against the same fixture repository. Its Report equals the CLI's for the same input, except `clonePath`.
 
