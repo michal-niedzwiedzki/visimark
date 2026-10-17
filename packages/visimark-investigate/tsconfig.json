@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["bun", "node"],
+    "lib": ["ES2023"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    // The engine's browser-safe entry point, as in every other client that is
+    // bundled for the browser: the widget runs this package there. The core
+    // itself imports `visimark` only as types (test/purity.test.ts).
+    "paths": {
+      "visimark": ["../../packages/visimark/src/browser.ts"]
+    }
+  },
+  "include": ["src", "test"]
+}
