@@ -1,33 +1,11 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import {
-  encodePath,
   fetchRawText,
   githubNewFileUrl,
-  isDotPath,
   mapPool,
   parseRepoInput,
-  VISIMARK_ACTION_USE,
   workflowYaml,
 } from "./repo-scan.js";
-
-describe("encodePath", () => {
-  test("leaves an ordinary path untouched", () => {
-    expect(encodePath("docs/readme.md")).toBe("docs/readme.md");
-  });
-
-  test("encodes a hash in a filename without eating the rest of the path", () => {
-    expect(encodePath("docs/C#-notes.md")).toBe("docs/C%23-notes.md");
-  });
-
-  test("encodes a question mark and percent sign", () => {
-    expect(encodePath("notes?.md")).toBe("notes%3F.md");
-    expect(encodePath("100%.md")).toBe("100%25.md");
-  });
-
-  test("preserves the slash between segments", () => {
-    expect(encodePath("a/b/c.md").split("/")).toHaveLength(3);
-  });
-});
 
 describe("fetchRawText", () => {
   const originalFetch = globalThis.fetch;
@@ -167,45 +145,6 @@ describe("workflowYaml", () => {
     expect(yaml).toContain("branches: [main]");
     expect(yaml).toContain("uses: michal-niedzwiedzki/visimark@v0.1.10");
     expect(yaml).toContain("permissions:\n  contents: read");
-  });
-});
-
-describe("isDotPath", () => {
-  test("flags a file directly under a dot-directory", () => {
-    expect(isDotPath(".github/workflows/ci.yml")).toBe(true);
-  });
-
-  test("flags a dot-directory buried deeper in the path", () => {
-    expect(isDotPath("docs/.internal/notes.md")).toBe(true);
-  });
-
-  test("flags a bare dot-file", () => {
-    expect(isDotPath(".env.md")).toBe(true);
-  });
-
-  test("does not flag an ordinary path", () => {
-    expect(isDotPath("docs/readme.md")).toBe(false);
-  });
-
-  test("does not flag a segment that merely contains a dot", () => {
-    expect(isDotPath("docs/v1.2/notes.md")).toBe(false);
-  });
-});
-
-describe("VISIMARK_ACTION_USE", () => {
-  test("matches a pinned action reference", () => {
-    const yaml = "steps:\n  - uses: michal-niedzwiedzki/visimark@v0.1.10\n";
-    expect(VISIMARK_ACTION_USE.test(yaml)).toBe(true);
-  });
-
-  test("matches an action.yml path reference", () => {
-    const yaml = "steps:\n  - uses: michal-niedzwiedzki/visimark/action.yml@v0.1.10\n";
-    expect(VISIMARK_ACTION_USE.test(yaml)).toBe(true);
-  });
-
-  test("does not match an unrelated action", () => {
-    const yaml = "steps:\n  - uses: actions/checkout@v7\n";
-    expect(VISIMARK_ACTION_USE.test(yaml)).toBe(false);
   });
 });
 

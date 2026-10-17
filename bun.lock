@@ -193,6 +193,7 @@
       "dependencies": {
         "codemirror-visimark": "workspace:*",
         "visimark": "workspace:*",
+        "visimark-investigate": "workspace:*",
       },
       "devDependencies": {
         "@codemirror/commands": "^6.11.1",

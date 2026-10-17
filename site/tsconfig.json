@@ -18,7 +18,8 @@
     "paths": {
       "visimark": ["../packages/visimark/src/browser.ts"],
       "codemirror-visimark": ["../packages/codemirror-visimark/src/index.ts"],
-      "codemirror-visimark/*": ["../packages/codemirror-visimark/src/*"]
+      "codemirror-visimark/*": ["../packages/codemirror-visimark/src/*"],
+      "visimark-investigate": ["../packages/visimark-investigate/src/index.ts"]
     }
   },
   "include": ["src", "test", "build-playground.ts"]
