@@ -1,0 +1,26 @@
+[
+  {
+    "id": "bad.md#t1/Cost/B",
+    "path": "bad.md",
+    "lines": [3, 6],
+    "permalink": null,
+    "confidence": "confirmed",
+    "rules": ["line-product"],
+    "stored": "13.00",
+    "computed": "12.00",
+    "message": "the table says 13.00; Qty × Price is 12.00; the other 3 rows agree",
+    "evidence": [
+      "    5  | A    | 2   | 5.00  | 10.00 |",
+      "    6  | B    | 3   | 4.00  | 13.00 |",
+      "    7  | C    | 1   | 7.00  | 7.00 |"
+    ],
+    "fix": [
+      {
+        "from": 124,
+        "to": 129,
+        "old": "13.00",
+        "new": "12.00"
+      }
+    ]
+  }
+]
