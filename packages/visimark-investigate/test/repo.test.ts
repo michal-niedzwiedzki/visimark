@@ -148,3 +148,17 @@ describe("blobUrl", () => {
     expect(blobUrl(null, "o/r", "abc", "a.md", 1)).toBeNull();
   });
 });
+
+describe("VISIMARK_ACTION_USE on hostile input", () => {
+  test("a long run of spaces does not backtrack polynomially", () => {
+    const hostile = `${" \n".repeat(30_000)}x`;
+    const start = performance.now();
+    expect(hasVisimarkAction([hostile])).toBe(false);
+    expect(performance.now() - start).toBeLessThan(200);
+  });
+
+  test("still matches a dash-led step and a bare uses line", () => {
+    expect(hasVisimarkAction(["  -   uses: owner/visimark@v1\n"])).toBe(true);
+    expect(hasVisimarkAction(["    uses: owner/visimark@v1\n"])).toBe(true);
+  });
+});

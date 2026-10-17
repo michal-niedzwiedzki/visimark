@@ -9,7 +9,8 @@ import { emptyResult, tableKey, type Rule } from "../types.js";
  * (spec §4.1). A column whose total equals quantity × price for some other
  * column is a priced total, not a mismatch.
  */
-const TOTAL_LABEL = /^(grand\s+)?(sub)?\s*total(\s+cost)?:?$/i;
+// No two adjacent `\s` runs, so a cell full of spaces cannot backtrack polynomially.
+const TOTAL_LABEL = /^(?:grand\s+)?(?:sub\s*)?total(?:\s+cost)?:?$/i;
 
 const value = (raw: string): string => raw.replace(/&nbsp;/g, "").trim();
 

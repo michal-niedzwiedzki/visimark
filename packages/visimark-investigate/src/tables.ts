@@ -35,7 +35,8 @@ export interface Table {
 }
 
 const ROW = /^\s*\|/;
-const DELIMITER = /^\s*\|[\s:|-]+\|?\s*$/;
+// One character class, so a long run of spaces cannot backtrack polynomially.
+const DELIMITER = /^\s*\|[\s:|-]+$/;
 
 /** A cell's text without the emphasis or code markers around it; an inner `_` (`premium_hours`) stays. */
 export const plainCell = (raw: string): string =>

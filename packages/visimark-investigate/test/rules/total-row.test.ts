@@ -79,3 +79,12 @@ describe("total-row", () => {
     ]);
   });
 });
+
+test("a label full of spaces is rejected in linear time", () => {
+  const label = `grand${" ".repeat(50_000)}y`;
+  const start = performance.now();
+  expect(
+    runRule(totalRow, "a.md", table("| A | 1 |", "| B | 2 |", `| ${label} | 3 |`)).findings,
+  ).toEqual([]);
+  expect(performance.now() - start).toBeLessThan(200);
+});

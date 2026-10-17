@@ -90,3 +90,12 @@ describe("readTables", () => {
     expect(label.text).toBe("Venue");
   });
 });
+
+describe("hostile input", () => {
+  test("a delimiter-looking line full of spaces reads in linear time", () => {
+    const text = `| a | b |\n|${" ".repeat(50_000)}x\n`;
+    const start = performance.now();
+    expect(readTables(maskMarkdown(text))).toEqual([]);
+    expect(performance.now() - start).toBeLessThan(200);
+  });
+});

@@ -11,7 +11,7 @@ import { emptyResult, tableKey, type Rule } from "../types.js";
  * are not reported.
  */
 const PRODUCT_HEADER = /total|amount|cost|price|sum|line|value/i;
-const TOTAL_ROW = /^(grand\s+)?(sub)?\s*total/i;
+const TOTAL_ROW = /^(?:grand\s+)?(?:sub\s*)?total/i;
 
 export const lineProduct: Rule = {
   id: "line-product",

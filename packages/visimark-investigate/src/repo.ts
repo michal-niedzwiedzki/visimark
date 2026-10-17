@@ -73,8 +73,10 @@ export function encodePath(path: string): string {
  * A `uses:` line naming the visimark action, e.g. `owner/visimark@v1` or
  * `owner/visimark/action.yml@v1` — matches action.yml's own publish shape,
  * case-insensitively since Actions refs are matched case-insensitively too.
+ * Horizontal whitespace only, and no two adjacent runs of it: workflow text
+ * is untrusted input, and `\s*-?\s*` backtracked polynomially on it (CodeQL).
  */
-export const VISIMARK_ACTION_USE = /^\s*-?\s*uses:\s*[\w.-]+\/visimark(@|\/|\s|$)/im;
+export const VISIMARK_ACTION_USE = /^[ \t]*(?:-[ \t]*)?uses:[ \t]*[\w.-]+\/visimark(?:@|\/|\s|$)/im;
 
 export function hasVisimarkAction(workflowTexts: string[]): boolean {
   return workflowTexts.some((text) => VISIMARK_ACTION_USE.test(text));
