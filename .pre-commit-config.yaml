@@ -22,7 +22,7 @@ repos:
         # arithmetic still passes by carrying `<!--vmark:no-formulas-->`; there
         # is no other kind of exemption.
         files: \.md$
-        exclude: ^(docs/WIP/.*|\.agents/skills/[^/]+/.*|packages/visimark/test/fixtures/.*|docs/example-invoice-drift\.md|docs/example-quote-plain\.md|docs/example-lunch-split-drift\.md|docs/design/presentation-only-percent-display-sigil-(plan|spec)\.md|packages/visimark-mcp/docs/example-invoice-drift\.md)$
+        exclude: ^(docs/WIP/.*|\.agents/skills/[^/]+/.*|packages/(visimark|visimark-investigate)/test/fixtures/.*|docs/example-invoice-drift\.md|docs/example-quote-plain\.md|docs/example-lunch-split-drift\.md|docs/design/presentation-only-percent-display-sigil-(plan|spec)\.md|packages/visimark-mcp/docs/example-invoice-drift\.md)$
       - id: gen-articles
         name: regenerate article pages
         language: system

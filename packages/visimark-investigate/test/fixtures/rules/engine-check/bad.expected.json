@@ -1,0 +1,24 @@
+[
+  {
+    "id": "bad.md#lunch/Total",
+    "path": "bad.md",
+    "lines": [17, 17],
+    "permalink": null,
+    "confidence": "confirmed",
+    "rules": ["engine-check"],
+    "stored": "30.00",
+    "computed": "29.50",
+    "message": "the document says 30.00; SUM(Price) computes 29.50",
+    "evidence": [
+      "   17  The four of us owe **30.00**<!--vmark=lunch.Total--> total, split evenly."
+    ],
+    "fix": [
+      {
+        "from": 461,
+        "to": 466,
+        "old": "30.00",
+        "new": "29.50"
+      }
+    ]
+  }
+]

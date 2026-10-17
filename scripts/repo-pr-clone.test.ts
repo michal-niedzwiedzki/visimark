@@ -1,8 +1,13 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { hasLocalWork } from "./repo-pr-clone.js";
+import {
+  hasLocalWork,
+  scanMeta,
+  usesVisimarkActionAt,
+  type PreparedClone,
+} from "./repo-pr-clone.js";
 import { run } from "./proc-run.js";
 
 function withGitRepo(fn: (dir: string) => void): void {
@@ -42,6 +47,82 @@ describe("hasLocalWork", () => {
     withGitRepo((dir) => {
       writeFileSync(join(dir, "b.txt"), "uncommitted");
       expect(hasLocalWork(dir)).toBe(true);
+    });
+  });
+});
+
+describe("usesVisimarkActionAt", () => {
+  test("reads the workflows at the commit, not the work tree", () => {
+    const dir = mkdtempSync(join(tmpdir(), "uses-action-"));
+    const git = (...args: string[]) =>
+      run(
+        ["git", "-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", ...args],
+        dir,
+      );
+    try {
+      git("init", "-q");
+      mkdirSync(join(dir, ".github/workflows"), { recursive: true });
+      writeFileSync(
+        join(dir, ".github/workflows/ci.yml"),
+        "steps:\n  - uses: actions/checkout@v4\n",
+      );
+      git("add", "-A");
+      git("commit", "-q", "-m", "ci");
+      const plain = git("rev-parse", "HEAD").stdout;
+      expect(usesVisimarkActionAt(dir, plain)).toBe(false);
+
+      // repo:pr's own workflow on its work branch does not count as adoption.
+      writeFileSync(
+        join(dir, ".github/workflows/visimark.yml"),
+        "steps:\n  - uses: michal-niedzwiedzki/visimark@v0.4.1\n",
+      );
+      git("add", "-A");
+      git("commit", "-q", "-m", "add");
+      expect(usesVisimarkActionAt(dir, plain)).toBe(false);
+      expect(usesVisimarkActionAt(dir, git("rev-parse", "HEAD").stdout)).toBe(true);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("false when the commit has no workflows", () => {
+    const dir = mkdtempSync(join(tmpdir(), "uses-action-"));
+    try {
+      run(["git", "init", "-q"], dir);
+      expect(usesVisimarkActionAt(dir, "HEAD")).toBe(false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("scanMeta", () => {
+  const clone: PreparedClone = {
+    status: "ready",
+    host: "github.com",
+    label: "o/r",
+    cloneUrl: "https://github.com/o/r.git",
+    sha: "remote-sha",
+    workdir: "/cache/o-r",
+    defaultBranch: "main",
+    reusedLocalWork: false,
+  };
+
+  test("a fresh clone is the remote commit, with permalinks", () => {
+    expect(scanMeta(clone, () => "local-head")).toEqual({
+      label: "o/r",
+      host: "github.com",
+      commit: "remote-sha",
+      clonePath: "/cache/o-r",
+    });
+  });
+
+  test("reused local work is its own HEAD, with no permalinks", () => {
+    expect(scanMeta({ ...clone, reusedLocalWork: true }, () => "local-head")).toEqual({
+      label: "o/r",
+      host: null,
+      commit: "local-head",
+      clonePath: "/cache/o-r",
     });
   });
 });

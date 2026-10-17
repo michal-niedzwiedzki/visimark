@@ -80,7 +80,7 @@ jobs:
           # skills-lock.json), and the engine's test fixtures, which fail on
           # purpose. .pre-commit-config.yaml selects the same set;
           # scripts/doc-set.test.ts keeps the two in step.
-          files=$(git ls-files '*.md' | grep -vE '^(docs/WIP/|\.agents/skills/[^/]+/|packages/visimark/test/fixtures/)')
+          files=$(git ls-files '*.md' | grep -vE '^(docs/WIP/|\.agents/skills/[^/]+/|packages/(visimark|visimark-investigate)/test/fixtures/)')
           for f in "${exclude[@]}"; do
             files=$(echo "$files" | grep -vxF "$f")
           done

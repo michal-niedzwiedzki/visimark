@@ -41,7 +41,7 @@
     "gen:editor-templates": "bun scripts/gen-editor-templates.ts",
     "gen:articles": "bun scripts/gen-articles.ts",
     "publish:devto": "bun scripts/publish-devto.ts",
-    "repo:scan": "bun scripts/repo-scan.ts",
+    "repo:investigate": "bun scripts/repo-investigate.ts",
     "repo:pr": "bun scripts/repo-pr.ts",
     "gen:examples": "bun scripts/gen-examples.ts",
     "gen:fonts": "bun scripts/gen-fonts.ts",

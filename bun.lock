@@ -162,6 +162,9 @@
         "unified": "^11.0.4",
       },
     },
+    "packages/visimark-investigate": {
+      "name": "visimark-investigate",
+    },
     "packages/visimark-lsp": {
       "name": "visimark-lsp",
       "version": "0.4.1",
@@ -190,6 +193,7 @@
       "dependencies": {
         "codemirror-visimark": "workspace:*",
         "visimark": "workspace:*",
+        "visimark-investigate": "workspace:*",
       },
       "devDependencies": {
         "@codemirror/commands": "^6.11.1",
@@ -1834,6 +1838,8 @@
     "visimark": ["visimark@workspace:packages/visimark"],
 
     "visimark-editor-shared": ["visimark-editor-shared@workspace:editors/shared"],
+
+    "visimark-investigate": ["visimark-investigate@workspace:packages/visimark-investigate"],
 
     "visimark-lsp": ["visimark-lsp@workspace:packages/visimark-lsp"],
 
