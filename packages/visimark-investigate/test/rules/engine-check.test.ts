@@ -63,6 +63,11 @@ describe("engine-check", () => {
     expect(runRule(engineCheck, "l.md", lunch).findings.length).toBe(1);
   });
 
+  test("a finding about a generated artifact is dropped", () => {
+    const charts = readFileSync(join(ROOT, "docs/example-charts.md"), "utf8");
+    expect(runRule(engineCheck, "docs/example-charts.md", charts).findings).toEqual([]);
+  });
+
   test("WARN and NOTE are dropped", () => {
     const text = QUOTE.replace("Cost = Qty * Price", "Cost = Qty * Price\nUnused = 1");
     const codes = runRule(engineCheck, "q.md", text).shaped.map((f) => f.confidence);

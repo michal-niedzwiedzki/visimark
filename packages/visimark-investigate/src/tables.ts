@@ -9,7 +9,7 @@
  */
 
 export interface Cell {
-  /** trimmed, with `*`, `_` and `` ` `` removed */
+  /** trimmed, with the `*`, `_` and `` ` `` runs that wrap it removed */
   text: string;
   /** the raw cell content without its surrounding spaces */
   from: number;
@@ -37,7 +37,12 @@ export interface Table {
 const ROW = /^\s*\|/;
 const DELIMITER = /^\s*\|[\s:|-]+\|?\s*$/;
 
-export const plainCell = (raw: string): string => raw.replace(/[*_`]/g, "").trim();
+/** A cell's text without the emphasis or code markers around it; an inner `_` (`premium_hours`) stays. */
+export const plainCell = (raw: string): string =>
+  raw
+    .trim()
+    .replace(/^[*_`]+|[*_`]+$/g, "")
+    .trim();
 
 function cellsOf(text: string, lineFrom: number, lineText: string): Cell[] {
   // Split on unescaped pipes; drop the empty edges a leading/trailing `|` makes.

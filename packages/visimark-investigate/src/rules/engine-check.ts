@@ -7,8 +7,9 @@ import { emptyResult, tableKey, type CellRef, type RawFinding, type Rule } from 
  * The engine's own verdict (spec §4.1). `STALE` — a stored value its rule no
  * longer computes — is a confirmed wrong number. Every other error code is a
  * broken document rather than a wrong number, so it is a lead. `COVERAGE` is
- * counted for the adoption axis, and `WARN`, `NOTE` and the collapsed
- * anchor-group `STALE` (a summary of the others) are not findings.
+ * counted for the adoption axis, and `WARN`, `NOTE`, the collapsed
+ * anchor-group `STALE` (a summary of the others) and anything about a
+ * generated artifact are not findings.
  */
 export const engineCheck: Rule = {
   id: "engine-check",
@@ -37,6 +38,9 @@ export const engineCheck: Rule = {
         continue;
       }
       if (!engine.isProblem(f) || f.anchorGroup) continue;
+      // A chart is a generated file the investigation never reads, so a
+      // finding about one says nothing about a number in the document.
+      if (f.artifact !== undefined || f.code === "ARTIFACT") continue;
       const stale = f.code === "STALE";
       const at = f.span ? cellAt(doc.tables, f.span.start) : null;
       let cell: CellRef;

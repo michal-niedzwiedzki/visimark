@@ -69,6 +69,12 @@ describe("readTables", () => {
     expect(shape(crlf)).toEqual(shape(lf));
   });
 
+  test("emphasis is stripped from the edges, an inner underscore stays", () => {
+    const [t] = tables("| **premium_hours** | `rate` |\n|---|---|\n| _a_b_ | 1 |\n");
+    expect(t!.header.map((c) => c.text)).toEqual(["premium_hours", "rate"]);
+    expect(t!.rows[0]!.label).toBe("a_b");
+  });
+
   test("duplicate labels get ~2", () => {
     const [t] = tables("| k | v |\n|---|---|\n| A | 1 |\n| A | 2 |\n| Total | 3 |\n");
     expect(rowKeys(t!)).toEqual(["A", "A~2", "Total"]);
