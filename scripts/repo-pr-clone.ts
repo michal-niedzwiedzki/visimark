@@ -12,6 +12,7 @@ import { dirname, join } from "node:path";
 import * as engine from "../packages/visimark/src/browser.js";
 import { readVersion } from "../packages/visimark/src/cli/version.js";
 import {
+  hasVisimarkAction,
   hostOf,
   importTargets,
   investigate,
@@ -215,14 +216,21 @@ export function investigateWorkdir(
   const workflowTexts = paths
     .filter((p) => /^\.github\/workflows\/[^/]+\.ya?ml$/.test(p.path))
     .flatMap((p) => readInside(workdir, p.path) ?? []);
-  const lastCommit = run(["git", "log", "-1", "--format=%cs"], workdir);
+  // The committer date in UTC, as the widget reads it from the GitHub API:
+  // `%cs` would print it in the committer's own offset, and a commit near
+  // midnight would then carry a different date in the two reports.
+  const committed = run(["git", "log", "-1", "--format=%cI"], workdir);
+  const lastCommit = committed.ok && committed.stdout ? new Date(committed.stdout) : null;
   return investigate(
     {
       repo: {
         label: meta.label,
         host: meta.host,
         commit: meta.commit,
-        lastCommit: lastCommit.ok && lastCommit.stdout ? lastCommit.stdout : null,
+        lastCommit:
+          lastCommit && !Number.isNaN(lastCommit.getTime())
+            ? lastCommit.toISOString().slice(0, 10)
+            : null,
       },
       engineVersion: readVersion(),
       paths,
@@ -233,6 +241,40 @@ export function investigateWorkdir(
     },
     engine,
   );
+}
+
+/**
+ * What a Report says it scanned. A fresh or clean cached clone is the remote
+ * commit, with permalinks at it. A clone reused for its local work (a
+ * `repo:pr` branch or uncommitted edits) is not that commit: the Report names
+ * the work tree's own HEAD and carries no host, so no permalink points at a
+ * snapshot the findings did not come from.
+ */
+export function scanMeta(
+  clone: PreparedClone,
+  headOf: (workdir: string) => string,
+): { label: string; host: string | null; commit: string; clonePath: string } {
+  return clone.reusedLocalWork
+    ? { label: clone.label, host: null, commit: headOf(clone.workdir), clonePath: clone.workdir }
+    : { label: clone.label, host: clone.host, commit: clone.sha, clonePath: clone.workdir };
+}
+
+/**
+ * True when the workflows at commit `ref` run the VisiMark Action. Read from
+ * the commit, not the work tree: a cached clone may have `repo:pr`'s own
+ * branch checked out, whose new workflow would otherwise read as adoption.
+ */
+export function usesVisimarkActionAt(workdir: string, ref: string): boolean {
+  const listed = run(["git", "ls-tree", "--name-only", `${ref}:.github/workflows`], workdir);
+  if (!listed.ok) return false; // no workflows directory at that commit
+  const texts = listed.stdout
+    .split("\n")
+    .filter((n) => /\.ya?ml$/.test(n))
+    .flatMap((n) => {
+      const shown = run(["git", "show", `${ref}:.github/workflows/${n}`], workdir);
+      return shown.ok ? [shown.stdout] : [];
+    });
+  return hasVisimarkAction(texts);
 }
 
 /** Writes the manifest entry and deletes the clone unless the report is actionable. Returns whether it was kept. */

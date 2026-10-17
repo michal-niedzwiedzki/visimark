@@ -27,4 +27,4 @@ export { applyEdits } from "./apply.js";
 export { cellKey } from "./ids.js";
 export { RULES } from "./rules/registry.js";
 export type { Edit, Engine, Finding, Report, Rule, RuleResult } from "./types.js";
-export { findingLines, summaryLines } from "./format.js";
+export { findingLines, ruleErrorLines, summaryLines } from "./format.js";

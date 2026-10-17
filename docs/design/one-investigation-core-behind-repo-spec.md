@@ -48,7 +48,7 @@ bun run repo:investigate <owner/repo | https-git-url | ssh-git-url | local-path>
 | `https://…` or `git@…:…` | A clone URL. Same grammar as today's `parseRepoArg`. |
 | `local-path` | An argument starting with `/`, `./` or `../` is a local directory. It must be inside a git work tree. Nothing is cloned and no cache or manifest is touched. Exists so acceptance runs offline. A bare `docs/x` is never a path: it is shorthand, and an invalid one if it has no `/`. |
 | `--branch NAME` | Clone `NAME` instead of the remote's `HEAD`. Refused with a local path. |
-| `--force` | Clone again even if a cached clone for this commit exists. It never deletes local work (a `WORK_BRANCH` branch or uncommitted changes, `hasLocalWork`). In that case the cached clone is reused and stderr says so. Refused with a local path. |
+| `--force` | Clone again even if a cached clone for this commit exists. It never deletes local work (a `WORK_BRANCH` branch or uncommitted changes, `hasLocalWork`). In that case the cached clone is reused and stderr says so. That Report names the work tree's own `HEAD` as its commit and has `host: null`, so no permalink points at a remote snapshot the findings did not come from. Refused with a local path. |
 | `--json` | Print the Report (§3.3) and nothing else to stdout. |
 
 There are no short forms. Any other `--option`, a second positional argument, or `--branch` without a value is a usage error. `--explain` and `--keep` from `repo:scan` do not exist: text mode always prints every finding, and the clone is always cached (§2.3).
@@ -251,7 +251,7 @@ Posture is computed by the core from `paths`, the workflow texts and `repo.lastC
 - `prTemplate`: `pull_request_template.md` at the root, under `docs/`, or under `.github/`, or any file under `.github/PULL_REQUEST_TEMPLATE/`. Names are compared case-insensitively.
 - `license`: a root file matching `/^(licen[cs]e|copying)(\..*)?$/i`.
 - `actionUsed`: `VISIMARK_ACTION_USE` matches any `.github/workflows/*.y(a)ml` text.
-- `lastCommit`: the committer date of the scanned commit, as `YYYY-MM-DD`. The CLI gets it from `git log -1 --format=%cs`, the widget from the commits call.
+- `lastCommit`: the committer date of the scanned commit in UTC, as `YYYY-MM-DD`. The CLI gets it from `git log -1 --format=%cI` converted to UTC, and the widget from the commits call, which is already UTC. Using `%cs` would give the committer's own offset, so a commit near midnight would get a different date in each report.
 
 ### 4.3 Sessions (acceptance)
 

@@ -18,6 +18,7 @@ import { basename, resolve } from "node:path";
 import {
   findingLines,
   parseRepoArg,
+  ruleErrorLines,
   summaryLines,
   type Report,
 } from "../packages/visimark-investigate/src/index.js";
@@ -27,6 +28,7 @@ import {
   investigateWorkdir,
   prepareClone,
   recordClone,
+  scanMeta,
 } from "./repo-pr-clone.js";
 
 const USAGE =
@@ -73,6 +75,7 @@ function print(report: Report, json: boolean): void {
     `repo-investigate: ${report.repo.label} at ${report.repo.commit.slice(0, 12)}, ${report.files.read} Markdown files`,
     ...summaryLines(report),
     ...report.files.skipped.map((s) => `skipped: ${s.path} (${s.reason})`),
+    ...ruleErrorLines(report),
   ];
   for (const f of report.findings) out.push("", ...findingLines(f, "cli"));
   console.log(out.join("\n"));
@@ -113,12 +116,10 @@ if (LOCAL.test(target)) {
       `note: ${clone.workdir} has local work from repo:pr; reusing it, manifest left alone`,
     );
   }
-  report = investigateWorkdir(clone.workdir, {
-    label: clone.label,
-    host: clone.host,
-    commit: clone.sha,
-    clonePath: clone.workdir,
-  });
+  report = investigateWorkdir(
+    clone.workdir,
+    scanMeta(clone, (dir) => run(["git", "rev-parse", "HEAD"], dir).stdout),
+  );
   const kept = clone.reusedLocalWork || recordClone(cacheRoot, clone, report);
   if (!kept) report.clonePath = null;
   console.error(

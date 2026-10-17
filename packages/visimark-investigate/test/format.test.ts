@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { findingLines, summaryLines } from "../src/format.js";
+import { findingLines, ruleErrorLines, summaryLines } from "../src/format.js";
 import { investigate } from "../src/investigate.js";
 import { selectFiles } from "../src/policy.js";
 import type { Finding } from "../src/types.js";
@@ -96,5 +96,14 @@ describe("findingLines", () => {
   test("an escaped component prints plainly", () => {
     const f: Finding = { ...lead, id: "a.md#t1/Cost%2FUnit/B", confidence: "confirmed" };
     expect(findingLines(f, "web")[0]).toBe("Wrong number · docs/plan.md:8 · Cost/Unit / B");
+  });
+});
+
+describe("ruleErrorLines", () => {
+  test("one line per rule error, none when clean", () => {
+    const r = report();
+    expect(ruleErrorLines(r)).toEqual([]);
+    r.ruleErrors = [{ path: "docs/a.md", rule: "engine-check", message: "boom" }];
+    expect(ruleErrorLines(r)).toEqual(["rule error: docs/a.md (engine-check): boom"]);
   });
 });

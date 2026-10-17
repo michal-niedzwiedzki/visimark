@@ -113,6 +113,22 @@ describe("investigate", () => {
     expect(r.findings.length).toBe(1);
   });
 
+  test("an infer failure in the after-fix pass is recorded, not thrown", () => {
+    const quote = fixtureRepo().get("docs/quote.md")!;
+    // The fixed text is the only one holding "12.00", so only the after-fix pass throws.
+    const flaky = {
+      ...engine,
+      infer: (text: string) => {
+        if (text.includes("12.00")) throw new Error("infer broke");
+        return engine.infer(text);
+      },
+    };
+    const r = investigate(inputOf(new Map([["q.md", quote]])), flaky);
+    expect(r.ruleErrors).toEqual([{ path: "q.md", rule: "engine-infer", message: "infer broke" }]);
+    expect(r.adoption.inferableAfterFix).toBe(0);
+    expect(r.findings.length).toBe(1);
+  });
+
   test("posture unavailable when workflowTexts is null", () => {
     const r = investigate(inputOf(fixtureRepo(), { workflowTexts: null }), engine);
     expect(r.posture.available).toBe(false);

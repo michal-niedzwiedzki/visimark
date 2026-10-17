@@ -40,3 +40,8 @@ export function findingLines(f: Finding, style: "cli" | "web"): string[] {
     `  ${f.message}`,
   ];
 }
+
+/** One line per rule that failed on a file, so a partial investigation says so. */
+export function ruleErrorLines(r: Report): string[] {
+  return r.ruleErrors.map((e) => `rule error: ${e.path} (${e.rule}): ${e.message}`);
+}

@@ -97,7 +97,7 @@ export function investigate(
 
   const inferable = [...proposed].filter((k) => !ruled.has(k) && !confirmedTables.has(k)).length;
   const withArithmetic = new Set([...checked, ...proposed].filter((k) => !ruled.has(k))).size;
-  const inferableAfterFix = afterFix(docs, confirmedTables, ruled, ctx);
+  const inferableAfterFix = afterFix(docs, confirmedTables, ruled, ctx, ruleErrors);
 
   const confirmed = findings.filter((f) => f.confidence === "confirmed").length;
   const leads = findings.length - confirmed;
@@ -175,6 +175,7 @@ function afterFix(
   confirmedTables: Map<string, Finding[]>,
   ruled: Set<string>,
   ctx: RuleContext,
+  ruleErrors: Report["ruleErrors"],
 ): number {
   let count = 0;
   for (const doc of docs) {
@@ -189,7 +190,18 @@ function afterFix(
     } catch {
       continue;
     }
-    const proposals = engineInfer.run(docInput(doc.path, fixed), ctx).proposals;
+    let proposals;
+    try {
+      proposals = engineInfer.run(docInput(doc.path, fixed), ctx).proposals;
+    } catch (err) {
+      // Recorded like any other rule failure: the rest of the report stands.
+      ruleErrors.push({
+        path: doc.path,
+        rule: engineInfer.id,
+        message: err instanceof Error ? err.message : String(err),
+      });
+      continue;
+    }
     const after = new Set(proposals.map((p) => tableKey(doc.path, p.table)));
     count += tables.filter((k) => after.has(k)).length;
   }

@@ -14,7 +14,11 @@ const USAGE =
 let parent: string;
 let sha: string;
 
-function makeRepo(name: string, files: Record<string, string>): string {
+function makeRepo(
+  name: string,
+  files: Record<string, string>,
+  date = "2026-09-30T12:00:00Z",
+): string {
   const dir = join(parent, name);
   for (const [path, text] of Object.entries(files)) {
     mkdirSync(dirname(join(dir, path)), { recursive: true });
@@ -22,8 +26,8 @@ function makeRepo(name: string, files: Record<string, string>): string {
   }
   const env = {
     ...process.env,
-    GIT_AUTHOR_DATE: "2026-09-30T12:00:00Z",
-    GIT_COMMITTER_DATE: "2026-09-30T12:00:00Z",
+    GIT_AUTHOR_DATE: date,
+    GIT_COMMITTER_DATE: date,
   };
   const git = (...args: string[]) =>
     Bun.spawnSync(
@@ -80,6 +84,11 @@ beforeAll(() => {
       "",
     ].join("\n"),
   });
+  makeRepo(
+    "late-repo",
+    { "README.md": "# Late\n\n<!--vmark:no-formulas-->\n" },
+    "2026-09-30T23:30:00-05:00",
+  );
   mkdirSync(join(parent, "empty-dir"));
 });
 
@@ -162,6 +171,10 @@ describe("repo:investigate", () => {
     expect(r.stdout).toContain("lead       docs/plan.md:");
     expect(r.stdout).toContain("· found by: VisiMark");
     expect(r.code).toBe(0);
+  });
+
+  test("last commit is the UTC date, as the widget reads it", () => {
+    expect(JSON.parse(run("./late-repo", "--json").stdout).posture.lastCommit).toBe("2026-10-01");
   });
 
   test("no argument", () => {

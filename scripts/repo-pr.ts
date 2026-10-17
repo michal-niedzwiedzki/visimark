@@ -17,7 +17,12 @@ import { fileURLToPath } from "node:url";
 import { cmdCheck, cmdFmt, cmdInfer, type Writer } from "../packages/visimark/src/cli/commands.js";
 import { isConfined } from "./fs-guard.js";
 import { listTrackedFiles, run } from "./proc-run.js";
-import { defaultCacheRoot, ensureClone, WORK_BRANCH } from "./repo-pr-clone.js";
+import {
+  defaultCacheRoot,
+  ensureClone,
+  usesVisimarkActionAt,
+  WORK_BRANCH,
+} from "./repo-pr-clone.js";
 import { isDotPath } from "../packages/visimark-investigate/src/index.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -112,6 +117,17 @@ let workdir: string;
 // default branch: `ensureClone` captures it once, right after cloning and
 // before anything checks a work branch out. See its comment.
 let defaultBranch: string;
+
+/** The investigation no longer skips an adopted repo, but this script would
+ *  install a second visimark workflow into one; keep refusing unless forced. */
+function refuseAdopted(label: string, adopted: boolean): void {
+  if (!adopted || force) return;
+  console.log(
+    `repo-pr: ${label} already runs the visimark action — pass --force to proceed anyway`,
+  );
+  process.exit(0);
+}
+
 if (clone.status === "already-scanned") {
   if (!clone.entry.hasFindings || !clone.entry.workdir) {
     console.log(
@@ -122,15 +138,11 @@ if (clone.status === "already-scanned") {
   repoLabel = clone.repo;
   workdir = clone.entry.workdir;
   defaultBranch = clone.entry.defaultBranch;
+  // A cached clone answers from the scanned commit, not from its work tree,
+  // where a previous run's own workflow may already sit.
+  refuseAdopted(repoLabel, usesVisimarkActionAt(workdir, clone.entry.ref));
 } else {
-  // The investigation no longer skips an adopted repo, but this script would
-  // install a second visimark workflow into one; keep refusing unless forced.
-  if (clone.report.posture.actionUsed && !force) {
-    console.log(
-      `repo-pr: ${clone.report.repo.label} already runs the visimark action — pass --force to proceed anyway`,
-    );
-    process.exit(0);
-  }
+  refuseAdopted(clone.report.repo.label, clone.report.posture.actionUsed === true);
   if (!clone.kept) {
     console.log(
       `repo-pr: ${clone.report.repo.label} has nothing to act on (no findings) — nothing to do`,
