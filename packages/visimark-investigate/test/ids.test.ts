@@ -18,3 +18,9 @@ test("a repeated label takes ~2, and emphasis leaves the header", () => {
     "| Item | **Cost** |\n|---|---|\n| Total | 1 |\n| A | 1 |\n| B | 2 |\n| Total | 4 |\n";
   expect(runRule(totalRow, "a.md", text).shaped.map((f) => f.id)).toEqual(["a.md#t1/Cost/Total~2"]);
 });
+
+test("a slash or percent inside a component is escaped", () => {
+  expect(cellKey("a.md", { kind: "table", table: 1, column: "Cost/Unit", row: "50%" })).toBe(
+    "a.md#t1/Cost%2FUnit/50%25",
+  );
+});
