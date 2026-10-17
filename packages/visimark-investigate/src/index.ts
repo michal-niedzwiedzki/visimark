@@ -22,3 +22,8 @@ export {
   type RepoRef,
 } from "./repo.js";
 export { importTargets } from "./imports.js";
+export { investigate, type InvestigateInput } from "./investigate.js";
+export { applyEdits } from "./apply.js";
+export { cellKey } from "./ids.js";
+export { RULES } from "./rules/registry.js";
+export type { Edit, Engine, Finding, Report, Rule, RuleResult } from "./types.js";
