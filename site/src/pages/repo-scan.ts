@@ -1,19 +1,39 @@
 /**
- * "Scan your repo" widget on the homepage: paste a public `owner/repo`,
- * fetch its tracked Markdown straight from GitHub's API (no clone, no
- * server — `raw.githubusercontent.com` and `api.github.com` both send
- * permissive CORS headers), run the same `infer`/`check` the CLI ships
- * against it in the browser, and offer a link that hands off to GitHub's
- * own "create new file" editor to add the VisiMark Action — nothing here
- * ever commits or opens a PR itself.
+ * "Scan your repo" widget on the homepage: paste a public `owner/repo`, fetch
+ * its tracked files straight from GitHub (no clone, no server —
+ * `raw.githubusercontent.com` and `api.github.com` both send permissive CORS
+ * headers), and run the investigation core (`packages/visimark-investigate`)
+ * over them in the browser — the same code `bun run repo:investigate` runs,
+ * so both report the same findings for the same repo and commit. This file
+ * only fetches and renders; it judges nothing itself. Spec:
+ * docs/design/one-investigation-core-behind-repo-spec.md.
+ *
+ * Three API calls per scan — the repo (its default branch), that branch's
+ * commit (the scan is pinned to it, so permalinks hold and files are read at
+ * one commit), and the commit's tree. Everything else is raw content.
  *
  * The engine (`vendor/visimark-browser.js`, ~300KB minified) is not fetched
  * until the form is submitted, via a dynamically injected `<script>` tag —
  * it's an IIFE bundle, not a module, so `import()` can't load it (see
  * `../playground/browser-entry.ts`'s header comment for why the playground
  * bundle is built that way; this page's copy is the same build). Every
- * visit that doesn't use the widget pays nothing for it.
+ * visit that doesn't use the widget pays nothing for it. The core reaches it
+ * as an argument, never as an import.
  */
+import enginePackage from "../../../packages/visimark/package.json" with { type: "json" };
+import {
+  encodePath,
+  findingLines,
+  importTargets,
+  investigate,
+  looksGenerated,
+  selectFiles,
+  summaryLines,
+  type Engine,
+  type InvestigateInput,
+  type Report,
+  type Skipped,
+} from "visimark-investigate";
 import type { VisiMarkApi } from "../playground/types.js";
 import { byId } from "./dom.js";
 import { escapeHtml, setTrustedHtml } from "../html.js";
@@ -23,15 +43,11 @@ const RAW = "https://raw.githubusercontent.com";
 const ENGINE_SRC = "vendor/visimark-browser.js";
 /** Last known-good release, used only if the live lookup below fails. */
 const FALLBACK_TAG = "v0.1.10";
-/** Repos larger than this many Markdown files get the first N (in the git
- *  tree's own order — not sorted by anything meaningful) scanned and a note
- *  that the rest were skipped, as a last-resort guard against a truly
- *  pathological repo. Set well above what a normal docs-heavy repo carries:
- *  this project's own repo has 206 after dot-paths are excluded, and a cap
- *  anywhere near that silently drops real content in tree order — which is
- *  roughly alphabetical, so `docs/example-*.md` loses to `docs/design/*.md`
- *  first. raw.githubusercontent.com has no per-scan rate limit that a few
- *  hundred small text fetches would hit. */
+/** The widget's file cap (spec §3.4): past it, the first files in byte order
+ *  are read and the rest are reported as `file-cap` skips. Set well above
+ *  what a normal docs-heavy repo carries — this project's own repo has a
+ *  couple of hundred after dot-paths are excluded. It protects a browser tab,
+ *  not a policy about what counts as a document, so the CLI has none. */
 const MAX_FILES = 500;
 const CONCURRENCY = 6;
 /** One retry, after a short pause, for a raw-content fetch that failed —
@@ -39,28 +55,6 @@ const CONCURRENCY = 6;
  *  out of a few hundred, which used to take down the whole scan (a single
  *  rejected `fetch()` propagated uncaught through the pool). */
 const RETRY_DELAY_MS = 400;
-
-/** Mirrors `scripts/repo-scan-lib.ts`'s `VISIMARK_ACTION_USE` — kept as a
- *  separate copy because that module is Bun/Node CLI code and this one is a
- *  browser bundle; if VisiMark ever publishes the Action under a different
- *  name, both copies need the update. */
-export const VISIMARK_ACTION_USE = /^\s*-?\s*uses:\s*[\w.-]+\/visimark(@|\/|\s|$)/im;
-
-/** Mirrors `scripts/repo-scan-lib.ts`'s `excludeDotPaths` — same reasoning,
- *  same "why a separate copy" as `VISIMARK_ACTION_USE` above: dot-directory
- *  content (`.github/`, `.agents/`, a repo's own tooling) isn't the authored
- *  Markdown this widget exists to find arithmetic in. */
-export function isDotPath(path: string): boolean {
-  return path.split("/").some((segment) => segment.startsWith("."));
-}
-
-/** Percent-encodes each path segment, keeping `/` as a separator — a branch
- *  name or a Markdown path can contain `#`, `?`, or `%`, any of which
- *  truncates or misroutes a URL built by plain concatenation (a raw path
- *  like `docs/C#-notes.md` would cut the request off at the `#`). */
-export function encodePath(path: string): string {
-  return path.split("/").map(encodeURIComponent).join("/");
-}
 
 export interface RepoRef {
   owner: string;
@@ -81,6 +75,7 @@ export function parseRepoInput(input: string): RepoRef | null {
 interface GitTreeEntry {
   path: string;
   type: string;
+  size?: number;
 }
 
 /** Runs `fn` over `items` with at most `limit` in flight at once, so a
@@ -217,20 +212,6 @@ export async function fetchRawText(url: string): Promise<string | null> {
   return null;
 }
 
-interface FileResult {
-  path: string;
-  /** `formatCheck`'s full text — every finding, not just problems, since its
-   *  own footer ("N problems (M stale, K errors)") is what the CLI and the
-   *  GitHub Action itself print. */
-  findingsText: string;
-  /** Findings that would fail `check` — `VM.isProblem`, not the raw finding
-   *  count. A document can carry `WARN`/`NOTE` advice with nothing actually
-   *  wrong; showing that as a "finding" buried the real drift (issue: the
-   *  homepage's own flagship stale-invoice demo has to be found among noise
-   *  from files that merely lack `infer`'s advisory annotations). */
-  problemCount: number;
-}
-
 /** Thrown for anything the status line should show verbatim — a 404, a rate
  *  limit, an empty repo. Distinguishes "GitHub said no" from a bug. */
 class ScanError extends Error {}
@@ -257,168 +238,162 @@ async function fetchJson(url: string): Promise<unknown> {
   return res.json();
 }
 
-async function runScan(
+/**
+ * Everything the core needs, fetched from GitHub (spec §2.4, §3.2): the
+ * commit, every tracked path with its size, the Markdown the policy keeps,
+ * the workflows and the import targets. The engine is loaded only once the
+ * Markdown is in hand, and handed back so the caller investigates with it.
+ */
+export async function gatherInputs(
   ref: RepoRef,
+  loadEngine: () => Promise<Engine>,
   onProgress: (message: string, fraction: number | null) => void,
-): Promise<{
-  defaultBranch: string;
-  hasAction: boolean;
-  files: FileResult[];
-  skipped: number;
-  failed: number;
-  crashed: number;
-}> {
+): Promise<{ input: InvestigateInput; defaultBranch: string; engine: Engine }> {
   onProgress(`Resolving ${ref.owner}/${ref.repo}…`, null);
-  const repoInfo = (await fetchJson(`${API}/repos/${ref.owner}/${ref.repo}`)) as {
-    default_branch: string;
-  };
+  const base = `${API}/repos/${ref.owner}/${ref.repo}`;
+  const repoInfo = (await fetchJson(base)) as { default_branch: string };
   const defaultBranch = repoInfo.default_branch;
-
-  const tree = (await fetchJson(
-    `${API}/repos/${ref.owner}/${ref.repo}/git/trees/${encodeURIComponent(defaultBranch)}?recursive=1`,
-  )) as { tree: GitTreeEntry[] };
-
+  const commit = (await fetchJson(`${base}/commits/${encodeURIComponent(defaultBranch)}`)) as {
+    sha: string;
+    commit?: { committer?: { date?: string } };
+  };
+  const sha = commit.sha;
+  const tree = (await fetchJson(`${base}/git/trees/${sha}?recursive=1`)) as {
+    tree: GitTreeEntry[];
+  };
   const raw = (path: string) =>
-    fetchRawText(
-      `${RAW}/${ref.owner}/${ref.repo}/${encodePath(defaultBranch)}/${encodePath(path)}`,
-    );
+    fetchRawText(`${RAW}/${ref.owner}/${ref.repo}/${sha}/${encodePath(path)}`);
 
-  const workflowEntries = tree.tree.filter(
-    (e) => e.type === "blob" && /^\.github\/workflows\/.*\.ya?ml$/.test(e.path),
-  );
-  const workflowTexts = await mapPool(workflowEntries, CONCURRENCY, (e) => raw(e.path));
-  const hasAction = workflowTexts.some((t) => t !== null && VISIMARK_ACTION_USE.test(t));
-  if (hasAction) return { defaultBranch, hasAction, files: [], skipped: 0, failed: 0, crashed: 0 };
+  const paths = tree.tree
+    .filter((e) => e.type === "blob")
+    .map((e) => ({ path: e.path, size: e.size ?? 0 }));
+  const tracked = new Set(paths.map((p) => p.path));
 
-  const allMdEntries = tree.tree.filter(
-    (e) => e.type === "blob" && /\.(md|markdown)$/i.test(e.path) && !isDotPath(e.path),
-  );
-  const mdEntries = allMdEntries.slice(0, MAX_FILES);
-  const skipped = allMdEntries.length - mdEntries.length;
+  const workflowPaths = paths
+    .map((p) => p.path)
+    .filter((p) => /^\.github\/workflows\/[^/]+\.ya?ml$/.test(p));
+  const workflowFetched = await mapPool(workflowPaths, CONCURRENCY, raw);
+  const workflowTexts = workflowFetched.some((t) => t === null)
+    ? null
+    : (workflowFetched as string[]);
 
-  onProgress(`Fetching ${mdEntries.length} file(s)…`, 0);
-  const contents = new Map<string, string>();
+  const { markdown, skipped: policySkipped } = selectFiles(paths, MAX_FILES);
+  const skipped: Skipped[] = [...policySkipped];
+  const texts = new Map<string, string>();
+  onProgress(`Fetching ${markdown.length} file(s)…`, 0);
   let fetched = 0;
-  let failed = 0;
-  await mapPool(mdEntries, CONCURRENCY, async (e) => {
-    const text = await raw(e.path);
-    if (text === null) failed++;
-    else contents.set(e.path, text);
+  const fetchedTexts = await mapPool(markdown, CONCURRENCY, async (path) => {
+    const text = await raw(path);
     fetched++;
     onProgress(
-      `Fetching ${mdEntries.length} file(s)… (${fetched}/${mdEntries.length})`,
-      fetched / mdEntries.length,
+      `Fetching ${markdown.length} file(s)… (${fetched}/${markdown.length})`,
+      fetched / markdown.length,
     );
+    return text;
+  });
+  markdown.forEach((path, i) => {
+    const text = fetchedTexts[i];
+    if (text === null || text === undefined) skipped.push({ path, reason: "fetch-failed" });
+    else if (looksGenerated(text)) skipped.push({ path, reason: "generated" });
+    else texts.set(path, text);
   });
 
   onProgress("Loading engine…", null);
-  const VM = await loadEngine();
-  const reader = VM.memoryReader((path) => contents.get(path));
-  const files: FileResult[] = [];
-  let crashed = 0;
-  let scanned = 0;
-  for (const entry of mdEntries) {
-    const source = contents.get(entry.path);
-    if (source !== undefined) {
-      // A malformed or unusual document from a repo VisiMark has never seen
-      // is exactly the case a public "paste any repo" widget has to expect —
-      // one bad file must not take the whole scan down with it (see the
-      // fetch-side `fetchRawText` for the same principle on the network side).
-      try {
-        const model = VM.build(VM.locate(source));
-        const result = VM.check(model, { doc: { path: entry.path, reader } });
-        // COVERAGE ("this table has no vmark rules yet — infer them, or mark
-        // it no-formulas") isn't an arithmetic fault, it's "you haven't
-        // adopted VisiMark here yet." It's the right thing for `check` in CI
-        // to enforce once a repo has opted in, but reporting it to someone
-        // who just pasted their repo out of curiosity reads as "your table
-        // has a problem" when the honest message is "nothing has been wrong
-        // yet, because nothing here is being checked" — noise that competes
-        // with, and can bury, an actual STALE/DATE/UNDEF finding. Excluded
-        // from both the count and the detail text below.
-        const relevantFindings = result.findings.filter((f) => f.code !== "COVERAGE");
-        const problemCount = relevantFindings.filter(VM.isProblem).length;
-        if (problemCount > 0) {
-          files.push({
-            path: entry.path,
-            findingsText: VM.formatCheck(entry.path, relevantFindings),
-            problemCount,
-          });
-        }
-      } catch {
-        crashed++;
-      }
-    }
-    scanned++;
-    // Every 5 files, *and* unconditionally on the last one — a fixed interval
-    // that doesn't divide `mdEntries.length` (20 vs. this repo's 206) meant
-    // the final stretch ran with no further UI update at all until the loop
-    // fully ended: indistinguishable from a hang if anything in that tail is
-    // even a little slower than expected (a different JS engine's regex
-    // performance, a busy tab, GC). The `=== mdEntries.length` guard is what
-    // actually fixes that — a finer interval alone would still leave *some*
-    // remainder silent, just a shorter one.
-    if (scanned % 5 === 0 || scanned === mdEntries.length) {
-      onProgress(`Scanning… (${scanned}/${mdEntries.length})`, scanned / mdEntries.length);
-      await delay(0);
-    }
-  }
-  // No separate "done" message: the caller hides the whole status line the
-  // moment this promise (and the parallel tag lookup, now timeout-bounded
-  // too) settles, so a synthetic "done" step here only added a state where
-  // the text says finished while the spinner, correctly, has not stopped yet.
-  return { defaultBranch, hasAction, files, skipped, failed, crashed };
+  const engine = await loadEngine();
+  const targets = importTargets(texts, engine).filter((t) => tracked.has(t) && !texts.has(t));
+  const targetTexts = await mapPool(targets, CONCURRENCY, raw);
+  targets.forEach((t, i) => {
+    const text = targetTexts[i];
+    if (text !== null && text !== undefined) texts.set(t, text);
+  });
+
+  const date = commit.commit?.committer?.date;
+  return {
+    defaultBranch,
+    engine,
+    input: {
+      repo: {
+        label: `${ref.owner}/${ref.repo}`,
+        host: "github.com",
+        commit: sha,
+        lastCommit: date ? date.slice(0, 10) : null,
+      },
+      engineVersion: enginePackage.version,
+      paths,
+      texts,
+      skipped,
+      workflowTexts,
+      clonePath: null,
+    },
+  };
 }
 
-function renderReport(
-  reportEl: HTMLElement,
+async function runScan(
   ref: RepoRef,
-  outcome: Awaited<ReturnType<typeof runScan>>,
-  addActionUrl: string | null,
-): void {
-  const { hasAction, files, skipped, failed, crashed } = outcome;
-  const parts: string[] = [];
+  onProgress: (message: string, fraction: number | null) => void,
+): Promise<{ report: Report; defaultBranch: string }> {
+  const { input, defaultBranch, engine } = await gatherInputs(ref, loadEngine, onProgress);
+  onProgress("Checking…", null);
+  await delay(0);
+  return { report: investigate(input, engine), defaultBranch };
+}
 
-  if (hasAction) {
-    parts.push(
-      `<p class="repo-scan-summary">${escapeHtml(`${ref.owner}/${ref.repo}`)} already runs the VisiMark Action — nothing to add.</p>`,
-    );
-  } else {
-    const totalProblems = files.reduce((n, f) => n + f.problemCount, 0);
-    const caveats = [
-      skipped > 0 ? `stopped after ${MAX_FILES} files; ${skipped} more weren't scanned` : "",
-      failed > 0 ? `${failed} file(s) couldn't be fetched and were skipped — try again?` : "",
-      crashed > 0 ? `${crashed} file(s) couldn't be checked and were skipped` : "",
-    ]
-      .filter(Boolean)
-      .join("; ");
-    parts.push(
-      `<p class="repo-scan-summary">${
-        files.length === 0
-          ? "No check problems found."
-          : `${totalProblems} problem(s) across ${files.length} file(s).`
-      }${caveats ? ` (${caveats}.)` : ""}</p>`,
-    );
-    if (files.length > 0) {
-      const items = files
-        .map((f) => {
-          const fileUrl = `https://github.com/${ref.owner}/${ref.repo}/blob/${encodePath(outcome.defaultBranch)}/${encodePath(f.path)}`;
-          return (
-            `<li><a class="repo-scan-file-link" href="${escapeHtml(fileUrl)}" target="_blank" rel="noopener"><code>${escapeHtml(f.path)}</code></a>` +
-            `<details><summary>${f.problemCount} problem(s)</summary><pre>${escapeHtml(f.findingsText)}</pre></details></li>`
-          );
-        })
-        .join("");
-      parts.push(`<ul class="repo-scan-files">${items}</ul>`);
-    }
-    if (addActionUrl) {
-      parts.push(
-        `<a class="tryout-btn" target="_blank" rel="noopener" href="${escapeHtml(addActionUrl)}">Add visimark.yml to ${escapeHtml(`${ref.owner}/${ref.repo}`)} on GitHub &rarr;</a>`,
-      );
-    }
+/**
+ * The report as HTML: the core's own summary and finding lines, escaped —
+ * the CLI prints the very same lines (spec §4.5). The "Add visimark.yml"
+ * link appears only for a repo that does not already run the Action.
+ */
+export function reportHtml(report: Report, addActionUrl: string | null): string {
+  const parts: string[] = [];
+  const lines = summaryLines(report).map((l) => escapeHtml(l));
+  parts.push(`<p class="repo-scan-summary">${lines.join("<br>")}</p>`);
+
+  const count = (reason: Skipped["reason"]) =>
+    report.files.skipped.filter((s) => s.reason === reason).length;
+  const caveats = [
+    count("file-cap") > 0
+      ? `stopped after ${MAX_FILES} files; ${count("file-cap")} more weren't scanned`
+      : "",
+    count("fetch-failed") > 0
+      ? `${count("fetch-failed")} file(s) couldn't be fetched and were skipped — try again?`
+      : "",
+    report.ruleErrors.length > 0
+      ? `${report.ruleErrors.length} check(s) couldn't run on a file and were skipped`
+      : "",
+  ].filter(Boolean);
+  if (caveats.length > 0) {
+    parts.push(`<p class="repo-scan-summary">(${escapeHtml(caveats.join("; "))}.)</p>`);
   }
 
-  setTrustedHtml(reportEl, parts.join("\n"));
+  if (report.findings.length === 0) {
+    parts.push(`<p class="repo-scan-summary">No wrong numbers found.</p>`);
+  } else {
+    const items = report.findings
+      .map((f) => {
+        const [headline = "", message = "", foundBy = ""] = findingLines(f, "web");
+        const title = f.permalink
+          ? `<a class="repo-scan-file-link" href="${escapeHtml(f.permalink)}" target="_blank" rel="noopener">${escapeHtml(headline)}</a>`
+          : escapeHtml(headline);
+        const evidence =
+          f.evidence.length > 0
+            ? `<details><summary>source</summary><pre>${escapeHtml(f.evidence.join("\n"))}</pre></details>`
+            : "";
+        return `<li><strong>${title}</strong><br>${escapeHtml(message)}<br><small>${escapeHtml(foundBy)}</small>${evidence}</li>`;
+      })
+      .join("");
+    parts.push(`<ul class="repo-scan-files">${items}</ul>`);
+  }
+
+  if (addActionUrl && report.posture.actionUsed === false) {
+    parts.push(
+      `<a class="tryout-btn" target="_blank" rel="noopener" href="${escapeHtml(addActionUrl)}">Add visimark.yml to ${escapeHtml(report.repo.label)} on GitHub &rarr;</a>`,
+    );
+  }
+  return parts.join("\n");
+}
+
+function renderReport(reportEl: HTMLElement, report: Report, addActionUrl: string | null): void {
+  setTrustedHtml(reportEl, reportHtml(report, addActionUrl));
   reportEl.hidden = false;
 }
 
@@ -469,7 +444,7 @@ export function wireRepoScan(): void {
     setStatus("Resolving repo…", null);
 
     void (async () => {
-      const [outcome, actionTag] = await withTimeout(
+      const [{ report, defaultBranch }, actionTag] = await withTimeout(
         Promise.all([
           runScan(ref, (message, fraction) => setStatus(message, fraction)),
           latestVisimarkTag(),
@@ -477,15 +452,13 @@ export function wireRepoScan(): void {
         90_000,
         "This is taking far longer than it should — try a smaller repo, or try again.",
       );
-      const addActionUrl = outcome.hasAction
-        ? null
-        : githubNewFileUrl(
-            ref,
-            outcome.defaultBranch,
-            workflowYaml(outcome.defaultBranch, actionTag),
-          );
+      const addActionUrl = githubNewFileUrl(
+        ref,
+        defaultBranch,
+        workflowYaml(defaultBranch, actionTag),
+      );
       statusEl.hidden = true;
-      renderReport(reportEl, ref, outcome, addActionUrl);
+      renderReport(reportEl, report, addActionUrl);
     })()
       .catch((err: unknown) => {
         const message =

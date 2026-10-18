@@ -27,8 +27,8 @@
       carries `'self'` for articles/articles.json (the articles panel; the demos
       render Markdown that is already in the markup) plus the two hosts the
       "Scan your repo" widget fetches from on submit: `api.github.com` (repo
-      metadata and the file tree) and `raw.githubusercontent.com` (each
-      Markdown file's content) — see `site/src/pages/repo-scan.ts`.
+      metadata, the commit and its file tree) and `raw.githubusercontent.com`
+      (each file's content at that commit) — see `site/src/pages/repo-scan.ts`.
       Its "Add visimark.yml" button is a plain `<a href="https://github.com/…">`,
       not a `fetch()`, so `github.com` itself has no reason to be in
       `connect-src`. `default-src 'none'` makes each grant an allowlist
@@ -469,8 +469,9 @@ Total: **35.00**<span class="c">&lt;!--vmark=order.total--&gt;</span>
       <header class="section-head">
         <h2>Scan your repo</h2>
         <p class="subtitle">
-          Paste a public GitHub repo and see what VisiMark would catch in its Markdown &mdash;
-          nothing is cloned or written until you click through to GitHub yourself.
+          Paste a public GitHub repo and see what VisiMark would catch in its Markdown &mdash; wrong
+          totals and line totals, and stale values in documents that already use it. Nothing is
+          cloned or written until you click through to GitHub yourself.
         </p>
       </header>
 

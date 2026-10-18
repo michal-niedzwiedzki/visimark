@@ -1,5 +1,5 @@
 /**
- * Turns a `repo-scan --keep`-worthy repo into a reviewable local branch: it
+ * Turns a repo `repo:investigate` would keep a clone of into a reviewable local branch: it
  * reuses (or creates) the persisted clone from `repo-pr-clone.ts`'s
  * `ensureClone`, installs the VisiMark GitHub Action, runs `infer --write`
  * then `check` then `fmt` over the repo's tracked Markdown, commits the
@@ -17,10 +17,20 @@ import { fileURLToPath } from "node:url";
 import { cmdCheck, cmdFmt, cmdInfer, type Writer } from "../packages/visimark/src/cli/commands.js";
 import { isConfined } from "./fs-guard.js";
 import { listTrackedFiles, run } from "./proc-run.js";
-import { defaultCacheRoot, ensureClone, WORK_BRANCH } from "./repo-pr-clone.js";
-import { excludeDotPaths, type JsonSummaryLike } from "./repo-scan-lib.js";
+import {
+  defaultCacheRoot,
+  ensureClone,
+  usesVisimarkActionAt,
+  WORK_BRANCH,
+} from "./repo-pr-clone.js";
+import { isDotPath } from "../packages/visimark-investigate/src/index.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+
+interface JsonSummaryLike {
+  files: number;
+  [key: string]: number;
+}
 
 function usage(): never {
   console.error("Usage: bun run repo:pr <owner/repo|git-url> [--branch NAME] [--force]");
@@ -107,6 +117,17 @@ let workdir: string;
 // default branch: `ensureClone` captures it once, right after cloning and
 // before anything checks a work branch out. See its comment.
 let defaultBranch: string;
+
+/** The investigation no longer skips an adopted repo, but this script would
+ *  install a second visimark workflow into one; keep refusing unless forced. */
+function refuseAdopted(label: string, adopted: boolean): void {
+  if (!adopted || force) return;
+  console.log(
+    `repo-pr: ${label} already runs the visimark action — pass --force to proceed anyway`,
+  );
+  process.exit(0);
+}
+
 if (clone.status === "already-scanned") {
   if (!clone.entry.hasFindings || !clone.entry.workdir) {
     console.log(
@@ -117,14 +138,18 @@ if (clone.status === "already-scanned") {
   repoLabel = clone.repo;
   workdir = clone.entry.workdir;
   defaultBranch = clone.entry.defaultBranch;
+  // A cached clone answers from the scanned commit, not from its work tree,
+  // where a previous run's own workflow may already sit.
+  refuseAdopted(repoLabel, usesVisimarkActionAt(workdir, clone.entry.ref));
 } else {
+  refuseAdopted(clone.report.repo.label, clone.report.posture.actionUsed === true);
   if (!clone.kept) {
     console.log(
-      `repo-pr: ${clone.report.repo} has nothing to act on (no findings) — nothing to do`,
+      `repo-pr: ${clone.report.repo.label} has nothing to act on (no findings) — nothing to do`,
     );
     process.exit(0);
   }
-  repoLabel = clone.report.repo;
+  repoLabel = clone.report.repo.label;
   workdir = clone.workdir;
   defaultBranch = clone.defaultBranch;
 }
@@ -157,7 +182,7 @@ writeFileSync(workflowPath, workflowYaml(defaultBranch, actionTag));
 
 // --- 3-5. infer --write, check, fmt ----------------------------------------
 
-const relFiles = excludeDotPaths(listTrackedFiles(workdir, ["*.md", "*.markdown"]));
+const relFiles = listTrackedFiles(workdir, ["*.md", "*.markdown"]).filter((p) => !isDotPath(p));
 const allAbsFiles = relFiles.map((f) => join(workdir, f));
 // Same reasoning as the workflow write above: a tracked Markdown path this
 // repo doesn't control could itself be a symlink out of the clone, and

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Fixed
+
+- **A scan's GitHub permalinks open the Markdown source, not its rendered
+  preview.** `blobUrl` now writes `?plain=1` before the `#L` anchor. Without
+  it GitHub renders a `.md` file and the line range selects nothing.
+
 ## 0.4.1 - 2026-10-17
 
 ### Added
