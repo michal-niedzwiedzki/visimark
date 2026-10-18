@@ -1,0 +1,14 @@
+{
+  "name": "visimark-investigate",
+  "private": true,
+  "description": "The one investigation core behind `repo:investigate` and the homepage's \"Scan your repo\" widget. Private and unversioned: both shells use it from source.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  }
+}
