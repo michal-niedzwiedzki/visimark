@@ -11,9 +11,9 @@ const SRC = join(import.meta.dir, "../src");
 const CALLERS = [
   "pages/articles-carousel.ts",
   "pages/demo-panes.ts",
-  "pages/preview-cards.ts",
   "pages/preview-page.ts",
   "pages/repo-scan.ts",
+  "pages/tour.ts",
   "playground/badges.ts",
   "playground/pipeline.ts",
   "playground/reference.ts",

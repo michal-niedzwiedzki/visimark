@@ -14,8 +14,3 @@ declare const mermaid:
       run(options: { querySelector: string }): void;
     }
   | undefined;
-
-/** Swiper, for the landing page's three-slide preview cards. */
-declare const Swiper: {
-  new (el: Element | null, options: Record<string, unknown>): { slides: HTMLElement[] };
-};

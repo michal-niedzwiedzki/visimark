@@ -18,7 +18,7 @@
 
       `style-src` does still carry it, for the same reason playground.html's
       does: mermaid injects a <style> into every
-      diagram it renders, Swiper's bundle injects its own, and the dependency
+      diagram it renders, and the dependency
       graph is coloured by setting element styles. An inline-style injection is a defacement, not code
       execution, so the trade is a different order of magnitude from the
       script one.
@@ -102,13 +102,6 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&display=swap"
     />
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/Swiper/14.2.0/swiper-bundle.min.css"
-      integrity="sha512-o7Knr4VAyVWuQ+zWMXH8bbv8zhp2EAQQKSMTiM7S6KjoK5MXagmNbVhUdmojS94zr3cCIERxQyEOoqSdSk2bLA=="
-      crossorigin="anonymous"
-      referrerpolicy="no-referrer"
-    />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -126,144 +119,22 @@
         <span>&hellip;so stale values are impossible!</span>
       </p>
 
-      <main class="cards">
-        <article class="card">
-          <h2>Author</h2>
-          <p>
-            Write <code>Net = Price * Qty</code> instead of <code>50.00</code>. The document
-            computes itself and still renders on GitHub, in previews, through pandoc &mdash; no
-            plugin.
-          </p>
-          <div class="preview">
-            <div class="preview-dots"></div>
-            <div class="swiper">
-              <div class="swiper-wrapper">
-                <div class="swiper-slide">
-                  <pre data-ex="author-base">| Item  | Price | Qty |   Net |
-|-------|------:|----:|------:|
-| pen   |  2.00 |  10 | 20.00 |
-| paper |  0.15 | 100 | 15.00 |
-<span class="k">```vmark #order</span>
-Net   = Price * Qty
-total = SUM(Net)
-<span class="k">```</span>
-Total: **35.00**<span class="c">&lt;!--vmark=order.total--&gt;</span>
-<span class="p">$</span></pre>
-                  <p class="slide-note">Use formulas to recompute easily.</p>
-                </div>
-                <div class="swiper-slide">
-                  <pre data-ex="author-edit">| Item  | Price | Qty |   Net |
-|-------|------:|----:|------:|
-| pen   |  <em>2.20</em> |  10 | 20.00 |
-| paper |  0.15 | <em>150</em> | 15.00 |
-<span class="k">```vmark #order</span>
-Net   = Price * Qty
-total = SUM(Net)
-<span class="k">```</span>
-Total: **35.00**<span class="c">&lt;!--vmark=order.total--&gt;</span>
-<span class="p">$</span> <em>visimark fmt figures.md</em></pre>
-                  <p class="slide-note">Edit inputs and run <code>fmt</code>.</p>
-                </div>
-                <div class="swiper-slide">
-                  <pre data-ex="author-fixed">| Item  | Price | Qty |   Net |
-|-------|------:|----:|------:|
-| pen   |  2.20 |  10 | <em>22.00</em> |
-| paper |  0.15 | 150 | <em>22.50</em> |
-<span class="k">```vmark #order</span>
-Net   = Price * Qty
-total = SUM(Net)
-<span class="k">```</span>
-Total: **<em>44.50</em>**<span class="c">&lt;!--vmark=order.total--&gt;</span>
-<span class="p">$</span></pre>
-                  <p class="slide-note">VisiMark only recomputes what it owns.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </article>
-
-        <article class="card">
-          <h2>Adopt</h2>
-          <p>
-            Already have a table full of numbers? <code>visimark infer</code> derives the rules that
-            reproduce them, so you don't retype anything.
-          </p>
-          <div class="preview">
-            <div class="preview-dots"></div>
-            <div class="swiper">
-              <div class="swiper-wrapper">
-                <div class="swiper-slide">
-                  <pre data-ex="adopt-base">| Item  | Price | Qty |   Net |
-|-------|------:|----:|------:|
-| pen   |  2.00 |  10 | 20.00 |
-| paper |  0.15 | 100 | 15.00 |
-Total: **35.00**
-
-
-
-
-<span class="p">$</span> <em>visimark infer figures.md</em></pre>
-                  <p class="slide-note">An ordinary table you already have. No formulas.</p>
-                </div>
-                <div class="swiper-slide">
-                  <pre data-ex="adopt-out">| Item  | Price | Qty |   Net |
-|-------|------:|----:|------:|
-| pen   |  2.00 |  10 | 20.00 |
-| paper |  0.15 | 100 | 15.00 |
-Total: **35.00**
-<span class="p">$</span> visimark infer figures.md
-  column rules
-    Net = Price * Qty    <span class="c">2/2 ok</span>
-
-  1 rule, 1 scalar written.</pre>
-                  <p class="slide-note"><code>infer</code> finds the meaning in the data.</p>
-                </div>
-                <div class="swiper-slide">
-                  <pre data-ex="adopt-fixed">| Item  | Price | Qty |   Net |
-|-------|------:|----:|------:|
-| pen   |  2.00 |  10 | 20.00 |
-| paper |  0.15 | 100 | 15.00 |
-<span class="k">```vmark #order</span>
-Net   = Price * Qty
-total = SUM(Net)
-<span class="k">```</span>
-Total: **35.00**<span class="c">&lt;!--vmark=order.total--&gt;</span>
-<span class="p">$</span></pre>
-                  <p class="slide-note">Now self-computing and ready for <code>check</code>.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </article>
-
-        <article class="card">
-          <h2>Enforce</h2>
-          <p>
-            <code>visimark check</code> fails CI the moment a number and its formula disagree.
-            <strong>This is the one that matters</strong> &mdash; Author and Adopt exist to get you
-            here. VisiMark catches:
-          </p>
-          <ul>
-            <li>human errors</li>
-            <li>stale values</li>
-            <li>AI arithmetic hallucinations</li>
-          </ul>
-          <div class="preview">
-            <div class="preview-dots"></div>
-            <div class="swiper">
-              <div class="swiper-wrapper">
-                <div class="swiper-slide">
-                  <pre data-ex="enforce-out"><span class="p">$</span> visimark check figures.md
-<span class="ok">&#10003;</span> figures.md &mdash; 4 values agree
-<span class="p">$</span> echo $?
-0</pre>
-                  <p class="slide-note">Non-zero exit on the first disagreement. Build failed.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </article>
-      </main>
+      <section class="tour" id="tour" aria-labelledby="tour-title">
+        <div class="tour-head">
+          <span class="tour-step" id="tour-step">1 / 10</span>
+          <h2 id="tour-title">Let&rsquo;s start with unverifiable Markdown</h2>
+        </div>
+        <div class="tour-window">
+          <div class="tour-tab" id="tour-tab">order.md</div>
+          <pre class="tour-editor" id="tour-editor" aria-live="polite"></pre>
+        </div>
+        <div class="tour-foot">
+          <button type="button" class="tour-next" id="tour-next">
+            Infer formulas from document &rarr;
+          </button>
+          <div class="tour-dots" id="tour-dots"></div>
+        </div>
+      </section>
     </div>
 
     <!-- Agents: this row is maintained by hand. The site links live in docs/nav.json, which `bun run gen:docs` turns into the navbar of the generated pages. When you add or rename a page there, update this row, the playground nav and the install-cta in scripts/gen-articles-lib.ts to match. -->
@@ -1259,12 +1130,6 @@ variance  = lines.gross_total - scheduled
       </div>
     </div>
 
-    <script
-      src="https://cdnjs.cloudflare.com/ajax/libs/Swiper/14.2.0/swiper-bundle.min.js"
-      integrity="sha512-nM1ZmLe8KJ0bEkxcoG3D09bO8YvrITjvqMRPqEj14rYoNH/Hdg+ZR3hC+ez1S08A5NxEkRDgyBWVTZZgLQLhaQ=="
-      crossorigin="anonymous"
-      referrerpolicy="no-referrer"
-    ></script>
     <script
       src="https://cdnjs.cloudflare.com/ajax/libs/marked/18.0.11/lib/marked.umd.min.js"
       integrity="sha512-spWXz/aNScpDSOz0auQxbzVBx6LmlxjgH7zilyCenKLGEyBje0iSJiLGsdPlrfNqFitWXRDdAXo1Bi7bonkZ6A=="

@@ -118,136 +118,256 @@ body {
   }
 }
 
-/* Cards */
-.cards {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+/* Guided tour */
+.tour {
   margin-top: 80px;
+  padding: 30px 28px 24px;
   background: #ffffff;
   color: #1b1b1b;
   border-radius: 16px;
   box-shadow: 0 16px 50px rgba(0, 0, 0, 0.45);
 }
-.card {
+.tour-head {
   display: flex;
-  flex-direction: column;
-  min-width: 0;
-  padding: 30px 28px;
+  align-items: baseline;
+  gap: 14px;
+  margin-bottom: 18px;
 }
-.card + .card {
-  border-left: 1px solid #e6e6e6;
+.tour-step {
+  flex: none;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #5f5f5f;
+  font-variant-numeric: tabular-nums;
 }
-.card h2 {
-  margin: 0 0 10px;
-  font-size: 1.32rem;
+.tour h2 {
+  margin: 0;
+  font-size: 1.5rem;
   font-weight: 750;
 }
-.card p {
-  margin: 0 0 20px;
-  font-size: 0.96rem;
-  color: #363636;
-}
-.card p code {
-  background: #f0f0f0;
-  border-radius: 4px;
-  padding: 1px 5px;
-  font-size: 0.88em;
-}
-.card p:has(+ ul) {
-  margin-bottom: 8px;
-}
-.card ul {
-  margin: 0 0 20px;
-  padding-left: 1.2rem;
-  font-size: 0.96rem;
-  color: #363636;
-  list-style: square;
-}
-.card li {
-  margin: 3px 0;
-}
-.card li::marker {
-  color: #ff453a;
-}
-.card pre {
-  margin: 0;
+.tour-window {
   background: #1c1c1c;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.tour-tab {
+  display: inline-block;
+  padding: 7px 16px;
+  background: #2a2a2a;
+  color: #b9b9b9;
+  font:
+    0.78rem "SF Mono",
+    "JetBrains Mono",
+    Menlo,
+    Consolas,
+    "Liberation Mono",
+    monospace;
+  border-bottom: 2px solid #79c0ff;
+}
+.tour-editor {
+  --fs: clamp(0.75rem, 2vw, 1.25rem);
+  margin: 0;
+  /* Room for the pills that hang above and below the table, and a fixed
+     height so the window does not jump from slide to slide. */
+  padding: 3.2em 1.2em 3.2em 1.2em;
+  min-height: calc(var(--fs) * 1.9 * 15);
   color: #e6e6e6;
-  border-radius: 10px;
-  padding: 14px 15px;
   font-family: "SF Mono", "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
-  font-size: 0.72rem;
-  line-height: 1.6;
+  font-size: var(--fs);
+  line-height: 1.9;
   overflow-x: auto;
 }
-.card pre .c {
-  color: #7d7d7d;
+.tour-editor.is-terminal {
+  padding-top: 1.4em;
+  font-size: calc(var(--fs) * 0.85);
+  line-height: 1.7;
 }
-.card pre .p {
-  color: #7ee787;
-}
-.card pre .k {
+.tour-editor .k {
   color: #79c0ff;
 }
-.card pre em {
-  font-style: normal;
+.tour-editor .c {
+  color: #7d7d7d;
+}
+.tour-editor .p {
+  color: #7ee787;
+}
+.tour-editor .ok {
+  color: #56d364;
+  font-weight: 700;
+}
+.tour-editor .bad {
+  color: #ff9f0a;
+  font-weight: 700;
+}
+.tour-editor .chg {
   background: #ffffff;
   color: #1b1b1b;
   border-radius: 5px;
   padding: 0 3px;
   margin: 0 -3px;
 }
-.card pre .ok {
-  color: #56d364;
-  font-weight: 700;
-}
 
-/* Preview carousel */
-.preview {
-  margin: auto 0 0;
+/* Annotation pills. Collapsed they are a small icon on the corner of what
+   they annotate; the first hover opens them and nothing closes them. */
+.cell {
+  position: relative;
+  display: inline-block;
 }
-.preview .swiper {
-  width: 100%;
-}
-.preview .preview-dots {
-  position: static;
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  margin: 0 0 10px 2px;
-  min-height: 26px;
-}
-.preview .preview-dots .swiper-pagination-bullet {
-  width: 26px;
-  height: 26px;
-  margin: 0;
-  border-radius: 999px;
-  background: rgba(27, 27, 27, 0.1);
-  opacity: 1;
+.pill {
+  position: absolute;
+  right: -0.3em;
+  z-index: 1;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: #1b1b1b;
-  cursor: pointer;
+  height: 1.5em;
+  padding: 0 0.42em;
+  border-radius: 999px;
+  font:
+    600 0.75em/1 -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+  white-space: nowrap;
+  cursor: default;
+  transform-origin: right bottom;
+  transition: transform 0.2s ease;
+  animation: pill-in 0.35s ease both;
+}
+.pill.at-bottom {
+  top: calc(100% - 0.5em);
+}
+.pill.at-bottom.lv1 {
+  top: calc(100% + 0.9em);
+}
+.pill.at-end {
+  position: relative;
+  right: auto;
+  margin-left: 0.8em;
+  vertical-align: middle;
+  transform-origin: left center;
+}
+.pill.at-top {
+  bottom: calc(100% - 0.1em);
+  transform-origin: right top;
+}
+.pill.at-top.lv1 {
+  bottom: calc(100% + 0.9em);
+}
+.pill b {
+  font-weight: 800;
+  min-width: 1em;
+  text-align: center;
+}
+.pill .t {
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
   transition:
-    background 0.2s ease,
-    color 0.2s ease;
+    max-width 0.3s ease,
+    opacity 0.2s ease,
+    margin 0.3s ease;
 }
-.preview .preview-dots .swiper-pagination-bullet i {
-  font-style: normal;
+.pill.open {
+  z-index: 3;
+  transform: rotate(-4deg);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
 }
-.preview .preview-dots .swiper-pagination-bullet-active {
-  background: #1b1b1b;
+.pill.open .t {
+  max-width: 30em;
+  opacity: 1;
+  margin: 0 0.3em 0 0.3em;
+}
+.pill:focus-visible {
+  outline: 2px solid #79c0ff;
+}
+.k-gray {
+  background: #6b6b6b;
   color: #ffffff;
 }
-.preview .slide-note {
-  margin: 12px 2px 0;
-  font-size: 0.82rem;
-  line-height: 1.5;
-  color: #5f5f5f;
-  min-height: 3em;
+.k-input {
+  background: #f4f4f4;
+  color: #1b1b1b;
+}
+.k-computed {
+  background: #f5c542;
+  color: #3a2a00;
+}
+.k-formula {
+  background: #3fb950;
+  color: #04260f;
+}
+.k-stale,
+.k-fail {
+  background: #ff453a;
+  color: #ffffff;
+}
+.k-anchor {
+  background: #2f81f7;
+  color: #ffffff;
+}
+.k-assert {
+  background: #ff9f0a;
+  color: #2b1700;
+}
+.k-param {
+  background: #a371f7;
+  color: #ffffff;
+}
+@keyframes pill-in {
+  from {
+    opacity: 0;
+    scale: 0.6;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pill,
+  .pill .t {
+    animation: none;
+    transition: none;
+  }
+}
+
+.tour-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  margin-top: 18px;
+}
+.tour-next {
+  font: inherit;
+  font-weight: 700;
+  font-size: 1.05rem;
+  padding: 11px 22px;
+  border: 0;
+  border-radius: 999px;
+  background: #1b1b1b;
+  color: #ffffff;
+  cursor: pointer;
+}
+.tour-next:hover {
+  background: #363636;
+}
+.tour-dots {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+.tour-dots button {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(27, 27, 27, 0.1);
+  color: #1b1b1b;
+  font: 700 0.8rem inherit;
+  cursor: pointer;
+}
+.tour-dots button.is-active {
+  background: #1b1b1b;
+  color: #ffffff;
 }
 
 /* Footer */
@@ -1605,13 +1725,6 @@ body {
 }
 
 @media (max-width: 880px) {
-  .cards {
-    grid-template-columns: 1fr;
-  }
-  .card + .card {
-    border-left: 0;
-    border-top: 1px solid #e6e6e6;
-  }
   .chart-demo {
     grid-template-columns: 1fr;
   }

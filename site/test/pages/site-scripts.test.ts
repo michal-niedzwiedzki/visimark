@@ -16,7 +16,7 @@ import { describe, expect, test } from "bun:test";
 import { escapeHtml } from "../../src/html.js";
 import { slugify } from "../../src/pages/dom.js";
 import { dedent } from "../../src/pages/demo-panes.js";
-import { buildSlots } from "../../src/pages/preview-cards.js";
+import { SLIDE_COUNT, slideAt } from "../../src/pages/tour.js";
 import { explainFailure } from "../../src/pages/source-document.js";
 import { splitBlocks } from "../../src/pages/blocks.js";
 
@@ -122,85 +122,55 @@ describe("escaping", () => {
   });
 });
 
-describe("the landing page's preview cards", () => {
-  const slots = buildSlots({
-    slug: "order",
-    file: "figures.md",
-    cols: ["Item", "Price", "Qty", "Net"],
-    dp: [null, 2, 0, 2],
-    rows: [
-      ["pen", 2.0, 10],
-      ["paper", 0.15, 100],
-    ],
-    agg: "total",
-    label: "Total",
-    unit: "",
-    edits: [
-      [0, 1, 2.2],
-      [1, 2, 150],
-    ],
+describe("the landing page's guided tour", () => {
+  const text = (n: number): string =>
+    slideAt(n)
+      .html.replace(/<span class="pill.*?<\/span><\/span>/g, "")
+      .replace(/<[^>]+>/g, "")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">");
+
+  test("has ten slides, and the last has no button", () => {
+    expect(SLIDE_COUNT).toBe(10);
+    for (let n = 1; n < SLIDE_COUNT; n++) expect(slideAt(n).next, `slide ${n}`).toBeTruthy();
+    expect(slideAt(SLIDE_COUNT).next).toBeUndefined();
   });
 
-  test("fills every slot the markup declares", () => {
-    expect(Object.keys(slots).sort()).toEqual([
-      "adopt-base",
-      "adopt-fixed",
-      "adopt-out",
-      "author-base",
-      "author-edit",
-      "author-fixed",
-      "enforce-out",
-    ]);
+  test("the order sums to what the corrected slides say", () => {
+    // 4 * 12.50 + 2 * 30.00 + 6 * 8.00 = 50 + 60 + 48
+    expect(text(1)).toContain("**148.00**");
+    expect(text(4)).toContain("**158.00**");
   });
 
-  test("computes the derived column and the aggregate", () => {
-    // pen 2.00 × 10 = 20.00, paper 0.15 × 100 = 15.00, total 35.00
-    expect(slots["author-base"]).toContain("20.00");
-    expect(slots["author-base"]).toContain("15.00");
-    expect(slots["author-base"]).toContain("Total: **35.00**");
+  test("the stale pill appears once, on slide three", () => {
+    expect(slideAt(3).html).toContain("STALE - run fmt to recalculate");
+    expect(slideAt(4).html).not.toContain("STALE");
   });
 
-  test("marks the inputs the reader changed, and only those", () => {
-    // Slide two shows the edited inputs against the *old* derived values —
-    // the document before `fmt` catches up with it.
-    expect(slots["author-edit"]).toContain("<em>2.20</em>");
-    expect(slots["author-edit"]).toContain("<em>150</em>");
-    expect(slots["author-edit"]).toContain("Total: **35.00**");
+  test("the unit arrives on slide five, with its display rule", () => {
+    expect(text(4)).not.toContain("USD");
+    expect(text(5)).toContain("Price [USD]");
+    expect(text(5)).toContain("**158.00 USD**<!--vmark=order.order_total|unit-->");
   });
 
-  test("marks what `fmt` recalculated on the slide after it", () => {
-    // 2.20 × 10 = 22.00, 0.15 × 150 = 22.50, total 44.50
-    expect(slots["author-fixed"]).toContain("<em>22.00</em>");
-    expect(slots["author-fixed"]).toContain("<em>22.50</em>");
-    expect(slots["author-fixed"]).toContain("<em>44.50</em>");
+  test("the assertion is added, then parametrized and failing", () => {
+    expect(text(5)).not.toContain("assert");
+    expect(text(6)).toContain("assert order_total < 150");
+    expect(text(8)).toContain("param budget [USD] = default 150");
+    expect(text(8)).toContain("assert order_total < budget");
+    expect(slideAt(8).html).toContain("assertion failed");
   });
 
-  test("pads the three slides of a card to the same height", () => {
-    // Fade stacks the slides; a card whose slides differ in row count jumps
-    // as the reader steps through it.
-    const lines = (s: string): number => s.split("\n").length;
-    expect(lines(slots["author-edit"]!)).toBe(lines(slots["author-base"]!));
-    expect(lines(slots["author-fixed"]!)).toBe(lines(slots["author-base"]!));
-    expect(lines(slots["adopt-out"]!)).toBe(lines(slots["adopt-base"]!));
-    expect(lines(slots["adopt-fixed"]!)).toBe(lines(slots["adopt-base"]!));
-  });
-
-  test("keeps the closing prompt on the last line of every slide", () => {
-    // The padding goes *above* the last line for exactly this reason.
-    for (const key of ["author-base", "author-edit", "author-fixed", "adopt-base"]) {
-      expect(slots[key]!.split("\n").at(-1), key).toContain('<span class="p">$</span>');
-    }
+  test("slides seven, nine and ten are terminal output", () => {
+    for (const n of [7, 9, 10]) expect(slideAt(n).tab, `slide ${n}`).toBe("terminal");
+    expect(text(7)).toContain("ASSERT");
+    expect(text(10)).toContain("--get limits.budget");
   });
 
   test("lines the table's columns up", () => {
-    const rows = slots["author-base"]!.split("\n").filter((l) => l.startsWith("|"));
-    // Every row is the same width once the `<em>` markup is out of the way.
-    const widths = new Set(rows.map((r) => r.replace(/<\/?em>/g, "").length));
-    expect(widths.size).toBe(1);
-  });
-
-  test("names the sheet in the fence and in the anchor comment", () => {
-    expect(slots["author-base"]).toContain("```vmark #order");
-    expect(slots["author-base"]).toContain("&lt;!--vmark=order.total--&gt;");
+    const rows = text(5)
+      .split("\n")
+      .filter((l) => l.startsWith("|"));
+    expect(new Set(rows.map((r) => r.length)).size).toBe(1);
   });
 });

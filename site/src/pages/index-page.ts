@@ -13,7 +13,7 @@
 import { wireArticlesCarousel } from "./articles-carousel.js";
 import { byId } from "./dom.js";
 import { renderDemo } from "./demo-panes.js";
-import { fillPreviewCards, wireSwipers } from "./preview-cards.js";
+import { wireTour } from "./tour.js";
 import { wireRepoScan } from "./repo-scan.js";
 
 /**
@@ -181,5 +181,4 @@ wireDepToggle();
 wireStickyToc();
 wireRepoScan();
 void wireArticlesCarousel();
-fillPreviewCards();
-wireSwipers();
+wireTour();
