@@ -5,10 +5,10 @@
  * a broken server.
  *
  * `USAGE`, `READ` and `SCENARIO` are the engine's own codes, carried through
- * unchanged. `WRITE` is this package's, for the gate in §2.4: it has no CLI
- * counterpart because the CLI has no gate.
+ * unchanged. `WRITE` and `LIMIT` are this package's: `WRITE` is the gate in §2.4
+ * and `LIMIT` is `--max-questions`; the CLI has neither a gate nor a cap.
  */
-export type FaultCode = "USAGE" | "READ" | "SCENARIO" | "WRITE";
+export type FaultCode = "USAGE" | "READ" | "SCENARIO" | "WRITE" | "LIMIT";
 
 export interface Fault {
   readonly code: FaultCode;

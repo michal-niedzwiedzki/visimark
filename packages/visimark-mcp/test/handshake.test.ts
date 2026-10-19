@@ -51,7 +51,7 @@ test("initialize names the server and its own version", async () => {
   expect(info).toMatchObject({ name: "visimark", version: expect.any(String) });
 });
 
-test("tools/list returns the eight names with their annotations", async () => {
+test("tools/list returns the nine names with their annotations", async () => {
   const client = await connected();
   const { tools } = await client.listTools();
   expect(tools.map((t) => t.name).sort()).toEqual([
@@ -63,9 +63,16 @@ test("tools/list returns the eight names with their annotations", async () => {
     "visimark_infer",
     "visimark_infer_apply",
     "visimark_ref",
+    "visimark_simulate",
   ]);
   const byName = new Map(tools.map((t) => [t.name, t]));
-  for (const name of ["visimark_check", "visimark_fmt", "visimark_infer", "visimark_ref"]) {
+  for (const name of [
+    "visimark_check",
+    "visimark_fmt",
+    "visimark_infer",
+    "visimark_ref",
+    "visimark_simulate",
+  ]) {
     expect({ name, ...byName.get(name)!.annotations }).toMatchObject({
       readOnlyHint: true,
       destructiveHint: false,

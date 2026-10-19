@@ -34,3 +34,24 @@ test("runServer --help prints the help text and returns 0 without starting the t
   }
   expect(lines.join("\n")).toContain("usage: visimark-mcp");
 });
+
+test("--max-questions takes a positive integer", () => {
+  expect(parseArgs(["--max-questions", "100"])).toEqual({
+    args: { allowWrite: false, maxQuestions: 100 },
+  });
+  expect(parseArgs(["--allow-write", "--max-questions", "5"])).toEqual({
+    args: { allowWrite: true, maxQuestions: 5 },
+  });
+});
+
+test("--max-questions with no positive integer is a usage error", () => {
+  for (const bad of [["0"], ["-1"], ["1.5"], ["abc"], []]) {
+    const r = parseArgs(["--max-questions", ...bad]);
+    expect("usage" in r && r.usage).toContain("--max-questions needs a positive integer");
+  }
+});
+
+test("the help text lists --max-questions", () => {
+  const r = parseArgs(["-h"]);
+  expect("help" in r && r.help).toContain("--max-questions N");
+});

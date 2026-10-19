@@ -44,10 +44,14 @@ pins.
 ## The command
 
 ```
-visimark-mcp [--allow-write]
+visimark-mcp [--allow-write] [--max-questions N]
 ```
 
-One binary, stdio transport, no other options. An unrecognised option is
+One binary, stdio transport, two options. `--max-questions N` (a positive integer)
+refuses a `visimark_simulate` call whose grid has more than `N` questions, with a
+`LIMIT` fault and before any question runs. It is the operator's policy: not an
+environment variable and not a tool argument, so an agent cannot raise it. Unset
+means no cap. A bad value is refused with exit `2`, like any unrecognised option, An unrecognised option is
 refused with exit `2` before the transport starts. The server exits `0` on a
 clean shutdown and never exits because a document had findings.
 
@@ -61,13 +65,16 @@ clean shutdown and never exits because a document had findings.
 | `visimark_infer` | `path` or `content` | nothing | `true` | `false` |
 | `visimark_fmt` | `path` or `content` | nothing — it plans | `true` | `false` |
 | `visimark_ref` | nothing at all | nothing | `true` | `false` |
+| `visimark_simulate` | `path` or `content`, plus `failOnFault` | nothing | `true` | `false` |
 | `visimark_fmt_apply` | `path`, `plan` | computed cells and anchors in place; generated artifacts, whole | `false` | `true` |
 | `visimark_infer_apply` | `path`, `plan` | a `vmark` block after each table, an anchor after each matched figure | `false` | `true` |
 
-There is no `simulate` tool. Its spec left one to a follow-up issue
-([`add-a-simulate-command-spec.md`](design/add-a-simulate-command-spec.md) §9),
-so an agent that reads about the command in `visimark://cli-reference` runs
-`visimark simulate` from a shell instead.
+`visimark_simulate` returns the `simulate` command's lines as `stdout` and
+`stderr` arrays in the usual envelope, for reading and not for parsing, with no
+elapsed time ([spec](design/visimark-simulate-mcp-tool-spec.md)). It runs the
+whole sweep before it returns, about 3.5 ms a question, and the server answers
+nothing else meanwhile. A host that auto-approves every `readOnlyHint: true`
+tool approves this one too; `--max-questions` is the operator's bound on it.
 
 `visimark_fmt` and `visimark_infer` are **read-only**: they return the edits
 they would make and touch nothing. That is the plan half of the plan/apply

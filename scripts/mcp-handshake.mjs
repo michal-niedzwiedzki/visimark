@@ -25,6 +25,7 @@ const EXPECTED = [
   "visimark_infer",
   "visimark_infer_apply",
   "visimark_ref",
+  "visimark_simulate",
 ];
 
 const READ_ONLY = [
@@ -34,6 +35,7 @@ const READ_ONLY = [
   "visimark_fmt",
   "visimark_infer",
   "visimark_ref",
+  "visimark_simulate",
 ];
 const DESTRUCTIVE = ["visimark_fmt_apply", "visimark_infer_apply"];
 

@@ -26,7 +26,10 @@ export async function runServer(argv: readonly string[]): Promise<number> {
     return 2;
   }
 
-  const { connect } = createServer({ allowWrite: parsed.args.allowWrite });
+  const { connect } = createServer({
+    allowWrite: parsed.args.allowWrite,
+    ...(parsed.args.maxQuestions === undefined ? {} : { maxQuestions: parsed.args.maxQuestions }),
+  });
   const transport = new StdioServerTransport();
   await connect(transport);
 

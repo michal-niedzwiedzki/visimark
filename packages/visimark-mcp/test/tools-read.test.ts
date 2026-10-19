@@ -28,7 +28,7 @@ function faultOf(outcome: Outcome): { code: string; message: string } {
 
 // --- the surface itself ------------------------------------------------------
 
-test("the six read tools are all read-only and non-destructive", () => {
+test("the seven read tools are all read-only and non-destructive", () => {
   // `fmt` and `infer` included, because planning is not writing.
   expect(READ_TOOLS.map((t) => t.name)).toEqual([
     "visimark_ref",
@@ -37,6 +37,7 @@ test("the six read tools are all read-only and non-destructive", () => {
     "visimark_eval",
     "visimark_infer",
     "visimark_fmt",
+    "visimark_simulate",
   ]);
   for (const t of READ_TOOLS) {
     expect({ name: t.name, ...t.annotations }).toMatchObject({
