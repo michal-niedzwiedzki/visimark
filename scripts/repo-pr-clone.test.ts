@@ -8,7 +8,7 @@ import {
   usesVisimarkActionAt,
   type PreparedClone,
 } from "./repo-pr-clone.js";
-import { run } from "./proc-run.js";
+import { listTrackedFiles, run } from "./proc-run.js";
 
 function withGitRepo(fn: (dir: string) => void): void {
   const dir = mkdtempSync(join(tmpdir(), "repo-pr-clone-test-"));
@@ -92,6 +92,57 @@ describe("usesVisimarkActionAt", () => {
       expect(usesVisimarkActionAt(dir, "HEAD")).toBe(false);
     } finally {
       rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("inherited git repository-context variables", () => {
+  test("usesVisimarkActionAt and listTrackedFiles still use the supplied cwd", () => {
+    const dir = mkdtempSync(join(tmpdir(), "git-env-"));
+    const other = mkdtempSync(join(tmpdir(), "git-env-other-"));
+    const saved = {
+      GIT_DIR: process.env.GIT_DIR,
+      GIT_WORK_TREE: process.env.GIT_WORK_TREE,
+      GIT_INDEX_FILE: process.env.GIT_INDEX_FILE,
+    };
+    try {
+      run(["git", "init", "-q"], dir);
+      run(["git", "init", "-q"], other);
+      mkdirSync(join(dir, ".github/workflows"), { recursive: true });
+      writeFileSync(
+        join(dir, ".github/workflows/ci.yml"),
+        "steps:\n  - uses: michal-niedzwiedzki/visimark@v0.4.1\n",
+      );
+      writeFileSync(join(dir, "a.md"), "x");
+      const git = (...args: string[]) =>
+        run(
+          [
+            "git",
+            "-c",
+            "user.name=t",
+            "-c",
+            "user.email=t@t",
+            "-c",
+            "commit.gpgsign=false",
+            ...args,
+          ],
+          dir,
+        );
+      git("add", "-A");
+      git("commit", "-q", "-m", "init");
+
+      process.env.GIT_DIR = join(other, ".git");
+      process.env.GIT_WORK_TREE = other;
+      process.env.GIT_INDEX_FILE = join(other, ".git", "index");
+      expect(usesVisimarkActionAt(dir, "HEAD")).toBe(true);
+      expect(listTrackedFiles(dir, ["*.md"])).toEqual(["a.md"]);
+    } finally {
+      for (const [k, v] of Object.entries(saved)) {
+        if (v === undefined) delete process.env[k];
+        else process.env[k] = v;
+      }
+      rmSync(dir, { recursive: true, force: true });
+      rmSync(other, { recursive: true, force: true });
     }
   });
 });

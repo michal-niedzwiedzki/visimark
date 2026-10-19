@@ -1,8 +1,27 @@
 /** Shared `Bun.spawnSync` wrapper for the `repo:investigate`/`repo:pr` scripts —
  * every git/gh invocation across them wants the same exit/stdout/stderr
  * shape, trimmed of the trailing newline a CLI tool always leaves. */
+/** Variables that make git ignore `cwd` and act on another repository (a git
+ * hook exports them). Only these are dropped: the rest of `GIT_*` is config
+ * and transport settings the user wants kept. */
+const REPOSITORY_CONTEXT_VARS = [
+  "GIT_DIR",
+  "GIT_WORK_TREE",
+  "GIT_IMPLICIT_WORK_TREE",
+  "GIT_INDEX_FILE",
+  "GIT_OBJECT_DIRECTORY",
+  "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+  "GIT_COMMON_DIR",
+] as const;
+
+function childEnv(): Record<string, string | undefined> {
+  const env: Record<string, string | undefined> = { ...process.env };
+  for (const key of REPOSITORY_CONTEXT_VARS) delete env[key];
+  return env;
+}
+
 export function run(cmd: string[], cwd: string): { ok: boolean; stdout: string; stderr: string } {
-  const proc = Bun.spawnSync(cmd, { cwd });
+  const proc = Bun.spawnSync(cmd, { cwd, env: childEnv() });
   return {
     ok: proc.exitCode === 0,
     stdout: proc.stdout.toString("utf8").trim(),
@@ -24,7 +43,10 @@ export function run(cmd: string[], cwd: string): { ok: boolean; stdout: string; 
  * splitting already isolates each entry, so nothing here needs trimming.
  */
 export function listTrackedFiles(cwd: string, patterns: string[]): string[] {
-  const proc = Bun.spawnSync(["git", "ls-files", "-z", ...patterns], { cwd });
+  const proc = Bun.spawnSync(["git", "ls-files", "-z", ...patterns], {
+    cwd,
+    env: childEnv(),
+  });
   if (proc.exitCode !== 0) return [];
   return proc.stdout
     .toString("utf8")
