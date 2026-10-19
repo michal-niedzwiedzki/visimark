@@ -12,8 +12,8 @@ import { locate, NO_FORMULAS_MARKER } from "../parse/document.js";
 import { infer } from "../infer/propose.js";
 import { planInfer } from "../infer/write.js";
 import { describeFinding, formatCheck } from "../report/format.js";
-import { simulate } from "../eval/simulate.js";
-import { elapsedText, renderBlocked, renderSheet } from "../report/simulate.js";
+import { elapsedText } from "../report/simulate.js";
+import { simulateRun } from "../report/simulate-run.js";
 import { explainText, explainView } from "../report/explain.js";
 import { errorEnvelope, explainJson } from "../report/envelope.js";
 import { formatInfer } from "../report/infer.js";
@@ -753,11 +753,12 @@ export function cmdSimulate(args: string[], out: Writer, err: Writer, tty: Progr
       continue;
     }
     let shown = "";
-    const sim = simulate(source, {
+    let planned = 0;
+    const run = simulateRun(source, path, {
       doc: onDisk(path),
-      onPlan: (plan) => {
-        const n = plan.gridBuilt ? plan.gridSize + 1 : 0;
-        err(`simulate: ${path}: ${n} questions (${plan.latticeCount} lattice params)`);
+      onPlanLine: (line) => {
+        err(line);
+        planned = 1;
       },
       onQuestion: (i, n) => {
         if (!progress) return;
@@ -769,38 +770,21 @@ export function cmdSimulate(args: string[], out: Writer, err: Writer, tty: Progr
           err(line);
         }
       },
+      elapsed: () => elapsedText(tty.now() - fileStarted),
     });
     if (shown !== "") tty.raw(`\r${" ".repeat(shown.length)}\r`);
-    if (sim.reportSheets.length === 0) {
-      err(`simulate: ${path}: no report statement`);
-      continue;
-    }
+    for (const line of run.stderr.slice(planned)) err(line.text);
+    if (run.noReport) continue;
     anyReport = true;
     if (printed++ > 0) {
       out("");
       out("---");
       out("");
     }
-    out(`==> ${path} <==`);
-    const blocked = new Map(sim.blocked.map((b) => [b.sheetId, b]));
-    for (const sheetId of sim.reportSheets) {
-      const lines = blocked.has(sheetId) ? renderBlocked(sheetId) : renderSheet(sim, sheetId);
-      for (const line of lines) out(line);
-    }
-    for (const b of sim.blocked) {
-      const f = b.first;
-      const where = f.name === undefined ? "" : ` ${f.sheetId ? `${f.sheetId}.${f.name}` : f.name}`;
-      const more = b.more > 0 ? ` (and ${b.more} more; run visimark check ${path})` : "";
-      err(
-        `simulate: ${path}: #${b.sheetId} cannot start: ${f.code}${where}: ${describeFinding(f)}${more}`,
-      );
-    }
-    const ran = sim.reportSheets.length - sim.blocked.length;
-    const took = elapsedText(tty.now() - fileStarted);
-    err(`simulate: ${path}: ${ran} of ${sim.reportSheets.length} sheets ran in ${took}`);
-    sheetsRan += ran;
-    sheetsAll += sim.reportSheets.length;
-    if (sim.blocked.length > 0) anyBlocked = true;
+    for (const line of run.stdout) out(line);
+    sheetsRan += run.sheets - run.blocked;
+    sheetsAll += run.sheets;
+    if (run.blocked > 0) anyBlocked = true;
   }
   if (files.length > 1) {
     const took = elapsedText(tty.now() - started);

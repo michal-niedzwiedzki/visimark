@@ -149,3 +149,5 @@ to that. `docs/mcp.md` says so.
 - Progress notifications, cancellation, or an async `run`.
 - More than one document per call.
 - A generated registry for the counts in prose (#350).
+
+<!--vmark:no-formulas-->
