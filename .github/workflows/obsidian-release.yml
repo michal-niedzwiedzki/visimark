@@ -20,6 +20,13 @@ name: obsidian-release
 # one-time step the maintainer does by hand when actually submitting to the
 # registry, not a recurring release concern this workflow's tag-triggered
 # runs are about — see docs/releasing.md.
+#
+# Normally nobody pushes that tag. Since the plugin joined the core version
+# line (#396), release.yml calls this workflow (`workflow_call`) once every core
+# leg has landed, with the bare version and the release commit; the GitHub
+# Release cut below creates the tag. Pushing the bare tag by hand, or a
+# dispatch, is the backfill. Either way the run ends by reading the release
+# back, so a green run means the plugin is out.
 on:
   push:
     tags: ["[0-9]*.[0-9]*.[0-9]*"]
@@ -27,6 +34,16 @@ on:
     inputs:
       tag:
         description: "Tag to build and release, e.g. 0.1.0. Must already exist and match editors/obsidian/manifest.json's version at that ref."
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      tag:
+        description: "Bare version to release, e.g. 0.4.0. The tag need not exist yet: the release creates it on `commit`."
+        required: true
+        type: string
+      commit:
+        description: "The commit to build, and to create the tag on."
         required: true
         type: string
 
@@ -41,13 +58,39 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.tag || github.ref }}
+          persist-credentials: false
+          ref: ${{ inputs.commit || inputs.tag || github.ref }}
 
-      - uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
-          bun-version: latest
+          no-cache: true
+          # The packageManager Bun, not latest: main.js is built by the Bun
+          # developers and CI use. scripts/check-bun-policy.ts enforces it.
+          bun-version-file: package.json
 
       - run: bun install --frozen-lockfile
+
+      # A re-run, or a hand-pushed tag after release.yml already cut the
+      # release, must not rebuild and re-upload: a second build is new bytes
+      # under an attestation for the first. If all three files are there, skip
+      # to the final check.
+      - name: Is the release already out?
+        id: existing
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -uo pipefail
+          # No release yet is the normal first run: gh exits non-zero, and the
+          # shell's -e plus pipefail would fail the step instead of building.
+          have="$( (gh release view "$TAG" --json assets --jq '.assets[].name' 2>/dev/null || true) | sort | tr '\n' ' ')"
+          if [ "$have" = "main.js manifest.json styles.css " ]; then
+            echo "Release $TAG already has main.js, manifest.json and styles.css; nothing to publish."
+            echo "done=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "done=false" >> "$GITHUB_OUTPUT"
+          fi
 
       # The tag is never trusted to already agree with the manifest — the
       # same "don't publish what the tag doesn't match" discipline
@@ -66,20 +109,16 @@ jobs:
             exit 1
           fi
 
-      # Not in ci.yml: a core-only bump would turn every PR red until the
-      # plugin was re-released. Here it asks the one question that matters, at
-      # the one commit that is about to ship — does the "Bundles engine X."
-      # line tell the truth about what main.js carries.
-      - name: Verify the changelog names the bundled engine
-        run: bun scripts/check-obsidian-engine-line.ts
-
       # Only this version's section; the whole file is history, not notes.
       - name: Extract the release notes
+        if: steps.existing.outputs.done != 'true'
         env:
           TAG: ${{ inputs.tag || github.ref_name }}
         run: bun scripts/changelog-section.ts editors/obsidian/CHANGELOG.md "$TAG" > "$RUNNER_TEMP/release-notes.md"
 
-      - run: bun run --filter visimark-obsidian build
+      - name: Build the plugin
+        if: steps.existing.outputs.done != 'true'
+        run: bun run --filter visimark-obsidian build
 
       # The community scanner's Scorecard looks for a verified GitHub artifact
       # attestation on `main.js` and `styles.css` (the two files that run in a
@@ -87,6 +126,7 @@ jobs:
       # uploads, so it sits between the build and the upload with nothing in
       # between that could rewrite either file.
       - name: Attest the build
+        if: steps.existing.outputs.done != 'true'
         uses: actions/attest-build-provenance@v4
         with:
           subject-path: |
@@ -101,12 +141,53 @@ jobs:
       # produced no main.js would still cut a "successful" release missing
       # the one file the registry actually installs.
       - name: GitHub Release
-        uses: softprops/action-gh-release@v3
+        if: steps.existing.outputs.done != 'true'
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           tag_name: ${{ inputs.tag || github.ref_name }}
+          # Only matters when the tag does not exist yet, i.e. when release.yml
+          # called this: the tag is created here, on the release commit, not on
+          # the default branch's head.
+          target_commitish: ${{ inputs.commit || github.sha }}
           fail_on_unmatched_files: true
           files: |
             editors/obsidian/main.js
             editors/obsidian/manifest.json
             editors/obsidian/styles.css
           body_path: ${{ runner.temp }}/release-notes.md
+
+      # Read the release back rather than trusting the upload's exit code: the
+      # three files are attached, the manifest on the release says this
+      # version, and the attestation verifies for the bytes a user downloads.
+      # This was a by-hand step until #396 put the plugin on the core tag.
+      - name: the release must be complete
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -uo pipefail
+          fail=0
+          dir="$RUNNER_TEMP/plugin-release"
+          if ! gh release download "$TAG" -D "$dir" -p main.js -p manifest.json -p styles.css; then
+            echo "::error::release $TAG is missing, or lacks one of main.js, manifest.json and styles.css."
+            exit 1
+          fi
+          if [ "$(gh release view "$TAG" --json isDraft --jq .isDraft)" != false ]; then
+            echo "::error::release $TAG is a draft; the community registry and BRAT do not see drafts."
+            fail=1
+          fi
+          released="$(node -p "require('$dir/manifest.json').version")"
+          if [ "$released" != "$TAG" ]; then
+            echo "::error::the manifest.json on release $TAG says $released."
+            fail=1
+          fi
+          for f in main.js styles.css; do
+            if gh attestation verify "$dir/$f" --repo "$GH_REPO" >/dev/null; then
+              echo "$f on release $TAG has a verified build attestation."
+            else
+              echo "::error::$f on release $TAG has no build attestation that verifies; the community scanner's Scorecard looks for one."
+              fail=1
+            fi
+          done
+          exit $fail

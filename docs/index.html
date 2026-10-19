@@ -12,7 +12,7 @@
 
       `script-src` grants no inline script, which is the whole reason this is
       worth having: this page's 578 lines of `<script>` moved to
-      packages/visimark/src/site/, where four gates can see them, and are
+      site/src/pages/, where four gates can see them, and are
       loaded from vendor/ like the playground's. A policy that still needed
       'unsafe-inline' would buy almost nothing.
 
@@ -27,8 +27,8 @@
       carries `'self'` for articles/articles.json (the articles panel; the demos
       render Markdown that is already in the markup) plus the two hosts the
       "Scan your repo" widget fetches from on submit: `api.github.com` (repo
-      metadata and the file tree) and `raw.githubusercontent.com` (each
-      Markdown file's content) — see `packages/visimark/src/site/repo-scan.ts`.
+      metadata, the commit and its file tree) and `raw.githubusercontent.com`
+      (each file's content at that commit) — see `site/src/pages/repo-scan.ts`.
       Its "Add visimark.yml" button is a plain `<a href="https://github.com/…">`,
       not a `fetch()`, so `github.com` itself has no reason to be in
       `connect-src`. `default-src 'none'` makes each grant an allowlist
@@ -44,8 +44,8 @@
                script-src 'self' https://cdnjs.cloudflare.com;
                style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com;
                font-src https://fonts.gstatic.com;
-               img-src 'self';
-               connect-src 'self' https://api.github.com https://raw.githubusercontent.com;
+               img-src 'self' https://visimark.goatcounter.com;
+               connect-src 'self' https://api.github.com https://raw.githubusercontent.com https://visimark.goatcounter.com;
                base-uri 'none';
                form-action 'none'"
     />
@@ -469,8 +469,9 @@ Total: **35.00**<span class="c">&lt;!--vmark=order.total--&gt;</span>
       <header class="section-head">
         <h2>Scan your repo</h2>
         <p class="subtitle">
-          Paste a public GitHub repo and see what VisiMark would catch in its Markdown &mdash;
-          nothing is cloned or written until you click through to GitHub yourself.
+          Paste a public GitHub repo and see what VisiMark would catch in its Markdown &mdash; wrong
+          totals and line totals, and stale values in documents that already use it. Nothing is
+          cloned or written until you click through to GitHub yourself.
         </p>
       </header>
 
@@ -614,7 +615,7 @@ Total: **35.00**<span class="c">&lt;!--vmark=order.total--&gt;</span>
             aria-expanded="false"
             aria-controls="drift-check-out"
           >
-            Run <code style="background: none; color: inherit; padding: 0">visimark check</code>
+            Run <code class="code-plain">visimark check</code>
           </button>
           <pre id="drift-check-out" hidden><span class="p">$</span> visimark check invoice.md
 invoice.md
@@ -693,7 +694,7 @@ invoice.md
             Teaching revenue comes to **27600.00**<!--vmark=programme.revenue_total--> PLN.
           </script>
           <button type="button" class="feature-btn" id="infer-btn" aria-pressed="false">
-            Run <code style="background: none; color: inherit; padding: 0">visimark infer</code>
+            Run <code class="code-plain">visimark infer</code>
           </button>
           <pre id="infer-out" hidden><span class="p">$</span> visimark infer quote.md
   column rules
@@ -1278,5 +1279,10 @@ variance  = lines.gross_total - scheduled
       referrerpolicy="no-referrer"
     ></script>
     <script src="vendor/visimark-site-index.js"></script>
+    <script
+      data-goatcounter="https://visimark.goatcounter.com/count"
+      async
+      src="vendor/goatcounter-count.js"
+    ></script>
   </body>
 </html>

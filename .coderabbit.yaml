@@ -21,3 +21,8 @@ reviews:
     - "!**/*.webp"
     - "!**/*.png"
     - "!**/*.svg"
+    # Vendored agent skills are upstream text pinned by hash in
+    # skills-lock.json (scripts/check-skills.ts); a fix belongs upstream, not
+    # in a local edit the pin would refuse. .agents/skills/README.md is ours
+    # and stays reviewed; the visimark skill is reviewed at skills/visimark.
+    - "!.agents/skills/*/**"

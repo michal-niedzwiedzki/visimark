@@ -11,7 +11,7 @@
       directly under <meta charset>.
 
       Every origin below is one this page actually uses, and no others:
-      cdnjs for CodeMirror and marked, jsdelivr for canvas-confetti, Google
+      cdnjs for marked, jsdelivr for canvas-confetti, Google
       Fonts split across its stylesheet and font hosts. Each of those tags
       already carries integrity + crossorigin + referrerpolicy; this is the
       second lock on the same door — integrity says "this exact file", the
@@ -23,12 +23,14 @@
       to grant. A CSP that still needed it would buy almost nothing.
 
       style-src does still carry it: this page's 950 lines of CSS are inline,
-      and CodeMirror sets element styles as it lays out the editor. An
+      and CodeMirror 6 injects its theme as style rules at run time. Whether
+      a policy without it would still let those apply is untested (#360 spec
+      §8), so style-src does still carry it for both. An
       inline-style injection is a defacement, not code execution, so the
       trade is a different order of magnitude from the script one.
 
       img-src grants `data:` for the chart SVGs the PREVIEW panel substitutes
-      in (see svgDataUri in src/playground/app/pipeline.ts, review §2.12) —
+      in (see svgDataUri in site/src/playground/pipeline.ts, review §2.12) —
       `data:` and `blob:` are separate grants, so that decision and this line
       move together.
 
@@ -40,7 +42,7 @@
       playground's documents are all local, and a remote image in a demo
       editor is a tracking beacon pointed at whoever opens a shared document.
       What changed is that the page now says so at the moment it bites, in
-      TERMINAL (reportBlockedImages in src/playground/app/main.ts), instead of
+      TERMINAL (reportBlockedImages in site/src/playground/main.ts), instead of
       swallowing it into the console.
 
       connect-src is 'self' because every fetch() is a sibling
@@ -55,7 +57,7 @@
       http-equiv="Content-Security-Policy"
       content="default-src 'none';
                script-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net;
-               style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com;
+               style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
                font-src 'self' https://fonts.gstatic.com;
                img-src 'self' data:;
                connect-src 'self';
@@ -94,7 +96,9 @@
       The two local bundles are the largest things on the critical path (the
       engine alone is 288 KB) and the last to be discovered, because their
       <script> tags are at the end of <body>. Preloading starts them with the
-      stylesheets instead of after them.
+      stylesheets instead of after them. Since #360 the editor is bundled
+      into visimark-playground.js, so these two are the only scripts the page
+      waits on besides marked.
 
       Measured while doing review §2.5: with the twenty document fetches off
       the critical path, what remains between navigation and first render is
@@ -113,13 +117,6 @@
     <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&display=swap"
-    />
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css"
-      integrity="sha512-uf06llspW44/LZpHzHT6qBOIVODjWtv4MxCricRxkzvopAlSWnTf6hpZTFxuuZcuNE9CBQhqE0Seu1CoRk84nQ=="
-      crossorigin="anonymous"
-      referrerpolicy="no-referrer"
     />
     <style>
       *,
@@ -346,7 +343,7 @@
          to "what is the playground on a phone", not a `flex-wrap` accident.
 
          The breakpoint is paired with `matchMedia("(min-width: 900px)")` in
-         src/playground/app/main.ts, which is what stops the application
+         site/src/playground/main.ts, which is what stops the application
          fetching 22 documents for a page nobody can see — and what boots it if
          a desktop window is dragged back open. Change one and change the
          other. */
@@ -422,7 +419,7 @@
          §2.3). The transitions are collapsed rather than removed so that
          anything keyed to `transitionend` still fires; the confetti is a
          <canvas> painted by JavaScript and can only be suppressed there — see
-         prefersReducedMotion() in src/playground/app/motion.ts. */
+         prefersReducedMotion() in site/src/playground/motion.ts. */
       @media (prefers-reduced-motion: reduce) {
         *,
         *::before,
@@ -658,38 +655,12 @@
         overflow: hidden;
         padding: 0;
       }
-      .CodeMirror {
-        height: 100%;
-        background: transparent;
-        color: #e6e6e6;
-        font-family: "SF Mono", "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
-        font-size: 0.82rem;
-        line-height: 1.55;
+      .visimark-computed {
+        text-decoration: underline dotted rgba(126, 231, 135, 0.6);
+        text-underline-offset: 3px;
       }
-      .CodeMirror-gutters {
-        background: transparent;
-        border-right: 1px solid rgba(255, 255, 255, 0.08);
-      }
-      .CodeMirror-linenumber {
-        color: #5c5c5c;
-      }
-      .CodeMirror-cursor {
-        border-left-color: #ff453a;
-      }
-      .cm-s-default .cm-header {
-        color: #7ee787;
-      }
-      .cm-s-default .cm-comment {
-        color: #7d7d7d;
-      }
-      .cm-s-default .cm-string {
-        color: #79c0ff;
-      }
-      .cm-s-default .cm-variable-2 {
-        color: #ffb454;
-      }
-      .CodeMirror-selected {
-        background: rgba(255, 69, 58, 0.25) !important;
+      .visimark-disagrees {
+        text-decoration: underline wavy #ff453a;
       }
 
       /* PREVIEW — 35%, #FAF9F6 */
@@ -1408,6 +1379,14 @@
       .reference-table .ref-errors {
         margin-top: 4px;
       }
+      /* The scratch textarea the clipboard fallback copies from: rendered,
+         because execCommand("copy") copies only a real selection, but off
+         screen (site/src/playground/clipboard.ts). */
+      .clipboard-scratch {
+        position: fixed;
+        top: 0;
+        left: -9999px;
+      }
     </style>
   </head>
   <body>
@@ -1493,7 +1472,7 @@
                 <!-- Review §2.7: edits now survive a reload, so there has to
                      be a way back to the documents this page shipped with.
                      Files the visitor created are left alone — see
-                     src/playground/app/files.ts. -->
+                     site/src/playground/files.ts. -->
                 <button class="reset-all-btn" id="reset-all-btn" type="button">
                   Reset all documents
                 </button>
@@ -1915,36 +1894,6 @@ answers. Nothing in the document is changed.</pre>
     </div>
 
     <script
-      src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"
-      integrity="sha512-OeZ4Yrb/W7d2W4rAMOO0HQ9Ro/aWLtpW9BUSR2UOWnSV2hprXLkkYnnCGc9NeLUxxE4ZG7zN16UuT1Elqq8Opg=="
-      crossorigin="anonymous"
-      referrerpolicy="no-referrer"
-    ></script>
-    <script
-      src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"
-      integrity="sha512-LarNmzVokUmcA7aUDtqZ6oTS+YXmUKzpGdm8DxC46A6AHu+PQiYCUlwEGWidjVYMo/QXZMFMIadZtrkfApYp/g=="
-      crossorigin="anonymous"
-      referrerpolicy="no-referrer"
-    ></script>
-    <script
-      src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/markdown/markdown.min.js"
-      integrity="sha512-DmMao0nRIbyDjbaHc8fNd3kxGsZj9PCU6Iu/CeidLQT9Py8nYVA5n0PqXYmvqNdU+lCiTHOM/4E7bM/G8BttJg=="
-      crossorigin="anonymous"
-      referrerpolicy="no-referrer"
-    ></script>
-    <script
-      src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/mode/overlay.min.js"
-      integrity="sha512-SNwKDMYQwymOPjleeZy1xbdlK1PAjJ6EAplvx0CvNFJbW/pF5ec3h0mAdDl1yySq9r3Qont4STM4W3le7FTm9w=="
-      crossorigin="anonymous"
-      referrerpolicy="no-referrer"
-    ></script>
-    <script
-      src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/gfm/gfm.min.js"
-      integrity="sha512-9gBvOWzR4i5GyhEfJbHXWa0jmCUiT/trH9Q72JbKU2IswWMWKN3Gfzi05IWbsOUzM8Ob+z65I8Ah4EoIQHfkeg=="
-      crossorigin="anonymous"
-      referrerpolicy="no-referrer"
-    ></script>
-    <script
       src="https://cdnjs.cloudflare.com/ajax/libs/marked/18.0.11/lib/marked.umd.min.js"
       integrity="sha512-spWXz/aNScpDSOz0auQxbzVBx6LmlxjgH7zilyCenKLGEyBje0iSJiLGsdPlrfNqFitWXRDdAXo1Bi7bonkZ6A=="
       crossorigin="anonymous"
@@ -1962,17 +1911,17 @@ answers. Nothing in the document is changed.</pre>
          with no bundler. The order matters — visimark-playground.js reads
          `window.VisiMark` at boot, which visimark-browser.js assigns.
 
-         visimark-browser.js is the engine (packages/visimark/src/playground/
+         visimark-browser.js is the engine (packages/visimark/src/browser/
          browser-entry.ts). visimark-playground.js is this page's application
-         (packages/visimark/src/playground/app/), which lived here as 1,535
+         (site/src/playground/), which lived here as 1,535
          lines of inline <script> until review §2.4: inline, no linter,
          typechecker, formatter or test in the repository could see it. Both
          are committed build artifacts produced by
-         `bun run --filter visimark build:playground`, and the `playground-bundle`
+         `bun run --filter visimark-site build:playground`, and the `playground-bundle`
          CI job fails on either drifting from its source.
 
          The starter documents and the logo are siblings of this page (see
-         FILE_SOURCES in src/playground/app/sources.ts) and are fetched at
+         FILE_SOURCES in site/src/playground/sources.ts) and are fetched at
          runtime, which means playground.html must be served over http(s)
          (e.g. `bun run serve` or GitHub Pages) rather than opened directly via
          file://, since `fetch()` of local files is blocked by CORS there. -->

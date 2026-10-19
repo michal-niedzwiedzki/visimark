@@ -1,6 +1,6 @@
 {
   "name": "remark-lint-visimark",
-  "version": "0.2.0",
+  "version": "0.4.1",
   "description": "A unified/remark plugin that runs visimark check over a document and reports findings as VFile messages.",
   "keywords": [
     "lint",
@@ -36,11 +36,11 @@
   "scripts": {
     "test": "bun test",
     "typecheck": "tsc --noEmit",
-    "build": "bun build src/index.ts --target node --outdir dist && tsc -p tsconfig.build.json",
+    "build": "bun build src/index.ts --target node --production --outdir dist --external visimark && tsc -p tsconfig.build.json",
     "prepublishOnly": "bun run typecheck && bun test && bun run build"
   },
   "dependencies": {
-    "visimark": "0.2.0"
+    "visimark": "0.4.1"
   },
   "devDependencies": {
     "@types/mdast": "^4.0.4",
@@ -52,7 +52,7 @@
     "vfile": "^6.0.3"
   },
   "engines": {
-    "bun": ">=1.0.0",
+    "bun": ">=1.4.2",
     "node": ">=24"
   }
 }

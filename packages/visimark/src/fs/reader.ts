@@ -21,7 +21,7 @@
  * entry never imports — so `node:fs` and `node:crypto` are not in the
  * browser bundle at all, and the old "no document path" checks become "no
  * reader was supplied", which is the same condition stated structurally.
- * `test/playground/browser-graph.test.ts` is the guard that keeps
+ * `test/browser/browser-graph.test.ts` is the guard that keeps
  * `node:fs`/`node:crypto` out of the browser graph at all;
  * `scripts/cross-host-check.ts` is the guard on the companion property, that
  * the two hosts *agree* once a reader is or isn't there — the graph test

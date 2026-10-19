@@ -22,16 +22,23 @@ permissions:
 
 jobs:
   sync:
-    if: github.actor == 'dependabot[bot]' && startsWith(github.head_ref, 'dependabot/')
+    # Trust comes from the PR's author, which a re-run or a human push to the
+    # branch cannot change. The `github.actor` half is not a trust check: only
+    # a Dependabot-triggered run can read the Dependabot secret below, so any
+    # other run would fail at checkout rather than skip.
+    if: github.event.pull_request.user.login == 'dependabot[bot]' && github.actor == 'dependabot[bot]' && startsWith(github.head_ref, 'dependabot/') # zizmor: ignore[bot-conditions]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
         with:
           ref: ${{ github.head_ref }}
           token: ${{ secrets.LOCKFILE_SYNC_TOKEN }}
-      - uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
-          bun-version: latest
+          no-cache: true
+          # The Bun that reads the lockfile everywhere else, so a newer one
+          # cannot rewrite it into a format the pinned one disagrees with.
+          bun-version-file: package.json
       - run: bun install --lockfile-only
       - name: push bun.lock if it changed
         run: |

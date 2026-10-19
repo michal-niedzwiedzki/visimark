@@ -1,0 +1,47 @@
+{
+  "name": "markdown-it-visimark",
+  "version": "0.4.1",
+  "description": "A markdown-it plugin for VisiMark: marks every computed value in rendered HTML and flags the ones that disagree with their formulas.",
+  "keywords": [
+    "markdown",
+    "markdown-it",
+    "markdown-it-plugin",
+    "visimark"
+  ],
+  "homepage": "https://github.com/michal-niedzwiedzki/visimark#readme",
+  "bugs": "https://github.com/michal-niedzwiedzki/visimark/issues",
+  "license": "MIT",
+  "author": "Michał Niedźwiedzki <michal@epsi.pl>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/michal-niedzwiedzki/visimark.git",
+    "directory": "packages/markdown-it-visimark"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json && bun build.ts",
+    "prepublishOnly": "bun run typecheck && bun test && bun run build"
+  },
+  "devDependencies": {
+    "@happy-dom/global-registrator": "^20.14.6",
+    "markdown-it": "^15.0.2",
+    "markdown-it-footnote": "^4.0.0"
+  },
+  "engines": {
+    "bun": ">=1.4.2",
+    "node": ">=24"
+  }
+}

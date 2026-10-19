@@ -1,0 +1,140 @@
+name: supply-chain
+
+# What this repository pulls in, as opposed to what it builds. ci.yml checks
+# the repo's own policies; this checks the packages it depends on, against the
+# OSV database. Review 2026-10-15 §2.15.
+#
+# OSV and not GitHub's dependency review: the dependency graph does not parse
+# bun.lock, so a graph-based review would miss exactly the change that matters
+# here — a lockfile-only bump to a vulnerable transitive version. osv-scanner
+# reads bun.lock directly, and covers development dependencies too.
+#
+# osv-scanner.toml, next to bun.lock, lists the advisories accepted rather
+# than fixed, each with a reason and an ignoreUntil date; osv-scanner reads it
+# from the lockfile's directory. Both jobs fail when an entry there no longer
+# matches anything, so an accept cannot outlive the advisory it covers (#402).
+on:
+  pull_request:
+  schedule:
+    - cron: "17 6 * * 1" # Mondays, after Dependabot's weekly run has opened its PRs
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # A PR fails when its bun.lock carries a high-severity advisory (CVSS 7.0 or
+  # more) that its base branch's bun.lock does not: a new package, a version
+  # bump into a vulnerable range, or a lockfile-only change. Advisories already
+  # on the base branch are the weekly job's to report, not this PR's to fix.
+  osv-pr:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: install osv-scanner
+        run: &install |
+          set -euo pipefail
+          # A named release checked against its published SHA-256; bump both
+          # lines together.
+          osv_version=2.7.0
+          osv_sha256=160c6253e2922e9e0a6a9771c5c4c40a4b3c6090b34a3cdd5e80c96cc2e4218b
+          curl -sSfL -o "$RUNNER_TEMP/osv-scanner" \
+            "https://github.com/google/osv-scanner/releases/download/v$osv_version/osv-scanner_linux_amd64"
+          echo "$osv_sha256  $RUNNER_TEMP/osv-scanner" | sha256sum -c -
+          chmod +x "$RUNNER_TEMP/osv-scanner"
+      - name: no new high-severity advisory in bun.lock
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin "$BASE_REF"
+          mkdir -p "$RUNNER_TEMP/base"
+          git show FETCH_HEAD:bun.lock > "$RUNNER_TEMP/base/bun.lock"
+          # Exit 1 means "vulnerabilities found", which is the normal case
+          # here; anything else is the scanner failing.
+          scan() {
+            "$RUNNER_TEMP/osv-scanner" scan source --format json --lockfile="$1" > "$2" || [ $? -eq 1 ]
+          }
+          scan "$RUNNER_TEMP/base/bun.lock" "$RUNNER_TEMP/base.json"
+          # The head scan's stderr carries osv-scanner.toml's "unused ignores"
+          # notice under --format json; the last step reads it from this log.
+          scan bun.lock "$RUNNER_TEMP/head.json" 2> "$RUNNER_TEMP/osv-head.log"
+          cat "$RUNNER_TEMP/osv-head.log" >&2
+          # One row per advisory and package: id, name, version, CVSS score.
+          rows() {
+            jq -r '.results[]?.packages[]? | .package.name as $n | .package.version as $v
+              | .groups[] | "\(.ids[0])\t\($n)\t\($v)\t\(.max_severity // "")"' "$1" | sort -u
+          }
+          rows "$RUNNER_TEMP/base.json" | cut -f1,2 | sort -u > "$RUNNER_TEMP/base.keys"
+          new=$(rows "$RUNNER_TEMP/head.json" |
+            awk -F'\t' 'NR==FNR { seen[$1 FS $2]=1; next } !(($1 FS $2) in seen)' "$RUNNER_TEMP/base.keys" -)
+          if [ -z "$new" ]; then
+            echo "bun.lock adds no advisory the base branch does not already have."
+            exit 0
+          fi
+          printf 'New advisories in this PR (id, package, version, CVSS):\n%s\n' "$new"
+          high=$(printf '%s\n' "$new" | awk -F'\t' '$4 != "" && $4+0 >= 7')
+          if [ -n "$high" ]; then
+            printf '%s\n' "$high" | while IFS="$(printf '\t')" read -r id name version score; do
+              echo "::error file=bun.lock::$name@$version has $id (CVSS $score), which the base branch does not. Pick a fixed version, or say in the PR why it cannot reach users."
+            done
+            exit 1
+          fi
+          echo "::warning file=bun.lock::this PR adds advisories below high severity; see the list above."
+      - name: every osv-scanner.toml entry still matches an advisory
+        if: ${{ !cancelled() }}
+        run: &unused |
+          set -euo pipefail
+          # osv-scanner prints "<path> has unused ignores:" then one " - <id>"
+          # line per entry that filtered nothing, and still exits 0. That is
+          # two different cases:
+          # - the advisory is gone (fixed upstream, or the package left
+          #   bun.lock): a stale pin, so fail until the entry is deleted;
+          # - the entry is past its ignoreUntil, so it stopped filtering and
+          #   the advisory is back in the scan output: it must be re-judged,
+          #   not deleted. The weekly scan fails on it; a PR only gets a
+          #   notice, because no PR caused the date to pass.
+          # The scan output names an advisory as `"<id>"` (JSON) or as
+          # `osv.dev/<id>` (table); the unused-ignores list itself does neither.
+          log="$RUNNER_TEMP/osv-head.log"
+          [ -f "$log" ] || exit 0
+          ids=$(awk '/has unused ignores:/ { on = 1; next } on && /^ - / { print $2; next } { on = 0 }' "$log")
+          [ -z "$ids" ] && exit 0
+          fail=0
+          for id in $ids; do
+            if grep -qsE "\"$id\"|osv\.dev/$id" "$log" "$RUNNER_TEMP/head.json"; then
+              if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+                echo "::notice file=osv-scanner.toml::$id is past its ignoreUntil date in osv-scanner.toml. The weekly scan fails on it until it is re-judged: fix the advisory, or extend the date with a reason."
+              else
+                echo "::error file=osv-scanner.toml::$id is past its ignoreUntil date in osv-scanner.toml and is still present in bun.lock. Re-judge it: fix the advisory, or extend the date with a reason."
+                fail=1
+              fi
+            else
+              echo "::error file=osv-scanner.toml::$id is ignored in osv-scanner.toml but no longer matches anything in bun.lock. Remove the entry."
+              fail=1
+            fi
+          done
+          exit "$fail"
+
+  # Every package in bun.lock, weekly. Report only: a new advisory against an
+  # existing dependency, or an osv-scanner.toml entry past its ignoreUntil,
+  # turns this scheduled run red and blocks nothing on master.
+  osv-scan:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: install osv-scanner
+        run: *install
+      - name: scan bun.lock
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/osv-scanner" scan source --lockfile=bun.lock 2>&1 | tee "$RUNNER_TEMP/osv-head.log"
+      - name: every osv-scanner.toml entry still matches an advisory
+        if: ${{ !cancelled() }}
+        run: *unused

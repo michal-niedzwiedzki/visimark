@@ -1,4 +1,4 @@
-/** Shared `Bun.spawnSync` wrapper for the `repo:scan`/`repo:pr` scripts —
+/** Shared `Bun.spawnSync` wrapper for the `repo:investigate`/`repo:pr` scripts —
  * every git/gh invocation across them wants the same exit/stdout/stderr
  * shape, trimmed of the trailing newline a CLI tool always leaves. */
 export function run(cmd: string[], cwd: string): { ok: boolean; stdout: string; stderr: string } {

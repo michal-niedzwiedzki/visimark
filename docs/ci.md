@@ -545,7 +545,8 @@ schedule that checks everything. Do not let the fast path be the only path.
 
 The Action's `version` input defaults to the engine release that Action ref
 ships. So `@v0.1.5` pins two things at once: the Action, and the verifier it
-installs.
+installs. A `visimark` already on the runner's `PATH` is used only when it is
+that same version, and the log's first line names the engine that ran.
 
 That matters in a way that is easy to miss. Re-run an unchanged commit next
 month and you get the same answer. A build that was green stays green, and a new
@@ -1209,7 +1210,7 @@ Here is what that prints for a pull request that raises the catering price in
  report best scalar event.ticket direction min among feasible
 @@ -29,9 +29,9 @@
  
- report deltas on event.profit, event.sponsor_share
+ report deltas on event.profit, event.sponsor_share among all
  
 -  event.profit  base 6975.00
 -    low   -11250.00  (-18225.00)  attendees=100 ticket=60.00 sponsors=0
@@ -1220,7 +1221,26 @@ Here is what that prints for a pull request that raises the catering price in
    event.sponsor_share  base 0.333
      low   0.000  (-0.333)  attendees=100 ticket=60.00 sponsors=0
      high  0.714  (+0.381)  attendees=100 ticket=60.00 sponsors=3
-@@ -90,7 +90,7 @@
+@@ -41,13 +41,13 @@
+ 
+   attendees <= venue_capacity
+     inside   room    0  attendees=300 ticket=60.00 sponsors=2
+-    outside  miss  100  attendees=400 ticket=60.00 sponsors=1
++    outside  miss  100  attendees=400 ticket=60.00 sponsors=2
+     13 questions tie inside; the first in grid order is shown
+-    15 questions tie outside; the first in grid order is shown
+-    from 25 feasible and 15 failing only this, of 64 questions
++    14 questions tie outside; the first in grid order is shown
++    from 25 feasible and 14 failing only this, of 64 questions
+   profit >= 0
+-    inside   room  900.00  attendees=200 ticket=60.00 sponsors=2
+-    outside  miss  100.00  attendees=200 ticket=80.00 sponsors=1
++    inside   room  100.00  attendees=200 ticket=60.00 sponsors=2
++    outside  miss  650.00  attendees=100 ticket=120.00 sponsors=1
+     from 25 feasible and 16 failing only this, of 64 questions
+   sponsor_share <= 50%
+     inside   room  0.000  attendees=100 ticket=100.00 sponsors=2
+@@ -109,7 +109,7 @@
    47              300  120.00         2  yes
    48              300  120.00         3  yes
    49              400   60.00         0  no        attendees <= venue_capacity; profit >= 0
@@ -1228,11 +1248,14 @@ Here is what that prints for a pull request that raises the catering price in
 +  50              400   60.00         1  no        attendees <= venue_capacity; profit >= 0
    51              400   60.00         2  no        attendees <= venue_capacity
    52              400   60.00         3  no        attendees <= venue_capacity
+   53              400   80.00         0  no        attendees <= venue_capacity
 ```
 
 The reviewer reads, without working anything out: one more question loses
 money, the best plan earns 1200 less, and the cheapest working ticket did not
-move — its report is not in the diff at all.
+move — its report is not in the diff at all. `slack` says what that ticket now
+costs in safety: the 60-euro plan's room on break-even falls from 900.00 to
+100.00 euros.
 
 Four notes on that job:
 
@@ -1477,8 +1500,10 @@ repos:
 ```
 
 `pre-commit autoupdate` moves `rev:` forward as releases ship. Under the hood
-the hook tries an already-installed `visimark` first, then Bun's `bunx`, then
-npm's `npx` — so it works whether the machine has Node, Bun, or both.
+the hook uses an already-installed `visimark` only when it is the version the
+`rev:` pins, and otherwise fetches that version with Bun's `bunx` or npm's
+`npx`. It works whether the machine has Node, Bun, or both, and an old global
+install never stands in for the pinned engine.
 
 Without the framework, or to pin the fetch command yourself, the same recipe
 by hand:

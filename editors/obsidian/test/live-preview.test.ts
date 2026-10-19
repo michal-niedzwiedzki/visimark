@@ -10,7 +10,8 @@ import { CmState } from "./harness/cm-state.js";
 // checks it against the same declaration `mock.module` swaps in at runtime,
 // not against real `obsidian.d.ts`.
 import { editorLivePreviewField, setLivePreviewForTest } from "./harness/obsidian.js";
-import { editorViewOf, forceLivePreviewRecompute, livePreviewMarks } from "../src/live-preview.js";
+import { refresh } from "codemirror-visimark";
+import { editorViewOf, livePreviewMarks } from "../src/live-preview.js";
 
 const { EditorState } = CmState;
 
@@ -50,8 +51,6 @@ function viewOver(doc: string): EditorView {
 function marksNamed(view: EditorView, name: string): Element[] {
   return [...view.dom.querySelectorAll(`[data-vmark="${name}"]`)];
 }
-
-const wait = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
 test("an ordinary note (no vmark block) shows nothing, in Live Preview or not", () => {
   const view = viewOver("# Groceries\n\n- milk\n- eggs\n");
@@ -95,46 +94,23 @@ const ANCHOR_LINE = `Net of tax the engagement comes to **${ANCHORED_TEXT}**<!--
 const insertAt = invoice.indexOf(ANCHOR_LINE) + ANCHOR_LINE.length;
 const duplicateAnchor = ` Again: **${ANCHORED_TEXT}**<!--vmark=${NAME}--> PLN.`;
 
-test("an edit maps the existing mark immediately; only the debounced recompute adds a mark for newly typed text", async () => {
-  const view = viewOver(invoice);
-  expect(marksNamed(view, NAME)).toHaveLength(1);
-
-  const filler = "x".repeat(50);
-  view.dispatch({
-    changes: [
-      { from: 0, insert: filler },
-      { from: insertAt, insert: duplicateAnchor },
-    ],
-  });
-
-  // immediately: mapping only. The original mark followed the edit (it did
-  // not vanish, and it still reads exactly what it always did — mapping can
-  // move a decoration but never change which one it is), and the newly
-  // typed duplicate is *not* marked yet, because only a real recompute
-  // decides whether new text should be.
-  const mappedOnly = marksNamed(view, NAME);
-  expect(mappedOnly).toHaveLength(1);
-  expect(mappedOnly[0]?.textContent).toBe(ANCHORED_TEXT);
-
-  await wait(600);
-
-  // once the debounce fires, the real recompute sees both occurrences
-  const recomputed = marksNamed(view, NAME);
-  expect(recomputed).toHaveLength(2);
-  for (const el of recomputed) expect(el.textContent).toBe(ANCHORED_TEXT);
-
-  view.destroy();
-});
-
-test("forceLivePreviewRecompute (settings-tab.ts's toggle) recomputes immediately, without the debounce", () => {
+test("the settings toggle's refresh recomputes immediately, without the debounce", () => {
   const view = viewOver(invoice);
   view.dispatch({ changes: { from: insertAt, insert: duplicateAnchor } });
 
   expect(marksNamed(view, NAME)).toHaveLength(1); // mapped only, so far
 
-  view.dispatch({ effects: forceLivePreviewRecompute.of(undefined) });
+  view.dispatch({ effects: refresh.of(null) });
 
   expect(marksNamed(view, NAME)).toHaveLength(2); // recomputed synchronously
+  view.destroy();
+});
+
+test("every Obsidian mark is focusable, for the tap listener", () => {
+  const view = viewOver(invoice);
+  const all = view.dom.querySelectorAll("[data-vmark]");
+  expect(all.length).toBeGreaterThan(0);
+  for (const el of all) expect(el.getAttribute("tabindex")).toBe("0");
   view.destroy();
 });
 

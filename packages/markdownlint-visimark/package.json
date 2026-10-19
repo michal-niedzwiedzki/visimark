@@ -1,6 +1,6 @@
 {
   "name": "markdownlint-rule-visimark",
-  "version": "0.2.0",
+  "version": "0.4.1",
   "description": "markdownlint custom rules that run visimark check over a document and report its findings alongside your other rules.",
   "keywords": [
     "lint",
@@ -38,18 +38,18 @@
   "scripts": {
     "test": "bun test",
     "typecheck": "tsc --noEmit",
-    "build": "bun build src/index.ts --target node --outdir dist && tsc -p tsconfig.build.json",
+    "build": "bun build src/index.ts --target node --production --outdir dist --external visimark && tsc -p tsconfig.build.json",
     "prepublishOnly": "bun run typecheck && bun test && bun run build"
   },
   "dependencies": {
-    "visimark": "0.2.0"
+    "visimark": "0.4.1"
   },
   "devDependencies": {
     "markdownlint": "^0.41.1",
     "markdownlint-cli2": "^0.23.3"
   },
   "engines": {
-    "bun": ">=1.0.0",
+    "bun": ">=1.4.2",
     "node": ">=24"
   }
 }

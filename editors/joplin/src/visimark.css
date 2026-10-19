@@ -1,0 +1,21 @@
+/* VisiMark marks in Joplin. Computed values take their colour from the text,
+   so light and dark themes need no rules of their own. */
+.visimark-computed {
+  text-decoration: underline dotted;
+  text-decoration-color: color-mix(in srgb, currentColor 55%, transparent);
+  text-underline-offset: 0.2em;
+}
+.visimark-disagrees {
+  text-decoration: underline wavy;
+  text-decoration-color: #e5484d;
+}
+@media print {
+  .visimark-computed:not(.visimark-disagrees) {
+    text-decoration: none;
+  }
+}
+/* the showMarks setting, off (#384 spec §2.4): the marks go, the lint stays.
+   Two classes, so it outranks .visimark-disagrees. */
+.visimark-marks-off .visimark-computed {
+  text-decoration: none;
+}

@@ -39,3 +39,5 @@ are a record of who wrote those commits; leave them.
 
 Commands that used to hardcode a Claude trailer (`/issue-review`,
 `/issue-decide`) resolve the trailer from this table at commit time.
+
+<!--vmark:no-formulas-->

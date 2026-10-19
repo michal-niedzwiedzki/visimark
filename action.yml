@@ -24,9 +24,9 @@ inputs:
   # downstream repo at once. The cost is a fourth place the release commit has
   # to bump, so ci.yml asserts this equals packages/visimark/package.json.
   version:
-    description: "visimark npm version or dist-tag to install. Defaults to the release this Action ref ships, so pinning the Action pins the engine too. Set it to `latest` to track releases as they land instead."
+    description: "visimark npm version or dist-tag to install. Defaults to the release this Action ref ships, so pinning the Action pins the engine too. Set it to `latest` to track releases as they land instead, or to `path` to run whatever `visimark` is already on PATH."
     required: false
-    default: "0.2.0"
+    default: "0.4.1"
 
 runs:
   using: "composite"
@@ -52,12 +52,22 @@ runs:
           echo "visimark-action: no files matched \"$VISIMARK_FILES\"" >&2
           exit 2
         fi
-        # A caller that already has `visimark` on PATH (e.g. this repo's own
-        # CI, via the workspace link `bun install` creates) runs that build
-        # rather than fetching one from npm — that's how this action can be
-        # dogfooded against the current branch instead of the last release.
-        if command -v visimark >/dev/null 2>&1; then
-          visimark "$VISIMARK_COMMAND" $VISIMARK_ARGS "${files[@]}"
+        # A `visimark` already on PATH runs only when it is the pinned
+        # version, or when the caller asks for it with `version: path` (this
+        # repo's dogfood.yml, which runs the workspace build of the branch
+        # under test). Anything else would let an old global install stand in
+        # for the engine the Action ref pins, with nothing in the log to say so.
+        if [ "$VISIMARK_VERSION" = path ]; then
+          if ! command -v visimark >/dev/null 2>&1; then
+            echo "visimark-action: version is \"path\", but there is no visimark on PATH" >&2
+            exit 2
+          fi
+          run=(visimark)
+        elif command -v visimark >/dev/null 2>&1 &&
+          [ "$(visimark --version 2>/dev/null)" = "visimark $VISIMARK_VERSION" ]; then
+          run=(visimark)
         else
-          npx --yes "visimark@$VISIMARK_VERSION" "$VISIMARK_COMMAND" $VISIMARK_ARGS "${files[@]}"
+          run=(npx --yes "visimark@$VISIMARK_VERSION")
         fi
+        echo "visimark-action: running $("${run[@]}" --version)"
+        "${run[@]}" "$VISIMARK_COMMAND" $VISIMARK_ARGS "${files[@]}"

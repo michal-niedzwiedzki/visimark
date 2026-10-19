@@ -46,7 +46,8 @@ Plus two pieces every row above is built on: the vault-backed reader
 audience-B finding vocabulary
 ([#207](https://github.com/michal-niedzwiedzki/visimark/issues/207)).
 
-The templates live in [`templates/`](templates/), Markdown files the CLI can
+The templates live in
+[`editors/shared/templates/`](../shared/templates/), Markdown files the CLI can
 check directly; each passes `visimark check` with zero findings before it is
 edited.
 
@@ -67,8 +68,8 @@ screen), §2.5 (nothing written unbidden, especially on mobile) and §2.11
 
 ## Installing it
 
-Every plugin release is a GitHub Release tagged with the plugin's version and
-no `v` (`0.2.1`, not `v0.2.1`), carrying `main.js`, `manifest.json` and
+Every plugin release is a GitHub Release tagged with the release's version and
+no `v` (`0.4.0`, not `v0.4.0`), carrying `main.js`, `manifest.json` and
 `styles.css`. Releases tagged `vX.Y.Z` are the engine and the VS Code
 extension, not this.
 
@@ -115,8 +116,8 @@ this repository.** The browser playground permits exactly one builtin,
 does not transfer here: Obsidian desktop is Electron and has Node, Obsidian
 mobile is neither, so a `node:path` that works on the desktop is a plugin that
 does not load on the device this client exists for. The build substitutes
-[`src/browser-path.ts`](src/browser-path.ts), and
-[`test/bundle.test.ts`](test/bundle.test.ts) asserts **zero** from both ends —
+[`codemirror-visimark`'s `src/browser-path.ts`](../../packages/codemirror-visimark/src/browser-path.ts),
+and [`test/bundle.test.ts`](test/bundle.test.ts) asserts **zero** from both ends —
 a source walk from `src/main.ts` through the engine, and a scan of the bytes
 esbuild actually emits.
 
@@ -154,12 +155,12 @@ claims.
 
 ## Versioning
 
-The plugin's version lives in `manifest.json` and **nowhere else**. The
-workspace `package.json` deliberately carries none, so there is one number and
-nothing for it to disagree with. It is not the `visimark` npm version and does
-not move with it (spec §2.2); `CHANGELOG.md` says which engine version each
-build carries, and `scripts/check-changelog-entries.ts` fails a build whose
-manifest version has no dated entry.
+The plugin's version is the release's: the same number as the `visimark` npm
+packages and the VS Code extension, in `manifest.json` and as the newest key of
+`versions.json`, and nowhere else in this folder (the workspace `package.json`
+carries none).
+[`docs/releasing.md`](../../docs/releasing.md#versioning) states the policy;
+`scripts/check-versions.ts` fails a build where it disagrees.
 
 ## Developing
 

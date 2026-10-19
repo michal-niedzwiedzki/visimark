@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # Tags the current master commit for a release and pushes the tag.
 #
-# Usage: scripts/release-tag.sh vX.Y.Z   (core: release.yml)
-#        scripts/release-tag.sh X.Y.Z    (Obsidian plugin: obsidian-release.yml)
+# Usage: scripts/release-tag.sh vX.Y.Z   (the release: release.yml, which also
+#                                        cuts the Obsidian plugin's X.Y.Z)
+#        scripts/release-tag.sh X.Y.Z    (backfill only: the plugin's release,
+#                                        if release.yml's obsidian job failed)
 #
 # A tag is what publishes, and it cannot be taken back once the workflow has
 # run. So this refuses unless the commit is exactly what CI already passed:

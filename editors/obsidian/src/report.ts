@@ -1,12 +1,5 @@
-import {
-  planFmt,
-  type CheckResult,
-  type DocModel,
-  type DocumentFile,
-  type Edit,
-  type Finding,
-  type Span,
-} from "visimark";
+import type { CheckResult, DocModel, DocumentFile, Edit, Finding, Span } from "visimark";
+import { planRepairs } from "visimark-editor-shared/repairs.js";
 import { forReader, type ReaderFinding } from "./findings.js";
 
 /**
@@ -97,41 +90,12 @@ export function reportFor(
   doc?: DocumentFile,
   opts: ReportOptions = {},
 ): NoteReport {
-  const planned = planFmt(model, result, {
-    noArtifacts: true,
+  // the plan, including the anchor-group adoption, is shared with the Joplin
+  // plugin (#384) so both apply the bytes `fmt` would
+  const { byFinding, all } = planRepairs(model, result, {
     fixDates: opts.fixDates ?? false,
     ...(doc ? { doc } : {}),
   });
-
-  const bare = (e: Edit): Edit => ({ start: e.start, end: e.end, text: e.text });
-
-  /**
-   * **Not every planned edit belongs to a finding the view shows.**
-   * `planFmt` looks its finding up by span, and the engine collapses every
-   * drifted prose anchor into one finding *with no span* — there is no single
-   * place to point at. Those edits come back carrying a synthetic
-   * `{ code: "STALE" }` that is in no result, so identity matching drops them,
-   * and a reader who pressed every button in the list would be left with a
-   * note the CLI still calls stale.
-   *
-   * They belong to the collapsed anchor row, which is the one spanless `STALE`
-   * in the result. Found rather than assumed: if there is not exactly one,
-   * the edits stay in `allRepairs` and no row claims them, because a repair
-   * button that fixes something the row does not name is worse than a missing
-   * button.
-   */
-  const anchorGroup = result.findings.filter((f) => f.code === "STALE" && f.span === undefined);
-  const adopt = anchorGroup.length === 1 ? anchorGroup[0]! : null;
-  const known = new Set<Finding>(result.findings);
-
-  const byFinding = new Map<Finding, Edit[]>();
-  for (const edit of planned) {
-    const owner = known.has(edit.finding) ? edit.finding : adopt;
-    if (owner === null) continue;
-    const list = byFinding.get(owner);
-    if (list) list.push(bare(edit));
-    else byFinding.set(owner, [bare(edit)]);
-  }
 
   const problems: FindingRow[] = [];
   const advice: FindingRow[] = [];
@@ -155,6 +119,6 @@ export function reportFor(
   return {
     problems,
     advice,
-    allRepairs: planned.map(bare),
+    allRepairs: all,
   };
 }

@@ -1,6 +1,6 @@
 {
   "name": "visimark",
-  "version": "0.2.0",
+  "version": "0.4.1",
   "description": "A document integrity layer for Markdown: it checks that every number in a document still matches the formula that produced it, so an agent's correct formula can't ship with a wrong total.",
   "keywords": [
     "ai",
@@ -43,25 +43,23 @@
   "scripts": {
     "test": "bun test",
     "bench:finance": "bun bench/finance.ts",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.app.json",
-    "build": "bun build src/cli/main.ts src/index.ts --target node --outdir dist && tsc -p tsconfig.build.json",
-    "build:playground": "bun build src/playground/browser-entry.ts --target browser --format iife --minify --outfile ../../docs/vendor/visimark-browser.js && bun build src/playground/app/main.ts --target browser --format iife --minify --outfile ../../docs/vendor/visimark-playground.js && bun run build:site",
-    "build:site": "for p in index preview tutorial ci simulate mcp-server; do bun build src/site/$p-page.ts --target browser --format iife --minify --outfile ../../docs/vendor/visimark-site-$p.js || exit 1; done",
+    "typecheck": "tsc --noEmit",
+    "build": "rm -rf dist && bun build src/index.ts --target node --production --outdir dist && tsc -p tsconfig.build.json",
     "prepublishOnly": "cp ../../README.md README.md && bun run typecheck && bun test && bun run build"
   },
   "dependencies": {
-    "decimal.js": "^10.4.3",
-    "remark-gfm": "^4.0.0",
-    "remark-parse": "^11.0.0",
-    "unified": "^11.0.4"
+    "decimal.js": "^10.4.3"
   },
   "devDependencies": {
     "@types/bun": "^1.4.2",
-    "@types/node": "^26.6.2",
-    "typescript": "^7.0.2"
+    "@types/node": "^24.19.2",
+    "remark-gfm": "^4.0.0",
+    "remark-parse": "^11.0.0",
+    "typescript": "^7.0.2",
+    "unified": "^11.0.4"
   },
   "engines": {
-    "bun": ">=1.0.0",
+    "bun": ">=1.4.2",
     "node": ">=24"
   }
 }

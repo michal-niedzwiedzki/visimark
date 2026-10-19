@@ -1,0 +1,8 @@
+# Advisories accepted rather than fixed. Each entry expires: when ignoreUntil
+# passes, supply-chain.yml's weekly scan goes red and the entry is re-judged.
+# An entry that matches nothing fails both supply-chain jobs (see there).
+
+[[IgnoredVulns]]
+id = "GHSA-vfj7-8cjw-p6xm"
+ignoreUntil = 2027-04-17
+reason = "braces: no patched release exists (latest 3.0.3 is affected). Dev-only, via markdownlint-cli2 and @vscode/vsce > secretlint; never bundled."

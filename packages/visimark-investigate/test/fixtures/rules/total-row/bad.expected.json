@@ -1,0 +1,36 @@
+[
+  {
+    "id": "bad.md#t1/Cost/Total",
+    "path": "bad.md",
+    "lines": [3, 15],
+    "permalink": null,
+    "confidence": "confirmed",
+    "rules": ["total-row"],
+    "stored": "341.50",
+    "computed": "340.50",
+    "message": "the table says 341.50; the rows add up to 340.50 (exact); off by 1.00",
+    "evidence": [
+      "    3  | Item | Cost |",
+      "    4  |------|-----:|",
+      "    5  | Venue | 120.00 |",
+      "    6  | Catering | 85.50 |",
+      "    7  | Printing | 22.00 |",
+      "    8  | Badges | 14.00 |",
+      "    9  | Signage | 30.00 |",
+      "   10  | Coffee | 18.00 |",
+      "   11  | Speakers | 25.00 |",
+      "   12  | Recording | 15.00 |",
+      "   13  | Swag | 6.00 |",
+      "   14  | Misc | 5.00 |",
+      "   15  | Total | 341.50 |"
+    ],
+    "fix": [
+      {
+        "from": 246,
+        "to": 252,
+        "old": "341.50",
+        "new": "340.50"
+      }
+    ]
+  }
+]

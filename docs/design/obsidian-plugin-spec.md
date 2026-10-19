@@ -104,16 +104,20 @@ editors/
     versions.json      minAppVersion history, required by the community registry
     src/
       main.ts          the Plugin subclass: lifecycle, commands, settings
-      snapshot.ts      the vault-backed ReaderPort (§2.6)
       api.ts           the public plugin API (§2.7)
       findings.ts      the audience-B finding vocabulary (§3.2)
       reading.ts       the Markdown post-processor (reading mode)
-      live.ts          the CodeMirror 6 ViewPlugin (Live Preview)
+      live-preview.ts  host wiring for codemirror-visimark's extension (Live Preview)
       sweep.ts         the vault health sweep
     test/
       bundle.test.ts   the graph guard (§2.2)
     esbuild.config.mjs
 ```
+
+The analysis, the gate, the decorations and the vault snapshot live in
+`packages/codemirror-visimark` since
+[#360](https://github.com/michal-niedzwiedzki/visimark/issues/360); the plugin
+bundles them from source.
 
 It depends on the engine as `"visimark": "workspace:*"`, exactly as
 `packages/visimark-lsp` and `editors/vscode` do, and it imports one engine
@@ -178,6 +182,14 @@ engine patch to that review latency would either stall the engine or ship plugin
 versions nobody changed. `manifest.json` carries its own version, and the
 engine version it bundles is stated in the release notes and in
 `CONTRIBUTING.md`.
+
+> **Amended 2026-10-15 ([#396](https://github.com/michal-niedzwiedzki/visimark/issues/396)).**
+> Reversed: the plugin now carries the release's version, starting at 0.4.0.
+> The premise above, a human registry review on every release, lapsed once the
+> plugin was listed: after the one-time submission the registry reviews each
+> release automatically. The policy is stated in
+> [`releasing.md`](../releasing.md#versioning). The paragraph above, the §5
+> table row and the §9 note stay as the record of v1.
 
 **v1 is side-loadable, not listed.** The community registry — a PR against
 `obsidianmd/obsidian-releases`, a human review, and a GitHub release carrying
@@ -270,7 +282,7 @@ is for. The verbs are unchanged and are what the table below lists.
 offers three answers to that: a caret can be in the binding line that declares
 a name, in a prose anchor that reads one, or in a table cell a column rule
 computes. The first two are spans the engine already records and
-`editors/obsidian/src/at-cursor.ts` answers from them, counting both halves of
+`at-cursor.ts` (in `editors/shared/src/` since #384) answers from them, counting both halves of
 an anchor — the value and the comment that binds it — because in reading mode
 the comment is invisible and in Live Preview it is not, so a caret "on the
 number" lands in either. The third is not a span the engine records, and the
@@ -291,7 +303,7 @@ each one's job is to create the block the gate looks for:
 v1 row 10. One command each rather than a picker: four palette entries are
 searchable by name, the palette is already a picker, and a modal is UI nothing
 can test. The documents are Markdown files in the repository, generated into
-the bundle by `scripts/gen-obsidian-templates.ts`, because a template's whole
+the bundle by `scripts/gen-editor-templates.ts` (from `editors/shared/templates/` since #384), because a template's whole
 contract is that `visimark check` passes it with **zero** findings unedited —
 and a string literal can be handed to no CLI, no formatter and no renderer.
 
@@ -374,6 +386,11 @@ Four in v1; six since v1.1 rows 14 and 17. The defaults are still the spec.
 | Fix unambiguous dates | off | **v1.1 row 17.** Mirrors the CLI's `fmt --fix-dates`, default included: on, Format also rewrites a `DATE` finding whose ISO form is decidable. `report.ts`'s `ReportOptions.fixDates` threads it into `planFmt`; `findings.ts`'s `actionFor` still restricts the per-row repair button to `STALE`, so this is whole-note only, the same shape the CLI flag has. |
 
 ### 2.6 The vault reader — the one piece the engine does not supply
+
+Since [#360](https://github.com/michal-niedzwiedzki/visimark/issues/360) the
+snapshot is `packages/codemirror-visimark/src/snapshot.ts`, where any
+CodeMirror host can use it; the plugin's `VaultRead` is its `ReadImport`. What
+follows, the symlink limitation included, still describes it.
 
 This is the load-bearing part of the spec, and the one place the "thin client"
 claim needed checking rather than repeating.
@@ -668,7 +685,7 @@ script, this is the contract.
 
 | Thing | Before | After |
 |---|---|---|
-| The published npm packages (`visimark`, `visimark-lsp`, `visimark-mcp`, `remark-visimark`, `markdownlint-visimark`) | five packages | unchanged. The plugin is not published to npm |
+| The published npm packages (`visimark`, `visimark-mcp`, `remark-lint-visimark`, `markdownlint-rule-visimark`) | four packages | unchanged by this spec; `codemirror-visimark` joined them in [#360](https://github.com/michal-niedzwiedzki/visimark/issues/360). The plugin is not published to npm |
 | [`.agents/rules/runtime-parity.md`](../../.agents/rules/runtime-parity.md) | a published package with no `bin` gains no launcher and no second CI job | unchanged, and it applies: `editors/obsidian` has no `bin`, so no `sh` launcher, no `acceptance-node` leg, no `smoke-bun` leg |
 | Workspace root | `packages/*`, `editors/*` | `editors/obsidian` is picked up by the existing globs; `bun test` walks it |
 | `ci.yml` | builds and tests the workspace | **nothing.** `bun run build` and `bun run typecheck` are `--filter '*'` and `bun test` walks the tree, so the package joins all three by existing. Row 1 confirmed it: no workflow edit, no new job, no added step |

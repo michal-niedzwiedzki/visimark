@@ -1,5 +1,5 @@
 {
-  "//": "The badge manifest: every badge the playground can award, keyed by slug and listed in the order the BADGES tab shows them. scenarios.json refers to a badge by its slug only. `name` and `skill` are shown and shared once every quest step of the chapter that carries the badge is checked off; `file` is the chapter that awards the badge, which the BADGES tab links to; `icon` is a key into BADGE_ICONS in packages/visimark/src/playground/app/badges.ts — add an entry there before using a new icon name. `skill` is written first person, ready to post as-is on socials. Loaded at runtime by loadBadges().",
+  "//": "The badge manifest: every badge the playground can award, keyed by slug and listed in the order the BADGES tab shows them. scenarios.json refers to a badge by its slug only. `name` and `skill` are shown and shared once every quest step of the chapter that carries the badge is checked off; `file` is the chapter that awards the badge, which the BADGES tab links to; `icon` is a key into BADGE_ICONS in site/src/playground/badges.ts — add an entry there before using a new icon name. `skill` is written first person, ready to post as-is on socials. Loaded at runtime by loadBadges().",
   "rookie": {
     "name": "Rookie",
     "file": "01-tables.md",

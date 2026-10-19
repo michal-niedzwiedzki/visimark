@@ -18,125 +18,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: oven-sh/setup-bun@v2
         with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          no-cache: true
           bun-version: latest
       - run: bun install --frozen-lockfile
 
-      # Twenty files/fields carry the version and all twenty must agree. The six
-      # package manifests have to match because one tag publishes all of them, and a
-      # mismatch ships a release under the wrong number or fails a leg midway
-      # with the others already out. action.yml joins them because its `version`
-      # default is what a consumer's `npx` actually installs: leave it behind
-      # and every tag-pinned consumer silently keeps running an older engine
-      # than the Action ref they pinned, with nothing at run time to tell them.
-      # scripts/precommit-visimark-check.sh joins them for the same reason — it
-      # is what a consumer's pinned `pre-commit` `rev:` actually runs.
-      # packages/remark-visimark/package.json joins them twice over: its own
-      # `version` (npm won't let a publish under a stale number pass silently)
-      # and its `dependencies.visimark` pin (a caret range would let the plugin
-      # drift onto an engine version never tested against it).
-      # packages/markdownlint-visimark/package.json joins on the same two counts,
-      # for the same two reasons.
-      # packages/visimark-mcp/package.json joins on the same two counts again: its
-      # own `version`, and its `dependencies.visimark` pin. The server imports the
-      # engine as a library and is published in lockstep with it, so a caret there
-      # would let a published server pair with an engine it was never tested
-      # against — and its envelope reports the engine version it loaded, which
-      # would then be a number no CI run ever saw.
-      # bun.lock mirrors all six manifests' "version" and the three exact
-      # "visimark" pins in its own "workspaces" block, for bookkeeping. Bun
-      # links a workspace-named dependency locally no matter what the pin
-      # text says, so --frozen-lockfile never refuses over this drifting —
-      # it sat at 0.1.8 through v0.1.9 and v0.1.10 before anyone noticed.
-      #
-      # docs/releasing.md used to ask the releaser to eyeball this with grep.
-      # A release checklist step that nothing enforces is a step that gets
-      # skipped on the release where it matters.
+      # One tag publishes every package, so every version-carrying file must
+      # agree with the engine. The list and the reasons live in
+      # scripts/check-versions.ts and scripts/release-manifests.ts.
       - name: every version-carrying file must agree
-        run: |
-          set -e
-          engine=$(bun -e 'console.log(require("./packages/visimark/package.json").version)')
-          lsp=$(bun -e 'console.log(require("./packages/visimark-lsp/package.json").version)')
-          ext=$(bun -e 'console.log(require("./editors/vscode/package.json").version)')
-          # The `version` input's default, read without a YAML parser the repo
-          # does not depend on: first `default:` after the `version:` key.
-          pinned=$(awk '/^  version:/{f=1} f && /^    default:/{sub(/^    default: *"/,"");sub(/"[[:space:]]*$/,"");print;exit}' action.yml)
-          # scripts/precommit-visimark-check.sh pins the same version twice
-          # (the bunx and npx branches) — both must agree with each other
-          # before either is compared with the engine.
-          precommit_versions=$(grep -oE 'visimark@[0-9]+\.[0-9]+\.[0-9]+' scripts/precommit-visimark-check.sh | sed 's/^visimark@//' | sort -u)
-          precommit_count=$(echo "$precommit_versions" | grep -c .)
-          remark_version=$(bun -e 'console.log(require("./packages/remark-visimark/package.json").version)')
-          remark_dep=$(bun -e 'console.log(require("./packages/remark-visimark/package.json").dependencies.visimark)')
-          markdownlint_version=$(bun -e 'console.log(require("./packages/markdownlint-visimark/package.json").version)')
-          markdownlint_dep=$(bun -e 'console.log(require("./packages/markdownlint-visimark/package.json").dependencies.visimark)')
-          mcp_version=$(bun -e 'console.log(require("./packages/visimark-mcp/package.json").version)')
-          mcp_dep=$(bun -e 'console.log(require("./packages/visimark-mcp/package.json").dependencies.visimark)')
-          # bun.lock is not JSON (it allows trailing commas), so it is read with
-          # plain string search rather than `bun -e require(...)`. Each lookup
-          # is scoped to the one workspace block, found by substring match on
-          # its `"<workspace>":` key line, so "packages/visimark" cannot pick up
-          # "packages/visimark-lsp"'s field — index() needs the exact `":`
-          # right after the key text, which the longer name never produces.
-          # It stops at the block's own closing brace (four spaces then "},")
-          # rather than scanning past it: without that bound, a field missing
-          # from its own block would silently match the next workspace's.
-          lock_field() {
-            awk -v key="\"$1\":" -v marker="\"$2\": \"" '
-              index($0, key) { f=1; next }
-              f && /^    \},?[ \t]*$/ { exit }
-              f && index($0, marker) {
-                i = index($0, marker) + length(marker)
-                rest = substr($0, i)
-                print substr(rest, 1, index(rest, "\"") - 1)
-                exit
-              }
-            ' bun.lock
-          }
-          lock_engine=$(lock_field "packages/visimark" version)
-          lock_lsp=$(lock_field "packages/visimark-lsp" version)
-          lock_ext=$(lock_field "editors/vscode" version)
-          lock_remark_version=$(lock_field "packages/remark-visimark" version)
-          lock_remark_dep=$(lock_field "packages/remark-visimark" visimark)
-          lock_markdownlint_version=$(lock_field "packages/markdownlint-visimark" version)
-          lock_markdownlint_dep=$(lock_field "packages/markdownlint-visimark" visimark)
-          lock_mcp_version=$(lock_field "packages/visimark-mcp" version)
-          lock_mcp_dep=$(lock_field "packages/visimark-mcp" visimark)
-          echo "engine=$engine lsp=$lsp vscode=$ext action.yml=$pinned precommit-hook=$precommit_versions remark-plugin=$remark_version remark-plugin-dep=$remark_dep markdownlint-rule=$markdownlint_version markdownlint-rule-dep=$markdownlint_dep mcp-server=$mcp_version mcp-server-dep=$mcp_dep bun.lock=$lock_engine,$lock_lsp,$lock_ext,$lock_remark_version,$lock_remark_dep,$lock_markdownlint_version,$lock_markdownlint_dep,$lock_mcp_version,$lock_mcp_dep"
-          if [ -z "$pinned" ]; then
-            echo "::error::could not read the version default out of action.yml. The version input or its default line moved; fix this check rather than deleting it."
-            exit 1
-          fi
-          fail=0
-          # Every bun.lock field above is mandatory — unlike $precommit, which
-          # can legitimately end up empty after an already-reported mismatch
-          # — so an empty result here means the workspace block or the field
-          # itself is missing, and that has to fail loudly rather than be
-          # skipped by the "$got" is empty" guard the comparison loop below
-          # uses for $precommit.
-          for lock_check in "packages/visimark version:$lock_engine" "packages/visimark-lsp version:$lock_lsp" "editors/vscode version:$lock_ext" "packages/remark-visimark version:$lock_remark_version" "packages/remark-visimark visimark dep:$lock_remark_dep" "packages/markdownlint-visimark version:$lock_markdownlint_version" "packages/markdownlint-visimark visimark dep:$lock_markdownlint_dep" "packages/visimark-mcp version:$lock_mcp_version" "packages/visimark-mcp visimark dep:$lock_mcp_dep"; do
-            name=${lock_check%%:*}; val=${lock_check#*:}
-            if [ -z "$val" ]; then
-              echo "::error file=bun.lock::could not find $name in bun.lock — the workspace block or the field moved. Fix this check or bun.lock — see docs/releasing.md."
-              fail=1
-            fi
-          done
-          if [ "$precommit_count" != "1" ]; then
-            echo "::error file=scripts/precommit-visimark-check.sh::expected exactly one visimark@<version> pin (the bunx and npx branches must agree), found: $(echo "$precommit_versions" | tr '\n' ' ')"
-            fail=1
-            precommit=""
-          else
-            precommit=$precommit_versions
-          fi
-          for pair in "packages/visimark-lsp/package.json:$lsp" "editors/vscode/package.json:$ext" "action.yml:$pinned" "scripts/precommit-visimark-check.sh:$precommit" "packages/remark-visimark/package.json (version):$remark_version" "packages/remark-visimark/package.json (visimark dep):$remark_dep" "packages/markdownlint-visimark/package.json (version):$markdownlint_version" "packages/markdownlint-visimark/package.json (visimark dep):$markdownlint_dep" "packages/visimark-mcp/package.json (version):$mcp_version" "packages/visimark-mcp/package.json (visimark dep):$mcp_dep" "bun.lock (packages/visimark version):$lock_engine" "bun.lock (packages/visimark-lsp version):$lock_lsp" "bun.lock (editors/vscode version):$lock_ext" "bun.lock (packages/remark-visimark version):$lock_remark_version" "bun.lock (packages/remark-visimark visimark dep):$lock_remark_dep" "bun.lock (packages/markdownlint-visimark version):$lock_markdownlint_version" "bun.lock (packages/markdownlint-visimark visimark dep):$lock_markdownlint_dep" "bun.lock (packages/visimark-mcp version):$lock_mcp_version" "bun.lock (packages/visimark-mcp visimark dep):$lock_mcp_dep"; do
-            file=${pair%%:*}; got=${pair#*:}
-            if [ -n "$got" ] && [ "$got" != "$engine" ]; then
-              echo "::error file=$file::$file says $got but packages/visimark/package.json says $engine. Bump every version-carrying file in the release commit — see docs/releasing.md (bun scripts/prepare-release.ts does bun.lock too)."
-              fail=1
-            fi
-          done
-          exit $fail
+        run: bun scripts/check-versions.ts
 
       # Each changelog is a release input: CHANGELOG.md becomes the GitHub
       # Release body and editors/vscode/CHANGELOG.md becomes the Marketplace
@@ -159,15 +53,47 @@ jobs:
           bun scripts/check-mcp-name.ts
           bun scripts/check-obsidian-root-mirror.ts
 
+      # Pins that only mean something if they agree with what they stand for:
+      # each type package at the runtime floor it describes, each root
+      # `overrides` entry inside every range a workspace declares for it, and
+      # every published `engines.bun` at the Bun the release builds with, and
+      # every file a workflow downloads at a named version and SHA-256.
+      # Review 2026-10-15 §2.3, §2.5–§2.7; the reasons are in each script's
+      # header, the rule in .agents/rules/dependencies-and-pins.md.
+      - name: pins must agree with the floors they stand for
+        run: |
+          bun scripts/check-type-floors.ts
+          bun scripts/check-overrides.ts
+          bun scripts/check-bun-policy.ts
+          bun scripts/check-workflow-downloads.ts
+
+      # skills-lock.json pins each vendored agent skill by content hash; this
+      # recomputes the hashes so the pin is checked, not just recorded.
+      - name: vendored skills must match skills-lock.json
+        run: bun scripts/check-skills.ts
+
+      # A relative link in a living document whose target moved, or never
+      # existed outside one machine (a gitignored path), fails here.
+      - name: relative links in the docs must resolve
+        run: bun scripts/check-links.ts
+
       - run: bun run lint
-      # The Obsidian community scanner's ruleset. Errors fail the build; the
-      # warnings that remain are known and listed in editors/obsidian's
-      # changelog, because the scanner shows them publicly on the Scorecard.
+      # The Obsidian community scanner reads the root manifest.json and lints
+      # the whole repository as the plugin. Two steps stand in for it:
+      # the scanner's full typed ruleset on the plugin itself (errors fail;
+      # its warnings are accepted and show publicly on the Scorecard), and
+      # its two Error rules over every tracked file, which caught nothing
+      # before #402 because site/ was never linted.
       - run: bun run --filter visimark-obsidian lint
+      - run: bun run lint:scanner
       - run: bun run format:check
       - run: bun run typecheck
       - run: bun run build
-      - run: bun test
+      # Needs dist/: every published package's manifest must declare exactly
+      # what its build loads, and what its published .d.ts files name.
+      - name: published manifests must match their dist/
+        run: bun scripts/check-dist-imports.ts
+      - run: bun run test
       - name: Package the extension
         working-directory: editors/vscode
         run: bunx @vscode/vsce package --no-dependencies --out visimark.vsix
@@ -175,31 +101,42 @@ jobs:
         with:
           name: visimark-vsix
           path: editors/vscode/visimark.vsix
+      # editors/joplin is build-only (#378): this artifact is how a Joplin
+      # user gets the plugin. Nothing publishes it.
+      - uses: actions/upload-artifact@v7
+        with:
+          name: visimark-joplin
+          path: editors/joplin/publish/com.visimark.joplin.jpl
+          if-no-files-found: error
 
-  # docs/vendor/visimark-browser.js is a committed build artifact. pages.yml
-  # uploads docs/ verbatim with no build step, so nothing else in this pipeline
-  # notices it drifting from packages/visimark/src/**. It did drift, silently,
+  # docs/vendor/visimark-*.js are committed build artifacts, built by the site
+  # workspace (site/) from its own source, the engine's and
+  # codemirror-visimark's. pages.yml uploads docs/ verbatim with no build step,
+  # so nothing else in this pipeline notices them drifting. One did, silently,
   # for two releases — the deployed playground was missing three chart engines
   # the docs already documented (see docs/reviews/2026-09-15.md §2.5).
   #
-  # Its own job rather than a step in `build`, because Bun has to be pinned here
-  # and nowhere else: the comparison is byte-exact against an artifact produced
-  # by the packageManager toolchain, so a minifier change in a newer Bun would
-  # fail this check for a reason that has nothing to do with the pull request.
+  # Its own job rather than a step in `build`, because Bun has to be the pinned
+  # one here: the comparison is byte-exact against an artifact produced by the
+  # packageManager toolchain, so a minifier change in a newer Bun would fail
+  # this check for a reason that has nothing to do with the pull request.
   # `build` keeps `latest` so the "VisiMark works on current Bun" signal stays.
   playground-bundle:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.2
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          no-cache: true
+          bun-version-file: package.json
       - run: bun install --frozen-lockfile
       - name: the committed playground bundle must match the source
         run: |
-          bun run --filter visimark build:playground
+          bun run --filter visimark-site build:playground
           if ! git diff --exit-code -- docs/vendor/; then
-            echo "::error::docs/vendor/ is stale. Run 'bun run --filter visimark build:playground' and commit the result. If the diff looks like pure minifier churn rather than a real change, check that your local Bun matches packageManager in package.json."
+            echo "::error::docs/vendor/ is stale. Run 'bun run --filter visimark-site build:playground' and commit the result. If the diff looks like pure minifier churn rather than a real change, check that your local Bun matches packageManager in package.json."
             exit 1
           fi
 
@@ -211,8 +148,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: oven-sh/setup-bun@v2
         with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          no-cache: true
           bun-version: latest
       - run: bun install --frozen-lockfile
       - name: the generated documentation must match the sources
@@ -232,8 +172,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: oven-sh/setup-bun@v2
         with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          no-cache: true
           bun-version: latest
       - run: bun install --frozen-lockfile
       - name: the generated MCP skill and doc copies must match their sources
@@ -257,8 +200,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: oven-sh/setup-bun@v2
         with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          no-cache: true
           bun-version: latest
       - run: bun install --frozen-lockfile
       - name: the generated article pages must match articles.json
@@ -288,12 +234,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: oven-sh/setup-bun@v2
         with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          no-cache: true
           bun-version: latest
       - run: bun install --frozen-lockfile
       - name: the CLI and the committed browser bundle must agree
         run: bun scripts/cross-host-check.ts
+
+  # Static analysis of the workflows and action.yml: credential persistence,
+  # unpinned third-party actions, cache poisoning in jobs that publish,
+  # template injection. Configured in .github/zizmor.yml; `--offline` skips
+  # the audits that would need a token. Findings below `medium` are advice.
+  workflow-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - run: pipx run zizmor==1.31.0 --offline --min-severity medium .github/workflows action.yml
 
   # The Node support policy, enforced rather than written down and hoped for.
   # Two assertions, and the second is the one that keeps the first honest:
@@ -315,8 +276,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v7
         with:
+          package-manager-cache: false
           node-version: "lts/*"
       - name: every engines.node floor is the current LTS
         run: |
@@ -324,7 +288,7 @@ jobs:
           lts=$(node -p "process.versions.node.split('.')[0]")
           echo "current LTS major: $lts"
           fail=0
-          for manifest in packages/visimark/package.json packages/visimark-mcp/package.json packages/remark-visimark/package.json packages/markdownlint-visimark/package.json; do
+          for manifest in packages/visimark/package.json packages/visimark-mcp/package.json packages/remark-visimark/package.json packages/markdownlint-visimark/package.json packages/codemirror-visimark/package.json packages/markdown-it-visimark/package.json; do
             declared=$(node -p "require('./$manifest').engines?.node ?? ''")
             floor=$(printf '%s' "$declared" | sed -n 's/^>=\([0-9][0-9]*\).*/\1/p')
             if [ -z "$floor" ]; then
@@ -397,11 +361,15 @@ jobs:
         node: ["lts/*", "latest"]
     steps:
       - uses: actions/checkout@v7
-      - uses: oven-sh/setup-bun@v2
         with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          no-cache: true
           bun-version: latest
       - uses: actions/setup-node@v7
         with:
+          package-manager-cache: false
           node-version: ${{ matrix.node }}
       - run: bun install --frozen-lockfile
       - run: bun run build
@@ -440,6 +408,23 @@ jobs:
       - name: the depth cap still has stack headroom under Node
         run: node scripts/stack-headroom.mjs
 
+      # A plain `bun build --target node` resolves the `development` export
+      # condition, which shipped micromark's debug build in 0.2.0: 78,977
+      # stderr lines from one `check` under DEBUG=micromark. The DEBUG run is
+      # the behaviour test, and catches any instrumented dependency; the grep
+      # names the one library that did it.
+      - name: the built CLI is a production build (silent under DEBUG=*)
+        run: |
+          set -e
+          out=$(DEBUG='*' node packages/visimark/bin/visimark.js check docs/example-invoice.md 2>&1 >/dev/null)
+          if [ -n "$out" ]; then
+            echo "::error::the CLI writes to stderr under DEBUG=*; is a build missing --production?"
+            printf '%s\n' "$out" | head -20; exit 1
+          fi
+          if grep -l 'micromark/dev/' packages/*/dist/*.js packages/*/dist/*/*.js 2>/dev/null; then
+            echo "::error::a dist/ bundle contains micromark's development build"; exit 1
+          fi
+
   # Pack once, then install the tarballs globally in two isolated environments —
   # a Node-only runner and a Bun-only container — and run the commands. This is
   # the regression test for #29 (bun add -g on a machine with no Node), and the
@@ -452,8 +437,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: oven-sh/setup-bun@v2
         with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          no-cache: true
           bun-version: latest
       - run: bun install --frozen-lockfile
       - run: bun run build
@@ -476,6 +464,18 @@ jobs:
       - name: pack the markdownlint rule tarball
         working-directory: packages/markdownlint-visimark
         run: npm pack --pack-destination "$RUNNER_TEMP"
+      # codemirror-visimark has no `bin`; packed to prove the tarball imports and
+      # renders as a library at both ends of its peer ranges (#360). Its name
+      # does not match `visimark-*`, so the engine/MCP shapes stay unambiguous.
+      - name: pack the CodeMirror extension tarball
+        working-directory: packages/codemirror-visimark
+        run: npm pack --pack-destination "$RUNNER_TEMP"
+      # markdown-it-visimark has no `bin`; packed to prove the tarball imports
+      # and renders under each runtime, at markdown-it 13.0.2 (Joplin's, #378),
+      # 14.3.2 (VS Code's) and latest (#373). Its name does not match `visimark-*`.
+      - name: pack the markdown-it plugin tarball
+        working-directory: packages/markdown-it-visimark
+        run: npm pack --pack-destination "$RUNNER_TEMP"
       - uses: actions/upload-artifact@v7
         with:
           name: visimark-tarball
@@ -487,6 +487,8 @@ jobs:
             ${{ runner.temp }}/visimark-*.tgz
             ${{ runner.temp }}/remark-lint-visimark-*.tgz
             ${{ runner.temp }}/markdownlint-rule-visimark-*.tgz
+            ${{ runner.temp }}/codemirror-visimark-*.tgz
+            ${{ runner.temp }}/markdown-it-visimark-*.tgz
           if-no-files-found: error
       # The smoke jobs have no checkout — they are deliberately bare
       # single-runtime environments — so the handshake driver rides along with
@@ -494,12 +496,18 @@ jobs:
       - run: |
           cp scripts/mcp-handshake.mjs "$RUNNER_TEMP/handshake.mjs"
           cp scripts/plugins-smoke.mjs "$RUNNER_TEMP/plugins-smoke.mjs"
+          cp scripts/codemirror-smoke.mjs "$RUNNER_TEMP/codemirror-smoke.mjs"
+          cp scripts/markdown-it-smoke.mjs "$RUNNER_TEMP/markdown-it-smoke.mjs"
+          cp scripts/types-smoke.mts "$RUNNER_TEMP/types-smoke.mts"
       - uses: actions/upload-artifact@v7
         with:
           name: mcp-handshake
           path: |
             ${{ runner.temp }}/handshake.mjs
             ${{ runner.temp }}/plugins-smoke.mjs
+            ${{ runner.temp }}/codemirror-smoke.mjs
+            ${{ runner.temp }}/markdown-it-smoke.mjs
+            ${{ runner.temp }}/types-smoke.mts
           if-no-files-found: error
 
   smoke-node:
@@ -512,6 +520,7 @@ jobs:
     steps:
       - uses: actions/setup-node@v7
         with:
+          package-manager-cache: false
           node-version: ${{ matrix.node }}
       - uses: actions/download-artifact@v8
         with:
@@ -611,10 +620,63 @@ jobs:
           cp ../plugins-smoke.mjs .
           node plugins-smoke.mjs
 
+      - name: the packed type declarations typecheck in a consumer project
+        run: |
+          set -e
+          # The lint plugins' scratch project from the step above. TypeScript
+          # and the Node types come from the registry, at the repo's
+          # TypeScript major and this runner's Node major; nothing else is
+          # added, so an import a published .d.ts makes and its package does
+          # not declare fails here (remark-lint-visimark 0.2.0 imported
+          # `unified` and `mdast` this way).
+          cd lib
+          npm i --no-save typescript@7 "@types/node@$(node -p 'process.versions.node.split(".")[0]')"
+          cp ../types-smoke.mts .
+          npx tsc --noEmit --strict --skipLibCheck false --module node16 --moduleResolution node16 --target es2022 --types node types-smoke.mts
+
+      - name: the CodeMirror extension renders under Node only, at its peer floor
+        run: |
+          set -e
+          # The floor of every peer range, exactly: an API the extension uses
+          # that is newer than its declared floor fails here, not for a user
+          # (#360 spec §6). smoke-bun runs the same script at the latest peers.
+          cm_tgz="$(pwd)/$(ls codemirror-visimark-*.tgz)"
+          mkdir cm && cd cm
+          printf '{"name":"cm","private":true,"type":"module"}' > package.json
+          npm i "$cm_tgz" @codemirror/state@6.5.2 @codemirror/view@6.36.2 @codemirror/lint@6.4.0 @codemirror/language@6.3.0 @happy-dom/global-registrator@20
+          packed=$(tar -xzOf "$cm_tgz" package/package.json | tr -d ' \n')
+          installed=$(tr -d ' \n' < node_modules/codemirror-visimark/package.json)
+          [ "$packed" = "$installed" ] || { echo "::error::the extension under test is not the packed one"; exit 1; }
+          cp ../codemirror-smoke.mjs .
+          node codemirror-smoke.mjs
+
+      - name: the markdown-it plugin renders under Node only, at 13.0.2, 14.3.2 and latest
+        run: |
+          set -e
+          # 13.0.2 is the markdown-it Joplin's renderer pins (#378); 14.3.2 is
+          # the one VS Code's built-in Markdown extension locks; latest is what
+          # a new host installs (#373). smoke-bun runs the same three under Bun.
+          mi_tgz="$(pwd)/$(ls markdown-it-visimark-*.tgz)"
+          for v in 13.0.2 14.3.2 latest; do
+            rm -rf mi && mkdir mi && cd mi
+            printf '{"name":"mi","private":true,"type":"module"}' > package.json
+            npm i "$mi_tgz" "markdown-it@$v"
+            packed=$(tar -xzOf "$mi_tgz" package/package.json | tr -d ' \n')
+            installed=$(tr -d ' \n' < node_modules/markdown-it-visimark/package.json)
+            [ "$packed" = "$installed" ] || { echo "::error::the plugin under test is not the packed one"; exit 1; }
+            cp ../markdown-it-smoke.mjs .
+            node markdown-it-smoke.mjs
+            cd ..
+          done
+
+  # The container is the packageManager Bun, which is also every published
+  # `engines.bun` floor: this is the job that proves the floor installs and
+  # runs. `build` runs the test suite on `latest`.
+  # scripts/check-bun-policy.ts keeps the tag and the floor together.
   smoke-bun:
     needs: pack
     runs-on: ubuntu-latest
-    container: oven/bun:latest
+    container: oven/bun:1.4.2
     steps:
       - uses: actions/download-artifact@v8
         with:
@@ -737,3 +799,40 @@ jobs:
           [ "$packed" = "$installed" ] || { echo "::error::the engine under test is not the packed one"; exit 1; }
           cp ../plugins-smoke.mjs .
           bun plugins-smoke.mjs
+
+      - name: the CodeMirror extension renders under Bun only, at the latest peers
+        run: |
+          set -e
+          export PATH="$(bun pm bin -g):/usr/local/bin:/usr/bin:/bin"
+          if command -v node >/dev/null 2>&1; then
+            echo "::error::node still on PATH; smoke-bun must be Bun-only"; exit 1
+          fi
+          cm_tgz="$(pwd)/$(ls codemirror-visimark-*.tgz)"
+          mkdir cm && cd cm
+          printf '{"name":"cm","private":true,"type":"module"}' > package.json
+          bun add "$cm_tgz" @codemirror/state @codemirror/view @codemirror/lint @codemirror/language @happy-dom/global-registrator@20
+          packed=$(tar -xzOf "$cm_tgz" package/package.json | tr -d ' \n')
+          installed=$(tr -d ' \n' < node_modules/codemirror-visimark/package.json)
+          [ "$packed" = "$installed" ] || { echo "::error::the extension under test is not the packed one"; exit 1; }
+          cp ../codemirror-smoke.mjs .
+          bun codemirror-smoke.mjs
+
+      - name: the markdown-it plugin renders under Bun only, at 13.0.2, 14.3.2 and latest
+        run: |
+          set -e
+          export PATH="$(bun pm bin -g):/usr/local/bin:/usr/bin:/bin"
+          if command -v node >/dev/null 2>&1; then
+            echo "::error::node still on PATH; smoke-bun must be Bun-only"; exit 1
+          fi
+          mi_tgz="$(pwd)/$(ls markdown-it-visimark-*.tgz)"
+          for v in 13.0.2 14.3.2 latest; do
+            rm -rf mi && mkdir mi && cd mi
+            printf '{"name":"mi","private":true,"type":"module"}' > package.json
+            bun add "$mi_tgz" "markdown-it@$v"
+            packed=$(tar -xzOf "$mi_tgz" package/package.json | tr -d ' \n')
+            installed=$(tr -d ' \n' < node_modules/markdown-it-visimark/package.json)
+            [ "$packed" = "$installed" ] || { echo "::error::the plugin under test is not the packed one"; exit 1; }
+            cp ../markdown-it-smoke.mjs .
+            bun markdown-it-smoke.mjs
+            cd ..
+          done

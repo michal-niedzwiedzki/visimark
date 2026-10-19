@@ -19,15 +19,13 @@ on:
         required: false
         type: string
       dry_run:
-        description: "Rehearse: build, test, check the tag, `npm publish --dry-run` for the four packages and `vsce package`. Publishes nothing, cuts no GitHub Release, closes no issues."
+        description: "Rehearse: build, test, check the tag, `npm publish --dry-run` for the six npm packages and `vsce package`. Publishes nothing, cuts no GitHub Release, closes no issues."
         required: false
         default: false
         type: boolean
 
-permissions:
-  contents: write # cut the GitHub Release
-  id-token: write # mint the OIDC token that signs the npm provenance attestation
-  issues: write # close vocabulary-request issues whose primitive ships in this release
+# Each job asks for its own; nothing is granted workflow-wide.
+permissions: {}
 
 # One run per tag. The first v0.1.9 push started two at once, racing each other
 # to the same registries. `cancel-in-progress: false` queues the second rather
@@ -39,19 +37,36 @@ concurrency:
 jobs:
   release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # cut the GitHub Release
+      id-token: write # mint the OIDC token that signs the npm provenance attestation
+      issues: write # close vocabulary-request issues whose primitive ships in this release
+    # Read by the `obsidian` job below: which commit to cut the plugin's
+    # release on, and under which version.
+    outputs:
+      plugin_tag: ${{ steps.tag.outputs.plugin_tag }}
+      commit: ${{ steps.tag.outputs.commit }}
     steps:
       # On a dispatch with a `tag`, build that tag's tree rather than the
       # default branch: a backfill has to publish what was released, not what
       # master happens to hold now.
+      # persist-credentials: false keeps the write-scoped GITHUB_TOKEN out of
+      # .git/config, where every later step could read it. Nothing here pushes;
+      # the steps that need the token get it in their own `env:`.
       - uses: actions/checkout@v7
         with:
+          persist-credentials: false
           ref: ${{ inputs.tag || github.ref }}
           fetch-depth: 0 # the vocab issue-close step walks history back to the previous tag
-      - uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
-          bun-version: latest
+          no-cache: true
+          # The packageManager Bun, not latest: what ships is built by the Bun
+          # developers and CI use. scripts/check-bun-policy.ts enforces it.
+          bun-version-file: package.json
       - uses: actions/setup-node@v7
         with:
+          package-manager-cache: false
           # Node is a tool here, not the thing under test — npm does the
           # publishing. It still tracks the LTS rather than a number, so this
           # file cannot drift onto an EOL runtime while ci.yml moves on.
@@ -61,7 +76,7 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run typecheck
       - run: bun run build
-      - run: bun test
+      - run: bun run test
 
       # The tag the tag-gated steps below work from: the dispatch input if one
       # was given, else the pushed tag. Anything else — a dispatch with no input
@@ -110,6 +125,10 @@ jobs:
             echo "Effective tag: $tag"
           fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          if [ -n "$tag" ]; then
+            echo "plugin_tag=${tag#v}" >> "$GITHUB_OUTPUT"
+            echo "commit=$(git rev-parse "refs/tags/$tag^{commit}")" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Resolve the versions to publish
         run: |
@@ -198,6 +217,44 @@ jobs:
             npm publish --provenance --access public
           fi
 
+      # codemirror-visimark bundles the engine rather than pinning it, so it
+      # does not depend on the engine leg having landed; it follows it only to
+      # keep the npm legs in one place (#360).
+      - name: Publish the CodeMirror extension to npm
+        id: codemirror-extension
+        continue-on-error: true
+        working-directory: packages/codemirror-visimark
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          if [ "$DRY_RUN" = true ]; then
+            npm publish --dry-run --access public
+          elif npm view "codemirror-visimark@$ENGINE_VERSION" version >/dev/null 2>&1; then
+            echo "codemirror-visimark@$ENGINE_VERSION is already on npm; skipping."
+          else
+            npm publish --provenance --access public
+          fi
+
+      # markdown-it-visimark bundles the engine rather than pinning it, so it
+      # does not depend on the engine leg having landed; it follows the
+      # CodeMirror leg only to keep the npm legs in one place (#373).
+      - name: Publish the markdown-it plugin to npm
+        id: markdown-it-plugin
+        continue-on-error: true
+        working-directory: packages/markdown-it-visimark
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          if [ "$DRY_RUN" = true ]; then
+            npm publish --dry-run --access public
+          elif npm view "markdown-it-visimark@$ENGINE_VERSION" version >/dev/null 2>&1; then
+            echo "markdown-it-visimark@$ENGINE_VERSION is already on npm; skipping."
+          else
+            npm publish --provenance --access public
+          fi
+
       # The official MCP registry is how an agent discovers this server at all;
       # npm is only where the bytes live. The namespace is proven by GitHub
       # login and is independent of the `visimark_` tool-name prefix, so a
@@ -218,10 +275,9 @@ jobs:
             exit 0
           fi
           # server.json's two version fields are rewritten from the tag rather
-          # than trusted: the committed value documents the shape, and a stale
-          # one would publish a registry entry pointing at a version that is
-          # not what just went to npm. It is not in ci.yml's version-agreement
-          # check because it is not a package manifest.
+          # than trusted, even though scripts/check-versions.ts keeps the
+          # committed values in step: a backfill dispatch must publish the
+          # version that just went to npm, whatever the tree says.
           bun -e '
             const fs = require("fs");
             const doc = JSON.parse(fs.readFileSync("server.json", "utf8"));
@@ -229,8 +285,15 @@ jobs:
             for (const pkg of doc.packages) pkg.version = process.env.ENGINE_VERSION;
             fs.writeFileSync("server.json", JSON.stringify(doc, null, 2) + "\n");
           '
-          curl -sSL -o /tmp/mcp-publisher.tar.gz \
-            "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/').tar.gz"
+          # A named release and its SHA-256, never `releases/latest`: this
+          # binary runs in a job that can mint an OIDC token. Bump both lines
+          # together, deliberately — the digest is in the release's
+          # registry_<version>_checksums.txt.
+          mcp_publisher_version=1.8.1
+          mcp_publisher_sha256=a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc
+          curl -sSfL -o /tmp/mcp-publisher.tar.gz \
+            "https://github.com/modelcontextprotocol/registry/releases/download/v$mcp_publisher_version/mcp-publisher_linux_amd64.tar.gz"
+          echo "$mcp_publisher_sha256  /tmp/mcp-publisher.tar.gz" | sha256sum -c -
           tar -xzf /tmp/mcp-publisher.tar.gz -C /tmp mcp-publisher
           # npm accepts a publish before it serves the version: the registry
           # validates the entry against npm and refuses one for a version npm
@@ -338,7 +401,7 @@ jobs:
         id: ghrelease
         if: steps.tag.outputs.tag != '' && steps.package.outcome == 'success' && steps.notes.outcome == 'success' && !inputs.dry_run
         continue-on-error: true
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
           files: editors/vscode/visimark.vsix
@@ -398,6 +461,8 @@ jobs:
           REMARK_PLUGIN_OUTCOME: ${{ steps.remark-plugin.outcome }}
           MARKDOWNLINT_RULE_OUTCOME: ${{ steps.markdownlint-rule.outcome }}
           MCP_SERVER_OUTCOME: ${{ steps.mcp-server.outcome }}
+          CODEMIRROR_OUTCOME: ${{ steps.codemirror-extension.outcome }}
+          MARKDOWN_IT_OUTCOME: ${{ steps.markdown-it-plugin.outcome }}
           PACKAGE_OUTCOME: ${{ steps.package.outcome }}
           NOTES_OUTCOME: ${{ steps.notes.outcome }}
           TAG: ${{ steps.tag.outputs.tag }}
@@ -408,6 +473,8 @@ jobs:
             "npm publish --dry-run (remark-lint-visimark)=$REMARK_PLUGIN_OUTCOME" \
             "npm publish --dry-run (markdownlint-rule-visimark)=$MARKDOWNLINT_RULE_OUTCOME" \
             "npm publish --dry-run (visimark-mcp)=$MCP_SERVER_OUTCOME" \
+            "npm publish --dry-run (codemirror-visimark)=$CODEMIRROR_OUTCOME" \
+            "npm publish --dry-run (markdown-it-visimark)=$MARKDOWN_IT_OUTCOME" \
             "Package the extension=$PACKAGE_OUTCOME" \
             "Extract the release notes=$NOTES_OUTCOME"; do
             # Anything but success fails: a skipped leg is a leg that did not
@@ -449,6 +516,8 @@ jobs:
           REMARK_PLUGIN_OUTCOME: ${{ steps.remark-plugin.outcome }}
           MARKDOWNLINT_RULE_OUTCOME: ${{ steps.markdownlint-rule.outcome }}
           MCP_SERVER_OUTCOME: ${{ steps.mcp-server.outcome }}
+          CODEMIRROR_OUTCOME: ${{ steps.codemirror-extension.outcome }}
+          MARKDOWN_IT_OUTCOME: ${{ steps.markdown-it-plugin.outcome }}
           MCP_REGISTRY_OUTCOME: ${{ steps.mcp-registry.outcome }}
           PACKAGE_OUTCOME: ${{ steps.package.outcome }}
           MARKETPLACE_OUTCOME: ${{ steps.marketplace.outcome }}
@@ -456,6 +525,8 @@ jobs:
           GHRELEASE_OUTCOME: ${{ steps.ghrelease.outcome }}
           ISSUES_OUTCOME: ${{ steps.issues.outcome }}
           NOTES_OUTCOME: ${{ steps.notes.outcome }}
+          TAG: ${{ steps.tag.outputs.tag }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -uo pipefail
           fail=0
@@ -468,6 +539,8 @@ jobs:
             "Publish the remark plugin to npm=$REMARK_PLUGIN_OUTCOME" \
             "Publish the markdownlint rule to npm=$MARKDOWNLINT_RULE_OUTCOME" \
             "Publish the MCP server to npm=$MCP_SERVER_OUTCOME" \
+            "Publish the CodeMirror extension to npm=$CODEMIRROR_OUTCOME" \
+            "Publish the markdown-it plugin to npm=$MARKDOWN_IT_OUTCOME" \
             "Publish to the MCP registry=$MCP_REGISTRY_OUTCOME" \
             "Package the extension=$PACKAGE_OUTCOME" \
             "Publish to the VS Code Marketplace=$MARKETPLACE_OUTCOME" \
@@ -506,6 +579,8 @@ jobs:
           on_npm_remark() { npm view "remark-lint-visimark@$ENGINE_VERSION" version >/dev/null 2>&1; }
           on_npm_markdownlint() { npm view "markdownlint-rule-visimark@$ENGINE_VERSION" version >/dev/null 2>&1; }
           on_npm_mcp() { npm view "visimark-mcp@$ENGINE_VERSION" version >/dev/null 2>&1; }
+          on_npm_codemirror() { npm view "codemirror-visimark@$ENGINE_VERSION" version >/dev/null 2>&1; }
+          on_npm_markdown_it() { npm view "markdown-it-visimark@$ENGINE_VERSION" version >/dev/null 2>&1; }
           on_mcp_registry() {
             curl -sS "https://registry.modelcontextprotocol.io/v0/servers?search=visimark" \
               | grep -q "\"version\"[[:space:]]*:[[:space:]]*\"$ENGINE_VERSION\""
@@ -544,6 +619,20 @@ jobs:
             fail=1
           fi
 
+          if retry on_npm_codemirror; then
+            echo "npm has codemirror-visimark@$ENGINE_VERSION."
+          else
+            echo "::error::npm still does not have codemirror-visimark@$ENGINE_VERSION after ~10 minutes of retries — this is absence, not lag. Fix the CodeMirror extension leg and re-run this workflow; do not publish by hand (see docs/releasing.md)."
+            fail=1
+          fi
+
+          if retry on_npm_markdown_it; then
+            echo "npm has markdown-it-visimark@$ENGINE_VERSION."
+          else
+            echo "::error::npm still does not have markdown-it-visimark@$ENGINE_VERSION after ~10 minutes of retries — this is absence, not lag. Fix the markdown-it plugin leg and re-run this workflow; do not publish by hand (see docs/releasing.md)."
+            fail=1
+          fi
+
           if retry on_mcp_registry; then
             echo "The MCP registry has visimark $ENGINE_VERSION."
           else
@@ -565,4 +654,71 @@ jobs:
             fail=1
           fi
 
+          # What scripts/verify-release.sh used to be the only thing to check,
+          # asked here so that a green run is the whole verification.
+          #
+          # Listed is not attested: a version published without --provenance
+          # has no dist.attestations at all.
+          attested() {
+            curl -sSf "https://registry.npmjs.org/$1/$ENGINE_VERSION" 2>/dev/null \
+              | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{let d;try{d=JSON.parse(s)}catch{process.exit(1)}process.exit(d.dist&&d.dist.attestations?0:1)})'
+          }
+          for pkg in visimark remark-lint-visimark markdownlint-rule-visimark visimark-mcp codemirror-visimark markdown-it-visimark; do
+            if retry attested "$pkg"; then
+              echo "npm's $pkg@$ENGINE_VERSION carries a provenance attestation."
+            else
+              echo "::error::npm's $pkg@$ENGINE_VERSION has no provenance attestation. A published version cannot be re-attested; ship the next patch from this workflow (see docs/releasing.md)."
+              fail=1
+            fi
+          done
+
+          if [ -n "$TAG" ]; then
+            if gh release view "$TAG" --json assets --jq '.assets[].name' 2>/dev/null | grep -qx visimark.vsix; then
+              echo "GitHub Release $TAG exists, with visimark.vsix."
+            else
+              echo "::error::GitHub Release $TAG is missing or has no visimark.vsix. Re-run with 'gh workflow run release.yml -f tag=$TAG'."
+              fail=1
+            fi
+          fi
+
+          # A server that cannot start is invisible to every registry check.
+          # --nope is an unknown flag: a server that starts rejects it with exit
+          # 2 and a usage line. Run from outside the checkout, so neither runner
+          # can resolve the workspace's own visimark-mcp instead of npm's.
+          starts() {
+            (cd "$RUNNER_TEMP" && "$@" "visimark-mcp@$ENGINE_VERSION" --nope >/dev/null 2>&1)
+            [ $? -eq 2 ]
+          }
+          for runner in "npx -y" bunx; do
+            # shellcheck disable=SC2086
+            if retry starts $runner; then
+              echo "$runner visimark-mcp@$ENGINE_VERSION starts."
+            else
+              echo "::error::'$runner visimark-mcp@$ENGINE_VERSION --nope' did not exit 2: the published server does not start. Read docs/releasing.md, \"Publishing a new package for the first time\"."
+              fail=1
+            fi
+          done
+
           exit $fail
+
+  # The Obsidian plugin's GitHub Release, on the same commit and version, under
+  # the bare tag the community registry and BRAT match (no `v`). It runs only
+  # once the job above has proved every leg landed: the plugin bundles the
+  # engine, and its release must not exist before the npm packages it names
+  # (#286). A dispatch with no tag has nothing to release it from, and a dry run
+  # publishes nothing.
+  #
+  # The release creates the bare tag. A tag GITHUB_TOKEN creates does not start
+  # obsidian-release.yml a second time, so this is the only run. Pushing the
+  # bare tag by hand still works, as a backfill.
+  obsidian:
+    needs: release
+    if: needs.release.outputs.plugin_tag != '' && !inputs.dry_run
+    permissions:
+      contents: write # cut the GitHub Release, and with it the bare tag
+      id-token: write # sign the build attestation
+      attestations: write # store it against this repository
+    uses: ./.github/workflows/obsidian-release.yml
+    with:
+      tag: ${{ needs.release.outputs.plugin_tag }}
+      commit: ${{ needs.release.outputs.commit }}

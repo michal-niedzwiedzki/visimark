@@ -1,8 +1,8 @@
 # Where VisiMark is listed
 
-VisiMark ships five separate published artifacts (the `visimark` CLI/library,
-two lint-rule plugins, the MCP server, the VS Code extension, and the
-Obsidian plugin). Each artifact has its own set of registries and
+VisiMark ships eight separate published artifacts (the `visimark` CLI/library,
+two lint-rule plugins, the MCP server, the CodeMirror extension, the
+markdown-it plugin, the VS Code extension, and the Obsidian plugin). Each artifact has its own set of registries and
 third-party directories it can appear in. This page is the one place that
 tracks, per artifact, what is **automatic** (fed by `release.yml` on every
 tag, per [`docs/releasing.md`](releasing.md)), what is a **one-time manual
@@ -23,14 +23,14 @@ under `docs/WIP/` are not (several are gitignored and session-local).
 | Where | Status | Notes |
 |---|---|---|
 | [npmjs.com/package/remark-lint-visimark](https://www.npmjs.com/package/remark-lint-visimark) | **Live**, automatic | Same release leg as above. |
-| unifiedjs/remark plugin list | Not researched | No submission prepared yet. |
+| [remarkjs/remark plugin list](https://github.com/remarkjs/remark/blob/main/doc/plugins.md) | **PR open**, 2026-10-05 | [PR #1504](https://github.com/remarkjs/remark/pull/1504), awaiting merge. One-line addition to `doc/plugins.md` after `remark-lint`. Requirements: `remark-` name, default export, `remark-plugin` keyword (all already met) and a `remark-plugin` GitHub topic (added for this submission). Deliberately not sent to remark-lint's "external rules" list: that is for `unified-lint-rule` packages, and ours is a plain unified plugin. |
 
 ## `markdownlint-rule-visimark` (npm)
 
 | Where | Status | Notes |
 |---|---|---|
 | [npmjs.com/package/markdownlint-rule-visimark](https://www.npmjs.com/package/markdownlint-rule-visimark) | **Live**, automatic | Same release leg as above. |
-| DavidAnson/markdownlint custom-rules list | Not researched | No submission prepared yet. |
+| markdownlint community rules (npm keyword) | **Live**, automatic, confirmed 2026-10-05 | markdownlint has no list or PR process; its custom-rules doc says community rules are discovered via the npm keyword [`markdownlint-rule`](https://www.npmjs.com/search?q=keywords:markdownlint-rule), which the package carries. Confirmed it appears in that search (634 downloads at the time). |
 
 ## `visimark-mcp` (npm + MCP directories)
 
@@ -42,6 +42,7 @@ under `docs/WIP/` are not (several are gitignored and session-local).
 | [Glama](https://glama.ai/mcp/servers) | **Live**, 2026-09-29 | Listed at <https://glama.ai/mcp/servers/michal-niedzwiedzki/visimark> (score still calculating as of publish, badge already resolves). Submitted via the web form ("Add MCP Server"). Glama's submission wizard auto-generates a Dockerfile that `git clone`s the monorepo at the pinned commit and never builds it — broken for this Bun workspace (the wizard installs pnpm, not Bun, and the dist the server needs is gitignored). Fixed by pasting in a Dockerfile that installs the already-published npm package and wraps it with `mcp-proxy`, the same way a real `npx visimark-mcp` user would run it; verified end-to-end locally (`docker build` + `docker run` + `docker logs` showing a completed `initialize` handshake) before pasting into Glama's Admin UI. Worth remembering for any future Docker-based directory submission for this package. |
 | [mcp.so](https://mcp.so/submit?type=server) | Prepared, not sent | Manual web form (repo URL, name, description, tool count, transport, homepage, icon). Maintainer asked to hold this until rows above land. |
 | [Cursor directory](https://cursor.directory/plugins/visimark) | **Live**, 2026-09-29 | Manual web form, submitted directly by the maintainer. Not MCP-only: the listing bundles four components — MCP server (`visimark-mcp`), the `visimark` Skill (auto-picked up from `.agents/skills/visimark`), a `/visimark-check` Command, and a Stop Hook — the last two added in [PR #303](https://github.com/michal-niedzwiedzki/visimark/pull/303) (`.agents/commands/visimark-check.md`, `.agents/hooks/visimark-check.sh`) specifically for this submission. |
+| [MCPRush](https://mcprush.com/michal-niedzwiedzki/visimark-mcp) | **Live**, 2026-10-06 | MCPRush registered the listing themselves and told the maintainer by memo; the maintainer claimed authorship by signing in with GitHub. Declined their paid option. Automated fetches get HTTP 403, so the page is only verifiable from a browser. |
 | [Smithery](https://smithery.ai/new) | Not sent | OAuth-gated web form behind the maintainer's own login; no `smithery.yaml` needed (local stdio transport only). |
 | [PulseMCP](https://www.pulsemcp.com/servers) | Not applicable right now | Submissions site-wide are paused; PulseMCP's own guidance is to rely on the official registry (already done) until they reopen. |
 | [OpenTools](https://opentools.com/registry) | Not applicable | Project's CLI/tooling side is retired; it points new servers at the official MCP registry, already covered. |
@@ -55,6 +56,19 @@ sibling list) is out of scope too: it's for remote/hosted-URL-only servers
 with no installable package, and `visimark-mcp` ships an installable npm
 package with a stdio transport, so it belongs in `awesome-mcp-servers`
 above, not that list.
+
+## `codemirror-visimark` (npm)
+
+| Where | Status | Notes |
+|---|---|---|
+| [npmjs.com/package/codemirror-visimark](https://www.npmjs.com/package/codemirror-visimark) | **Automatic** once the first tag that contains it ships | Same release leg as the other npm packages ([#360](https://github.com/michal-niedzwiedzki/visimark/issues/360)). |
+
+## `markdown-it-visimark` (npm)
+
+| Where | Status | Notes |
+|---|---|---|
+| [npmjs.com/package/markdown-it-visimark](https://www.npmjs.com/package/markdown-it-visimark) | **Automatic** once the first tag that contains it ships | Same release leg as the other npm packages ([#373](https://github.com/michal-niedzwiedzki/visimark/issues/373)). |
+| markdown-it plugins (npm keyword) | **Automatic** | markdown-it has no plugin list or PR process; its README sends readers to the npm keyword [`markdown-it-plugin`](https://www.npmjs.com/search?q=keywords:markdown-it-plugin), which the package carries. No other directory is in scope for #373. |
 
 ## `visimark-vscode` (VS Code extension)
 

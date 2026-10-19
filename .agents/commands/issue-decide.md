@@ -8,7 +8,6 @@ You are running the **decision** stage of the issue-review workflow.
 
 Read first, every run:
 - `.agents/rules/ai-attribution.md` — commit / PR trailer for **this** session (never copy a hardcoded Claude line)
-- `docs/superpowers/specs/2026-09-06-vocabulary-review-workflow-design.md` — the design
 - `docs/vocabulary-catalogue.md` — the register, its four vocabulary criteria, its status values, the six-template table in its preface, and the E/F line
 - `docs/issue-runbook.md` — **Six kinds, three tracks**, and **Front-loading**: this stage owes the plan writer a spec with nothing left to invent
 - `docs/visimark-design.md` — [§1](../../docs/visimark-design.md#1-purpose), [§2](../../docs/visimark-design.md#2-constraints-that-shaped-the-design), [§4](../../docs/visimark-design.md#4-syntax), [§5](../../docs/visimark-design.md#5-dates), [§7](../../docs/visimark-design.md#7-numeric-semantics), [§9](../../docs/visimark-design.md#9-write-back), [§10](../../docs/visimark-design.md#10-error-taxonomy), [§13](../../docs/visimark-design.md#13-testing), [§14](../../docs/visimark-design.md#14-deferred)
@@ -413,3 +412,5 @@ commit the revised spec (and plan / implementation if present) onto it rather
 than opening a second PR. A row already condensed into the Shipped register
 stays there — the re-decision edits it in place, never restores a section-table
 row.
+
+<!--vmark:no-formulas-->

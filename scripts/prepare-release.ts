@@ -1,11 +1,13 @@
 /**
- * Prepares the release commit for a core version: bumps the eight
+ * Prepares the release commit for a core version: bumps the
  * version-carrying files and turns the changelogs over.
  *
  * docs/releasing.md ("Before you tag", steps 3 and 4) lists what to touch by
  * hand, and `ci.yml`'s "every version-carrying file must agree" fails the build
  * if one is missed. This makes the misses impossible instead of merely caught.
- * It does not touch the Obsidian plugin, whose version is its own.
+ * The Obsidian plugin carries the same version (docs/releasing.md#versioning):
+ * both manifest.json copies, a new versions.json key in both copies, and its
+ * changelog move with the core files.
  *
  * It rewrites text in place, so file formatting survives. Every replacement
  * must match exactly as expected; if any does not, nothing is written.
@@ -27,6 +29,16 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  ACTION_VERSION,
+  ENGINE_MANIFEST,
+  HOOK_PIN,
+  OBSIDIAN_MANIFEST,
+  OBSIDIAN_VERSIONS,
+  RELEASE_MANIFESTS,
+  lockBlock,
+  workspaceOf,
+} from "./release-manifests.ts";
 
 const usage = (): never => {
   console.error("usage: prepare-release [FIX|MINOR|MAJOR|X.Y.Z] [--date YYYY-MM-DD] [--root path]");
@@ -99,7 +111,7 @@ function edit(file: string, pattern: RegExp, replacement: string, what: string):
   pending.set(file, text.replace(pattern, replacement));
 }
 
-const engineFile = "packages/visimark/package.json";
+const engineFile = ENGINE_MANIFEST;
 const current: string = JSON.parse(read(engineFile)).version;
 const [curMajor, curMinor, curPatch] = current.split(".").map(Number) as [number, number, number];
 
@@ -155,17 +167,51 @@ if (rank[level] > rank[ceiling]) {
   );
 }
 
-// The six package manifests: own version, and the exact `visimark` pin where
-// there is one (the lsp and the extension use `workspace:*`, which stays).
-const manifests: Array<[string, boolean]> = [
-  [engineFile, false],
-  ["packages/visimark-lsp/package.json", false],
-  ["editors/vscode/package.json", false],
-  ["packages/remark-visimark/package.json", true],
-  ["packages/markdownlint-visimark/package.json", true],
-  ["packages/visimark-mcp/package.json", true],
-];
-for (const [file, pinsEngine] of manifests) {
+// The Obsidian plugin carries the release's version (docs/releasing.md#versioning).
+// Everything it needs is checked here, before the first edit, so a refusal
+// still writes nothing.
+const pluginManifest = JSON.parse(read(OBSIDIAN_MANIFEST)) as Record<string, unknown>;
+const pluginVersion = pluginManifest.version;
+if (typeof pluginVersion !== "string" || !isSemver(pluginVersion)) {
+  refuse(
+    OBSIDIAN_MANIFEST,
+    `${OBSIDIAN_MANIFEST}: cannot find a top-level "version". The layout moved; fix scripts/prepare-release.ts.`,
+  );
+}
+// Lockstep makes this the same test as the core one above, except once: the
+// plugin tag 0.3.0 predates the shared line, so MINOR from 0.2.0 must not land on it.
+if (cmp(version, pluginVersion as string) <= 0) {
+  refuse(
+    OBSIDIAN_MANIFEST,
+    `${version} is not newer than the Obsidian plugin's current version ${pluginVersion}.`,
+  );
+}
+const minApp = pluginManifest.minAppVersion;
+if (typeof minApp !== "string" || minApp === "") {
+  refuse(
+    OBSIDIAN_MANIFEST,
+    `${OBSIDIAN_MANIFEST}: cannot find "minAppVersion". The layout moved; fix scripts/prepare-release.ts.`,
+  );
+}
+// The registry reads the root copies; check-obsidian-root-mirror.ts keeps them
+// byte-equal. Refuse a drifted pair rather than repair it without a word.
+for (const file of ["manifest.json", "versions.json"]) {
+  if (read(file) !== read(`editors/obsidian/${file}`)) {
+    refuse(
+      file,
+      `${file} differs from editors/obsidian/${file}. Make the root copies byte-equal first — see scripts/check-obsidian-root-mirror.ts.`,
+    );
+  }
+}
+if (Object.hasOwn(JSON.parse(read(OBSIDIAN_VERSIONS)), version)) {
+  refuse(OBSIDIAN_VERSIONS, `${OBSIDIAN_VERSIONS} already has a "${version}" key.`);
+}
+
+// The package manifests (scripts/release-manifests.ts): own version, and the
+// exact `visimark` pin where there is one (the lsp and the extension use
+// `workspace:*`, which stays; codemirror-visimark and markdown-it-visimark
+// bundle the engine and have none).
+for (const { file, pinsEngine } of RELEASE_MANIFESTS) {
   edit(file, /^(\s*"version": ")[^"]+(",?)$/m, `$1${version}$2`, 'a top-level "version"');
   if (pinsEngine) {
     edit(
@@ -184,11 +230,9 @@ for (const [file, pinsEngine] of manifests) {
 // pin says, so it sat two releases stale (0.1.8, through v0.1.9 and v0.1.10)
 // before anyone noticed.
 //
-// Each lookup is bounded to its own "<workspace>": { ... } block, found by
-// plain substring search (so there is no workspace-path-shaped regex to
-// escape) and closed by the first line that is exactly four spaces then
-// "},". Without that bound, a field missing from its own block would let the
-// search run on and silently match — and overwrite — the next workspace's.
+// Each lookup is bounded to its own "<workspace>": { ... } block (`lockBlock`).
+// Without that bound, a field missing from its own block would let the search
+// run on and silently match — and overwrite — the next workspace's.
 const lockFile = "bun.lock";
 function editInLockBlock(
   workspace: string,
@@ -197,20 +241,14 @@ function editInLockBlock(
   what: string,
 ): void {
   const text = pending.get(lockFile) ?? read(lockFile);
-  const start = text.indexOf(`"${workspace}": {`);
-  if (start === -1)
+  const block = lockBlock(text, workspace);
+  if (block === null)
     refuse(
       lockFile,
       `${lockFile}: cannot find the "${workspace}" workspace block. The layout moved; fix scripts/prepare-release.ts.`,
     );
-  const close = /\n {4}\},?\n/.exec(text.slice(start));
-  if (close === null)
-    refuse(
-      lockFile,
-      `${lockFile}: cannot find the end of the "${workspace}" workspace block. The layout moved; fix scripts/prepare-release.ts.`,
-    );
-  const end = start + close.index + close[0].length;
-  const block = text.slice(start, end);
+  const start = text.indexOf(block);
+  const end = start + block.length;
   if (!pattern.test(block))
     refuse(
       lockFile,
@@ -221,8 +259,8 @@ function editInLockBlock(
     text.slice(0, start) + block.replace(pattern, replacement) + text.slice(end),
   );
 }
-for (const [file, pinsEngine] of manifests) {
-  const workspace = file.replace(/\/package\.json$/, "");
+for (const { file, pinsEngine } of RELEASE_MANIFESTS) {
+  const workspace = workspaceOf(file);
   editInLockBlock(workspace, /("version": ")[^"]+(")/, `$1${version}$2`, 'a "version"');
   if (pinsEngine) {
     editInLockBlock(
@@ -236,24 +274,24 @@ for (const [file, pinsEngine] of manifests) {
 
 // The block is `version:` and the lines indented under it, so the match cannot
 // run on into a later input's `default` if this one loses its own.
-edit(
-  "action.yml",
-  /(^  version:[ \t]*\n(?:(?: {4}.*)?\n)*? {4}default: ")[^"]*(")/m,
-  `$1${version}$2`,
-  "the `version` input's own default",
-);
+edit("action.yml", ACTION_VERSION, `$1${version}$3`, "the `version` input's own default");
 
-// Exactly the two pins (the bunx and npx branches), both numeric. One branch
-// drifting to `visimark@latest` must refuse, not be half-bumped.
+// Exactly one `pinned=` line, numeric. A second one, or one drifted to
+// `latest`, must refuse, not be half-bumped.
 const hook = "scripts/precommit-visimark-check.sh";
-const pins = read(hook).match(/visimark@\S+/g) ?? [];
-if (pins.length !== 2 || !pins.every((pin) => /^visimark@\d+\.\d+\.\d+$/.test(pin))) {
+const pins = [...read(hook).matchAll(HOOK_PIN)].map((m) => m[1]!);
+if (pins.length !== 1 || !/^\d+\.\d+\.\d+$/.test(pins[0]!)) {
   refuse(
     hook,
-    `${hook}: expected exactly two numeric visimark@<version> pins, found: ${pins.join(" ") || "none"}.`,
+    `${hook}: expected exactly one numeric pinned=<version> line, found: ${pins.join(" ") || "none"}.`,
   );
 }
-edit(hook, /visimark@\d+\.\d+\.\d+/g, `visimark@${version}`, "a visimark@<version> pin");
+edit(hook, /^pinned=\d+\.\d+\.\d+$/m, `pinned=${version}`, "the pinned=<version> line");
+
+// server.json's own version and its npm package's. release.yml rewrites both
+// from the tag before publishing anyway; bumping them here keeps the committed
+// file from showing a version releases old.
+edit("server.json", /("version": ")\d+\.\d+\.\d+(")/g, `$1${version}$2`, "a version field");
 
 // Root changelog: Unreleased becomes the release, a fresh Unreleased opens
 // above it, and the link reference goes at the head of the reference block.
@@ -284,10 +322,52 @@ if (/^## Unreleased[ \t]*$/m.test(read(vscodeChangelog))) {
   );
 }
 
+// The Obsidian plugin: its manifest, a versions.json key, the root copies
+// (same bytes), and its changelog.
+edit(
+  OBSIDIAN_MANIFEST,
+  /^(\s*"version": ")[^"]+(",?)$/m,
+  `$1${version}$2`,
+  'a top-level "version"',
+);
+edit(
+  OBSIDIAN_VERSIONS,
+  /("[^"\n]*": "[^"\n]*")(\n\}\s*)$/,
+  `$1,\n  "${version}": "${minApp}"$2`,
+  "a last entry to append after",
+);
+pending.set("manifest.json", pending.get(OBSIDIAN_MANIFEST)!);
+pending.set("versions.json", pending.get(OBSIDIAN_VERSIONS)!);
+
+// Its changelog keeps an Unreleased heading. With content, that becomes the
+// release and a fresh one opens above it. Empty (or absent), the release gets
+// the placeholder, as the extension's does.
+const obsidianChangelog = "editors/obsidian/CHANGELOG.md";
+const pluginUnreleased = /^## Unreleased[ \t]*\n([\s\S]*?)(?=^## |(?![\s\S]))/m.exec(
+  read(obsidianChangelog),
+);
+if (pluginUnreleased !== null && pluginUnreleased[1]!.trim() !== "") {
+  edit(
+    obsidianChangelog,
+    /^## Unreleased[ \t]*$/m,
+    `## Unreleased\n\n## ${version} - ${date}`,
+    '"## Unreleased"',
+  );
+} else {
+  edit(
+    obsidianChangelog,
+    /^(?=## \d+\.\d+\.\d+ - )/m,
+    `## ${version} - ${date}\n\nNo plugin changes. Bundles engine ${version}.\n\n`,
+    "an existing release heading",
+  );
+}
+
 for (const [file, text] of pending) writeFileSync(join(root, file), text);
 
 console.log(`Prepared ${current} -> ${version} (${date}, ${level}) in ${pending.size} files.`);
-console.log(`Now: read the diff, and rewrite the placeholder line in ${vscodeChangelog} if the`);
-console.log('extension has editor-visible changes (docs/releasing.md, "Preparing the changelog").');
-console.log("Fill the Shipped-register Released cells (step 5), run the pre-push checks, then");
-console.log(`commit as "chore: release v${version}". The Obsidian plugin is not touched.`);
+console.log(`Now: read the diff, and rewrite the placeholder line in ${vscodeChangelog}`);
+console.log(`or ${obsidianChangelog} if that editor has user-visible changes`);
+console.log('(docs/releasing.md, "Preparing the changelog"). Fill the Shipped-register');
+console.log(
+  `Released cells (step 5), run the pre-push checks, then commit as "chore: release v${version}".`,
+);

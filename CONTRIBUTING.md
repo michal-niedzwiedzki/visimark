@@ -81,10 +81,19 @@ $ bun install
 `node_modules/.bin`, so `bun run` sees a `visimark` built from your working
 tree rather than the published package.
 
+The root `package.json` has an `overrides` block that pins four CodeMirror
+packages (`@codemirror/language`, `@codemirror/state`, `@codemirror/view`,
+`@lezer/highlight`) to one version for the whole workspace: two copies of
+`@codemirror/state` are two editor states, and nothing works across them.
+Dependabot does not read `overrides` and ignores those four, so bump one by
+hand, in the override and every manifest that names it, in one commit.
+`scripts/check-overrides.ts` fails CI when an override falls outside a range a
+workspace declares.
+
 Then check that it works:
 
 ```console
-$ bun test
+$ bun run test
 $ bunx visimark check docs/example-invoice.md
 ```
 
@@ -126,17 +135,19 @@ both are enforced by `editors/obsidian/test/bundle.test.ts`:
 - **No `node:` specifier may reach `main.js`.** Not one — the playground's
   `node:path` allowance does not transfer, because Obsidian mobile is not
   Electron and has no Node to fall back on. The build substitutes
-  `editors/obsidian/src/browser-path.ts`.
+  `packages/codemirror-visimark/src/browser-path.ts`.
 - **The plugin enters the engine at `packages/visimark/src/browser.ts`**, its
   browser-safe entry point, and never at `src/index.ts` — which reaches
   `node:fs`, `node:crypto`, `node:module` and `node:url` and cannot be bundled
   for a browser at all.
 
-The plugin's version lives in `manifest.json` only, and is deliberately **not**
-one of the numbers `ci.yml`'s version-agreement step keeps in lockstep: an
-Obsidian release goes through a human registry review and must not be coupled
-to an engine patch. `scripts/check-changelog-entries.ts` holds it honest
-instead.
+The Live Preview marks come from `packages/codemirror-visimark`, which the
+plugin bundles from source through the same kind of alias as the engine —
+`esbuild.config.mjs` and `tsconfig.json` both map it. The plugin never imports
+`codemirror-visimark/lint`; `bundle.test.ts` checks that too.
+
+The plugin's version lives in `manifest.json` and is the release's, like every
+other shipped artifact's ([`docs/releasing.md`](docs/releasing.md#versioning)).
 
 #### Developing and debugging it against a running vault
 
@@ -161,6 +172,28 @@ Obsidian instance. `.agents/skills/obsidian-cli` (a Claude skill, but its
    on the focused element (`.cm-content` for the editor) reproduced the bug.
    Prefer dispatching on the element over `dev:cdp` when a DOM-level listener
    is what's under test, and attach the debugger if the two disagree.
+
+### Building the Joplin plugin and side-loading it
+
+`editors/joplin` is a client of the two published editor packages: it adds
+`codemirror-visimark` to Joplin's editor and `markdown-it-visimark` to its
+viewer. It is build-only (#378). Nothing publishes it, and it carries no
+version of its own; the build stamps the engine's into the manifest.
+
+```console
+$ bun run --filter joplin-plugin-visimark build
+$ ls editors/joplin/publish
+com.visimark.joplin.jpl
+```
+
+Install it in Joplin desktop 3.7.1 or later with **Tools → Options → Plugins →
+⚙ → Install from file**. CI uploads the same file as the `visimark-joplin`
+artifact.
+
+`editors/joplin/test/bundle.test.ts` reads esbuild's metafile. It fails if
+any `@codemirror/*` or `@lezer/*` source is bundled (Joplin provides them) or
+if any `node:` import survives. `docs/design/joplin-manual-test.md` is the
+check a screen needs.
 
 ### Running the MCP server from your working tree
 
@@ -203,18 +236,27 @@ and `articles-pages` enforce the same checks in CI either way.
 
 | Command | What it does |
 |---|---|
-| `bun test` | The whole suite. It runs in a few seconds — there is no reason not to run it. |
+| `bun run test` | The whole suite: each workspace's tests from its own directory, with its own `bunfig.toml`, then the root's `scripts/` tests. It runs in seconds — there is no reason not to run it. |
+| `bun test` | At the root, only `scripts/` (the root `bunfig.toml` sets `root`). Inside a workspace, that workspace's tests. |
 | `bun run typecheck` | TypeScript, across every workspace |
 | `bun run lint` | `oxlint`, with warnings treated as failures |
+| `bun run lint:scanner` | The Obsidian community scanner's two Error rules over every tracked JS/TS file — what CI runs because the scanner lints the whole repository. A file deleted but not yet committed makes it exit 2: commit or restore it |
 | `bun run format` | `oxfmt`, in place |
 | `bun run format:check` | `oxfmt`, read-only — this is what CI runs |
 | `bun run build` | Builds every package |
 | `bun run gen:docs` | Regenerates the function reference from the engine's own registry |
 | `bun run gen:mcp` | Regenerates the MCP server's served skill and doc copies |
-| `bun run gen:obsidian-templates` | Regenerates the Obsidian plugin's templates module from `editors/obsidian/templates/*.md` |
-| `bun run --filter visimark build:playground` | Rebuilds the browser bundles committed under `docs/vendor/` |
+| `bun run gen:editor-templates` | Regenerates the editor plugins' shared templates module from `editors/shared/templates/*.md` |
+| `bun run --filter visimark-site build:playground` | Rebuilds the browser bundles committed under `docs/vendor/`. The application bundle is built by `site/build-playground.ts`, which also bundles CodeMirror 6 and `codemirror-visimark` |
 | `bun run serve` | Serves `docs/` on `http://localhost:8080` — needed for the playground and the tutorial pages, which fetch their content and cannot run from `file://` |
 | `bun run vscode-install` | Builds, packages and installs the VS Code extension locally |
+
+The extension's Markdown preview marks (#373) have one check no test reaches,
+because it needs VS Code itself. After `bun run vscode-install`, open
+`docs/example-invoice-drift.md` and run **Markdown: Open Preview to the Side**:
+the stale values are flagged on the first render, with no refresh. Set
+`visimark.preview.enable` to false and the marks leave the open preview without
+a window reload; set it back and they return.
 
 ## Before you push
 
@@ -226,7 +268,7 @@ $ bun run format
 $ bun run lint
 $ bun run typecheck
 $ bun run build
-$ bun test
+$ bun run test
 ```
 
 If you touched anything a generated or committed artifact depends on, also run
@@ -235,8 +277,8 @@ the matching regeneration and **commit the result**:
 ```console
 $ bun run gen:docs                              # if you changed a builtin function
 $ bun run gen:mcp                               # if you changed SKILL.md or a served doc
-$ bun run gen:obsidian-templates                # if you changed an Obsidian template
-$ bun run --filter visimark build:playground    # if you changed engine or playground source
+$ bun run gen:editor-templates                  # if you changed an editor template
+$ bun run --filter visimark-site build:playground  # if you changed engine or playground source
 ```
 
 If you touched any Markdown document in `docs/` or the repository's own prose,
@@ -274,15 +316,21 @@ in production) would answer differently than the CLI for the same document.
 Fix: this is a real bug, not something to silence — find why the two hosts
 disagree, and fix the engine or the `ReaderPort` boundary, never the check.
 
-**Every version-carrying file must agree.** Eleven fields carry the version —
-six package manifests (three of which also pin `visimark` as a dependency),
-`action.yml`'s pinned `version` default and `scripts/precommit-visimark-check.sh`.
+**Every version-carrying file must agree.** The eight package manifests listed
+in `scripts/release-manifests.ts` (three of which also pin `visimark` as a
+dependency; `codemirror-visimark` and `markdown-it-visimark` carry only their
+own version, because they bundle the engine), their mirror in `bun.lock`,
+`action.yml`'s pinned `version` default, the `pinned=` line in
+`scripts/precommit-visimark-check.sh`, the two versions in `server.json`, and
+the Obsidian plugin's `editors/obsidian/manifest.json` and the newest key of its
+`versions.json`.
+`scripts/check-versions.ts` is the check.
 One tag publishes all of them, the Action's default is what a consumer's `npx`
 actually installs, and an exact `visimark` pin is what stops a published plugin
 or the MCP server pairing with an engine it was never tested against. You only touch these in a release commit; see
 [`docs/releasing.md`](docs/releasing.md). The same commit needs a dated
-`## X.Y.Z - YYYY-MM-DD` heading in `CHANGELOG.md` and in
-`editors/vscode/CHANGELOG.md`; a separate CI step checks that each has one.
+`## X.Y.Z - YYYY-MM-DD` heading in `CHANGELOG.md`,
+`editors/vscode/CHANGELOG.md` and `editors/obsidian/CHANGELOG.md`; a separate CI step checks that each has one.
 
 **The built CLI must run under Node, not only Bun**
 ([`.agents/rules/runtime-parity.md`](.agents/rules/runtime-parity.md)). A
@@ -302,9 +350,13 @@ section.
 ## The repository eats its own cooking
 
 `dogfood.yml` runs the shipped GitHub Action against this repository's own
-documents — the worked examples, the tutorial, the CI guide, the design doc, the
-README and the changelog. If your pull request touches one of them and the
-numbers in it stop agreeing with its formulas, the build goes red.
+documents: every tracked Markdown file, package READMEs and editor plugins
+included. The exceptions are `docs/WIP/`, the vendored skills under
+`.agents/skills/<name>/`, the engine's test fixtures, and the drift examples
+that fail on purpose. If your pull request touches one of them and the numbers
+in it stop agreeing with its formulas, the build goes red. `bun run test` runs the
+same check (`scripts/doc-set.test.ts`), so it fails locally too, with or
+without the pre-commit hook installed.
 
 There are two findings you are likely to meet, and each has exactly one correct
 response.
@@ -335,7 +387,10 @@ Two more documentation rules that matter here:
 ## Tests
 
 Tests live next to what they test, in each package's `test/` directory, and run
-under `bun test`.
+under `bun test` from that package's directory. A package's test environment
+matches its runtime: only the editor workspaces and the two browser packages
+preload a DOM, each in its own `bunfig.toml`. A Node library's test that needs
+`document` is a bug in the test, not a reason to add a preload.
 
 **A bug fix comes with a test that fails before it.** Write the failing test
 first, watch it fail for the reason you expect, then fix it. A test that passes

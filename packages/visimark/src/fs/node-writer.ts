@@ -9,7 +9,7 @@ import type { WriteErr, WriteOk, WriterPort } from "./writer.js";
  *
  * **Nothing in the browser's module graph may import this file** — same rule
  * as `fs/node-reader.ts`, checked the same way in
- * `test/playground/browser-graph.test.ts`.
+ * `test/browser/browser-graph.test.ts`.
  */
 export const nodeWriter: WriterPort = {
   writeText(path: string, content: string): WriteOk | WriteErr {

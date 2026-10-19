@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
-# Asks every registry whether a core release really landed.
+# Asks every registry whether a release really landed, the Obsidian plugin's
+# GitHub Release included.
 #
 # Usage: scripts/verify-release.sh vX.Y.Z
 #
-# release.yml's last step asserts the versions are listed. This also checks
-# what it does not: the npm provenance attestations, the GitHub Release, and
-# that the published MCP server actually starts, from the registry, under each
-# runtime present. It needs only curl, gh and node or Bun. Run it after the release run goes green; see
-# docs/releasing.md ("Verify every leg"). Read-only: it publishes nothing.
+# A green release.yml run already checks all of this. The script is the
+# by-hand second opinion, from your machine rather than a runner: run it when
+# a run was re-dispatched, or when something looks off. It needs only curl, gh
+# and node or Bun, and runs the MCP server under whichever of npx and bunx is
+# installed. See docs/releasing.md ("Verify every leg"). Read-only: it
+# publishes nothing.
 # Exits 0 when every check passes, 1 otherwise, 2 on usage.
 set -uo pipefail
 
@@ -31,7 +33,7 @@ bad() { echo "FAIL  $*"; fail=1; }
 
 # The npm registry's HTTP API rather than the `npm` CLI, so this runs on a
 # machine that has only Bun (runtime-parity rule).
-for pkg in visimark remark-lint-visimark markdownlint-rule-visimark visimark-mcp; do
+for pkg in visimark remark-lint-visimark markdownlint-rule-visimark visimark-mcp codemirror-visimark markdown-it-visimark; do
   # Prints "listed", plus "attested" when dist.attestations is present. A version
   # published without --provenance has no attestations at all.
   state="$(curl -sS -f "https://registry.npmjs.org/$pkg/$version" 2>/dev/null \
@@ -68,6 +70,24 @@ if gh release view "$tag" >/dev/null 2>&1; then
   pass "GitHub Release $tag exists"
 else
   bad "no GitHub Release for $tag"
+fi
+
+# The Obsidian plugin's release, cut by the same run under the bare tag.
+plugin_dir="$(mktemp -d)"
+trap 'rm -rf "$plugin_dir"' EXIT
+if gh release download "$version" -D "$plugin_dir" -p main.js -p manifest.json -p styles.css >/dev/null 2>&1; then
+  pass "GitHub Release $version has main.js, manifest.json and styles.css"
+  released="$(node -p "require('$plugin_dir/manifest.json').version")"
+  [ "$released" = "$version" ] && pass "its manifest.json says $version" || bad "its manifest.json says $released"
+  for f in main.js styles.css; do
+    if gh attestation verify "$plugin_dir/$f" --repo michal-niedzwiedzki/visimark >/dev/null 2>&1; then
+      pass "its $f has a verified build attestation"
+    else
+      bad "its $f has no build attestation that verifies"
+    fi
+  done
+else
+  bad "no GitHub Release $version with main.js, manifest.json and styles.css (the Obsidian plugin)"
 fi
 
 # A server that cannot start is invisible to every registry check. --nope is an

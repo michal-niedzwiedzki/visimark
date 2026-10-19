@@ -28,7 +28,7 @@ body:
         - CI and the checks a pull request must pass
         - Packaging, publishing, releasing
         - The issue-review workflow, its skills and commands
-        - The VS Code extension and language server
+        - Editor integrations (VS Code, Obsidian, Joplin, the language server, the shared editor packages)
         - Repo layout, the design docs, the catalogue itself
         - Developer ergonomics (scripts, lint, formatting, local setup)
     validations:

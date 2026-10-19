@@ -173,7 +173,7 @@ equity_irr     precision 4 = IRR(years.Equity)
 
 report best scalar returns.equity_irr direction max among feasible
 report best scalar returns.npv direction max among feasible
-report deltas
+report deltas among all
 ```
 
 At the defaults the project is worth **4215389.03 EUR**<!--vmark=returns.npv|unit--> at an
@@ -190,7 +190,7 @@ assert levers.gearing <= 75%
 
 report gates
 report forbidden
-report deltas on debt.dscr_min, asset.soh_eol
+report deltas on debt.dscr_min, asset.soh_eol among all
 ```
 
 1. **Debt service cover.** CFADS in the last debt year must cover the
@@ -229,7 +229,7 @@ report best scalar returns.npv direction max among feasible
   chosen from 159 feasible of 576 questions
   2 questions tie; the first in grid order is shown
 
-report deltas
+report deltas among all
 
   returns.npv [EUR]  base 4215389.03
     low   -9850576.57  (-14065965.60)  power=100 duration=1 spread=60 fade=3.5% gearing=70%
@@ -237,6 +237,7 @@ report deltas
   returns.equity_irr  base 0.1931
     low   -0.1811  (-0.3742)  power=40 duration=1 spread=60 fade=3.5% gearing=80%
     high   0.8006  (+0.6075)  power=40 duration=4 spread=120 fade=1.5% gearing=80%
+  over 524 questions
 #credit
 
 report gates
@@ -255,7 +256,7 @@ report forbidden
   gearing = 80%  every question with it breaks an assertion
   365 of 576 questions are infeasible
 
-report deltas on debt.dscr_min, asset.soh_eol
+report deltas on debt.dscr_min, asset.soh_eol among all
 
   debt.dscr_min  base 1.41
     low   0.52  (-0.89)  power=40 duration=1 spread=60 fade=3.5% gearing=80%
@@ -263,6 +264,7 @@ report deltas on debt.dscr_min, asset.soh_eol
   asset.soh_eol  base 0.6250
     low   0.4750  (-0.1500)  power=40 duration=1 spread=60 fade=3.5% gearing=70%
     high  0.7750  (+0.1500)  power=40 duration=1 spread=60 fade=1.5% gearing=70%
+  over 524 questions
 ```
 
 Read it top to bottom, the way a credit paper is read.

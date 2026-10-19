@@ -10,15 +10,19 @@ repos:
         name: visimark check
         language: system
         entry: sh scripts/precommit-visimark-check.sh
-        # Scoped to the same file set dogfood.yml's "every doc in that set
-        # must pass" step already trusts: every tracked doc under docs/, plus
-        # the top-level ones below, minus docs/WIP/ (unfinished scratch notes
-        # never meant to satisfy `check`) and the fixtures excluded below,
-        # which exist to fail on purpose — each has its own dogfood.yml step
-        # proving that. A doc that has no arithmetic still passes by carrying
-        # `<!--vmark:no-formulas-->`; there is no other kind of exemption.
-        files: ^(docs/.*\.md|README\.md|CHANGELOG\.md|CONTRIBUTING\.md|skills/visimark/SKILL\.md)$
-        exclude: ^(docs/WIP/.*|docs/example-invoice-drift\.md|docs/example-quote-plain\.md|docs/example-lunch-split-drift\.md|docs/design/presentation-only-percent-display-sigil-(plan|spec)\.md)$
+        # Every tracked Markdown file, the same set dogfood.yml's "every doc
+        # in that set must pass" step checks (scripts/doc-set.test.ts pins the
+        # two together), minus: docs/WIP/ (unfinished scratch notes never meant
+        # to satisfy `check`); the vendored skills under .agents/skills/<name>/
+        # (third-party content pinned by hash in skills-lock.json); the engine's
+        # test fixtures; and the drift examples, which exist to fail on purpose
+        # — each has its own dogfood.yml step proving that, except the MCP
+        # server's copy of the drift invoice, which `gen:mcp` regenerates from
+        # docs/example-invoice-drift.md. A doc that has no
+        # arithmetic still passes by carrying `<!--vmark:no-formulas-->`; there
+        # is no other kind of exemption.
+        files: \.md$
+        exclude: ^(docs/WIP/.*|\.agents/skills/[^/]+/.*|packages/(visimark|visimark-investigate)/test/fixtures/.*|docs/example-invoice-drift\.md|docs/example-quote-plain\.md|docs/example-lunch-split-drift\.md|docs/design/presentation-only-percent-display-sigil-(plan|spec)\.md|packages/visimark-mcp/docs/example-invoice-drift\.md)$
       - id: gen-articles
         name: regenerate article pages
         language: system
@@ -31,13 +35,13 @@ repos:
       - id: gen-playground-bundle
         name: rebuild playground bundle
         language: system
-        entry: 'sh scripts/prepush-regen.sh --pin-bun "build: regenerate the playground bundle" "bun run --filter visimark build:playground" "docs/vendor/*"'
+        entry: 'sh scripts/prepush-regen.sh --pin-bun "build: regenerate the playground bundle" "bun run --filter visimark-site build:playground" "docs/vendor/*"'
         stages: [pre-push]
         pass_filenames: false
         # Same trigger set as the playground-bundle CI job: anything the
         # bundles are built from. Skipped, not failed, on a Bun that is not
         # the pinned one — the minifier's output is version-specific.
-        files: ^(packages/visimark/src/|packages/visimark/package\.json$|bun\.lock$)
+        files: ^(packages/visimark/src/|packages/codemirror-visimark/src/|site/|bun\.lock$)
       - id: gen-docs
         name: regenerate docs pages and MCP resources
         language: system

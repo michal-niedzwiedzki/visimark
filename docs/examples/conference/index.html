@@ -30,7 +30,8 @@
       content="default-src 'none';
                script-src 'self';
                style-src 'self';
-               img-src 'self';
+               img-src 'self' https://visimark.goatcounter.com;
+               connect-src https://visimark.goatcounter.com;
                base-uri 'none';
                form-action 'none'"
     />
@@ -115,7 +116,6 @@
 <a href="#conference-budget-2027" data-level="1">Conference budget, 2027</a>
 <a href="#the-event" data-level="2">The event</a>
 <a href="#costs" data-level="2">Costs</a>
-<a href="#readings" data-level="2">Readings</a>
         </nav>
       </div>
     </dialog>
@@ -216,23 +216,17 @@ total = SUM(Cost)
 EUR a ticket the day costs **23025.00**&lt;!--vmark=costs.total--&gt; EUR and makes
 **6975.00**&lt;!--vmark=event.profit--&gt; EUR.</pre><div class="out"><p>With <strong>250</strong> people at <strong>80.00</strong>
 EUR a ticket the day costs <strong>23025.00</strong> EUR and makes
-<strong>6975.00</strong> EUR.</p></div><pre class="src">## Readings</pre><div class="out"><h2 id="readings">Readings</h2></div><pre class="src">```vmark #readings
+<strong>6975.00</strong> EUR.</p></div><pre class="src">&lt;!--vmark:report #readings
 report gates
 report forbidden
 report best scalar event.profit direction max among feasible
 report best scalar event.ticket direction min among feasible
-report deltas on event.profit, event.sponsor_share
-```</pre><div class="out"><pre><code class="language-vmark">report gates
-report forbidden
-report best scalar event.profit direction max among feasible
-report best scalar event.ticket direction min among feasible
-report deltas on event.profit, event.sponsor_share
-</code></pre></div><pre class="src">```vmark #ledger
-report ledger assertions broken
-```</pre><div class="out"><pre><code class="language-vmark">report ledger assertions broken
-</code></pre></div>
+report deltas on event.profit, event.sponsor_share among all
+report slack
+--&gt;</pre><div class="out"></div><pre class="src">&lt;!--vmark:report #ledger report ledger assertions broken--&gt;</pre><div class="out"></div>
     </main>
 
     <script src="../../vendor/visimark-site-tutorial.js"></script>
+    <script data-goatcounter="https://visimark.goatcounter.com/count" async src="../../vendor/goatcounter-count.js"></script>
   </body>
 </html>

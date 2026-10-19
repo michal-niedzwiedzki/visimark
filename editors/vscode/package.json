@@ -1,7 +1,7 @@
 {
   "name": "visimark-vscode",
   "displayName": "VisiMark",
-  "version": "0.2.0",
+  "version": "0.4.1",
   "private": true,
   "description": "A document integrity layer for Markdown: it checks that every number in a document still matches the formula that produced it, so an agent's correct formula can't ship with a wrong total.",
   "categories": [
@@ -26,6 +26,7 @@
   "publisher": "visimark-michal-niedzwiedzki",
   "main": "./dist/extension.js",
   "scripts": {
+    "test": "bun test",
     "typecheck": "tsc --noEmit",
     "build": "node esbuild.mjs",
     "package": "bun run build && vsce package --no-dependencies --out visimark.vsix",
@@ -37,9 +38,10 @@
     "vscode-languageclient": "^10.1.1"
   },
   "devDependencies": {
-    "@types/vscode": "^1.91.0",
+    "@types/vscode": "1.91.0",
     "@vscode/vsce": "^4.0.0",
     "esbuild": "^0.28.2",
+    "markdown-it": "^15.0.2",
     "ovsx": "^1.2.0"
   },
   "contributes": {
@@ -65,6 +67,10 @@
         "title": "VisiMark: Restart Server"
       }
     ],
+    "markdown.markdownItPlugins": true,
+    "markdown.previewStyles": [
+      "./media/preview.css"
+    ],
     "configuration": {
       "title": "VisiMark",
       "properties": {
@@ -72,6 +78,11 @@
           "type": "boolean",
           "default": true,
           "description": "Enable VisiMark for Markdown files."
+        },
+        "visimark.preview.enable": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Mark computed values in the built-in Markdown preview, and flag the ones that disagree with their formulas. Independent of `visimark.enable`, which switches the language server."
         },
         "visimark.check.debounce": {
           "type": "number",
@@ -107,7 +118,8 @@
         "visimark.server.path": {
           "type": "string",
           "default": "",
-          "description": "Development only: path to a server entry point to run instead of the bundled one."
+          "scope": "machine",
+          "description": "Development only: path to a server entry point to run instead of the bundled one. User settings only: a workspace cannot set it, because the extension runs this file."
         },
         "visimark.trace.server": {
           "type": "string",
@@ -128,5 +140,14 @@
   "icon": "icon.png",
   "engines": {
     "vscode": "^1.91.0"
+  },
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "VisiMark checks documents in Restricted Mode; a custom server path is ignored.",
+      "restrictedConfigurations": [
+        "visimark.server.path"
+      ]
+    }
   }
 }

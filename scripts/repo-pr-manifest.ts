@@ -1,6 +1,6 @@
 /**
- * Tracks which repos `repo-scan --keep` has already persisted a clone for,
- * so a later `repo:pr` run (or a re-run of `repo-scan --keep` itself) can
+ * Tracks which repos `repo:investigate` or `repo:pr` has already persisted a clone for,
+ * so a later `repo:pr` run (or a re-run of `repo:investigate` itself) can
  * tell "already handled this exact commit" from "repo moved since we last
  * looked" without re-cloning or re-scanning to find out.
  *
@@ -11,16 +11,16 @@
  * new one — and the manifest entry lets a caller skip the clone entirely
  * once it already has an entry for that ref.
  *
- * Pure: no filesystem access here. `repo-scan.ts` owns reading/writing the
+ * Pure: no filesystem access here. `repo-pr-clone.ts` owns reading/writing the
  * JSON file and the actual clone directory.
  */
 
 export interface ManifestEntry {
-  /** The Git host this entry's remote lives on (`hostOf`, repo-scan-lib.ts) —
+  /** The Git host this entry's remote lives on (`hostOf`, packages/visimark-investigate/src/repo.ts) —
    * part of the manifest key, not just metadata: `label` alone ("owner/repo")
    * collides across two different hosts mirroring the same path. */
   host: string;
-  /** `owner/repo`, matching `RepoRef.label` from repo-scan-lib. */
+  /** `owner/repo`, matching `RepoRef.label` from packages/visimark-investigate/src/repo.ts. */
   repo: string;
   cloneUrl: string;
   /** Commit SHA the repo was at when this entry was recorded. */

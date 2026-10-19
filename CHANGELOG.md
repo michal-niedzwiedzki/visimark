@@ -2,15 +2,187 @@
 
 ## Unreleased
 
+### Fixed
+
+- **A scan's GitHub permalinks open the Markdown source, not its rendered
+  preview.** `blobUrl` now writes `?plain=1` before the `#L` anchor. Without
+  it GitHub renders a `.md` file and the line range selects nothing.
+
+## 0.4.1 - 2026-10-17
+
 ### Added
+
+- **CI runs the Obsidian community scanner's Error rules over the whole
+  repository.** `bun run lint:scanner` runs `no-unsanitized/property` and
+  `obsidianmd/no-static-styles-assignment` over every tracked JS/TS file. The
+  scanner lints the whole monorepo as the plugin, and its Scorecard for 0.4.0
+  failed on both rules in `site/`, which nothing in CI linted. The site's
+  `innerHTML` writes now go through one helper, `setTrustedHtml` in
+  `site/src/html.ts`, whose comment states the site's trust boundary (#402).
+- **Accepted advisories are written down and expire.** `osv-scanner.toml`
+  accepts `braces`' GHSA-vfj7-8cjw-p6xm (no patched release; dev-only) until
+  2027-04-17, and both `supply-chain.yml` jobs fail on an entry that no longer
+  matches anything. Root overrides clear the other three: `moment` 2.31.0
+  (GHSA-4p3w-j4w9-5jqw), `smol-toml` 1.9.1 (GHSA-r4xh-jqrq-34v2) and `katex`
+  0.18.11 (GHSA-238p-pmpm-9mq7), all development dependencies (#402).
+
+## 0.4.0 - 2026-10-15
+
+### Added
+
+- **`report` statements in an HTML comment.** A sheet's readings for
+  `simulate` may be written as `<!--vmark:report #readings report gates-->`,
+  or one statement per line between `<!--vmark:report #readings` and `-->`, so
+  they stay out of the rendered page. A comment and a `vmark` block with the
+  same id are one sheet, in source order. A malformed report comment (no id,
+  no `-->`, text after it, a line that is not a `report`) is a `SHEET` finding
+  and adds nothing. `docs/simulate/conference.md` now uses the comment form.
+  ([#375](https://github.com/michal-niedzwiedzki/visimark/issues/375))
+
+- **Quick fixes on `codemirror-visimark/lint` diagnostics.** A diagnostic now
+  offers the repair the VS Code extension offers for the same finding: update
+  a stale value to what `visimark fmt` would write, rewrite an unambiguous
+  date to ISO 8601, change an unknown name to its close match, or wrap a
+  column in `SUM(…)`. Each is one transaction. No new option or export; every
+  host that uses `visimarkLint()`, the Playground included, shows them.
+  ([#384](https://github.com/michal-niedzwiedzki/visimark/issues/384))
+
+- **A Joplin plugin, built but not published.** `editors/joplin` adds
+  `codemirror-visimark`'s marks and lint to Joplin's Markdown editor and
+  `markdown-it-visimark`'s marks to its viewer. Desktop only, Joplin 3.7.1 and
+  up. CI uploads it as the `visimark-joplin` artifact for installing from a
+  file. ([#378](https://github.com/michal-niedzwiedzki/visimark/issues/378))
+
+- **Joplin: commands, repair, settings, and a notebook sweep.** The Joplin
+  plugin gains Check, Format, Evaluate and Explain, Infer and four starter
+  templates, a quick fix on a diagnostic where one is obvious, a findings
+  panel, and a
+  cancellable, read-only sweep over a notebook and its sub-notebooks. Format
+  writes the bytes `visimark fmt` writes, as one undoable step. Two settings:
+  **Show marks on computed values** and **When formatting, rewrite dates to
+  ISO 8601**. The viewer shows each marked value's formula as a tooltip.
+  Commands other than Check, the panel and the sweep need the Markdown editor;
+  anything that depends on an imported file is left out, and the plugin says
+  so.
+  ([#384](https://github.com/michal-niedzwiedzki/visimark/issues/384))
+
+- **`report slack`, the nearest miss on each assertion.** A sixth `simulate`
+  reading. For each `assert` it prints the least room among the questions that
+  work and the smallest miss among the questions that break only that rule,
+  as an exact distance labelled `room` or `miss`, with tie lines and pool
+  counts. A rule that is not one numeric comparison says so instead.
+  `check` refuses a `report slack` in a file with no `assert`.
+  ([#352](https://github.com/michal-niedzwiedzki/visimark/issues/352))
+
+- **`markdown-it-visimark`, VisiMark marks in rendered HTML.** A new npm
+  package: `md.use(markdownItVisimark)` wraps each computed value with
+  `visimark-computed` (and `visimark-disagrees` when it no longer matches its
+  formula), carries `codemirror-visimark`'s `data-vmark*` attributes, and puts
+  the fence's info string on the rendered `vmark` block as `data-vmark-info`.
+  No CSS and no dependency. The VS Code extension uses it for the built-in
+  Markdown preview, switched by the new `visimark.preview.enable` setting.
+  Supported from markdown-it 13.0.2, the version Joplin uses.
+  ([#373](https://github.com/michal-niedzwiedzki/visimark/issues/373))
+
+- **`codemirror-visimark/highlight`, syntax highlighting for `vmark` blocks.**
+  `visimarkLanguage` colours a fence's keywords, names, functions, numbers,
+  units and comments when a host passes it to `markdown({ codeLanguages })`,
+  with `isVmarkFence` picking the fence. The package still ships no colours:
+  the host styles the standard highlight tags. `@codemirror/language` is a new
+  optional peer, needed only by this subpath. The Playground uses it.
+  ([#367](https://github.com/michal-niedzwiedzki/visimark/issues/367))
+
+- **`codemirror-visimark`, the editor marks as a CodeMirror 6 extension.** A
+  new npm package: `visimark()` marks every computed value in a Markdown
+  document and flags the ones that disagree with their formulas;
+  `codemirror-visimark/lint` adds diagnostics in the CLI's words. The Obsidian
+  plugin now uses it for Live Preview, with no visible change.
+  ([#360](https://github.com/michal-niedzwiedzki/visimark/issues/360))
+
+- **Cookieless page analytics on the project site.** The documentation pages
+  now count visits with [GoatCounter](https://www.goatcounter.com): no cookies,
+  no stored identifier, no cross-site tracking. The counter script is vendored
+  at `docs/vendor/goatcounter-count.js`, so `script-src` stays `'self'`; the
+  only new grant is the collector at `visimark.goatcounter.com`. The Playground
+  is not counted.
 
 - **A SIMULATION tab in the Playground.** Next to REASONING, KNOWLEDGE and
   INFERENCE, a flask-icon tab with a Start Simulation button runs
   `visimark simulate` on the open document. The readings fill the tab; the
   question count, any sheet that could not start, and the elapsed time go to
   TERMINAL, as they go to stderr on the command line.
+- **`report best` and `report deltas` require `among feasible|infeasible|all`.**
+  `all` is the range those reports used before. Omitting the clause is a
+  `TYPE` and fails `check`.
+  ([#351](https://github.com/michal-niedzwiedzki/visimark/issues/351))
+
+### Removed
+
+- **`visimark-mcp`'s library exports are three.** `import("visimark-mcp")`
+  now gives `runServer`, `engineVersion` and `serverVersion`. The write-gate
+  functions, tool tables, envelope helpers and `createServer` were internals
+  that had become semver surface; `createServer`'s signature also named the
+  MCP SDK's types, and the SDK is now bundled.
+
+- **`visimark`'s tarball ships only the declarations its export reaches.**
+  `dist/browser.d.ts` and `dist/playground/*.d.ts` are gone. No `exports`
+  entry led to them; they were the website playground's types.
+
+### Changed
+
+- **The Obsidian plugin carries the release's version.** Plugin 0.4.0 bundles
+  engine 0.4.0, and the numbers match from here on. The plugin's own line had
+  reached 0.3.0, so this release skips from 0.2.0 to 0.4.0
+  ([#396](https://github.com/michal-niedzwiedzki/visimark/issues/396)).
+
+- **Fewer installed packages.** `visimark` bundles the parser it uses and no
+  longer installs `unified`, `remark-parse` or `remark-gfm`: 2 packages instead
+  of 68. `remark-lint-visimark` and `markdownlint-rule-visimark` load the
+  `visimark` they install instead of carrying their own copy of the engine, so
+  each tarball is a few KB. `visimark-mcp` bundles the MCP SDK's stdio server
+  and depends on the engine alone, instead of 158 packages that included an
+  HTTP server and an OAuth client it never ran.
+
+- **`engines.bun` is `>=1.4.2`** on every npm package, the Bun CI builds and
+  tests with. It was `>=1.0.0`, a version nothing ran, and two packages
+  declared none.
+
+- **The GitHub Action and the pre-commit hook run the pinned engine.** A
+  `visimark` already on `PATH` is used only when it reports the pinned
+  version; any other version is passed over for the pinned one. The Action
+  prints the engine version before the findings, and its `version` input
+  takes `path` to run whatever is on `PATH` on purpose.
+
+- **VS Code: `visimark.server.path` is a user setting only.** It names a file
+  the extension runs, so a workspace's `.vscode/settings.json` can no longer
+  set it. The extension now declares limited support for Restricted Mode:
+  diagnostics work in an untrusted folder, and the setting is ignored there.
+
+- **Every `<!--vmark:` comment is checked.** The colon family has two words,
+  `no-formulas` and `report`. Any other word (`<!--vmark:reports …-->`), a
+  `no-formulas` marker with anything else in the comment, and a colon comment
+  inside a list, blockquote, table cell or paragraph used to be ignored as
+  ordinary comments. They are now `ANCHOR` findings (`SHEET` for a nested
+  report comment), and `check` fails on them.
+  ([#375](https://github.com/michal-niedzwiedzki/visimark/issues/375))
+
+- **The Playground editor is CodeMirror 6.** It now marks computed values,
+  underlines values that disagree with their formulas, shows findings as
+  diagnostics, and has its own search on Ctrl/Cmd+F. CodeMirror is bundled
+  instead of loaded from a CDN.
+  ([#360](https://github.com/michal-niedzwiedzki/visimark/issues/360))
 
 ### Fixed
+
+- **No debug output under `DEBUG=*`.** The CLI, the remark plugin and the
+  markdownlint rule shipped micromark's development build, so `DEBUG=*` (or
+  `DEBUG=micromark`) printed tens of thousands of lines to stderr. They are
+  production builds now, and CLI start-up is faster.
+
+- **`remark-lint-visimark`'s types resolve.** Its `.d.ts` imported `unified`
+  and `mdast`, which the package does not depend on; under a strict layout the
+  plugin's type fell back to `any`. The declarations are now self-contained,
+  and CI typechecks the packed declarations in a consumer project.
 
 - **`--help` exits `0` on every command.** `visimark check --help` (and `fmt`,
   `infer`, `eval`, `explain`, `ref`, `simulate`) printed a refusal and exited
@@ -1016,6 +1188,8 @@ record that the publish happened, and making the history read clean after the
 fact is the kind of underived edit this project exists to catch. There is no
 0.1.0 of the VS Code extension.
 
+[0.4.1]: https://github.com/michal-niedzwiedzki/visimark/releases/tag/v0.4.1
+[0.4.0]: https://github.com/michal-niedzwiedzki/visimark/releases/tag/v0.4.0
 [0.2.0]: https://github.com/michal-niedzwiedzki/visimark/releases/tag/v0.2.0
 [0.1.11]: https://github.com/michal-niedzwiedzki/visimark/releases/tag/v0.1.11
 [0.1.10]: https://github.com/michal-niedzwiedzki/visimark/releases/tag/v0.1.10

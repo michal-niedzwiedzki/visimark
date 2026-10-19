@@ -154,4 +154,10 @@ Sharing one build across the four engine calls — see the decision above; it is
 an engine change with a number attached, not a playground one, and it is now a
 catalogue row rather than a paragraph here.
 
+**2026-10 ([#360](https://github.com/michal-niedzwiedzki/visimark/issues/360)).**
+Each pass now ends with `cm.refreshMarks()`, which runs one more reader-less
+`check` — plus, for the imports chapter, one snapshot-backed `check` — for the
+editor's marks and lint diagnostics. `measure()` times it with the rest of the
+pass, so the adaptive debounce already accounts for it.
+
 <!--vmark:no-formulas-->

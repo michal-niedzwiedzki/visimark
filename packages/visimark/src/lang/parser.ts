@@ -7,6 +7,7 @@ import {
   type Call,
   type Expr,
   type Ref,
+  type ReportAmong,
   type ReportDecl,
   type ReportOptions,
   REPORT_NAMES,
@@ -403,6 +404,28 @@ export function parseBinding(line: string): Binding {
 }
 
 /**
+ * Whether `parseStatement` would read `line` as a `report` statement: its first
+ * token is `report` and it has no `=` — the dispatch below. A line the lexer
+ * rejects is judged the same way by its text. A report comment holds only
+ * such lines (docs/design/declare-a-sheet-s-report-statements-spec.md §2.1).
+ */
+export function isReportLine(line: string): boolean {
+  let toks: Token[];
+  try {
+    toks = lex(line);
+  } catch (e) {
+    if (!(e instanceof LangError)) throw e;
+    return /^report(?:\s|$)/.test(line.trim()) && !/=/.test(line.replace(/"[^"]*"/g, ""));
+  }
+  const first = toks.find((t) => t.kind !== "eof");
+  return (
+    first?.kind === "ident" &&
+    first.value === "report" &&
+    !toks.some((t) => t.kind === "op" && t.value === "=")
+  );
+}
+
+/**
  * Parse one `vmark` block line: an `assert <expression>` statement, or an
  * ordinary `name = expression` binding. `assert` is a keyword — `assert = 1`
  * and a binding named `assert` are rejected here rather than silently parsed.
@@ -677,7 +700,8 @@ function parseParamInner(line: string, toks: Token[], kw: Token, nameTok: Token)
 
 export const PARAM_DOMAIN_LITERAL_MESSAGE = "a param domain bound must be a number literal";
 export const PARAM_DOMAIN_MALFORMED_MESSAGE = "malformed param domain clause";
-const PARAM_DOMAIN_PRESETS = new Set<PresetName>(["integer", "positive", "natural"]);
+// module export for codemirror-visimark's drift test (#367); not package API
+export const PARAM_DOMAIN_PRESETS = new Set<PresetName>(["integer", "positive", "natural"]);
 
 /**
  * `[PRESET] [in DOMAIN-EXPR]`, the optional clause on a `param` header
@@ -1049,10 +1073,11 @@ function parseChart(toks: Token[], kw: Token): ChartDecl {
 
 const REPORT_SYNOPSIS: Record<ReportName, string | null> = {
   ledger: "[assertions broken]",
-  deltas: "[on REF {, REF}]",
+  deltas: "[on REF {, REF}] among feasible|infeasible|all",
   gates: null,
-  best: "scalar REF direction max|min [among feasible]",
+  best: "scalar REF direction max|min among feasible|infeasible|all",
   forbidden: null,
+  slack: null,
 };
 
 /**
@@ -1118,7 +1143,20 @@ function parseReport(toks: Token[], kw: Token): ReportDecl {
   const pieces: string[] = [];
   let assertionsBroken = false;
   let direction: "max" | "min" = "max";
-  let amongFeasible = false;
+  const amongWord = (): ReportAmong => {
+    word("among");
+    const w = at();
+    if (
+      w.kind !== "ident" ||
+      (w.value !== "feasible" && w.value !== "infeasible" && w.value !== "all")
+    ) {
+      return bad();
+    }
+    i++;
+    pieces.push(`among ${w.value}`);
+    return w.value as ReportAmong;
+  };
+  let among: ReportAmong = "all";
   if (name === "ledger" && isWord("assertions")) {
     i++;
     word("broken");
@@ -1135,6 +1173,9 @@ function parseReport(toks: Token[], kw: Token): ReportDecl {
       break;
     }
     pieces.push(`on ${refs.map(refText).join(", ")}`);
+    among = amongWord();
+  } else if (name === "deltas") {
+    among = amongWord();
   } else if (name === "best") {
     word("scalar");
     refs.push(ref());
@@ -1144,21 +1185,16 @@ function parseReport(toks: Token[], kw: Token): ReportDecl {
     direction = dir.value as "max" | "min";
     i++;
     pieces.push(`scalar ${refText(refs[0]!)} direction ${dir.value}`);
-    if (isWord("among")) {
-      i++;
-      word("feasible");
-      amongFeasible = true;
-      pieces.push("among feasible");
-    }
+    among = amongWord();
   }
   if (at().kind !== "eof") bad();
   const options: ReportOptions =
     name === "ledger"
       ? { kind: "ledger", assertionsBroken }
       : name === "deltas"
-        ? { kind: "deltas", on: refs }
+        ? { kind: "deltas", on: refs, among }
         : name === "best"
-          ? { kind: "best", scalar: refs[0]!, direction, amongFeasible }
+          ? { kind: "best", scalar: refs[0]!, direction, among }
           : { kind: name };
   return {
     type: "report",

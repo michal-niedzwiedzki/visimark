@@ -12,7 +12,7 @@
 
       `script-src` grants no inline script, which is the whole reason this is
       worth having: this page's 70 lines of `<script>` moved to
-      packages/visimark/src/site/, where four gates can see them, and are
+      site/src/pages/, where four gates can see them, and are
       loaded from vendor/ like the playground's. A policy that still needed
       'unsafe-inline' would buy almost nothing.
 
@@ -23,7 +23,7 @@
 
       `connect-src 'self'` is what `?file=` fetches — already restricted to a
       bare filename in this directory by the pattern in
-      packages/visimark/src/site/preview-page.ts, which is the check review §2.3
+      site/src/pages/preview-page.ts, which is the check review §2.3
       credited this page for. The policy is the second lock on that door.
 
       `frame-ancestors` is absent because a <meta> policy cannot carry it; on
@@ -35,8 +35,8 @@
                script-src 'self' https://cdnjs.cloudflare.com;
                style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
                font-src https://fonts.gstatic.com;
-               img-src 'self';
-               connect-src 'self';
+               img-src 'self' https://visimark.goatcounter.com;
+               connect-src 'self' https://visimark.goatcounter.com;
                base-uri 'none';
                form-action 'none'"
     />
@@ -288,5 +288,10 @@
       referrerpolicy="no-referrer"
     ></script>
     <script src="vendor/visimark-site-preview.js"></script>
+    <script
+      data-goatcounter="https://visimark.goatcounter.com/count"
+      async
+      src="vendor/goatcounter-count.js"
+    ></script>
   </body>
 </html>

@@ -41,7 +41,7 @@ export async function runServer(argv: readonly string[]): Promise<number> {
 // Run when invoked directly (`bun src/main.ts --allow-write`). The reasoning is
 // `packages/visimark/src/cli/main.ts`'s verbatim: `import.meta.main` is rewritten
 // by bun's bundler to a check that is always true in the ESM bundle, so
-// dist/main.js would run itself on import. Comparing against argv[1] survives
+// dist/index.js would run itself on import. Comparing against argv[1] survives
 // bundling, and `bin/visimark-mcp.js` calls runServer itself.
 const invokedDirectly =
   process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;

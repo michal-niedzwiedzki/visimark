@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { Article } from "../packages/visimark/src/site/articles.js";
+import type { Article } from "../site/src/pages/articles.js";
 import {
   nextArticle,
   relatedArticle,
@@ -114,8 +114,13 @@ describe("renderArticlesListPage", () => {
     expect(html).not.toContain("../../articles/");
   });
 
-  test("has no script tag left to grant in the Content-Security-Policy", () => {
-    expect(renderArticlesListPage(articles)).not.toMatch(/<script\b/i);
+  test("carries no script but the vendored analytics counter", () => {
+    const scripts = [...renderArticlesListPage(articles).matchAll(/<script\b[^>]*>/gi)].map(
+      (m) => m[0],
+    );
+    expect(scripts).toEqual([
+      '<script data-goatcounter="https://visimark.goatcounter.com/count" async src="vendor/goatcounter-count.js">',
+    ]);
   });
 
   test('sets og:type to "website" and uses the generic site description and card image', () => {

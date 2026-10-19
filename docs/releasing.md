@@ -3,7 +3,8 @@
 **The tag is the only publisher.** Pushing a `vX.Y.Z` tag runs
 [`.github/workflows/release.yml`](../.github/workflows/release.yml), which
 publishes the engine to npm and the extension to the VS Code Marketplace and
-Open VSX, and cuts a GitHub Release. Nobody runs `npm publish`, `vsce publish`
+Open VSX, cuts a GitHub Release, and then cuts the Obsidian plugin's release
+under the bare tag `X.Y.Z`. Nobody runs `npm publish`, `vsce publish`
 or `ovsx publish` by hand — not once, not "just to unblock it". npm burns a
 version number permanently the first time it sees it; `visimark@0.1.0` is the
 standing proof, a hand-publish from a work-in-progress tree that cost the number
@@ -22,10 +23,13 @@ directories still prepared but not sent — see
 | `remark-lint-visimark` on npm, with a provenance attestation | `packages/remark-visimark/package.json` | `npm view remark-lint-visimark@<v>` — skip if already there |
 | `markdownlint-rule-visimark` on npm, with a provenance attestation | `packages/markdownlint-visimark/package.json` | `npm view markdownlint-rule-visimark@<v>` — skip if already there |
 | `visimark-mcp` on npm, with a provenance attestation | `packages/visimark-mcp/package.json` | `npm view visimark-mcp@<v>` — skip if already there |
+| `codemirror-visimark` on npm, with a provenance attestation | `packages/codemirror-visimark/package.json` | `npm view codemirror-visimark@<v>` — skip if already there |
+| `markdown-it-visimark` on npm, with a provenance attestation | `packages/markdown-it-visimark/package.json` | `npm view markdown-it-visimark@<v>` — skip if already there |
 | `io.github.michal-niedzwiedzki/visimark` on the MCP registry | `server.json`, rewritten from the tag | `GET /v0/servers?search=visimark` — skip if this version is listed; runs only if the npm leg succeeded, since the entry points at the npm package, then waits (up to ~9 minutes) for npm to actually list the version — the registry validates against npm and refuses an entry npm cannot yet serve — and retries a 5xx from the registry, never a 4xx |
 | `visimark-vscode` on the VS Code Marketplace | `editors/vscode/package.json` | `vsce show` — skip if the version is listed |
 | `visimark-vscode` on Open VSX | `editors/vscode/package.json` | Open VSX API — skip if the version is there; create the namespace only if it is genuinely missing |
 | GitHub Release, with the `.vsix` attached | the tag | needs a tag — the pushed one, or the `tag` input on a `workflow_dispatch`. The body is that version's own section of `CHANGELOG.md` (extracted by `scripts/changelog-section.ts`), followed by GitHub's generated "What's Changed" list |
+| The Obsidian plugin's GitHub Release, tag `X.Y.Z` (no `v`), with `main.js`, `manifest.json` and `styles.css` and a build attestation for `main.js` and `styles.css` | `editors/obsidian/manifest.json` at the tagged commit | runs only after **every leg must have landed** passes; skips the build and upload if the release already has all three files, then reads the release back either way ([Releasing the Obsidian plugin](#releasing-the-obsidian-plugin)) |
 | Each request issue whose change ships in this release, closed | the `vocab/issue-<n>-<slug>-impl` or `issue/<n>-<slug>-impl` merge commit is an ancestor of the tag | the issue is still open — a re-run skips what is already closed |
 
 `packages/visimark-lsp` is bundled into the extension and is not published on
@@ -41,19 +45,22 @@ each leg's outcome and fails at the end. The only ordering that is real is the
 `.vsix`: if packaging the extension fails, both marketplace legs and the GitHub
 Release are skipped, because there is nothing to publish.
 
-The last step of the run, **every leg must have landed**, asks all four
+The last step of the core job, **every leg must have landed**, asks all four
 registries — npm, the VS Code Marketplace, Open VSX and
-`registry.modelcontextprotocol.io` — whether the versions are actually there and fails the job if any is
-missing. That is what makes a green run mean something — v0.1.1 went green with
-both marketplace legs empty, and v0.1.3 shipped npm only. It is not a substitute
-for [Verify every leg](#verify-every-leg), which also covers the provenance
-attestation and the GitHub Release.
+`registry.modelcontextprotocol.io` — whether the versions are actually there,
+checks that every npm package carries a provenance attestation, that the GitHub
+Release has the `.vsix`, and that the published MCP server starts under both
+`npx` and `bunx`, and fails the job if anything is missing. That is what makes a
+green run mean something — v0.1.1 went green with both marketplace legs empty,
+and v0.1.3 shipped npm only. Only then does the `obsidian` job cut the plugin's
+release, and it ends by reading that release back. A green run is a verified
+release; [Verify every leg](#verify-every-leg) is the by-hand second opinion.
 
 ```mermaid
 flowchart LR
   tag[Push tag vX.Y.Z] --> run[release.yml]
   run --> npm[npm visimark]
-  run --> npmplugins[npm remark/markdownlint/mcp]
+  run --> npmplugins[npm remark/markdownlint/mcp/codemirror/markdown-it]
   run --> mcpreg[MCP registry]
   run --> vsce[VS Code Marketplace]
   run --> ovsx[Open VSX]
@@ -74,7 +81,8 @@ flowchart LR
   legfail --> gate
   ghrel --> gate
   closeIss --> gate
-  gate -->|all present, no leg failed| verify[Verify every leg by hand]
+  gate -->|all present, no leg failed| plugin["obsidian job: plugin release X.Y.Z, read back"]
+  plugin --> done[Released]
   gate -->|anything missing| fail[Fail the run]
   fail --> fix[Fix the cause]
   fix --> dispatch["workflow_dispatch -f tag=vX.Y.Z backfills what is missing"]
@@ -106,80 +114,104 @@ gh workflow run release.yml -f tag=vX.Y.Z -f dry_run=true
 ```
 
 It builds, tests, runs the tag checks above, runs `npm publish --dry-run` for
-the four packages, packages the `.vsix` and extracts the release notes. It
-publishes nothing, cuts no GitHub Release, closes no issues, and skips **every
-leg must have landed** (there is nothing to land); a *dry run verdict* step
+the six npm packages, packages the `.vsix` and extracts the release notes. It
+publishes nothing, cuts no GitHub Release (core's or the plugin's), closes no
+issues, and skips **every leg must have landed** (there is nothing to land); a *dry run verdict* step
 fails the run if any rehearsed step did not succeed. It runs `npm publish`
 without `--provenance`, so it does not rehearse the attestation.
 
+## Versioning
+
+Every artifact one release ships carries that release's version: the six
+npm packages, the VS Code extension, `visimark-lsp` (bundled into the
+extension), `action.yml`'s default, the pre-commit pin, `server.json`, and
+the Obsidian plugin (`editors/obsidian/manifest.json` and the newest key of
+its `versions.json`). `scripts/check-versions.ts` fails CI when any of them
+disagrees with `packages/visimark/package.json`, and
+`scripts/prepare-release.ts` bumps them all. The Joplin plugin carries no
+committed version; its build stamps the engine's into the packed manifest.
+
+A fix that touches only one artifact is a patch release of the whole line.
+There is no exception that lets one artifact run ahead: it would need its own
+carve-out in the check, and the next release would have to skip a number.
+An artifact with nothing to say gets a one-line entry in its changelog ("No
+plugin changes. Bundles engine X.Y.Z.").
+
+The Obsidian plugin joined the line at 0.4.0 (#396). It had been on its own
+number, which reached 0.3.0, and a tag is never reused, so core went from
+0.2.0 to 0.4.0. Before that, the plugin was kept off the line because each
+Obsidian release was expected to wait on a human registry review; after the
+one-time submission, releases are reviewed automatically (see
+[Submitting to the community registry](#submitting-to-the-community-registry)).
+
 ## Release order
 
-Core first, plugin second, and never the other way round. The plugin bundles
-the engine, so its changelog says "Bundles engine X.Y.Z." and that version has to
-be on the registries before a plugin release names it — #286 was once merged
-before core had shipped.
+One version, one tag. The plugin bundles the engine, and its release must not
+exist before the npm packages it names are on the registries — #286 was once
+merged before core had shipped. `release.yml` enforces that order itself: its
+`obsidian` job `needs` the core job, so the plugin's release is cut only after
+**every leg must have landed** has passed.
 
-1. Merge the core release commit (`chore: release vX.Y.Z`) and wait for `ci`
+1. Merge the release commit (`chore: release vX.Y.Z`) and wait for `ci`
    and `dogfood` on it.
 2. Tag it with `scripts/release-tag.sh vX.Y.Z` and wait for `release.yml`.
-3. Run `scripts/verify-release.sh vX.Y.Z` ([Verify every leg](#verify-every-leg)).
-4. Only now merge the plugin release PR, and wait for `ci` on `master`.
-5. Tag it with `scripts/release-tag.sh X.Y.Z` and wait for
-   `obsidian-release.yml`.
-6. Check the release page has `main.js`, `manifest.json` and `styles.css`, and
-   that the attestation verifies (see below).
+   Green means core landed, every check in [Verify every leg](#verify-every-leg)
+   passed, and the plugin's `X.Y.Z` release is out and read back.
 
 Pushing a tag is the maintainer's action; an agent opens the PRs, watches the
 runs and verifies, and does not tag unless asked.
 
-**A core bump leaves the plugin changelog behind, on purpose.** Between step 2
-and step 5 the newest plugin entry still says "Bundles engine <previous>."
-while `packages/visimark` is already the new version.
-`scripts/check-obsidian-engine-line.ts` would fail on that tree, which is why
-it runs in `obsidian-release.yml` and nowhere else. Do not assert it against
-the live repository from a test or from `ci.yml`: a "passes on the real
-repository" case did exactly that and turned `ci` red on the v0.2.0 release
-commit (fixed in `3f15bd6`). Its synthetic-tree tests in
-`scripts/release-checks.test.ts` are the coverage.
-
 ## Releasing the Obsidian plugin
 
-**A separate, bare-version tag — not `vX.Y.Z`.** The plugin's version is its
-own (`editors/obsidian/manifest.json`, not tied to the engine's — see
-`editors/obsidian/CHANGELOG.md`'s own header), and the community registry and
-BRAT both match a GitHub Release's tag against that version *exactly*, with
-no `v` prefix. Pushing `0.2.0` (not `v0.2.0`) runs
-[`.github/workflows/obsidian-release.yml`](../.github/workflows/obsidian-release.yml),
-which fails if that tag disagrees with the manifest, builds `main.js`, and
-attaches `main.js`, `manifest.json` and `styles.css` to a GitHub Release cut
-against the same tag, after recording a build-provenance attestation for
-`main.js` and `styles.css` (the community scanner's Scorecard looks for one).
-Before tagging, `bun run --filter visimark-obsidian lint` must show no errors.
-The workflow also fails unless the newest dated entry in
-`editors/obsidian/CHANGELOG.md` says "Bundles engine X." for the engine version
-in `packages/visimark` at the tagged commit
-(`scripts/check-obsidian-engine-line.ts`). That check is deliberately not in
-`ci.yml`: a core-only bump would turn every PR red until the plugin was
-re-released. The release body is that version's own section of the plugin
-changelog. The workflow cannot fire from the same push that runs
-`release.yml`'s own `v*`-tagged release: the two tag schemes cannot collide,
-since every tag `release.yml` creates starts with `v` and this workflow's
-trigger requires the first character to be a digit.
+**Under a bare-version tag — not `vX.Y.Z` — that nobody pushes.** The
+plugin's version is the release's ([Versioning](#versioning)), and the
+community registry and BRAT both match a GitHub Release's tag against that
+version *exactly*, with no `v` prefix. `release.yml`'s `obsidian` job calls
+[`.github/workflows/obsidian-release.yml`](../.github/workflows/obsidian-release.yml)
+with that bare version and the release commit. It fails if the version
+disagrees with the manifest, builds `main.js`, records a build-provenance
+attestation for `main.js` and `styles.css` (the community scanner's Scorecard
+looks for one), and attaches `main.js`, `manifest.json` and `styles.css` to a
+GitHub Release whose creation makes the `X.Y.Z` tag on the release commit. Its
+last step, **the release must be complete**, downloads the three files back
+and fails unless the release is not a draft, its `manifest.json` says `X.Y.Z`,
+and `gh attestation verify` passes for `main.js` and `styles.css`. The release
+body is that version's own section of the plugin changelog. Before tagging,
+`bun run --filter visimark-obsidian lint` and `bun run lint:scanner` must
+show no errors.
 
-This is [Option C of `docs/design/obsidian-release-plan.md`](design/obsidian-release-plan.md),
-decided 2026-09-27. It has no `workflow_dispatch`-free backfill loop, no
-multi-registry verification gate, and no issue-closing bookkeeping the way
-`release.yml` does — the plugin publishes to exactly one place (a GitHub
-Release) rather than four registries, so there is nothing analogous to
-verify afterward beyond checking the release exists with its three assets.
-`workflow_dispatch` with a required `tag` input covers a backfill by hand.
+A tag made with the workflow's own token does not start another workflow, so
+the bare tag does not run `obsidian-release.yml` a second time. If the
+`obsidian` job failed, fix the cause and backfill with any of
+`gh workflow run release.yml -f tag=vX.Y.Z`,
+`gh workflow run obsidian-release.yml -f tag=X.Y.Z` (once the tag exists), or
+`scripts/release-tag.sh X.Y.Z` (while it does not). Each run first asks
+whether the release already has all three files and, if so, skips the build
+and upload — a second build would be new bytes under the first build's
+attestation — and goes straight to the read-back.
+
+**The workflow's token can create the bare tag only on the tip of a branch.**
+A probe on 2026-10-17 had `GITHUB_TOKEN` create releases with new tags: a
+target of `master`'s tip, or of another branch's tip, worked; a target of any
+older commit, the release commit once #406 had merged after it, got `403
+Resource not accessible by integration`. So tag promptly: if `master` has
+moved past the release commit before the `obsidian` job runs, that job cannot
+create `X.Y.Z`. Backfill with `scripts/release-tag.sh X.Y.Z`, which tags
+`master`'s *current* tip, not the release commit. The plugin's bytes are the
+same if nothing but non-plugin files changed; v0.4.1's plugin tag sits one
+commit after its `v0.4.1`.
+
+The bare-tag scheme is [Option C of `docs/design/obsidian-release-plan.md`](design/obsidian-release-plan.md),
+decided 2026-09-27. Since 0.4.0 put the plugin on the core line (#396), the
+core tag cuts it.
 
 **Keeping the root copies in step.** The community registry reads
 `manifest.json` from the repository's root on the default branch, while the
 build and the release read `editors/obsidian/`. The root `manifest.json` and
 `versions.json` must stay byte-equal to the `editors/obsidian/` copies; `ci.yml`
-fails ("release metadata must agree") when they drift, so copy both in the plugin
-release commit.
+fails ("release metadata must agree") when they drift, and
+`scripts/prepare-release.ts` writes both from the `editors/obsidian/` copies,
+refusing to start if they already differ.
 
 ### Submitting to the community registry
 
@@ -194,20 +226,26 @@ something a tagged release triggers:
    why the root copy exists, and it makes the scanner treat this whole monorepo
    as the plugin) and reviews the plugin automatically.
 4. Answer the review's feedback by publishing a **new release with an
-   incremented version** — each fix is a normal plugin release, in the order
-   above.
+   incremented version** — each fix is a patch release of the whole line, in
+   the order above.
 
 What the scanner looks at, learned from 0.2.0 to 0.2.2:
 
-- It lints with `eslint-plugin-obsidianmd`. Errors fail
-  `bun run --filter visimark-obsidian lint`; three warnings are known and
-  accepted (see the plugin changelog). Warnings show on the public Scorecard.
-- It lints the whole repository, so about twenty warnings from `packages/*` and
-  `editors/vscode` appear on the Scorecard too. Known, accepted.
+- It lints the whole repository with `eslint-plugin-obsidianmd`. CI stands in
+  for it twice: `bun run --filter visimark-obsidian lint` runs the full typed
+  ruleset on the plugin, and `bun run lint:scanner` runs the two rules that
+  failed 0.4.0's Scorecard over every tracked file (#402). An Error in either
+  fails the build.
+- Its warnings show on the public Scorecard and are accepted. The plugin lint
+  step prints the plugin's own; the rest of the repository's appear only on
+  the Scorecard (`lint:scanner` runs Error rules alone). No count is kept
+  here, because a count goes stale.
+- It reports dependency advisories. Fix one with an exact root `overrides`
+  entry, or accept it in `osv-scanner.toml` with a reason and an
+  `ignoreUntil` date; `.github/workflows/supply-chain.yml` checks both.
 - It looks for a **build-provenance attestation** on `main.js` and `styles.css`.
-  `obsidian-release.yml` makes one from the same bytes it uploads. Verify with
-  `gh attestation verify <file> --repo michal-niedzwiedzki/visimark`, which
-  prints nothing on success — check the exit code is 0.
+  `obsidian-release.yml` makes one from the same bytes it uploads, and its last
+  step verifies it.
 - `authorUrl` must be the author's profile, not the plugin repository (0.2.1
   was flagged for this).
 - The README must say what the plugin touches (vault enumeration, clipboard).
@@ -218,7 +256,7 @@ What the scanner looks at, learned from 0.2.0 to 0.2.2:
    ```bash
    bun install --frozen-lockfile
    bun run typecheck
-   bun test
+   bun run test
    bun run build
    ```
 2. **Green in CI on the commit you will tag.** `scripts/release-tag.sh` (step 7)
@@ -226,7 +264,7 @@ What the scanner looks at, learned from 0.2.0 to 0.2.2:
    run on every push to `master`. Wait for both before tagging — `release.yml`
    checks out the tag, not your working tree, so an unpushed or red commit
    cannot be in the release.
-3. **Bump the version** to the same `X.Y.Z` in all nine version-carrying files.
+3. **Bump the version** to the same `X.Y.Z` in all version-carrying files.
    `bun scripts/prepare-release.ts [FIX|MINOR|MAJOR|X.Y.Z]` does this and step 4's
    changelog turnover in one go; omitting the argument defaults to `FIX`. A bump
    word computes the next version from the one in `packages/visimark/package.json`
@@ -238,18 +276,30 @@ What the scanner looks at, learned from 0.2.0 to 0.2.2:
    `### Fixed` / `### Changed` alone never justifies more than `FIX`, so "bug
    fix" or "article added" content can't accidentally move the minor or major
    number. It writes nothing on any refusal; read the diff and rewrite the
-   extension changelog's placeholder line afterwards. By hand, the files are:
+   either editor changelog's placeholder line afterwards. By hand, the files are:
    ```
    packages/visimark/package.json
    packages/visimark-lsp/package.json
    editors/vscode/package.json
    action.yml                                  # the `version` input's default
-   scripts/precommit-visimark-check.sh         # both visimark@ pins inside it
+   scripts/precommit-visimark-check.sh         # its one pinned= line
    packages/remark-visimark/package.json       # its own version AND its visimark dependency pin
    packages/markdownlint-visimark/package.json # its own version AND its visimark dependency pin
    packages/visimark-mcp/package.json          # its own version AND its visimark dependency pin
-   bun.lock                                    # the same six "version"s and three visimark pins, mirrored
+   packages/codemirror-visimark/package.json   # its own version only — it bundles the engine
+   packages/markdown-it-visimark/package.json  # its own version only — it bundles the engine
+   bun.lock                                    # the same eight "version"s and three visimark pins, mirrored
+   server.json                                 # its own version AND its npm package's
+   editors/obsidian/manifest.json              # the plugin's version
+   editors/obsidian/versions.json              # a new "X.Y.Z": "<minAppVersion>" key, appended
+   manifest.json                               # byte copy of editors/obsidian/manifest.json
+   versions.json                               # byte copy of editors/obsidian/versions.json
+   editors/obsidian/CHANGELOG.md               # dated entry, or the placeholder
    ```
+   The eight manifests are listed once, in `scripts/release-manifests.ts`,
+   which `prepare-release.ts` and the CI check both import. The Obsidian
+   plugin's two files are named there too, outside that list, because neither
+   is a `package.json`.
    They must match each other and the tag exactly. `action.yml` is in the list
    because its default is what a consumer's `npx` installs: leave it behind and
    everyone who pinned the new Action ref quietly keeps running the old engine.
@@ -261,16 +311,17 @@ What the scanner looks at, learned from 0.2.0 to 0.2.2:
    says, so the drift was invisible to every build in this repo — it would only
    have bitten a consumer reading `bun.lock` for provenance, or a future change
    to that linking behavior. No hand-run `grep` needed any more — `ci.yml`'s
-   "every version-carrying file must agree" step fails the build if you miss
-   one of them, so step 6's green CI is the confirmation.
+   "every version-carrying file must agree" step (`scripts/check-versions.ts`)
+   fails the build if you miss one of them, so step 6's green CI is the
+   confirmation.
 
-   `server.json` is **not** in this list, and does not need to be: the
-   MCP-registry leg rewrites its two version fields from the tag before it
-   publishes, so it cannot go stale and cannot register an entry pointing at a
-   version other than the one that just shipped.
+   `server.json` is in the list so the committed file never shows a version
+   releases old. The MCP-registry leg still rewrites its two version fields
+   from the tag before it publishes, so a backfill dispatch registers the
+   version that just shipped whatever the tree says.
 4. **Write the changelog** — see [Preparing the changelog](#preparing-the-changelog).
    `ci.yml`'s "every release must have a changelog entry" step fails the build if
-   `CHANGELOG.md` or `editors/vscode/CHANGELOG.md` has no dated
+   `CHANGELOG.md`, `editors/vscode/CHANGELOG.md` or `editors/obsidian/CHANGELOG.md` has no dated
    `## X.Y.Z - YYYY-MM-DD` heading for its own manifest's version, so step 6's
    green CI is the confirmation. It checks that the entry exists, not that it is
    right.
@@ -297,22 +348,24 @@ What the scanner looks at, learned from 0.2.0 to 0.2.2:
    `origin/master`, the tag matches the manifest version and is unused (locally
    and on origin), and the latest `ci` and `dogfood` runs on `master` for
    `HEAD` are green. Then it creates the tag (signed, if your git config signs
-   tags) and pushes it. For the plugin, pass the bare version: `X.Y.Z`.
+   tags) and pushes it. That is the last step: the run releases the plugin
+   too, and checks everything [Verify every leg](#verify-every-leg) lists.
 
 ```mermaid
 flowchart LR
   local[Green locally] --> ci[Green CI on master]
-  ci --> bump[Bump all eight version-carrying files]
+  ci --> bump[Bump all version-carrying files]
   bump --> cl[Write the changelog]
   cl --> promo[Fill Shipped Released cells]
   promo --> commit[Commit and push]
   commit --> wait[Wait for CI on that commit]
   wait --> tag[Tag vX.Y.Z and push the tag]
+  tag --> green[release.yml green: core, plugin, all verified]
 ```
 
 ## Preparing the changelog
 
-Two files. Both are read by machines at release time, so both are part of the
+Three files. All are read by machines at release time, so both are part of the
 release, not an afterthought. CI checks that each has an entry for the release;
 it does not check what the entry says.
 
@@ -343,9 +396,10 @@ it does not check what the entry says.
   - `## Unreleased` is optional in this file. Write the entry when you cut the
     release.
 - **[`editors/obsidian/CHANGELOG.md`](../editors/obsidian/CHANGELOG.md)** — the
-  plugin has its own version, so it has its own entry, and it becomes the plugin
-  release's body. End each entry with "Bundles engine X.Y.Z." — the plugin
-  release run checks it against the engine in the tree.
+  plugin release's body. Every release gets a dated entry, as the extension's
+  does: `prepare-release.ts` dates `## Unreleased` when it has content and
+  opens a fresh one, or writes "No plugin changes. Bundles engine X.Y.Z." when
+  it is empty. List only what an Obsidian user sees.
 
 If a change only touches CI, the build, or the tests, it does not need a
 changelog line — unless a consumer can observe it (the provenance attestation
@@ -353,11 +407,12 @@ did, so it got one).
 
 ## Verify every leg
 
-`release.yml`'s own final step asserts all four registries have the
-version, so a green run is no longer the empty signal it was for v0.1.1. It
-still does not check the provenance attestation, the GitHub Release or that the
-server starts, and `check` refuses to call a formula-free table verified — hold
-a release to the same bar. After the run:
+A green `release.yml` run has checked everything below, the plugin's release
+included: the core job's **every leg must have landed** and the `obsidian`
+job's **the release must be complete**. There is no step left to run by hand.
+
+`scripts/verify-release.sh` asks the same questions from your machine instead
+of a runner. Run it after a backfill, or whenever a release looks wrong:
 
 ```bash
 scripts/verify-release.sh vX.Y.Z
@@ -365,7 +420,7 @@ scripts/verify-release.sh vX.Y.Z
 
 It is read-only, and needs only `curl`, `gh` and `node` or Bun. It checks:
 
-- all four npm packages are at that version **and** carry a provenance
+- all six npm packages are at that version **and** carry a provenance
   attestation (`dist.attestations`). CI proves the version number matches the
   manifests; only npm proves it was ever published, and `visimark@0.1.0` is the
   standing reminder that those are different questions;
@@ -374,10 +429,13 @@ It is read-only, and needs only `curl`, `gh` and `node` or Bun. It checks:
   release that reached no one;
 - the VS Code Marketplace and Open VSX list the extension version;
 - `gh release view vX.Y.Z` finds the release;
+- the plugin's `X.Y.Z` release has `main.js`, `manifest.json` (saying `X.Y.Z`)
+  and `styles.css`, and `main.js` and `styles.css` pass
+  `gh attestation verify`;
 - the published MCP server starts, from the registry rather than a tarball you
   built: `npx -y visimark-mcp@X.Y.Z --nope` and `bunx visimark-mcp@X.Y.Z --nope`
-  must each exit 2 with a usage line. It runs whichever of the two is installed
-  and says which it skipped, so run it on a machine with each.
+  must each exit 2 with a usage line. The script runs whichever of the two is
+  installed and says which it skipped; the workflow always runs both.
 
 A server that cannot start is not visible in any registry check. If either
 form fails to resolve `visimark`, read
@@ -402,7 +460,7 @@ gh workflow run release.yml -f tag=vX.Y.Z
 With `tag`, it checks that tag out, so the versions it publishes are the tagged
 ones and the GitHub Release and the request-issue bookkeeping are backfilled
 too. Without `tag` it runs from the default branch against the versions
-currently in the manifests, repairs the **publish** legs only — the four npm
+currently in the manifests, repairs the **publish** legs only — the six npm
 packages, the MCP registry entry, the Marketplace and Open VSX — and warns in
 the log that it skipped the two tag-gated ones, the GitHub Release and the
 request-issue bookkeeping. **Never bump the version just to
@@ -423,6 +481,16 @@ retried under a different number. Check before you tag, not after:
 ```bash
 npm view <name> version    # "npm error 404" is what you want to see
 ```
+
+`codemirror-visimark`
+([#360](https://github.com/michal-niedzwiedzki/visimark/issues/360)) went
+through this list: its name was free on 2026-10-11, it pins nothing so point 3
+does not apply, and its leg runs after the MCP server's.
+
+`markdown-it-visimark`
+([#373](https://github.com/michal-niedzwiedzki/visimark/issues/373)) went
+through it too: its name was free on 2026-10-12, it pins nothing, and its leg
+runs after the CodeMirror extension's.
 
 **2. A leg that depends on another must run after it.** `release.yml` publishes
 in dependency order — engine, then the remark plugin, the markdownlint rule and
@@ -460,17 +528,18 @@ fails, read the leg's log before assuming a credential problem: the guard
 `GET /v0/servers?search=` runs first, and a network failure there looks like a
 publish failure.
 
-**6. Verify the first release by hand, even though the gate is green.** Run
-`scripts/verify-release.sh` (see [Verify every leg](#verify-every-leg)) on a machine
-with each runtime, so both smoke commands run. The final gate proves a version is *listed*; only running it
-proves it *starts*.
+**6. Read the gate's log on the first release.** **every leg must have
+landed** runs the new package from the registry under `npx` and `bunx`, so a
+green run proves it *starts*, not only that it is *listed*. On a first
+publish, read that step's output for the new package rather than trusting
+the colour alone.
 
 ## Rules that bite
 
 | Rule | Consequence if ignored |
 |------|------------------------|
 | The tag is the only publisher. No hand-run `npm publish` / `vsce publish` / `ovsx publish`. | npm keeps the version number forever on the first publish it sees. `visimark@0.1.0` is a mis-publish that can never be reissued. |
-| All six `package.json` versions equal the tag, exactly — and the three `dependencies.visimark` pins with them. | One tag then publishes mismatched version numbers, or a leg fails mid-release with the others already out. |
+| All eight `package.json` versions equal the tag, exactly — and the three `dependencies.visimark` pins with them. So do the Obsidian plugin's `manifest.json` and the newest key of its `versions.json`. | One tag then publishes mismatched version numbers, or a leg fails mid-release with the others already out. |
 | `bun.lock`'s mirrored versions and pins equal the tag too. | `--frozen-lockfile` does not catch this — Bun links a workspace-named dependency locally regardless of the pin text — so it drifted silently for two releases (`0.1.8` through v0.1.9 and v0.1.10) before `ci.yml` learned to check it. |
 | The changelog entry is written, dated and merged **before** the tag. | The GitHub Release body is that version's section of `CHANGELOG.md` at the tagged commit — a tag ahead of the changelog has no section to extract, and the release step fails. |
 | Each changelog has a dated `## X.Y.Z - YYYY-MM-DD` heading for the release's version, in the release commit. | `ci.yml`'s "every release must have a changelog entry" step fails the release commit. Without the entry the GitHub Release body ships the previous version's notes, or the Marketplace page silently skips the version. The check proves the heading exists, not that the entry is accurate. |
@@ -479,9 +548,9 @@ proves it *starts*.
 | `action.yml`'s `version` default is bumped with the manifests. | Every consumer who pins the new Action ref keeps running the previous engine, with nothing at run time to tell them. Nothing fails; it just quietly verifies with the old code. |
 | Changelog dates are ISO 8601, `YYYY-MM-DD`. | The project's own date rule. A release heading with no date fails CI; every other date in a changelog is unchecked, because nothing runs `check` with date repair on it. |
 | A dependent package is never published against an engine older than the tag. | It inherits every bug that engine has, including ones already fixed on `master`, and no check in this repository would notice. `visimark@0.1.7`'s #170 `bun` exports condition would have made `bun add -g visimark-mcp` fail for every user. |
-| Core ships before the plugin that bundles it (see [Release order](#release-order)). | The plugin changelog names an engine version the registries do not have yet — #286 was merged before core shipped. |
+| Core ships before the plugin that bundles it (see [Release order](#release-order)). `release.yml`'s `obsidian` job `needs` the core job; do not push the bare tag ahead of a green `v` run. | The plugin release points at an engine version the registries do not have yet — #286 was merged before core shipped. |
 | Never retag, force-push a tag, or `npm unpublish` to tidy a botched release. | It rewrites history to look like the pipeline did something it did not. Bump to the next patch and let the record stand — the move `infer`'s near-miss refusal exists to enforce, applied to the release instead of a spreadsheet. |
-| A green `release` run is not a fully released package. Run `scripts/verify-release.sh`. | The run's final step asserts the four registries have the version, but not the provenance attestation, the GitHub Release or that the server starts. The v0.1.1 run reported success with npm and the GitHub Release done and both extension registries empty — that gap is closed; the remaining ones are yours. |
+| A green `release` run must mean a fully released package. Do not loosen **every leg must have landed** or **the release must be complete** to get a run green. | Those two steps are the only verification left; there is no by-hand step behind them. The v0.1.1 run reported success with npm and the GitHub Release done and both extension registries empty. |
 
 ## Secrets the workflow needs
 
@@ -489,9 +558,29 @@ Set as repository secrets (`gh secret set …`):
 
 | Secret | Used by | Notes |
 |--------|---------|-------|
-| `NPM_TOKEN` | npm publish | Automation token, publish scope. Provenance also needs `id-token: write`, which the workflow already declares. |
+| `NPM_TOKEN` | npm publish | A granular access token with **Read and write** permission on all six packages and **Bypass 2FA** enabled, so an unattended `npm publish` is not stopped by a one-time password. npm no longer issues the classic Automation tokens. A granular token expires: note the date, and replace the secret before it lapses or the next release's npm legs fail. Provenance also needs `id-token: write`, which the workflow already declares. To be retired: see below. |
 | `VSCE_PAT` | Marketplace publish | Azure DevOps PAT for the `visimark-michal-niedzwiedzki` publisher, Marketplace → Manage scope. |
 | `OVSX_PAT` | Open VSX publish | open-vsx.org access token. The namespace is the extension's `publisher`, `visimark-michal-niedzwiedzki`; the workflow creates it on first publish if it is missing. |
 | *(none)* | MCP registry publish | No secret. `mcp-publisher login github-oidc` uses the `id-token: write` permission the workflow already declares for npm provenance, and the `io.github.michal-niedzwiedzki/*` namespace is owned by virtue of that GitHub identity. Nothing to rotate, and nothing to set before the first release. |
+
+**Retiring `NPM_TOKEN`.** It is a credential that can publish all
+six packages, held by a job that also runs third-party code. npm trusted
+publishing replaces it with the OIDC token the job already mints. On
+npmjs.com, add a trusted publisher to each of the six packages (repository
+`michal-niedzwiedzki/visimark`, workflow `release.yml`), then delete every
+`NODE_AUTH_TOKEN` line from `release.yml` and the `NPM_TOKEN` secret, in that
+order. Provenance stays automatic. Until then the token stays: removing it
+first fails every npm leg.
+
+## Tools the release job pins
+
+`release.yml` and `obsidian-release.yml` build with the Bun in
+`packageManager` (`bun-version-file: package.json`), not `latest`, so what
+ships is built by the Bun CI tested with; `scripts/check-bun-policy.ts`
+enforces it. Third-party actions are pinned to a commit SHA with the tag in a
+comment, and Dependabot's `github-actions` ecosystem keeps both current.
+`mcp-publisher` is a named release checked against its SHA-256 before it runs;
+to move it, change `mcp_publisher_version` and `mcp_publisher_sha256` together,
+taking the digest from that release's `registry_<version>_checksums.txt`.
 
 <!--vmark:no-formulas-->

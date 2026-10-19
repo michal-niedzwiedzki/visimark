@@ -13,23 +13,27 @@
   },
   "type": "module",
   "scripts": {
+    "test": "bun test",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
+    "lint:scanner": "cd ../.. && eslint --config editors/obsidian/eslint.scanner.config.mjs $(git ls-files -- '*.ts' '*.mts' '*.cts' '*.js' '*.mjs' '*.cjs' ':!docs/vendor/**')",
     "build": "bun esbuild.config.mjs"
   },
   "dependencies": {
-    "visimark": "workspace:*"
+    "codemirror-visimark": "workspace:*",
+    "visimark": "workspace:*",
+    "visimark-editor-shared": "workspace:*"
   },
   "devDependencies": {
     "@codemirror/state": "^6.5.2",
-    "@codemirror/view": "^6.36.2",
+    "@codemirror/view": "^6.43.14",
     "@eslint/js": "^10.0.1",
-    "@eslint/json": "^2.1.0",
-    "@happy-dom/global-registrator": "^20.14.5",
+    "@eslint/json": "^2.1.1",
+    "@happy-dom/global-registrator": "^20.14.6",
     "esbuild": "^0.28.2",
-    "eslint": "^10.11.0",
+    "eslint": "^10.12.0",
     "eslint-plugin-obsidianmd": "^0.4.2",
-    "obsidian": "^1.8.7",
-    "typescript-eslint": "^8.70.1"
+    "obsidian": "^1.14.4",
+    "typescript-eslint": "^8.71.1"
   }
 }

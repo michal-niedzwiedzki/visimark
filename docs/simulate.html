@@ -28,7 +28,8 @@
       content="default-src 'none';
                script-src 'self';
                style-src 'self';
-               img-src 'self';
+               img-src 'self' https://visimark.goatcounter.com;
+               connect-src https://visimark.goatcounter.com;
                base-uri 'none';
                form-action 'none'"
     />
@@ -121,7 +122,7 @@
 <a href="#10-mistakes-in-the-declaration-and-what-they-report" data-level="2">10. Mistakes in the declaration, and what they report</a>
 <a href="#part-3-designing-the-report" data-level="1">Part 3 — Designing the report</a>
 <a href="#11-where-reports-live" data-level="2">11. Where reports live</a>
-<a href="#12-the-five-reports-and-the-question-each-answers" data-level="2">12. The five reports, and the question each answers</a>
+<a href="#12-the-six-reports-and-the-question-each-answers" data-level="2">12. The six reports, and the question each answers</a>
 <a href="#13-choosing-what-best-and-deltas-read" data-level="2">13. Choosing what best and deltas read</a>
 <a href="#14-mistakes-in-a-report-line-and-what-they-report" data-level="2">14. Mistakes in a report line, and what they report</a>
 <a href="#part-4-running-and-reading" data-level="1">Part 4 — Running and reading</a>
@@ -129,6 +130,7 @@
 <a href="#16-reading-gates" data-level="2">16. Reading gates</a>
 <a href="#17-reading-forbidden" data-level="2">17. Reading forbidden</a>
 <a href="#18-reading-best" data-level="2">18. Reading best</a>
+<a href="#how-close-each-rule-comes-slack" data-level="3">How close each rule comes: slack</a>
 <a href="#19-reading-deltas" data-level="2">19. Reading deltas</a>
 <a href="#20-reading-the-ledger" data-level="2">20. Reading the ledger</a>
 <a href="#21-faulted-questions" data-level="2">21. Faulted questions</a>
@@ -272,7 +274,7 @@ found, you edit a default and run <code>fmt</code>, and that is a normal diff fo
 <tr>
 <td><code>report</code></td>
 <td>These are the readings I want.</td>
-<td>a sheet of its own, usually</td>
+<td>a report comment, or a sheet block of its own</td>
 </tr>
 </tbody>
 </table>
@@ -322,19 +324,16 @@ With **250**&#x3C;!--vmark=event.attendees--> people at **80.00**&#x3C;!--vmark=
 EUR a ticket the day costs **23025.00**&#x3C;!--vmark=costs.total--> EUR and makes
 **6975.00**&#x3C;!--vmark=event.profit--> EUR.
 
-## Readings
-
-```vmark #readings
+&#x3C;!--vmark:report #readings
 report gates
 report forbidden
 report best scalar event.profit direction max among feasible
 report best scalar event.ticket direction min among feasible
-report deltas on event.profit, event.sponsor_share
-```
+report deltas on event.profit, event.sponsor_share among all
+report slack
+-->
 
-```vmark #ledger
-report ledger assertions broken
-```
+&#x3C;!--vmark:report #ledger report ledger assertions broken-->
 </code></pre>
 <p>It checks clean, like any other document:</p>
 <pre><code class="language-console">$ visimark check conference.md
@@ -601,37 +600,92 @@ lever still check normally.</p>
 <hr>
 <h1 id="part-3-designing-the-report">Part 3 — Designing the report</h1>
 <h2 id="11-where-reports-live">11. Where reports live</h2>
-<p>A <code>report</code> line goes in a sheet block, a <code>vmark #id</code> block. It binds nothing
-and stores nothing, the same as a <code>chart</code>.</p>
-<p>You can put reports in the sheet whose values they read, but the example keeps
-them apart:</p>
-<pre><code class="language-markdown">## Readings
-
-```vmark #readings
+<p>A <code>report</code> line binds nothing and stores nothing, the same as a <code>chart</code>. It
+belongs to a sheet, and there are two places to write it.</p>
+<p><strong>In a report comment.</strong> This is what the example does:</p>
+<pre><code class="language-markdown">&#x3C;!--vmark:report #readings
 report gates
 report forbidden
 report best scalar event.profit direction max among feasible
 report best scalar event.ticket direction min among feasible
-report deltas on event.profit, event.sponsor_share
-```
+report deltas on event.profit, event.sponsor_share among all
+report slack
+-->
 
-```vmark #ledger
-report ledger assertions broken
+&#x3C;!--vmark:report #ledger report ledger assertions broken-->
+</code></pre>
+<p>The comment opens with <code>&#x3C;!--vmark:report</code>, a space, and the sheet id, on one
+line. Every line after the id, up to <code>--></code>, is a whole <code>report</code> statement,
+keyword included. A sheet with one statement fits on one line, like <code>#ledger</code>.
+Blank lines and <code>#</code> comments are allowed, as in a block.</p>
+<p>A renderer hides HTML comments, so the readings are configuration for
+<code>simulate</code> and nothing more. The rendered budget stays prose and tables.
+<code>simulate</code> prints every statement back under its <code>#id</code> heading, so nothing a
+reader needs is lost.</p>
+<p><strong>In a sheet block.</strong> A <code>vmark #id</code> block may hold <code>report</code> lines too:</p>
+<pre><code class="language-markdown">```vmark #readings
+report gates
+report forbidden
 ```
 </code></pre>
-<p><strong>A sheet of its own reads as a section of the document.</strong> "Readings" is a
-heading a reviewer can find. It also means the model sheets stay exactly what
-they were before anyone asked for a sweep.</p>
+<p>Use a block when the document is teaching the declaration, or when you want
+it on the page.</p>
+<p><strong>Both can name one sheet.</strong> A comment and a block with the same id are one
+sheet, and its reports run in source order. A comment may also name the sheet
+whose values it reads, such as <code>#event</code>, and join it. The example keeps its
+readings in sheets of their own, so the model sheets stay exactly what they
+were before anyone asked for a sweep.</p>
 <p><strong>The long report gets its own sheet.</strong> The ledger prints one row per
 question, 65 here. <code>simulate</code> prints sheets in document order, so putting the
 ledger last keeps the short readings at the top of the output.</p>
 <p><strong>One grid per file.</strong> Every report sheet in a file reads the same questions.
 Each question is evaluated once, however many reports read it.</p>
 <p><code>check</code> reads every <code>report</code> line, checks its options and resolves every name
-in it. It never runs one. A report must be in a <code>#id</code> block; a document-scope
-block is a <code>SHEET</code> error.</p>
-<h2 id="12-the-five-reports-and-the-question-each-answers">12. The five reports, and the question each answers</h2>
-<p>The list is closed. A document can ask for these five and nothing else, so a
+in it. It never runs one. A report must be in a <code>#id</code> block or a report
+comment; a document-scope block is a <code>SHEET</code> error.</p>
+<p>A report comment that does not parse is an error too, never an ordinary
+comment:</p>
+<table>
+<thead>
+<tr>
+<th>Comment</th>
+<th><code>check</code> reports</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>&#x3C;!--vmark:report gates--></code></td>
+<td><code>SHEET</code> a report comment has no sheet id</td>
+</tr>
+<tr>
+<td><code>&#x3C;!--vmark:report #readings--></code></td>
+<td><code>SHEET</code> a report comment declares no report</td>
+</tr>
+<tr>
+<td><code>&#x3C;!--vmark:report #readings x = 1--></code></td>
+<td><code>SHEET</code> a report comment holds report statements only</td>
+</tr>
+<tr>
+<td><code>&#x3C;!--vmark:report #readings report gates--> more</code></td>
+<td><code>SHEET</code> text after a report comment</td>
+</tr>
+<tr>
+<td>a comment with no <code>--></code></td>
+<td><code>SHEET</code> a report comment is not closed with <code>--></code></td>
+</tr>
+<tr>
+<td>a report comment inside a list, a blockquote or a paragraph</td>
+<td><code>SHEET</code> a report comment must be at top level</td>
+</tr>
+<tr>
+<td><code>&#x3C;!--vmark:reports #readings report gates--></code></td>
+<td><code>ANCHOR</code> unknown <code>vmark:</code> comment <code>reports</code> — expected …</td>
+</tr>
+</tbody>
+</table>
+<p>A comment with one of these errors adds nothing to any sheet.</p>
+<h2 id="12-the-six-reports-and-the-question-each-answers">12. The six reports, and the question each answers</h2>
+<p>The list is closed. A document can ask for these six and nothing else, so a
 Markdown file can never make the tool run code it does not ship.</p>
 <table>
 <thead>
@@ -664,13 +718,18 @@ Markdown file can never make the tool run code it does not ship.</p>
 </tr>
 <tr>
 <td>How far does a value move across the grid?</td>
-<td><code>report deltas on X, Y</code></td>
+<td><code>report deltas on X, Y among all</code></td>
 <td>the base value, the lowest, the highest, and where</td>
+</tr>
+<tr>
+<td>How close does each rule come to breaking?</td>
+<td><code>report slack</code></td>
+<td>per <code>assert</code>: the least room among working questions, and the smallest miss among questions that break only that rule</td>
 </tr>
 </tbody>
 </table>
-<p>A sensible first sheet is <code>gates</code>, <code>forbidden</code>, one <code>best</code> and one <code>deltas</code>,
-with the ledger on its own. That is the example. Add more <code>best</code> lines for each
+<p>A sensible first sheet is <code>gates</code>, <code>forbidden</code>, one <code>best</code>, one <code>deltas</code> and
+<code>slack</code>, with the ledger on its own. That is the example. Add more <code>best</code> lines for each
 separate question you have: the example asks two, "most profit" and "cheapest
 ticket".</p>
 <p>The exact grammar:</p>
@@ -688,7 +747,7 @@ ticket".</p>
 </tr>
 <tr>
 <td><code>deltas</code></td>
-<td><code>[on REF {, REF}]</code></td>
+<td><code>[on REF {, REF}] among feasible|infeasible|all</code></td>
 </tr>
 <tr>
 <td><code>gates</code></td>
@@ -696,10 +755,14 @@ ticket".</p>
 </tr>
 <tr>
 <td><code>best</code></td>
-<td><code>scalar REF direction max|min [among feasible]</code></td>
+<td><code>scalar REF direction max|min among feasible|infeasible|all</code></td>
 </tr>
 <tr>
 <td><code>forbidden</code></td>
+<td>none</td>
+</tr>
+<tr>
+<td><code>slack</code></td>
 <td>none</td>
 </tr>
 </tbody>
@@ -709,14 +772,18 @@ ticket".</p>
 anywhere. It cannot name a column.</p>
 <p><strong>A lever is a scalar too.</strong> <code>best scalar event.ticket direction min among feasible</code> asks <em>what is the lowest ticket price at which some plan still
 works?</em> Reading a lever directly is often the clearest way to ask about it.</p>
-<p><strong>Almost always write <code>among feasible</code>.</strong> Without it, <code>best</code> ranks every
-question that could be computed, including the ones that break your rules. The
-most profitable plan in this grid needs 400 people in a 300-seat venue.</p>
-<p><strong>Name what <code>deltas</code> reads.</strong> <code>report deltas</code> with no <code>on</code> covers every
-non-param scalar of its own sheet. In a readings sheet, which has no scalars,
-<code>check</code> refuses it, because it has nothing to read: name the values with
-<code>deltas on REF, …</code>. In a model sheet it prints every
-scalar, including constants that never move:</p>
+<p><strong>Write the population on the line.</strong> <code>best</code> and <code>deltas</code> end with
+<code>among feasible</code>, <code>among infeasible</code>, or <code>among all</code>. <code>among feasible</code> ranks
+the questions that meet every rule. <code>among all</code> ranks every question that
+could be computed, including the ones that break the rules. The most profitable
+plan in this grid needs 400 people in a 300-seat venue, so that plan is a
+reading under <code>among all</code>.</p>
+<p><strong>Name what <code>deltas</code> reads.</strong> <code>report deltas among feasible|infeasible|all</code>
+with no <code>on</code> covers every non-param scalar of its own sheet. In a readings
+sheet, which has no scalars, <code>check</code> refuses that line, because it has nothing
+to read: name the values with <code>deltas on REF, …</code>. A line that leaves out
+<code>among</code> fails the synopsis, and that finding is the synopsis alone. In a model
+sheet the no-<code>on</code> form prints every scalar, including constants that never move:</p>
 <pre><code class="language-text">  event.venue_capacity  base 300
     low   300  (0)  attendees=100 ticket=60.00 sponsors=0
     high  300  (0)  attendees=100 ticket=60.00 sponsors=0
@@ -725,26 +792,26 @@ scalar, including constants that never move:</p>
 <p>A scalar that only a report reads is not reported as unused. The report counts
 as a read.</p>
 <h2 id="14-mistakes-in-a-report-line-and-what-they-report">14. Mistakes in a report line, and what they report</h2>
-<p>Each comes from changing one line of the example's <code>#readings</code> sheet.</p>
-<p>A misspelt name, <code>report deltas on event.proift</code>:</p>
+<p>Each comes from changing one line of the example's <code>#readings</code> report comment.</p>
+<p>A misspelt name, <code>report deltas on event.proift among all</code>:</p>
 <pre><code class="language-console">  UNDEF   readings.         unknown name `event.proift`
           did you mean `profit`?
 </code></pre>
-<p>A column, <code>report deltas on costs.Cost</code>:</p>
+<p>A column, <code>report deltas on costs.Cost among all</code>:</p>
 <pre><code class="language-console">  TYPE    readings.         a report reads a scalar; costs.Cost is a column
 </code></pre>
 <p>A report the tool does not ship, <code>report heatmap</code>:</p>
 <pre><code class="language-console">  TYPE    readings.         unknown report `heatmap`; the reports are ledger, deltas, gates, best, forbidden
 </code></pre>
 <p>Options that do not fit, <code>direction lowest</code>:</p>
-<pre><code class="language-console">  TYPE    readings.         `report best` takes: scalar REF direction max|min [among feasible]
+<pre><code class="language-console">  TYPE    readings.         `report best` takes: scalar REF direction max|min among feasible|infeasible|all
 </code></pre>
 <p>The same line twice:</p>
 <pre><code class="language-console">  DUP     readings.         report gates is declared twice in sheet readings
 </code></pre>
 <p>Two <code>deltas</code> lines with different names are not duplicates.</p>
-<p>A bare <code>report deltas</code> in a sheet with no scalar that is not a param, such as
-<code>#readings</code> with only <code>report deltas</code> and <code>report gates</code>:</p>
+<p>A <code>report deltas among all</code> in a sheet with no scalar that is not a param, such as
+<code>#readings</code> with only <code>report deltas among all</code> and <code>report gates</code>:</p>
 <pre><code class="language-console">  TYPE    readings.         `report deltas` has nothing to read: this sheet has no scalar that is not a param; name the values with `deltas on REF, …`
 </code></pre>
 <p><code>simulate</code> then shows the sheet as <code>(cannot start)</code>.</p>
@@ -783,7 +850,9 @@ called <strong>base</strong>. It is always asked, first, and it is never counted
 grid's 64.</p>
 <p>A lever prints at its width. A percent lever prints as a percent. A derived
 value prints at its own width, so <code>sponsor_share</code> prints as <code>0.333</code>, not 33.3%.</p>
-<p>The next five chapters read each report of the example's output in turn.</p>
+<p>The next five chapters read each report of the example's output in turn;
+chapter 18 reads <code>slack</code> beside <code>best</code>, because it answers what <code>best</code> leaves
+out.</p>
 <h2 id="16-reading-gates">16. Reading <code>gates</code></h2>
 <pre><code class="language-text">report gates
 
@@ -852,9 +921,47 @@ two sponsors, or with 300 people and two or three. The ledger (chapter 20) shows
 the domain, step finer, and sweep again.</p>
 <p><strong><code>best</code> does not say how much room is left.</strong> The 60-euro plan makes a profit
 of 900 euros (chapter 23 shows how to read that). A winner at the edge of a
-rule is a winner with no margin.</p>
+rule is a winner with no margin. <code>slack</code> is the report that says how much.</p>
+<h3 id="how-close-each-rule-comes-slack">How close each rule comes: <code>slack</code></h3>
+<pre><code class="language-text">report slack
+
+  attendees &#x3C;= venue_capacity
+    inside   room    0  attendees=300 ticket=60.00 sponsors=2
+    outside  miss  100  attendees=400 ticket=60.00 sponsors=1
+    13 questions tie inside; the first in grid order is shown
+    15 questions tie outside; the first in grid order is shown
+    from 25 feasible and 15 failing only this, of 64 questions
+  profit >= 0
+    inside   room  900.00  attendees=200 ticket=60.00 sponsors=2
+    outside  miss  100.00  attendees=200 ticket=80.00 sponsors=1
+    from 25 feasible and 16 failing only this, of 64 questions
+  sponsor_share &#x3C;= 50%
+    inside   room  0.000  attendees=100 ticket=100.00 sponsors=2
+    outside  miss  0.056  attendees=100 ticket=80.00 sponsors=2
+    3 questions tie outside; the first in grid order is shown
+    from 25 feasible and 6 failing only this, of 64 questions
+</code></pre>
+<p>One block per assertion, in document order. Each block has two lines:</p>
+<ul>
+<li><strong><code>inside</code></strong> is the working question that comes closest to breaking the rule,
+and its <strong>room</strong>: how far it is from the bound. A room of <code>0</code> means the rule
+binds: a full venue, or a sponsor share of exactly 50%.</li>
+<li><strong><code>outside</code></strong> looks only at questions that break this rule and nothing else,
+and shows the one that <strong>misses</strong> it by the least. Waive that one rule and the
+question works.</li>
+</ul>
+<p><code>room</code> and <code>miss</code> read the same way on <code>&#x3C;=</code> and <code>>=</code> rules. The distance is the
+plain difference of the two sides, never rounded, at the width of the wider
+side: <code>0.556 − 0.50</code> prints as <code>0.056</code>. The last line of each block counts the
+two pools, so you know whether a reading is one candidate or fifty.</p>
+<p>Read it next to <code>best</code>. The cheapest working ticket has 900.00 euros of
+profit to spare, and nothing closer to break-even works. The cheapest loss is
+100 euros short. Seats, euros and a share are not one unit, so <code>slack</code> never
+adds rules together. An <code>assert</code> that is not one comparison, such as one using
+<code>and</code> or <code>!=</code>, prints <code>no single boundary</code>; a comparison of dates prints
+<code>not a numeric comparison</code>.</p>
 <h2 id="19-reading-deltas">19. Reading <code>deltas</code></h2>
-<pre><code class="language-text">report deltas on event.profit, event.sponsor_share
+<pre><code class="language-text">report deltas on event.profit, event.sponsor_share among all
 
   event.profit  base 6975.00
     low   -11250.00  (-18225.00)  attendees=100 ticket=60.00 sponsors=0
@@ -862,16 +969,18 @@ rule is a winner with no margin.</p>
   event.sponsor_share  base 0.333
     low   0.000  (-0.333)  attendees=100 ticket=60.00 sponsors=0
     high  0.714  (+0.381)  attendees=100 ticket=60.00 sponsors=3
+  over 64 questions
 </code></pre>
 <p>For each value: its base, then the lowest and the highest it reaches across the
-grid, the change from base in brackets, and the first question that gets there.</p>
+grid, the change from base in brackets, and the first question that gets there.
+The last line counts the questions in that population that produced a number
+for at least one of the named values.</p>
 <p>Read it as <em>how exposed is this number?</em> Profit swings from an 11250-euro loss
 to a 34200-euro gain. That spread is the size of the bet the organisers are
 making.</p>
-<p><strong><code>deltas</code> ranges over every question, feasible or not.</strong> The 34200 high needs
-400 people, which <code>forbidden</code> just ruled out. That is on purpose: <code>deltas</code>
-shows how far a value <em>can</em> move, and <code>best … among feasible</code> shows how far it
-can move inside the rules. Read the two together.</p>
+<p><strong><code>among all</code> is the range over every question that is not faulted.</strong> The 34200
+high needs 400 people, which <code>forbidden</code> just ruled out. <strong><code>among feasible</code> is
+the range inside the rules.</strong> Read the two together.</p>
 <h2 id="20-reading-the-ledger">20. Reading the <code>ledger</code></h2>
 <p>The ledger is one row per question, base first. This is the start of it and a
 slice of the end; the 28 rows between were left out here.</p>
@@ -1018,7 +1127,8 @@ params:
 </code></pre>
 <p>Now the margin is visible: a profit of <strong>900</strong> euros, and a sponsor share of
 45.5%, close to the 50% limit. That is a plan that works on paper and has
-almost no room. The same plan with a third sponsor fails, as the ledger said:</p>
+almost no room. <code>slack</code> (chapter 18) had already put the profit margin at
+900.00. The same plan with a third sponsor fails, as the ledger said:</p>
 <pre><code class="language-console">$ cat three.json
 { "attendees": "200", "ticket": "60.00", "sponsors": "3" }
 $ visimark eval --scenario three.json conference.md --get event.sponsor_share
@@ -1028,6 +1138,11 @@ $ visimark eval --scenario three.json conference.md --get event.sponsor_share
 $ echo $?
 1
 </code></pre>
+<p><code>slack</code> saw this too. Its <code>sponsor_share</code> outside line reads <code>miss  0.056</code>, a
+share of 0.556 against 50%. It lands on <code>attendees=100 ticket=80.00 sponsors=2</code>,
+not on this plan: three questions miss by exactly 0.056, and its tie line says
+so. This plan, <code>attendees=200 ticket=60.00 sponsors=3</code>, is the third of them in
+grid order.</p>
 <h3 id="adopting-the-answer">Adopting the answer</h3>
 <p>When the organisers decide, the decision goes into the document the normal
 way: edit the defaults, run <code>fmt</code>, and commit the diff for review.</p>
@@ -1162,7 +1277,9 @@ them is a change in the document, not in the tool.</li>
 <li class="task-list-item"><input type="checkbox" disabled> Every boundary you care about is a lattice point. (Chapter 7.)</li>
 <li class="task-list-item"><input type="checkbox" disabled> You read the question count, and it is the size you meant. (Chapter 8.)</li>
 <li class="task-list-item"><input type="checkbox" disabled> The assertions say what "works" means, all of them. (Chapter 9.)</li>
-<li class="task-list-item"><input type="checkbox" disabled> <code>best</code> says <code>among feasible</code>, and <code>deltas</code> says <code>on</code>. (Chapter 13.)</li>
+<li class="task-list-item"><input type="checkbox" disabled> <code>best</code> and <code>deltas</code> name the population with <code>among</code>. (Chapter 13.)</li>
+<li class="task-list-item"><input type="checkbox" disabled> You know each rule's margin from <code>slack</code>, not only that it holds.
+(Chapter 18.)</li>
 <li class="task-list-item"><input type="checkbox" disabled> Any <code>forbidden</code> point and any <code>faulted</code> question has been explained.
 (Chapters 17 and 21.)</li>
 <li class="task-list-item"><input type="checkbox" disabled> The winning question was looked at in full with <code>eval --scenario</code>.
@@ -1177,8 +1294,8 @@ nothing. A decision goes back in as a reviewed edit.</li>
 before you read a single report.</li>
 <li><strong>A sweep only sees its points.</strong> Put a point on every boundary, and narrow
 before you step finer.</li>
-<li><strong><code>best</code> is a ranking, not a margin.</strong> Look at the winner with
-<code>eval --scenario</code> before you act on it.</li>
+<li><strong><code>best</code> is a ranking, not a margin.</strong> <code>slack</code> gives the margin. Look at
+the winner with <code>eval --scenario</code> before you act on it.</li>
 <li><strong>A false assertion is a reading.</strong> <code>simulate</code> exits <code>0</code>. Keep <code>check</code> as
 the gate.</li>
 </ol>
@@ -1201,7 +1318,7 @@ the gate.</li>
 </tr>
 <tr>
 <td><a href="example-battery-storage.md"><code>example-battery-storage.md</code></a></td>
-<td>A larger model: five levers, 577 questions, four lender covenants, every report</td>
+<td>A larger model: five levers, 577 questions, four lender covenants, five of the six reports</td>
 </tr>
 <tr>
 <td><a href="ci.html"><code>ci.md</code></a></td>
@@ -1220,5 +1337,6 @@ the gate.</li>
     </main>
 
     <script src="vendor/visimark-site-simulate.js"></script>
+    <script data-goatcounter="https://visimark.goatcounter.com/count" async src="vendor/goatcounter-count.js"></script>
   </body>
 </html>

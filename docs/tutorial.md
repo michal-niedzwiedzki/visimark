@@ -3282,15 +3282,15 @@ A sheet asks for readings with `report` lines:
 ````markdown
 ```vmark #sweep
 report ledger assertions broken
-report deltas on runway.months
+report deltas on runway.months among all
 report gates
 report best scalar runway.new_hires direction max among feasible
 report forbidden
 ```
 ````
 
-There are five reports, and the list is closed. A document can ask for these
-five and nothing else, so a Markdown file can never make the tool run code it
+There are six reports, and the list is closed. A document can ask for these
+six and nothing else, so a Markdown file can never make the tool run code it
 does not ship. `check` reads each line, checks its options, and resolves every
 name in it. A `report` that names a missing value is `UNDEF`, like a formula
 would be. `check` never runs a report.
@@ -3336,11 +3336,12 @@ report ledger assertions broken
   27         6.0%          5  no        months >= 12
   28         6.0%          6  no        months >= 12
 
-report deltas on runway.months
+report deltas on runway.months among all
 
   runway.months  base 13.1
     low   10.1  (-3.0)  raise=6.0% new_hires=6
     high  15.5  (+2.4)  raise=0.0% new_hires=0
+  over 28 questions
 
 report gates
 
@@ -3388,6 +3389,10 @@ Every question is asked the way `eval --scenario` would ask it. A question is
 - **`forbidden`** lists the lattice points at which *every* question breaks an
   assertion, so no other choice can save them. Four, five and six hires are out
   at any raise on the grid.
+- **`slack`**, which this sheet does not ask for, prints for each assertion the
+  least room among the working questions and the smallest miss among the
+  questions that break only that rule. It is how close a plan sits to the edge,
+  which `best` does not say.
 
 ### When a sheet cannot start
 
@@ -3435,7 +3440,7 @@ place on a terminal, and printed at every tenth of the run in a CI log.
   time. The count line tells you how big the run is before it starts.
 
 [`example-battery-storage.md`](example-battery-storage.md) is the large worked
-case: five levers, 577 questions, four lender covenants and all five reports,
+case: five levers, 577 questions, four lender covenants and five of the six reports,
 in a project-finance model of a grid-scale battery.
 
 How to design a sweep from scratch, how to read each report, and how to act on
@@ -3760,7 +3765,7 @@ Or ask the tool: `visimark ref NAME`.
 | [`example-ci-sharding.md`](example-ci-sharding.md) | A document a build tool reads. |
 | [`example-agent-budget.md`](example-agent-budget.md) | A spending cap an agent cannot talk itself out of, and a what-if run against it. |
 | [`example-executable-documentation.md`](example-executable-documentation.md) | A capacity decision that stopped being a second source of truth, with ratios printed as percents. |
-| [`example-battery-storage.md`](example-battery-storage.md) | A battery project a lender can sweep: 577 questions, four covenants, all five `simulate` reports. |
+| [`example-battery-storage.md`](example-battery-storage.md) | A battery project a lender can sweep: 577 questions, four covenants, five of the six `simulate` reports. |
 
 ### Try it without installing
 

@@ -1,9 +1,15 @@
 import type { Expr, UnitText } from "../lang/ast.js";
 import { parseUnit, type UnitDefs, type UnitMap } from "../lang/unit-expr.js";
 import { headerNameList, headerNames } from "./header-name.js";
-import { parseStatement } from "../lang/parser.js";
+import { isReportLine, parseStatement } from "../lang/parser.js";
 import { LangError } from "../lang/token.js";
-import type { LocatedDoc, RawBlock, Span } from "../parse/document.js";
+import type {
+  LocatedDoc,
+  MalformedColonComment,
+  RawBlock,
+  RawReportComment,
+  Span,
+} from "../parse/document.js";
 import { closest } from "../report/levenshtein.js";
 import {
   type Assertion,
@@ -40,6 +46,105 @@ function invalidSheetIdChars(id: string): string[] {
     note(ch);
   }
   return out;
+}
+
+// the colon-family messages, docs/design/declare-a-sheet-s-report-statements-spec.md §4.1
+const COLON_EXPECTED = "expected `<!--vmark:no-formulas-->` or `<!--vmark:report #id …-->`";
+export const unknownColonWord = (word: string): string =>
+  word === ""
+    ? `a \`vmark:\` comment names no word — ${COLON_EXPECTED}`
+    : `unknown \`vmark:\` comment \`${word}\` — ${COLON_EXPECTED}`;
+export const REPORT_COMMENT_NESTED = "a report comment must be at top level";
+export const COLON_NESTED = "a `vmark:` comment must be at top level";
+export const MALFORMED_MARKER =
+  "malformed `no-formulas` marker — expected `<!--vmark:no-formulas-->`";
+export const REPORT_COMMENT_UNCLOSED = "a report comment is not closed with `-->`";
+export const REPORT_COMMENT_TRAILING = "text after a report comment";
+export const REPORT_COMMENT_NO_ID = "a report comment has no sheet id";
+export const REPORT_COMMENT_EMPTY = "a report comment declares no report";
+export const REPORT_COMMENT_NOT_REPORT = "a report comment holds report statements only";
+
+function colonFinding(c: MalformedColonComment): Finding {
+  const at = (code: "SHEET" | "ANCHOR", message: string): Finding => ({
+    code,
+    message,
+    sourceOffset: c.span.start,
+    span: c.span,
+  });
+  switch (c.problem) {
+    case "unknown-word":
+      return at("ANCHOR", unknownColonWord(c.word));
+    case "nested":
+      return c.word === "report" ? at("SHEET", REPORT_COMMENT_NESTED) : at("ANCHOR", COLON_NESTED);
+    case "malformed-marker":
+      return at("ANCHOR", MALFORMED_MARKER);
+    case "unclosed":
+      return at("SHEET", REPORT_COMMENT_UNCLOSED);
+    case "trailing":
+      return at("SHEET", REPORT_COMMENT_TRAILING);
+    case "no-id":
+      return at("SHEET", REPORT_COMMENT_NO_ID);
+  }
+}
+
+function invalidSheetId(sheetId: string, span: Span): Finding | null {
+  if (SHEET_ID_RE.test(sheetId)) return null;
+  const bad = invalidSheetIdChars(sheetId);
+  const label = bad.length === 1 ? "invalid character" : "invalid characters";
+  const chars = bad.map((c) => "`" + c + "`").join(", ");
+  return {
+    code: "SHEET",
+    sheetId,
+    message: `sheet id \`${sheetId}\` is not a valid identifier — ${label} ${chars}`,
+    sourceOffset: span.start,
+    span,
+  };
+}
+
+/** a report joins its sheet unless byte-identical text is already there */
+function addReport(sheet: Sheet, report: Report, findings: Finding[]): void {
+  const first = sheet.reports.find((r) => r.text === report.text);
+  if (first) {
+    findings.push({
+      code: "DUP",
+      sheetId: sheet.id,
+      message: `${report.text} is declared twice in sheet ${sheet.id}`,
+      sourceOffset: report.span.start,
+      span: report.span,
+      relatedSpan: first.span,
+    });
+    return;
+  }
+  sheet.reports.push(report);
+}
+
+/**
+ * A report comment adds `report` statements to its sheet, with the rights a
+ * second fence of that id would have and no others. A body that is empty, or
+ * holds a line that is not a report, contributes nothing (spec §4.1–§4.2).
+ */
+function buildReportComment(
+  rc: RawReportComment,
+  sheets: Map<string, Sheet>,
+  source: string,
+  findings: Finding[],
+): void {
+  const { sheetId } = rc;
+  const refuse = (message: string, span: Span): void => {
+    findings.push({ code: "SHEET", sheetId, message, sourceOffset: span.start, span });
+  };
+  if (rc.bindings.length === 0) return refuse(REPORT_COMMENT_EMPTY, rc.span);
+  const other = rc.bindings.find((b) => !isReportLine(b.raw));
+  if (other) return refuse(REPORT_COMMENT_NOT_REPORT, { start: other.start, end: other.end });
+
+  const sheet = ensureSheet(sheets, sheetId, null);
+  const bad = invalidSheetId(sheetId, rc.span);
+  if (bad) findings.push(bad);
+  for (const rb of rc.bindings) {
+    const stmt = parseOne(rb, source, findings, sheetId);
+    if (!stmt) sheet.droppedLines = true;
+    else if (stmt.kind === "report") addReport(sheet, stmt.report, findings);
+  }
 }
 
 /**
@@ -132,7 +237,19 @@ export function build(doc: LocatedDoc): DocModel {
   const blockOfSheet = new Map<string, RawBlock>();
   const unitDefinitions: UnitDefinition[] = [];
 
-  for (const block of doc.blocks) {
+  // fences and report comments contribute in source order, so a sheet is
+  // opened by whichever comes first (spec §3.1)
+  const parts = [
+    ...doc.blocks.map((block) => ({ block, comment: null })),
+    ...doc.reportComments.map((comment) => ({ block: null, comment })),
+  ].sort((a, b) => (a.block ?? a.comment)!.span.start - (b.block ?? b.comment)!.span.start);
+
+  for (const { block, comment } of parts) {
+    if (comment) {
+      buildReportComment(comment, sheets, doc.source, findings);
+      continue;
+    }
+    if (!block) continue;
     if (block.sheetId === null) {
       buildDocScope(block, doc.source, docScope, findings, unitDefinitions);
       continue;
@@ -163,18 +280,8 @@ export function build(doc: LocatedDoc): DocModel {
       });
     }
 
-    if (!SHEET_ID_RE.test(sheetId)) {
-      const bad = invalidSheetIdChars(sheetId);
-      const label = bad.length === 1 ? "invalid character" : "invalid characters";
-      const chars = bad.map((c) => "`" + c + "`").join(", ");
-      findings.push({
-        code: "SHEET",
-        sheetId,
-        message: `sheet id \`${sheetId}\` is not a valid identifier — ${label} ${chars}`,
-        sourceOffset: block.span.start,
-        span: block.span,
-      });
-    }
+    const badId = invalidSheetId(sheetId, block.span);
+    if (badId) findings.push(badId);
 
     if (doc.detachedTableBlocks.has(block)) {
       findings.push({
@@ -352,19 +459,7 @@ export function build(doc: LocatedDoc): DocModel {
         continue;
       }
       if (stmt.kind === "report") {
-        const first = sheet.reports.find((r) => r.text === stmt.report.text);
-        if (first) {
-          findings.push({
-            code: "DUP",
-            sheetId,
-            message: `${stmt.report.text} is declared twice in sheet ${sheetId}`,
-            sourceOffset: stmt.report.span.start,
-            span: stmt.report.span,
-            relatedSpan: first.span,
-          });
-          continue;
-        }
-        sheet.reports.push(stmt.report);
+        addReport(sheet, stmt.report, findings);
         continue;
       }
 
@@ -492,6 +587,8 @@ export function build(doc: LocatedDoc): DocModel {
       span,
     });
   }
+
+  for (const c of doc.malformedColonComments) findings.push(colonFinding(c));
 
   return {
     sheets,

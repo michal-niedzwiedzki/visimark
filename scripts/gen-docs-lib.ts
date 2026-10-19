@@ -9,7 +9,9 @@ import remarkGfm from "remark-gfm";
 import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
 import { unified } from "unified";
-import { escapeHtml, slugify } from "../packages/visimark/src/site/dom.js";
+import { escapeHtml } from "../site/src/html.js";
+import { slugify } from "../site/src/pages/dom.js";
+import { GOATCOUNTER_ORIGIN, analyticsScriptTag } from "./analytics-lib.js";
 import { renderNav } from "./nav-lib.js";
 
 export interface TocEntry {
@@ -204,7 +206,8 @@ function createTutorialHtml(mainHtml: string, toc: TocEntry[], options: SplitPag
       content="default-src 'none';
                script-src 'self';
                style-src 'self';
-               img-src 'self';
+               img-src 'self' ${GOATCOUNTER_ORIGIN};
+               connect-src ${GOATCOUNTER_ORIGIN};
                base-uri 'none';
                form-action 'none'"
     />
@@ -289,6 +292,7 @@ ${mainHtml}
     </main>
 
     <script src="${base}vendor/visimark-site-tutorial.js"></script>
+    ${analyticsScriptTag(base)}
   </body>
 </html>`;
 }
@@ -396,7 +400,8 @@ export function renderDocPage(markdown: string, options: DocPageOptions): string
       content="default-src 'none';
                script-src 'self';
                style-src 'self';
-               img-src 'self';
+               img-src 'self' ${GOATCOUNTER_ORIGIN};
+               connect-src ${GOATCOUNTER_ORIGIN};
                base-uri 'none';
                form-action 'none'"
     />
@@ -475,6 +480,7 @@ ${processedHtml}
     </main>
 
     <script src="${base}vendor/visimark-site-${escapeHtml(options.scriptName)}.js"></script>
+    ${analyticsScriptTag(base)}
   </body>
 </html>`;
 }

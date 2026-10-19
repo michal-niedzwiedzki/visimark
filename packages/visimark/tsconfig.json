@@ -1,6 +1,6 @@
 {
   "extends": "../../tsconfig.base.json",
-  "include": ["src", "test", "bench"],
-  // The browser UI needs the DOM lib and is typechecked by tsconfig.app.json.
-  "exclude": ["src/playground/app", "src/site", "test/playground/app", "test/site"]
+  // No DOM lib: the engine and the CLI fail this typecheck if they reach for a
+  // browser global. The browser UI lives in the site workspace (../../site).
+  "include": ["src", "test", "bench"]
 }

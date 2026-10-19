@@ -1,12 +1,14 @@
 import { Decimal } from "decimal.js";
-import type { Ref } from "../lang/ast.js";
+import type { Ref, ReportAmong } from "../lang/ast.js";
+import type { AssertionSides, ComparisonOp } from "../eval/check.js";
 import type { Answer, LatticeParam, Simulation } from "../eval/simulate.js";
 import { roundToPlaces, type Value } from "../eval/value.js";
 import type { Report } from "../model/types.js";
 
 /**
- * The five shipped readings of a simulation, as text. Every line and rule is
- * docs/design/add-a-simulate-command-spec.md §3.3 and §4. This module only
+ * The six shipped readings of a simulation, as text. Every line and rule is
+ * docs/design/add-a-simulate-command-spec.md §3.3 and §4, and, for `slack`,
+ * docs/design/a-slack-report-for-the-nearest-miss-spec.md §3. This module only
  * formats: the questions were asked by `eval/simulate.ts`.
  */
 
@@ -108,6 +110,18 @@ class View {
   infeasible(a: Answer): boolean {
     return !a.faulted && a.holds.some((h) => h === false);
   }
+
+  inPopulation(a: Answer, among: ReportAmong): boolean {
+    if (among === "feasible") return this.feasible(a);
+    if (among === "infeasible") return this.infeasible(a);
+    return !a.faulted;
+  }
+
+  emptyPopulation(among: ReportAmong): string {
+    if (among === "feasible") return "no feasible question";
+    if (among === "infeasible") return "no infeasible question";
+    return "no question evaluated";
+  }
 }
 
 function body(sim: Simulation, r: Report): string[] {
@@ -118,7 +132,7 @@ function body(sim: Simulation, r: Report): string[] {
     case "deltas": {
       const ids = sim.refIds.get(r.id) ?? [];
       const names = r.options.on.length > 0 ? r.options.on.map(refText) : ids.map((id) => id);
-      return deltas(v, ids, names);
+      return deltas(v, ids, names, r.options.among);
     }
     case "gates":
       return gates(v);
@@ -126,10 +140,12 @@ function body(sim: Simulation, r: Report): string[] {
       const id = sim.refIds.get(r.id)?.[0];
       return id === undefined
         ? []
-        : best(v, id, refText(r.options.scalar), r.options.direction, r.options.amongFeasible);
+        : best(v, id, refText(r.options.scalar), r.options.direction, r.options.among);
     }
     case "forbidden":
       return forbidden(v);
+    case "slack":
+      return slack(v);
   }
 }
 
@@ -158,10 +174,10 @@ function ledger(v: View, broken: boolean): string[] {
   return table([head, ...rows], numeric);
 }
 
-function deltas(v: View, ids: string[], names: string[]): string[] {
+function deltas(v: View, ids: string[], names: string[], among: ReportAmong): string[] {
   if (v.sim.gridSize === 0) return [NO_GRID];
-  const live = v.grid.filter((a) => !a.faulted);
-  if (live.length === 0) return ["no question evaluated"];
+  const population = v.grid.filter((a) => v.inPopulation(a, among));
+  if (population.length === 0) return [v.emptyPopulation(among)];
   const out: string[] = [];
   ids.forEach((id, k) => {
     const base = v.numOf(v.base, id);
@@ -169,7 +185,7 @@ function deltas(v: View, ids: string[], names: string[]): string[] {
     out.push(`${head}  base ${base === undefined ? "?" : v.show(id, base)}`);
     let low: Answer | undefined;
     let high: Answer | undefined;
-    for (const a of live) {
+    for (const a of population) {
       const d = v.numOf(a, id);
       if (d === undefined) continue;
       if (low === undefined || d.lt(v.numOf(low, id)!)) low = a;
@@ -186,6 +202,12 @@ function deltas(v: View, ids: string[], names: string[]): string[] {
       }
     }
   });
+  const ranked = population.filter((a) => ids.some((id) => v.numOf(a, id) !== undefined)).length;
+  out.push(
+    among === "all"
+      ? `over ${ranked} questions`
+      : `over ${ranked} ${among} of ${v.sim.gridSize} questions`,
+  );
   return out;
 }
 
@@ -226,15 +248,11 @@ function best(
   id: string,
   name: string,
   direction: "max" | "min",
-  amongFeasible: boolean,
+  among: ReportAmong,
 ): string[] {
   if (v.sim.gridSize === 0) return [NO_GRID];
-  const candidates = v.grid.filter(
-    (a) => !a.faulted && v.numOf(a, id) !== undefined && (!amongFeasible || v.feasible(a)),
-  );
-  if (candidates.length === 0) {
-    return [amongFeasible ? "no feasible question" : "no question evaluated"];
-  }
+  const candidates = v.grid.filter((a) => v.inPopulation(a, among) && v.numOf(a, id) !== undefined);
+  if (candidates.length === 0) return [v.emptyPopulation(among)];
   let win = candidates[0]!;
   for (const a of candidates) {
     const d = v.numOf(a, id)!;
@@ -248,9 +266,9 @@ function best(
   const out = [
     v.prose(win),
     `${v.named(name, id)}  ${v.show(id, value)}  (${delta} against base)`,
-    amongFeasible
-      ? `chosen from ${candidates.length} feasible of ${v.sim.gridSize} questions`
-      : `chosen from ${candidates.length} questions`,
+    among === "all"
+      ? `chosen from ${candidates.length} questions`
+      : `chosen from ${candidates.length} ${among} of ${v.sim.gridSize} questions`,
   ];
   if (ties > 1) out.push(`${ties} questions tie; the first in grid order is shown`);
   return out;
@@ -276,4 +294,85 @@ function forbidden(v: View): string[] {
     ...(rows.length > 0 ? table(rows, [false, false]) : ["nothing is forbidden"]),
     `${infeasible} of ${sim.gridSize} questions are infeasible`,
   ];
+}
+
+/** a distance at width `w`, or its canonical decimal when `w` would round it */
+function distanceText(d: Decimal, w: number | null): string {
+  return w !== null && d.decimalPlaces() <= w ? d.toFixed(w) : d.toString();
+}
+
+/** how far a question sits inside a comparison, or how far it misses it */
+function distance(
+  op: ComparisonOp,
+  left: Decimal,
+  right: Decimal,
+  side: "inside" | "outside",
+): Decimal {
+  if (op === "==") return left.minus(right).abs();
+  const below = op === "<" || op === "<=";
+  // `a <= b` has room `b − a` and misses by `a − b`; `a >= b` is the mirror
+  return below === (side === "inside") ? right.minus(left) : left.minus(right);
+}
+
+function slack(v: View): string[] {
+  const { sim } = v;
+  if (sim.gridSize === 0) return [NO_GRID];
+  const feasible = v.grid.filter((a) => v.feasible(a));
+  const out: string[] = [];
+  sim.assertions.forEach((assertion, i) => {
+    out.push(assertion.key);
+    const op = assertion.comparison;
+    if (op === undefined) {
+      out.push("  no single boundary");
+      return;
+    }
+    const numeric = (s: AssertionSides | undefined) =>
+      s === undefined || (s.left.t === "num" && s.right.t === "num");
+    if (!sim.answers.every((a) => numeric(a.sides[i]))) {
+      out.push("  not a numeric comparison");
+      return;
+    }
+    const outside = v.grid.filter(
+      (a) => !a.faulted && a.holds.every((h, j) => (j === i ? h === false : h === true)),
+    );
+    const pools: { side: "inside" | "outside"; pool: Answer[]; empty: string }[] = [
+      ...(op === "=="
+        ? []
+        : [{ side: "inside" as const, pool: feasible, empty: "no feasible question" }]),
+      { side: "outside", pool: outside, empty: "no question fails only this assertion" },
+    ];
+    const rows: string[][] = [];
+    const lines: (number | string)[] = [];
+    const ties: string[] = [];
+    for (const { side, pool, empty } of pools) {
+      const label = side === "inside" ? "inside " : "outside";
+      const measured = pool.flatMap((a) => {
+        const s = a.sides[i];
+        if (s === undefined || s.left.t !== "num" || s.right.t !== "num") return [];
+        return [{ a, d: distance(op, s.left.d, s.right.d, side), w: s.width }];
+      });
+      if (measured.length === 0) {
+        lines.push(`${label}  ${empty}`);
+        continue;
+      }
+      let win = measured[0]!;
+      for (const m of measured) if (m.d.lt(win.d)) win = m;
+      const t = measured.filter((m) => m.d.eq(win.d)).length;
+      lines.push(rows.length);
+      rows.push([
+        label,
+        side === "inside" ? "room" : "miss",
+        distanceText(win.d, win.w),
+        v.prose(win.a),
+      ]);
+      if (t > 1) ties.push(`${t} questions tie ${side}; the first in grid order is shown`);
+    }
+    const laid = table(rows, [false, false, true, false]);
+    for (const line of lines) out.push(`  ${typeof line === "number" ? laid[line]! : line}`);
+    for (const line of ties) out.push(`  ${line}`);
+    out.push(
+      `  from ${feasible.length} feasible and ${outside.length} failing only this, of ${sim.gridSize} questions`,
+    );
+  });
+  return out;
 }

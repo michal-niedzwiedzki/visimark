@@ -93,7 +93,7 @@ A sweep needs four things, and three of them you may already have.
 | `param` | This number is an assumption. | a `vmark` block |
 | `in [...]` and `lattice` | These are the values worth trying. | the `param` line |
 | `assert` | This is what "the plan works" means. | a `vmark` block |
-| `report` | These are the readings I want. | a sheet of its own, usually |
+| `report` | These are the readings I want. | a report comment, or a sheet block of its own |
 
 The rest of this guide takes them in that order.
 
@@ -147,19 +147,16 @@ With **250**<!--vmark=event.attendees--> people at **80.00**<!--vmark=event.tick
 EUR a ticket the day costs **23025.00**<!--vmark=costs.total--> EUR and makes
 **6975.00**<!--vmark=event.profit--> EUR.
 
-## Readings
-
-```vmark #readings
+<!--vmark:report #readings
 report gates
 report forbidden
 report best scalar event.profit direction max among feasible
 report best scalar event.ticket direction min among feasible
-report deltas on event.profit, event.sponsor_share
-```
+report deltas on event.profit, event.sponsor_share among all
+report slack
+-->
 
-```vmark #ledger
-report ledger assertions broken
-```
+<!--vmark:report #ledger report ledger assertions broken-->
 ````
 
 It checks clean, like any other document:
@@ -408,31 +405,51 @@ lever still check normally.
 
 ## 11. Where reports live
 
-A `report` line goes in a sheet block, a `vmark #id` block. It binds nothing
-and stores nothing, the same as a `chart`.
+A `report` line binds nothing and stores nothing, the same as a `chart`. It
+belongs to a sheet, and there are two places to write it.
 
-You can put reports in the sheet whose values they read, but the example keeps
-them apart:
+**In a report comment.** This is what the example does:
 
-````markdown
-## Readings
-
-```vmark #readings
+```markdown
+<!--vmark:report #readings
 report gates
 report forbidden
 report best scalar event.profit direction max among feasible
 report best scalar event.ticket direction min among feasible
-report deltas on event.profit, event.sponsor_share
+report deltas on event.profit, event.sponsor_share among all
+report slack
+-->
+
+<!--vmark:report #ledger report ledger assertions broken-->
 ```
 
-```vmark #ledger
-report ledger assertions broken
+The comment opens with `<!--vmark:report`, a space, and the sheet id, on one
+line. Every line after the id, up to `-->`, is a whole `report` statement,
+keyword included. A sheet with one statement fits on one line, like `#ledger`.
+Blank lines and `#` comments are allowed, as in a block.
+
+A renderer hides HTML comments, so the readings are configuration for
+`simulate` and nothing more. The rendered budget stays prose and tables.
+`simulate` prints every statement back under its `#id` heading, so nothing a
+reader needs is lost.
+
+**In a sheet block.** A `vmark #id` block may hold `report` lines too:
+
+````markdown
+```vmark #readings
+report gates
+report forbidden
 ```
 ````
 
-**A sheet of its own reads as a section of the document.** "Readings" is a
-heading a reviewer can find. It also means the model sheets stay exactly what
-they were before anyone asked for a sweep.
+Use a block when the document is teaching the declaration, or when you want
+it on the page.
+
+**Both can name one sheet.** A comment and a block with the same id are one
+sheet, and its reports run in source order. A comment may also name the sheet
+whose values it reads, such as `#event`, and join it. The example keeps its
+readings in sheets of their own, so the model sheets stay exactly what they
+were before anyone asked for a sweep.
 
 **The long report gets its own sheet.** The ledger prints one row per
 question, 65 here. `simulate` prints sheets in document order, so putting the
@@ -442,12 +459,27 @@ ledger last keeps the short readings at the top of the output.
 Each question is evaluated once, however many reports read it.
 
 `check` reads every `report` line, checks its options and resolves every name
-in it. It never runs one. A report must be in a `#id` block; a document-scope
-block is a `SHEET` error.
+in it. It never runs one. A report must be in a `#id` block or a report
+comment; a document-scope block is a `SHEET` error.
 
-## 12. The five reports, and the question each answers
+A report comment that does not parse is an error too, never an ordinary
+comment:
 
-The list is closed. A document can ask for these five and nothing else, so a
+| Comment | `check` reports |
+|---|---|
+| `<!--vmark:report gates-->` | `SHEET` a report comment has no sheet id |
+| `<!--vmark:report #readings-->` | `SHEET` a report comment declares no report |
+| `<!--vmark:report #readings x = 1-->` | `SHEET` a report comment holds report statements only |
+| `<!--vmark:report #readings report gates--> more` | `SHEET` text after a report comment |
+| a comment with no `-->` | `SHEET` a report comment is not closed with `-->` |
+| a report comment inside a list, a blockquote or a paragraph | `SHEET` a report comment must be at top level |
+| `<!--vmark:reports #readings report gates-->` | `ANCHOR` unknown `vmark:` comment `reports` — expected … |
+
+A comment with one of these errors adds nothing to any sheet.
+
+## 12. The six reports, and the question each answers
+
+The list is closed. A document can ask for these six and nothing else, so a
 Markdown file can never make the tool run code it does not ship.
 
 | You want to know | Ask for | It prints |
@@ -456,10 +488,11 @@ Markdown file can never make the tool run code it does not ship.
 | Which rule bites, and where first? | `report gates` | one row per `assert`: how often it holds and fails |
 | Which lever values are out, whatever else I choose? | `report forbidden` | every lattice point at which no question works |
 | Which question does best at one value? | `report best scalar X direction max among feasible` | the winning question, and its value |
-| How far does a value move across the grid? | `report deltas on X, Y` | the base value, the lowest, the highest, and where |
+| How far does a value move across the grid? | `report deltas on X, Y among all` | the base value, the lowest, the highest, and where |
+| How close does each rule come to breaking? | `report slack` | per `assert`: the least room among working questions, and the smallest miss among questions that break only that rule |
 
-A sensible first sheet is `gates`, `forbidden`, one `best` and one `deltas`,
-with the ledger on its own. That is the example. Add more `best` lines for each
+A sensible first sheet is `gates`, `forbidden`, one `best`, one `deltas` and
+`slack`, with the ledger on its own. That is the example. Add more `best` lines for each
 separate question you have: the example asks two, "most profit" and "cheapest
 ticket".
 
@@ -468,10 +501,11 @@ The exact grammar:
 | Report | Options |
 |---|---|
 | `ledger` | `[assertions broken]` |
-| `deltas` | `[on REF {, REF}]` |
+| `deltas` | `[on REF {, REF}] among feasible\|infeasible\|all` |
 | `gates` | none |
-| `best` | `scalar REF direction max\|min [among feasible]` |
+| `best` | `scalar REF direction max\|min among feasible\|infeasible\|all` |
 | `forbidden` | none |
+| `slack` | none |
 
 ## 13. Choosing what `best` and `deltas` read
 
@@ -482,15 +516,19 @@ anywhere. It cannot name a column.
 feasible` asks *what is the lowest ticket price at which some plan still
 works?* Reading a lever directly is often the clearest way to ask about it.
 
-**Almost always write `among feasible`.** Without it, `best` ranks every
-question that could be computed, including the ones that break your rules. The
-most profitable plan in this grid needs 400 people in a 300-seat venue.
+**Write the population on the line.** `best` and `deltas` end with
+`among feasible`, `among infeasible`, or `among all`. `among feasible` ranks
+the questions that meet every rule. `among all` ranks every question that
+could be computed, including the ones that break the rules. The most profitable
+plan in this grid needs 400 people in a 300-seat venue, so that plan is a
+reading under `among all`.
 
-**Name what `deltas` reads.** `report deltas` with no `on` covers every
-non-param scalar of its own sheet. In a readings sheet, which has no scalars,
-`check` refuses it, because it has nothing to read: name the values with
-`deltas on REF, …`. In a model sheet it prints every
-scalar, including constants that never move:
+**Name what `deltas` reads.** `report deltas among feasible|infeasible|all`
+with no `on` covers every non-param scalar of its own sheet. In a readings
+sheet, which has no scalars, `check` refuses that line, because it has nothing
+to read: name the values with `deltas on REF, …`. A line that leaves out
+`among` fails the synopsis, and that finding is the synopsis alone. In a model
+sheet the no-`on` form prints every scalar, including constants that never move:
 
 ```text
   event.venue_capacity  base 300
@@ -505,16 +543,16 @@ as a read.
 
 ## 14. Mistakes in a report line, and what they report
 
-Each comes from changing one line of the example's `#readings` sheet.
+Each comes from changing one line of the example's `#readings` report comment.
 
-A misspelt name, `report deltas on event.proift`:
+A misspelt name, `report deltas on event.proift among all`:
 
 ```console
   UNDEF   readings.         unknown name `event.proift`
           did you mean `profit`?
 ```
 
-A column, `report deltas on costs.Cost`:
+A column, `report deltas on costs.Cost among all`:
 
 ```console
   TYPE    readings.         a report reads a scalar; costs.Cost is a column
@@ -529,7 +567,7 @@ A report the tool does not ship, `report heatmap`:
 Options that do not fit, `direction lowest`:
 
 ```console
-  TYPE    readings.         `report best` takes: scalar REF direction max|min [among feasible]
+  TYPE    readings.         `report best` takes: scalar REF direction max|min among feasible|infeasible|all
 ```
 
 The same line twice:
@@ -540,8 +578,8 @@ The same line twice:
 
 Two `deltas` lines with different names are not duplicates.
 
-A bare `report deltas` in a sheet with no scalar that is not a param, such as
-`#readings` with only `report deltas` and `report gates`:
+A `report deltas among all` in a sheet with no scalar that is not a param, such as
+`#readings` with only `report deltas among all` and `report gates`:
 
 ```console
   TYPE    readings.         `report deltas` has nothing to read: this sheet has no scalar that is not a param; name the values with `deltas on REF, …`
@@ -603,7 +641,9 @@ grid's 64.
 A lever prints at its width. A percent lever prints as a percent. A derived
 value prints at its own width, so `sponsor_share` prints as `0.333`, not 33.3%.
 
-The next five chapters read each report of the example's output in turn.
+The next five chapters read each report of the example's output in turn;
+chapter 18 reads `slack` beside `best`, because it answers what `best` leaves
+out.
 
 ## 16. Reading `gates`
 
@@ -692,12 +732,55 @@ the domain, step finer, and sweep again.
 
 **`best` does not say how much room is left.** The 60-euro plan makes a profit
 of 900 euros (chapter 23 shows how to read that). A winner at the edge of a
-rule is a winner with no margin.
+rule is a winner with no margin. `slack` is the report that says how much.
+
+### How close each rule comes: `slack`
+
+```text
+report slack
+
+  attendees <= venue_capacity
+    inside   room    0  attendees=300 ticket=60.00 sponsors=2
+    outside  miss  100  attendees=400 ticket=60.00 sponsors=1
+    13 questions tie inside; the first in grid order is shown
+    15 questions tie outside; the first in grid order is shown
+    from 25 feasible and 15 failing only this, of 64 questions
+  profit >= 0
+    inside   room  900.00  attendees=200 ticket=60.00 sponsors=2
+    outside  miss  100.00  attendees=200 ticket=80.00 sponsors=1
+    from 25 feasible and 16 failing only this, of 64 questions
+  sponsor_share <= 50%
+    inside   room  0.000  attendees=100 ticket=100.00 sponsors=2
+    outside  miss  0.056  attendees=100 ticket=80.00 sponsors=2
+    3 questions tie outside; the first in grid order is shown
+    from 25 feasible and 6 failing only this, of 64 questions
+```
+
+One block per assertion, in document order. Each block has two lines:
+
+- **`inside`** is the working question that comes closest to breaking the rule,
+  and its **room**: how far it is from the bound. A room of `0` means the rule
+  binds: a full venue, or a sponsor share of exactly 50%.
+- **`outside`** looks only at questions that break this rule and nothing else,
+  and shows the one that **misses** it by the least. Waive that one rule and the
+  question works.
+
+`room` and `miss` read the same way on `<=` and `>=` rules. The distance is the
+plain difference of the two sides, never rounded, at the width of the wider
+side: `0.556 − 0.50` prints as `0.056`. The last line of each block counts the
+two pools, so you know whether a reading is one candidate or fifty.
+
+Read it next to `best`. The cheapest working ticket has 900.00 euros of
+profit to spare, and nothing closer to break-even works. The cheapest loss is
+100 euros short. Seats, euros and a share are not one unit, so `slack` never
+adds rules together. An `assert` that is not one comparison, such as one using
+`and` or `!=`, prints `no single boundary`; a comparison of dates prints
+`not a numeric comparison`.
 
 ## 19. Reading `deltas`
 
 ```text
-report deltas on event.profit, event.sponsor_share
+report deltas on event.profit, event.sponsor_share among all
 
   event.profit  base 6975.00
     low   -11250.00  (-18225.00)  attendees=100 ticket=60.00 sponsors=0
@@ -705,19 +788,21 @@ report deltas on event.profit, event.sponsor_share
   event.sponsor_share  base 0.333
     low   0.000  (-0.333)  attendees=100 ticket=60.00 sponsors=0
     high  0.714  (+0.381)  attendees=100 ticket=60.00 sponsors=3
+  over 64 questions
 ```
 
 For each value: its base, then the lowest and the highest it reaches across the
 grid, the change from base in brackets, and the first question that gets there.
+The last line counts the questions in that population that produced a number
+for at least one of the named values.
 
 Read it as *how exposed is this number?* Profit swings from an 11250-euro loss
 to a 34200-euro gain. That spread is the size of the bet the organisers are
 making.
 
-**`deltas` ranges over every question, feasible or not.** The 34200 high needs
-400 people, which `forbidden` just ruled out. That is on purpose: `deltas`
-shows how far a value *can* move, and `best … among feasible` shows how far it
-can move inside the rules. Read the two together.
+**`among all` is the range over every question that is not faulted.** The 34200
+high needs 400 people, which `forbidden` just ruled out. **`among feasible` is
+the range inside the rules.** Read the two together.
 
 ## 20. Reading the `ledger`
 
@@ -900,7 +985,8 @@ params:
 
 Now the margin is visible: a profit of **900** euros, and a sponsor share of
 45.5%, close to the 50% limit. That is a plan that works on paper and has
-almost no room. The same plan with a third sponsor fails, as the ledger said:
+almost no room. `slack` (chapter 18) had already put the profit margin at
+900.00. The same plan with a third sponsor fails, as the ledger said:
 
 ```console
 $ cat three.json
@@ -912,6 +998,12 @@ $ visimark eval --scenario three.json conference.md --get event.sponsor_share
 $ echo $?
 1
 ```
+
+`slack` saw this too. Its `sponsor_share` outside line reads `miss  0.056`, a
+share of 0.556 against 50%. It lands on `attendees=100 ticket=80.00 sponsors=2`,
+not on this plan: three questions miss by exactly 0.056, and its tie line says
+so. This plan, `attendees=200 ticket=60.00 sponsors=3`, is the third of them in
+grid order.
 
 ### Adopting the answer
 
@@ -1063,7 +1155,9 @@ Before you trust a sweep:
 - [ ] Every boundary you care about is a lattice point. (Chapter 7.)
 - [ ] You read the question count, and it is the size you meant. (Chapter 8.)
 - [ ] The assertions say what "works" means, all of them. (Chapter 9.)
-- [ ] `best` says `among feasible`, and `deltas` says `on`. (Chapter 13.)
+- [ ] `best` and `deltas` name the population with `among`. (Chapter 13.)
+- [ ] You know each rule's margin from `slack`, not only that it holds.
+      (Chapter 18.)
 - [ ] Any `forbidden` point and any `faulted` question has been explained.
       (Chapters 17 and 21.)
 - [ ] The winning question was looked at in full with `eval --scenario`.
@@ -1078,8 +1172,8 @@ Before you trust a sweep:
    before you read a single report.
 3. **A sweep only sees its points.** Put a point on every boundary, and narrow
    before you step finer.
-4. **`best` is a ranking, not a margin.** Look at the winner with
-   `eval --scenario` before you act on it.
+4. **`best` is a ranking, not a margin.** `slack` gives the margin. Look at
+   the winner with `eval --scenario` before you act on it.
 5. **A false assertion is a reading.** `simulate` exits `0`. Keep `check` as
    the gate.
 
@@ -1089,7 +1183,7 @@ Before you trust a sweep:
 |---|---|
 | [`simulate/conference.md`](simulate/conference.md) | The example from this guide, to run yourself |
 | [`tutorial.md`](tutorial.md) | Chapters 29–31: `param`, scenarios and `simulate`, on a runway plan |
-| [`example-battery-storage.md`](example-battery-storage.md) | A larger model: five levers, 577 questions, four lender covenants, every report |
+| [`example-battery-storage.md`](example-battery-storage.md) | A larger model: five levers, 577 questions, four lender covenants, five of the six reports |
 | [`ci.md`](ci.md) | Chapter 21: the sweep in CI, in full |
 | [`cli-reference.md`](cli-reference.md) | Every command, option and exit code |
 | [`design/add-a-simulate-command-spec.md`](design/add-a-simulate-command-spec.md) | The exact contract: questions, output layout, every report's body |
