@@ -2,11 +2,11 @@ import { expect, test } from "bun:test";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { runCli } from "visimark";
 import { readTools } from "../src/tools/read.js";
 import type { Outcome, ToolDef } from "../src/tools/types.js";
 
 const repo = join(import.meta.dir, "../../..");
-const cli = join(repo, "packages/visimark/src/cli/main.ts");
 const fixture = readFileSync(
   join(repo, "packages/visimark/test/fixtures/simulation/simulate.md"),
   "utf8",
@@ -30,26 +30,29 @@ function faultOf(outcome: Outcome): { code: string; message: string } {
 }
 
 /** What the CLI prints for `path`, with the elapsed time cut from the summary line. */
-function cliLines(path: string): { stdout: string[]; stderr: string[]; exit: number } {
-  const r = Bun.spawnSync(["bun", cli, "simulate", path], { cwd: repo });
-  const lines = (b: Uint8Array) => {
-    const t = new TextDecoder().decode(b);
-    return t === "" ? [] : t.replace(/\n$/, "").split("\n");
-  };
+async function cliLines(
+  path: string,
+): Promise<{ stdout: string[]; stderr: string[]; exit: number }> {
+  const stdout: string[] = [];
+  const stderr: string[] = [];
+  const exit = await runCli(["simulate", path], {
+    out: (l) => stdout.push(l),
+    err: (l) => stderr.push(l),
+  });
   return {
-    stdout: lines(r.stdout),
-    stderr: lines(r.stderr).map((l) => l.replace(/ in [0-9.]+ (ms|s|min( [0-9]+ s)?)$/, "")),
-    exit: r.exitCode,
+    stdout,
+    stderr: stderr.map((l) => l.replace(/ in [0-9.]+ (ms|s|min( [0-9]+ s)?)$/, "")),
+    exit,
   };
 }
 
 const dir = mkdtempSync(join(tmpdir(), "visimark-simulate-"));
 
 /** the tool on `text` as `content` against the CLI on the same text as a file */
-function twin(text: string, name: string): void {
+async function twin(text: string, name: string): Promise<void> {
   const file = join(dir, name);
   writeFileSync(file, text);
-  const expected = cliLines(file);
+  const expected = await cliLines(file);
   const body = ok(tool().run({ content: text }));
   const relabel = (l: string) => l.replaceAll(file, "<content>");
   expect(body["stdout"]).toEqual(expected.stdout.map(relabel));
@@ -57,8 +60,8 @@ function twin(text: string, name: string): void {
   expect(body["status"]).toBe(expected.exit === 0 ? "ok" : "problems");
 }
 
-test("the battery example by path gives the CLI's lines, minus the elapsed time", () => {
-  const expected = cliLines(battery);
+test("the battery example by path gives the CLI's lines, minus the elapsed time", async () => {
+  const expected = await cliLines(battery);
   const body = ok(tool().run({ path: battery }));
   expect(body).toMatchObject({ command: "simulate", status: "ok", file: battery, skipped: {} });
   expect(body["stdout"]).toEqual(expected.stdout);
@@ -77,26 +80,26 @@ test("the clean fixture as content: header <content>, nothing skipped", () => {
   expect(body["skipped"]).toEqual({});
 });
 
-test("the other cases of the simulate spec have an MCP twin", () => {
-  twin(fixture, "clean.md");
-  twin(fixture.replace("plan.margin among all", "plan.marginn among all"), "typo.md");
-  twin(
+test("the other cases of the simulate spec have an MCP twin", async () => {
+  await twin(fixture, "clean.md");
+  await twin(fixture.replace("plan.margin among all", "plan.marginn among all"), "typo.md");
+  await twin(
     fixture.replace(
       "hours precision 0 integer in [0, 20] lattice 10",
       "hours precision 0 integer in [0, 20] lattice 3",
     ),
     "step.md",
   );
-  twin(
+  await twin(
     fixture.replace(
       "assert margin >= 0\n",
       "per_hour precision 2 = margin / hours\nassert margin >= 0\nassert per_hour >= 0\n",
     ),
     "faulted.md",
   );
-  twin(fixture.replace(/ lattice \S+/g, ""), "nolattice.md");
-  twin(fixture.replace("assert margin >= 0", "assert margin >= 2000"), "infeasible.md");
-  twin(readFileSync(join(repo, "docs/example-invoice.md"), "utf8"), "noreport.md");
+  await twin(fixture.replace(/ lattice \S+/g, ""), "nolattice.md");
+  await twin(fixture.replace("assert margin >= 0", "assert margin >= 2000"), "infeasible.md");
+  await twin(readFileSync(join(repo, "docs/example-invoice.md"), "utf8"), "noreport.md");
 }, 30_000);
 
 test("a document with no report statement is problems, not a fault", () => {
