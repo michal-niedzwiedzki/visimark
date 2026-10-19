@@ -177,3 +177,12 @@ test("the cap is enforced before the grid is allocated", () => {
   expect(refused.code).toBe("LIMIT");
   expect(refused.message).toContain("1003003002 questions");
 });
+
+test("a single huge lattice is refused before its points are allocated", () => {
+  const huge =
+    "```vmark #s\nparam a precision 0 integer in [0, 1000000000000] lattice 1 = default 0\n" +
+    "x precision 0 = a\nreport ledger assertions broken\n```\n";
+  const refused = faultOf(tool(100).run({ content: huge }));
+  expect(refused.code).toBe("LIMIT");
+  expect(refused.message).toContain("1000000000002 questions");
+});

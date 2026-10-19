@@ -1,5 +1,5 @@
 import type { Ref } from "../lang/ast.js";
-import { latticePoints } from "../lang/lattice.js";
+import { analyzeLattice, latticePoints, type LatticeInput } from "../lang/lattice.js";
 import type { DocumentFile } from "../fs/reader.js";
 import { build } from "../model/build.js";
 import {
@@ -133,6 +133,16 @@ function assertionKey(source: string): string {
     .replace(/\s+/g, " ");
 }
 
+function latticeInput(p: ParamInfo): LatticeInput {
+  return {
+    name: p.name,
+    ...(p.domain === undefined ? {} : { domain: p.domain }),
+    step: p.lattice!.step,
+    stepText: p.lattice!.literal.text,
+    percent: p.percent,
+  };
+}
+
 function latticeParams(params: ParamInfo[]): LatticeParam[] {
   const swept = params.filter((p) => p.lattice !== undefined);
   const count = new Map<string, number>();
@@ -142,13 +152,7 @@ function latticeParams(params: ParamInfo[]): LatticeParam[] {
     label: count.get(p.name)! > 1 ? `${p.sheetId}.${p.name}` : p.name,
     percent: p.percent,
     precision: p.precision ?? 0,
-    points: latticePoints({
-      name: p.name,
-      ...(p.domain === undefined ? {} : { domain: p.domain }),
-      step: p.lattice!.step,
-      stepText: p.lattice!.literal.text,
-      percent: p.percent,
-    }),
+    points: latticePoints(latticeInput(p)),
   }));
 }
 
@@ -266,8 +270,19 @@ export function simulate(source: string, opts: SimulateOptions = {}): Simulation
   const units = new Map<string, string>();
   for (const [k, u] of base.unitMaps) units.set(k, formatUnit(u.map));
 
+  // the size is counted from the lattices' declared extents, before any point is allocated
+  if (opts.onSize) {
+    const counts = gridFault
+      ? []
+      : allParams
+          .filter((p) => p.lattice !== undefined)
+          .map((p) => {
+            const a = analyzeLattice(latticeInput(p));
+            return a.ok ? a.count : 0;
+          });
+    opts.onSize(counts.length === 0 ? 1 : counts.reduce((n, c) => n * c, 1) + 1);
+  }
   const params = gridFault ? [] : latticeParams(allParams);
-  opts.onSize?.(params.length === 0 ? 1 : params.reduce((n, q) => n * q.points.length, 1) + 1);
   const grid = gridQuestions(params);
   const sim: Simulation = {
     params,
