@@ -1,5 +1,7 @@
 # A `visimark_simulate` tool in `visimark-mcp` — feature spec
 
+**Status:** approved (#330) · **Date:** 2026-10-19 · **Decision:** [APPROVED](https://github.com/michal-niedzwiedzki/visimark/issues/330#issuecomment-6263341560)
+
 Issue [#330](https://github.com/michal-niedzwiedzki/visimark/issues/330), the
 follow-up that [`add-a-simulate-command-spec.md`](add-a-simulate-command-spec.md)
 §9 left open. That spec stays a record of #259; this one supersedes its
