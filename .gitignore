@@ -19,9 +19,5 @@ docs/WIP/
 
 # tooling specific files
 .obsidian/
-.vscode/*
-# Shared launch, task and workspace settings for this repository are tracked.
-!.vscode/launch.json
-!.vscode/settings.json
-!.vscode/tasks.json
+.vscode/
 .worktrees/
