@@ -15,6 +15,8 @@ describe("the bundled simulation examples", () => {
       const r = pgSimulate(text, name, { now: () => 0 });
       expect(r.stdout.length).toBeGreaterThan(1);
       expect(r.stderr.some((l) => l.fault)).toBe(false);
-    });
+      // a whole sweep (577 questions for the battery example), so it needs more than bun's 5 s
+      // default on a loaded CI runner
+    }, 30_000);
   }
 });
