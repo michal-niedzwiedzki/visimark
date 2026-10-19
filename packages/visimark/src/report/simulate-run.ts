@@ -8,8 +8,9 @@ import { describeFinding } from "./format.js";
 import { renderBlocked, renderSheet } from "./simulate.js";
 
 export interface SimulateRunOptions extends Pick<CheckOptions, "doc"> {
-  /** called once the grid is planned, before any question runs; it may throw to stop the run */
-  onPlan?: (plan: { questions: number; latticeParams: number }) => void;
+  /** called with the question count (base included) before the grid is built or any question
+   *  runs; it may throw to stop the run */
+  onPlan?: (plan: { questions: number }) => void;
   /** called with the plan's stderr line as soon as it is known, for a caller that streams */
   onPlanLine?: (line: string) => void;
   /** called after each question, 1-based */
@@ -39,9 +40,9 @@ export function simulateRun(
   const stderr: SimulateRun["stderr"] = [];
   const sim = simulate(source, {
     ...(opts.doc ? { doc: opts.doc } : {}),
+    onSize: (questions) => opts.onPlan?.({ questions }),
     onPlan: (plan) => {
       const questions = plan.gridBuilt ? plan.gridSize + 1 : 0;
-      opts.onPlan?.({ questions, latticeParams: plan.latticeCount });
       const line = `simulate: ${label}: ${questions} questions (${plan.latticeCount} lattice params)`;
       stderr.push({ text: line });
       opts.onPlanLine?.(line);

@@ -247,9 +247,10 @@ $ bunx visimark-mcp        # a machine with Bun but no Node
 <p>The installed command runs under whichever of Bun or Node is on your <code>PATH</code>.
 On Windows, npm's global shim needs <code>sh</code> on <code>PATH</code> — Git Bash or WSL provide
 it, plain PowerShell does not.</p>
-<p>There is exactly one flag, and you do not need it yet:</p>
-<pre><code>visimark-mcp [--allow-write]
+<p>There are two flags, and you do not need either yet:</p>
+<pre><code>visimark-mcp [--allow-write] [--max-questions N]
 </code></pre>
+<p><code>--allow-write</code> is Part 4. <code>--max-questions N</code> bounds <code>visimark_simulate</code>, in chapter 11.</p>
 <p>An unrecognised option is refused with exit <code>2</code> before the transport starts —
 the same discipline as the CLI. Once stdio is the protocol stream there is
 nowhere left to print a usage line, so the check happens first.</p>

@@ -163,3 +163,17 @@ test("a grid that cannot be built has no questions and is never refused", () => 
   const step = fixture.replace("lattice 10", "lattice 3");
   expect(ok(tool(1).run({ content: step }))["stdout"].at(-1)).toBe("  (cannot start)");
 });
+
+test("the cap is enforced before the grid is allocated", () => {
+  // a billion questions: building the grid would exhaust memory long before it returned
+  const huge =
+    "```vmark #s\n" +
+    "param a precision 0 integer in [0, 1000] lattice 1 = default 0\n" +
+    "param b precision 0 integer in [0, 1000] lattice 1 = default 0\n" +
+    "param c precision 0 integer in [0, 1000] lattice 1 = default 0\n" +
+    "x precision 0 = a + b + c\n" +
+    "report ledger assertions broken\n```\n";
+  const refused = faultOf(tool(100).run({ content: huge }));
+  expect(refused.code).toBe("LIMIT");
+  expect(refused.message).toContain("1003003002 questions");
+});

@@ -91,6 +91,9 @@ export interface Simulation {
 
 export interface SimulateOptions {
   doc?: DocumentFile;
+  /** called with the question count (base included) before the grid is built, so a caller can
+   *  refuse a grid too big to allocate; it may throw */
+  onSize?: (questions: number) => void;
   /** called once the grid and the blocked sheets are known, before any grid question */
   onPlan?: (sim: Simulation) => void;
   /** called after each question is evaluated, `i` of `n` (base counted) */
@@ -264,6 +267,7 @@ export function simulate(source: string, opts: SimulateOptions = {}): Simulation
   for (const [k, u] of base.unitMaps) units.set(k, formatUnit(u.map));
 
   const params = gridFault ? [] : latticeParams(allParams);
+  opts.onSize?.(params.length === 0 ? 1 : params.reduce((n, q) => n * q.points.length, 1) + 1);
   const grid = gridQuestions(params);
   const sim: Simulation = {
     params,

@@ -99,11 +99,13 @@ The installed command runs under whichever of Bun or Node is on your `PATH`.
 On Windows, npm's global shim needs `sh` on `PATH` — Git Bash or WSL provide
 it, plain PowerShell does not.
 
-There is exactly one flag, and you do not need it yet:
+There are two flags, and you do not need either yet:
 
 ```
-visimark-mcp [--allow-write]
+visimark-mcp [--allow-write] [--max-questions N]
 ```
+
+`--allow-write` is Part 4. `--max-questions N` bounds `visimark_simulate`, in chapter 11.
 
 An unrecognised option is refused with exit `2` before the transport starts —
 the same discipline as the CLI. Once stdio is the protocol stream there is

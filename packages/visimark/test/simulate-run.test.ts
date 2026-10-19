@@ -41,7 +41,7 @@ test("a sheet that cannot start is counted and its line is a fault", () => {
 });
 
 test("onPlan sees the question count and may throw to stop the run", () => {
-  const seen: { questions: number; latticeParams: number }[] = [];
+  const seen: { questions: number }[] = [];
   let asked = 0;
   expect(() =>
     simulateRun(fixture, "s.md", {
@@ -52,6 +52,6 @@ test("onPlan sees the question count and may throw to stop the run", () => {
       onQuestion: () => asked++,
     }),
   ).toThrow("stop");
-  expect(seen).toEqual([{ questions: 10, latticeParams: 2 }]);
+  expect(seen).toEqual([{ questions: 10 }]);
   expect(asked).toBe(0);
 });
