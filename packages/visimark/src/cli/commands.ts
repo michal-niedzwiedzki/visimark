@@ -11,7 +11,7 @@ import type { DocModel } from "../model/types.js";
 import { locate, NO_FORMULAS_MARKER } from "../parse/document.js";
 import { infer } from "../infer/propose.js";
 import { planInfer } from "../infer/write.js";
-import { describeFinding, formatCheck } from "../report/format.js";
+import { formatCheck } from "../report/format.js";
 import { elapsedText } from "../report/simulate.js";
 import { simulateRun } from "../report/simulate-run.js";
 import { explainText, explainView } from "../report/explain.js";

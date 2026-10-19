@@ -29,7 +29,10 @@ test("a document with no report statement is noReport and prints nothing", () =>
 });
 
 test("a sheet that cannot start is counted and its line is a fault", () => {
-  const run = simulateRun(fixture.replace("plan.margin among all", "plan.marginn among all"), "s.md");
+  const run = simulateRun(
+    fixture.replace("plan.margin among all", "plan.marginn among all"),
+    "s.md",
+  );
   expect(run.blocked).toBe(1);
   expect(run.stdout.slice(-2)).toEqual(["#plan", "  (cannot start)"].slice(-2));
   expect(run.stderr.some((l) => l.fault === true && l.text.includes("cannot start: UNDEF"))).toBe(
