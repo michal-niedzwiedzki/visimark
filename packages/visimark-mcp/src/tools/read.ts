@@ -44,10 +44,11 @@ import {
   type Resolved,
 } from "../input.js";
 import { engineVersion } from "../version.js";
+import { simulateTool, type SimulateLimits } from "./simulate.js";
 import { READ_ONLY, docInputSchema, type Outcome, type ToolDef } from "./types.js";
 
 /**
- * The six read tools. Every one of them is `readOnlyHint: true`,
+ * The seven read tools. Every one of them is `readOnlyHint: true`,
  * `destructiveHint: false` — `fmt` and `infer` included, because planning is
  * not writing. They return the edits they would make and never touch disk;
  * the apply half is task 6's, behind the gate.
@@ -399,11 +400,17 @@ function artifactPaths(result: ReturnType<typeof check>): string[] {
   return out;
 }
 
-export const READ_TOOLS: readonly ToolDef[] = [
-  ref,
-  checkTool,
-  explain,
-  evalTool,
-  inferTool,
-  fmtTool,
-];
+export function readTools(limits: Partial<SimulateLimits> = {}): readonly ToolDef[] {
+  return [
+    ref,
+    checkTool,
+    explain,
+    evalTool,
+    inferTool,
+    fmtTool,
+    simulateTool({ maxQuestions: limits.maxQuestions }),
+  ];
+}
+
+/** The read tools with no cap on `visimark_simulate`. */
+export const READ_TOOLS: readonly ToolDef[] = readTools();

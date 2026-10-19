@@ -173,8 +173,9 @@ means the command could not run at all, and `WARN`/`NOTE` are advice that is
 printed without failing anything.
 
 **If you cannot shell out, there is an MCP server.** `visimark-mcp` serves
-every command above except `simulate` as a tool — `visimark_check`, `visimark_fmt`,
-`visimark_infer`, `visimark_eval`, `visimark_explain`, `visimark_ref`, plus
+every command above as a tool — `visimark_check`, `visimark_fmt`,
+`visimark_infer`, `visimark_eval`, `visimark_explain`, `visimark_ref`,
+`visimark_simulate`, plus
 `visimark_fmt_apply` and `visimark_infer_apply` behind an operator-controlled
 write gate. Its read tools take a document as `content` as readily as a
 `path`, so a table you are drafting in context needs no temp file. It returns

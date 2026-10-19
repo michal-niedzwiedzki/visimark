@@ -13,7 +13,7 @@ import { errorEnvelopeOf } from "./envelope.js";
 import { closedGate, type Gate } from "./gate.js";
 import { PROMPTS, promptFor } from "./prompts.js";
 import { RESOURCES, readResource, resourceFor } from "./resources.js";
-import { READ_TOOLS } from "./tools/read.js";
+import { readTools } from "./tools/read.js";
 import type { ToolDef } from "./tools/types.js";
 import { writeTools } from "./tools/write.js";
 import { serverVersion } from "./version.js";
@@ -27,6 +27,8 @@ import { serverVersion } from "./version.js";
 
 export interface ServerDeps {
   readonly allowWrite: boolean;
+  /** `--max-questions`: absent means `visimark_simulate` has no cap */
+  readonly maxQuestions?: number;
 }
 
 /** Mutable only from `roots/list`, which is the host talking, never a tool. */
@@ -91,7 +93,8 @@ export function createServer(deps: ServerDeps): {
     },
   );
 
-  const tools = (): ToolDef[] => [...READ_TOOLS, ...writeTools(roots.gate)];
+  const read = readTools({ maxQuestions: deps.maxQuestions });
+  const tools = (): ToolDef[] => [...read, ...writeTools(roots.gate)];
 
   server.setRequestHandler(ListToolsRequestSchema, () => ({
     tools: tools().map((t) => ({

@@ -28,7 +28,7 @@ the questions that turn up once you are actually using it.
 |---|---|---|
 | 1. What this is, and what it is not | 1–2 | The shape of the thing, and its one hard boundary |
 | 2. The five-minute setup | 3–6 | A running server your agent can talk to |
-| 3. The six read tools | 7–11 | `check`, `eval`, `explain`, `infer`, `fmt`, `ref` |
+| 3. The seven read tools | 7–11 | `check`, `eval`, `explain`, `infer`, `fmt`, `ref`, `simulate` |
 | 4. Turning on writes | 12–15 | The gate, the plan/apply split, and what refuses it |
 | 5. What the server teaches the agent | 16–17 | Resources and prompts |
 | 6. Operating it | 18–20 | Runtimes, versions, and what still belongs in CI |
@@ -48,7 +48,7 @@ MCP is the standard answer to that gap — a host (an editor, an agent
 framework, a chat client) declares a server, the server declares tools, and
 the model calls them the way it calls any other tool. `visimark-mcp` is
 VisiMark's half of that: it imports the same engine the CLI does — never
-shells out to it — and serves every command except `simulate` as a tool, the authoring
+shells out to it — and serves every command as a tool, the authoring
 discipline as resources, and two orderings agents reliably get wrong as
 prompts.
 
@@ -99,11 +99,13 @@ The installed command runs under whichever of Bun or Node is on your `PATH`.
 On Windows, npm's global shim needs `sh` on `PATH` — Git Bash or WSL provide
 it, plain PowerShell does not.
 
-There is exactly one flag, and you do not need it yet:
+There are two flags, and you do not need either yet:
 
 ```
-visimark-mcp [--allow-write]
+visimark-mcp [--allow-write] [--max-questions N]
 ```
+
+`--allow-write` is Part 4. `--max-questions N` bounds `visimark_simulate`, in chapter 11.
 
 An unrecognised option is refused with exit `2` before the transport starts —
 the same discipline as the CLI. Once stdio is the protocol stream there is
@@ -167,9 +169,9 @@ Then `notifications/initialized`, and `tools/list`:
 ```json
 → {"jsonrpc":"2.0","method":"notifications/initialized"}
 → {"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}
-← … eight tools, named visimark_check, visimark_eval, visimark_explain,
+← … nine tools, named visimark_check, visimark_eval, visimark_explain,
     visimark_fmt, visimark_fmt_apply, visimark_infer, visimark_infer_apply,
-    visimark_ref …
+    visimark_ref, visimark_simulate …
 ```
 
 If your host has no console for this, the repository's own smoke test does
@@ -177,12 +179,12 @@ exactly this exchange, with no dependency on anything else in the repo:
 
 ```console
 $ node scripts/mcp-handshake.mjs "$(which visimark-mcp)"
-mcp-handshake: ok — 8 tools, server 0.1.8, engine 0.1.8, and visimark_check ran
+mcp-handshake: ok — 9 tools, server 0.1.8, engine 0.1.8, and visimark_check ran
 $ bun  scripts/mcp-handshake.mjs "$(which visimark-mcp)"
 ```
 
-Eight tools listed and a version number back is the whole test. Nothing about
-the eight tools themselves matters yet — that is Part 3.
+Nine tools listed and a version number back is the whole test. Nothing about
+the nine tools themselves matters yet — that is Part 3.
 
 ## 6. Ask it about a real document
 
@@ -232,7 +234,7 @@ ever touching disk.
 
 ---
 
-# Part 3 — The six read tools
+# Part 3 — The seven read tools
 
 ## 7. `path` or `content`, never both, never neither
 
@@ -380,6 +382,28 @@ what happens when it no longer matches.
 Both `infer` and `fmt` carry `readOnlyHint: true` in their tool annotation —
 planning is not writing, and the annotation says so at the protocol level, not
 only in prose.
+
+### A sweep: `visimark_simulate`
+
+`visimark_simulate` is the twin of `visimark simulate`. It asks every question a
+document's `lattice` params declare, plus the base, and returns what its `report`
+statements ask for. It takes `path` or `content`, and `failOnFault` to make a
+report sheet that cannot start a `problems` result.
+
+```json
+→ {"name":"visimark_simulate","arguments":{"path":"docs/example-battery-storage.md"}}
+← {"command":"simulate","status":"ok",
+   "stdout":["==> docs/example-battery-storage.md <==","#returns", …],
+   "stderr":["simulate: …: 577 questions (5 lattice params)",
+             "simulate: …: 3 of 3 sheets ran"], "skipped":{}}
+```
+
+`stdout` and `stderr` are the CLI's lines, for reading, not parsing. The summary
+line carries no elapsed time, so two calls on one text return one result. There
+is no progress report: the call returns when the whole sweep has run. A large
+grid blocks the server while it runs, so an operator can start it with
+`--max-questions N`; a call over the limit is refused with a `LIMIT` fault
+before any question runs.
 
 ---
 

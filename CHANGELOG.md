@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- **`visimark-mcp` serves `visimark_simulate`** (#330), the MCP twin of `visimark simulate`. It takes `path` or `content` and `failOnFault`, and returns the usual envelope with the CLI's lines as `stdout` and `stderr` arrays, without the elapsed time. The server gains `--max-questions N`, which refuses a larger grid with a new `LIMIT` fault before any question runs. `visimark` exports `simulateRun`, the one function the CLI, the playground and the tool share. Spec: [`visimark-simulate-mcp-tool-spec.md`](docs/design/visimark-simulate-mcp-tool-spec.md).
+
 ### Fixed
 
 - **A scan's GitHub permalinks open the Markdown source, not its rendered

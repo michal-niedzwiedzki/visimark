@@ -100,6 +100,7 @@ export {
 } from "./eval/scenario.js";
 export { formatInfer } from "./report/infer.js";
 export { lineOf } from "./report/lines.js";
+export { simulateRun, type SimulateRun, type SimulateRunOptions } from "./report/simulate-run.js";
 export { applyUnit, parseDecorated, type Unit } from "./eval/units.js";
 export type { Binding, DocModel, Finding, FindingCode, Sheet } from "./model/types.js";
 export { ERROR_CODES, isProblem } from "./model/types.js";

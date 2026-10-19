@@ -83,6 +83,7 @@ maybe(
       "visimark_infer",
       "visimark_infer_apply",
       "visimark_ref",
+      "visimark_simulate",
     ]);
 
     const byName = new Map(
@@ -106,7 +107,7 @@ maybe(
   "--allow-write still lists the same tools",
   async () => {
     const { tools } = await handshake(["--allow-write"]);
-    expect((tools as { tools: unknown[] }).tools.length).toBe(8);
+    expect((tools as { tools: unknown[] }).tools.length).toBe(9);
   },
   20_000,
 );
@@ -122,5 +123,17 @@ test("an unrecognised option exits 2 before the transport starts", async () => {
   expect(err.trim()).toBe("visimark-mcp: unknown option --nope");
   // Not one byte of protocol traffic: the refusal happens before stdio is the
   // protocol stream, which is the whole reason it happens first (#121).
+  expect(out).toBe("");
+});
+
+test("a bad --max-questions exits 2 before the transport starts", async () => {
+  const proc = Bun.spawn([launcher, "--max-questions", "0"], { stdout: "pipe", stderr: "pipe" });
+  const [code, out, err] = await Promise.all([
+    proc.exited,
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+  ]);
+  expect(code).toBe(2);
+  expect(err.trim()).toBe("visimark-mcp: --max-questions needs a positive integer, got 0");
   expect(out).toBe("");
 });
