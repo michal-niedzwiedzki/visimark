@@ -115,13 +115,14 @@
 <a href="#4-point-a-host-at-it" data-level="2">4. Point a host at it</a>
 <a href="#5-prove-it-is-actually-alive" data-level="2">5. Prove it is actually alive</a>
 <a href="#6-ask-it-about-a-real-document" data-level="2">6. Ask it about a real document</a>
-<a href="#part-3-the-six-read-tools" data-level="1">Part 3 — The six read tools</a>
+<a href="#part-3-the-seven-read-tools" data-level="1">Part 3 — The seven read tools</a>
 <a href="#7-path-or-content-never-both-never-neither" data-level="2">7. path or content, never both, never neither</a>
 <a href="#what-content-mode-cannot-see" data-level="3">What content mode cannot see</a>
 <a href="#8-visimark_check-does-the-document-agree-with-itself" data-level="2">8. visimark_check — does the document agree with itself?</a>
 <a href="#9-visimark_eval-read-a-computed-value-straight-out-of-a-document" data-level="2">9. visimark_eval — read a computed value straight out of a document</a>
 <a href="#10-visimark_explain-and-visimark_ref-read-the-documents-shape-or-the-languages" data-level="2">10. visimark_explain and visimark_ref — read the document's shape, or the language's</a>
 <a href="#11-visimark_infer-and-visimark_fmt-the-two-tools-that-only-plan" data-level="2">11. visimark_infer and visimark_fmt — the two tools that only plan</a>
+<a href="#a-sweep-visimark_simulate" data-level="3">A sweep: visimark_simulate</a>
 <a href="#part-4-turning-on-writes" data-level="1">Part 4 — Turning on writes</a>
 <a href="#12-the-write-gate-two-conditions-neither-reachable-from-a-tool-call" data-level="2">12. The write gate: two conditions, neither reachable from a tool call</a>
 <a href="#13-visimark_fmt_apply-the-plan-you-already-reviewed-and-only-that-plan" data-level="2">13. visimark_fmt_apply — the plan you already reviewed, and only that plan</a>
@@ -179,9 +180,9 @@ the questions that turn up once you are actually using it.</p>
 <td>A running server your agent can talk to</td>
 </tr>
 <tr>
-<td>3. The six read tools</td>
+<td>3. The seven read tools</td>
 <td>7–11</td>
-<td><code>check</code>, <code>eval</code>, <code>explain</code>, <code>infer</code>, <code>fmt</code>, <code>ref</code></td>
+<td><code>check</code>, <code>eval</code>, <code>explain</code>, <code>infer</code>, <code>fmt</code>, <code>ref</code>, <code>simulate</code></td>
 </tr>
 <tr>
 <td>4. Turning on writes</td>
@@ -211,7 +212,7 @@ hand arbitrary commands to, and no reason to already know a CLI called
 framework, a chat client) declares a server, the server declares tools, and
 the model calls them the way it calls any other tool. <code>visimark-mcp</code> is
 VisiMark's half of that: it imports the same engine the CLI does — never
-shells out to it — and serves every command except <code>simulate</code> as a tool, the authoring
+shells out to it — and serves every command as a tool, the authoring
 discipline as resources, and two orderings agents reliably get wrong as
 prompts.</p>
 <p>The "imports, never shells out" part matters for one concrete reason: a
@@ -292,18 +293,18 @@ fine.</p>
 <p>Then <code>notifications/initialized</code>, and <code>tools/list</code>:</p>
 <pre><code class="language-json">→ {"jsonrpc":"2.0","method":"notifications/initialized"}
 → {"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}
-← … eight tools, named visimark_check, visimark_eval, visimark_explain,
+← … nine tools, named visimark_check, visimark_eval, visimark_explain,
     visimark_fmt, visimark_fmt_apply, visimark_infer, visimark_infer_apply,
-    visimark_ref …
+    visimark_ref, visimark_simulate …
 </code></pre>
 <p>If your host has no console for this, the repository's own smoke test does
 exactly this exchange, with no dependency on anything else in the repo:</p>
 <pre><code class="language-console">$ node scripts/mcp-handshake.mjs "$(which visimark-mcp)"
-mcp-handshake: ok — 8 tools, server 0.1.8, engine 0.1.8, and visimark_check ran
+mcp-handshake: ok — 9 tools, server 0.1.8, engine 0.1.8, and visimark_check ran
 $ bun  scripts/mcp-handshake.mjs "$(which visimark-mcp)"
 </code></pre>
-<p>Eight tools listed and a version number back is the whole test. Nothing about
-the eight tools themselves matters yet — that is Part 3.</p>
+<p>Nine tools listed and a version number back is the whole test. Nothing about
+the nine tools themselves matters yet — that is Part 3.</p>
 <h2 id="6-ask-it-about-a-real-document">6. Ask it about a real document</h2>
 <p>One tool call, end to end, against a document already in this repository —
 <code>docs/example-invoice.md</code>, which is clean, and its deliberately-broken sibling
@@ -340,7 +341,7 @@ Chapter 10 of <a href="ci.html"><code>ci.md</code></a> is the full explanation o
 the point is narrower — you just verified an in-progress draft with no file
 ever touching disk.</p>
 <hr>
-<h1 id="part-3-the-six-read-tools">Part 3 — The six read tools</h1>
+<h1 id="part-3-the-seven-read-tools">Part 3 — The seven read tools</h1>
 <h2 id="7-path-or-content-never-both-never-neither">7. <code>path</code> or <code>content</code>, never both, never neither</h2>
 <p>Every read tool takes <strong>either</strong> <code>path</code> <strong>or</strong> <code>content</code> — this is the one
 place the surface deliberately does not mirror the CLI, because an agent
@@ -460,6 +461,23 @@ what happens when it no longer matches.</p>
 <p>Both <code>infer</code> and <code>fmt</code> carry <code>readOnlyHint: true</code> in their tool annotation —
 planning is not writing, and the annotation says so at the protocol level, not
 only in prose.</p>
+<h3 id="a-sweep-visimark_simulate">A sweep: <code>visimark_simulate</code></h3>
+<p><code>visimark_simulate</code> is the twin of <code>visimark simulate</code>. It asks every question a
+document's <code>lattice</code> params declare, plus the base, and returns what its <code>report</code>
+statements ask for. It takes <code>path</code> or <code>content</code>, and <code>failOnFault</code> to make a
+report sheet that cannot start a <code>problems</code> result.</p>
+<pre><code class="language-json">→ {"name":"visimark_simulate","arguments":{"path":"docs/example-battery-storage.md"}}
+← {"command":"simulate","status":"ok",
+   "stdout":["==> docs/example-battery-storage.md &#x3C;==","#returns", …],
+   "stderr":["simulate: …: 577 questions (5 lattice params)",
+             "simulate: …: 3 of 3 sheets ran"], "skipped":{}}
+</code></pre>
+<p><code>stdout</code> and <code>stderr</code> are the CLI's lines, for reading, not parsing. The summary
+line carries no elapsed time, so two calls on one text return one result. There
+is no progress report: the call returns when the whole sweep has run. A large
+grid blocks the server while it runs, so an operator can start it with
+<code>--max-questions N</code>; a call over the limit is refused with a <code>LIMIT</code> fault
+before any question runs.</p>
 <hr>
 <h1 id="part-4-turning-on-writes">Part 4 — Turning on writes</h1>
 <h2 id="12-the-write-gate-two-conditions-neither-reachable-from-a-tool-call">12. The write gate: two conditions, neither reachable from a tool call</h2>
