@@ -36,8 +36,8 @@
     "prepublishOnly": "bun run typecheck && bun test && bun run build"
   },
   "devDependencies": {
-    "@happy-dom/global-registrator": "^20.14.6",
-    "markdown-it": "^15.0.2",
+    "@happy-dom/global-registrator": "^21.0.3",
+    "markdown-it": "^15.0.3",
     "markdown-it-footnote": "^4.0.0"
   },
   "engines": {
