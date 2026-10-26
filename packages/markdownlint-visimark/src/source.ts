@@ -36,12 +36,11 @@ function collectHtml(tokens: readonly MicromarkToken[], into: MicromarkToken[]):
  *   two. VisiMark's own anchor scanner never sees inside a code region either
  *   — mdast parses fenced and inline code as opaque text, never as a nested
  *   `html` node — so a comment there was never a binding to begin with.
- * - A CRLF document's *multi-line* comment is left blanked. `token.text` is
- *   sliced from the real source and keeps its `\r`s; the offsets below come
- *   from `params.lines.join("\n")`, which drops them. The lengths then
- *   disagree, the length-preservation guard (below) declines the write, and
- *   the comment stays blanked rather than landing at a corrupted offset. No
- *   VisiMark construct spans lines today, so this is unreached in practice.
+ * - A span whose original text and blanked length disagree is left blanked.
+ *   `markdownlint` up to 0.41 gave a CRLF document's *multi-line* comment its
+ *   `\r`s back in `token.text` while `params.lines.join("\n")` had none; 0.42
+ *   normalises them, so that case no longer arises, and the length-preservation
+ *   guard (below) stays as the backstop for the next change of that kind.
  */
 /**
  * One entry, keyed on the `lines` array's identity. `markdownlint` freezes that
@@ -102,8 +101,6 @@ function rebuild(params: RuleParams): string {
     const end = to + token.endColumn - 1;
     // Length-preserving is the invariant that makes this safe. If a future
     // markdownlint breaks it, leave the span alone rather than corrupt offsets.
-    // A CRLF document's multi-line comment lands here too: micromark's text
-    // keeps the \r that `lines.join("\n")` dropped, so the lengths disagree.
     if (start < cursor || end < start || token.text.length !== end - start) continue;
     parts.push(source.slice(cursor, start), token.text);
     cursor = end;

@@ -119,13 +119,11 @@ Net comes to **9.99**<!--vmark=lines.Net-->.
 `;
 
 /**
- * The anchor comment spans three lines. `token.text` (sliced from the real,
- * un-blanked source) keeps its `\r`s; the offset arithmetic in
- * `rebuild()` is built from `params.lines.join("\n")`, which does not. The
- * lengths disagree, `source.ts`'s length-preservation guard declines the
- * write, and the comment stays blanked — `lines.Net` degrades to the same
- * "unused" report as `anchorInFence`, on its own line, rather than either
- * restoring garbage or throwing.
+ * The anchor comment spans three lines. `markdownlint` 0.42 hands the
+ * micromark tokens `\n`-normalised text, so `token.text` and the offsets built
+ * from `params.lines.join("\n")` agree and the comment is restored like its
+ * LF twin. (Up to 0.41 the tokens kept their `\r`s, the lengths disagreed, and
+ * `source.ts`'s length-preservation guard left the comment blanked.)
  */
 const anchoredMultilineCRLF = `\`\`\`vmark #lines
 Net = 2 * 5.00
@@ -150,10 +148,10 @@ test("an anchor inside a fenced code block is not restored, and is not a binding
   ]);
 });
 
-test("the length-preservation guard declines rather than writing a bad offset", async () => {
+test("a multi-line anchor in a CRLF document is restored", async () => {
   const report = await run({ anchoredMultilineCRLF }, only);
   expect(report.anchoredMultilineCRLF).toEqual([
-    { line: 2, rule: "visimark-warn", detail: "lines.Net is defined and never read" },
+    { line: 5, rule: "visimark-stale", detail: "lines.Net: stored 9.99 ≠ computed 10.00" },
   ]);
 });
 
